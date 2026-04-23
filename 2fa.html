@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Two-factor authentication — controlp.io</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ── Design tokens (matches all other auth pages) ─────────────── */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --muted: 240 4.8% 95.9%;
+    --border: 240 5.9% 90%;
+    --primary: 240 5.9% 10%;
+    --radius: 0.625rem;
+  }
+
+  * { font-family: 'Inter', system-ui, sans-serif; }
+  body { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+
+  .font-display {
+    font-family: 'Geist', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  /* ── Shared button primitives ─────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: calc(var(--radius) - 2px);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .btn-primary { background: hsl(var(--primary)); color: white; padding: 12px 22px; }
+  .btn-primary:hover { background: hsl(240 5.9% 18%); }
+  .btn-outline {
+    border: 1px solid hsl(var(--border));
+    padding: 11px 22px;
+    background: white;
+    color: hsl(var(--foreground));
+  }
+  .btn-outline:hover { background: hsl(var(--muted)); }
+
+  /* ── Shared input primitive ───────────────────────────────────── */
+  .input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid hsl(var(--border));
+    border-radius: calc(var(--radius) - 2px);
+    font-size: 14px;
+    outline: none;
+    background: white;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .input:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(240 5.9% 10% / 0.08);
+  }
+
+  .label {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+    color: #3f3f46;
+  }
+
+  svg.icon    { width: 16px; height: 16px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-sm { width: 14px; height: 14px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-lg { width: 20px; height: 20px; stroke-width: 1.75; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── OTP digit boxes (Shadcn <InputOTP> in production) ─────────
+     Each box mirrors the .input token: same border, radius, focus ring.
+     Uses font-display + mono sizing for the digit readability.          */
+  .otp-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  .otp-box {
+    width: 52px;
+    height: 56px;
+    text-align: center;
+    font-family: 'Geist', 'Inter', system-ui, sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    border: 1px solid hsl(var(--border));
+    border-radius: calc(var(--radius) - 2px);
+    background: white;
+    outline: none;
+    caret-color: hsl(var(--primary));
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .otp-box:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(240 5.9% 10% / 0.08);
+  }
+  /* separator between box 3 and 4 — matches Shadcn InputOTP separator */
+  .otp-sep {
+    display: flex;
+    align-items: center;
+    color: hsl(240 3.8% 60%);
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 1;
+    padding: 0 2px;
+    margin-top: 2px;
+  }
+
+  /* ── Card shell ───────────────────────────────────────────────── */
+  .card {
+    background: white;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  }
+
+  /* ── Alert / info banner ──────────────────────────────────────── */
+  .alert-info {
+    background: hsl(214 100% 97%);
+    border: 1px solid hsl(214 80% 88%);
+    border-radius: calc(var(--radius) - 2px);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: hsl(214 60% 35%);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .alert-info svg { flex-shrink: 0; margin-top: 1px; }
+</style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+  <!-- ── Page shell ────────────────────────────────────────────── -->
+  <div class="w-full max-w-[400px]">
+
+    <!-- Logo -->
+    <a href="/" class="flex items-center justify-center gap-2 mb-8">
+      <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+      <span class="font-bold text-[16px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+    </a>
+
+    <!-- Card -->
+    <div class="card px-8 py-9">
+
+      <!-- Icon badge -->
+      <div class="w-12 h-12 rounded-xl bg-zinc-900 flex items-center justify-center mx-auto mb-5">
+        <svg class="icon-lg" style="color:white;" viewBox="0 0 24 24">
+          <rect x="5" y="11" width="14" height="10" rx="2" ry="2"/>
+          <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+        </svg>
+      </div>
+
+      <!-- Heading -->
+      <h1 class="font-display text-[24px] font-bold tracking-tight text-center mb-1.5">
+        Two-step verification
+      </h1>
+      <p class="text-[13.5px] text-zinc-500 text-center mb-6 leading-relaxed">
+        Enter the 6-digit code from your authenticator app or check your email at <strong class="text-zinc-800 font-medium">j••••@qallus.co</strong>.
+      </p>
+
+      <!-- OTP input (→ Shadcn <InputOTP> in production) -->
+      <label class="label text-center mb-3">Verification code</label>
+      <div class="otp-group mb-6" id="otp-group">
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" id="d1" />
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d2" />
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d3" />
+        <span class="otp-sep">·</span>
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d4" />
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d5" />
+        <input class="otp-box" type="text" inputmode="numeric" maxlength="1" id="d6" />
+      </div>
+
+      <!-- Info banner -->
+      <div class="alert-info mb-6">
+        <svg class="icon" style="stroke:hsl(214 60% 45%)" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>Codes expire after <strong>10 minutes</strong>. If you don't have access to your authenticator, use a backup code below.</span>
+      </div>
+
+      <!-- Primary action -->
+      <button class="btn btn-primary w-full" id="verify-btn" disabled style="opacity:0.5">
+        Verify and sign in
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+
+      <!-- Secondary: backup code toggle -->
+      <div class="mt-4 text-center">
+        <button
+          class="text-[13px] font-medium text-zinc-600 hover:text-zinc-900 underline-offset-2 hover:underline transition-colors"
+          onclick="document.getElementById('backup-section').classList.toggle('hidden')"
+        >
+          Use a backup code instead
+        </button>
+      </div>
+
+      <!-- Backup code input (hidden by default) -->
+      <div id="backup-section" class="hidden mt-4">
+        <label class="label">Backup code</label>
+        <input type="text" class="input font-mono tracking-widest" placeholder="XXXX-XXXX-XXXX" spellcheck="false" autocomplete="off" />
+        <button class="btn btn-outline w-full mt-3">
+          Verify with backup code
+        </button>
+      </div>
+
+    </div>
+    <!-- /card -->
+
+    <!-- Footer links -->
+    <div class="flex items-center justify-between mt-5 px-1">
+      <a href="/login" class="flex items-center gap-1.5 text-[13px] text-zinc-500 hover:text-zinc-900 transition-colors">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to sign in
+      </a>
+      <button
+        class="text-[13px] text-zinc-500 hover:text-zinc-900 transition-colors"
+        id="resend-btn"
+        onclick="handleResend()"
+      >
+        Resend code
+      </button>
+    </div>
+
+    <!-- Legal -->
+    <p class="text-center mt-6 text-[11.5px] text-zinc-400">
+      Having trouble? <a href="/contact" class="hover:text-zinc-900 underline">Contact support</a>
+    </p>
+
+  </div>
+  <!-- /page shell -->
+
+</body>
+
+<script>
+  const boxes = Array.from(document.querySelectorAll('.otp-box'));
+  const verifyBtn = document.getElementById('verify-btn');
+
+  function checkComplete() {
+    const filled = boxes.every(b => b.value.length === 1);
+    verifyBtn.disabled = !filled;
+    verifyBtn.style.opacity = filled ? '1' : '0.5';
+  }
+
+  boxes.forEach((box, i) => {
+    box.addEventListener('input', e => {
+      const val = e.target.value.replace(/\D/g, '');
+      e.target.value = val ? val[val.length - 1] : '';
+      if (val && i < boxes.length - 1) boxes[i + 1].focus();
+      checkComplete();
+    });
+
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && i > 0) {
+        boxes[i - 1].focus();
+        boxes[i - 1].value = '';
+        checkComplete();
+      }
+      if (e.key === 'ArrowLeft'  && i > 0)                boxes[i - 1].focus();
+      if (e.key === 'ArrowRight' && i < boxes.length - 1) boxes[i + 1].focus();
+    });
+
+    box.addEventListener('paste', e => {
+      e.preventDefault();
+      const digits = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+      digits.split('').forEach((d, j) => { if (boxes[j]) boxes[j].value = d; });
+      const next = Math.min(digits.length, boxes.length - 1);
+      boxes[next].focus();
+      checkComplete();
+    });
+  });
+
+  let cooldown = false;
+  function handleResend() {
+    if (cooldown) return;
+    const btn = document.getElementById('resend-btn');
+    cooldown = true;
+    let secs = 30;
+    btn.textContent = `Resend in ${secs}s`;
+    btn.style.opacity = '0.4';
+    btn.style.cursor = 'default';
+    const t = setInterval(() => {
+      secs--;
+      if (secs <= 0) {
+        clearInterval(t);
+        btn.textContent = 'Resend code';
+        btn.style.opacity = '';
+        btn.style.cursor = '';
+        cooldown = false;
+      } else {
+        btn.textContent = `Resend in ${secs}s`;
+      }
+    }, 1000);
+  }
+</script>
+</html>

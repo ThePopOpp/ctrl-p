@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem('cp-theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.remove('dark');else if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark');}catch(e){}</script>
+<title>Contact — controlp.io</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'};</script>
+<link rel="stylesheet" href="assets/site.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --background: 0 0% 100%; --foreground: 240 10% 3.9%; --card: 0 0% 100%; --muted: 240 4.8% 95.9%; --border: 240 5.9% 90%; --primary: 240 5.9% 10%; --radius: 0.625rem; }
+  * { font-family: 'Inter', system-ui, sans-serif; }
+  body { background: hsl(var(--background)); color: hsl(var(--foreground)); transition: background-color 0.2s ease, color 0.2s ease; }
+  .font-display { font-family: 'Geist', 'Inter', system-ui, sans-serif; letter-spacing: -0.02em; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: calc(var(--radius) - 2px); font-size: 14px; font-weight: 500; transition: all 0.15s; cursor: pointer; }
+  .btn-primary { background: hsl(var(--primary)); color: white; padding: 11px 22px; }
+  .btn-primary:hover { background: hsl(240 5.9% 18%); }
+  .btn-outline { border: 1px solid hsl(var(--border)); background: transparent; color: hsl(var(--foreground)); padding: 10px 20px; }
+  .btn-outline:hover { background: hsl(var(--muted)); }
+  .btn-ghost { background: transparent; padding: 8px 12px; }
+  .btn-ghost:hover { background: hsl(var(--muted)); }
+  .card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
+  .input, .select, .textarea { width: 100%; padding: 10px 12px; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); font-size: 14px; background: white; color: hsl(var(--foreground)); outline: none; font-family: inherit; }
+  .input:focus, .select:focus, .textarea:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(240 5.9% 10% / 0.08); }
+  .label { font-size: 13px; font-weight: 500; margin-bottom: 6px; display: block; }
+  svg.icon { width: 16px; height: 16px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-sm { width: 14px; height: 14px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-lg { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .map-bg { background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 50%, #fce7f3 100%); position: relative; overflow: hidden; }
+  .map-bg::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px); background-size: 40px 40px; }
+</style>
+</head>
+<body>
+
+<header class="site-header sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b dark:border-zinc-800 dark:bg-zinc-950/90" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1400px] mx-auto px-6">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center gap-6 lg:gap-8 min-w-0">
+        <a href="home.html" class="flex items-center gap-2 shrink-0">
+          <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+          <span class="font-bold text-[16px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+        </a>
+        <nav class="hidden lg:flex items-center gap-1 text-[14px]">
+          <div class="dropdown">
+            <button type="button" class="btn btn-ghost flex items-center gap-1">Shop <svg class="icon-sm" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="dropdown-menu card p-2 w-[560px] grid grid-cols-2 gap-1 shadow-xl">
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Large Format Prints</div><div class="text-[12px] text-zinc-500">Banners, posters, displays</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 7h14l-2 4h-12z"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Signs</div><div class="text-[12px] text-zinc-500">Standard &amp; custom signage</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M5 17h14"/><path d="M3 17l2-7c.3-1 1.2-2 2.3-2h9.4c1.1 0 2 1 2.3 2l2 7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Vehicle Wraps</div><div class="text-[12px] text-zinc-500">Full wraps, spot graphics, tint</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Business Cards</div><div class="text-[12px] text-zinc-500">Standard, die-cut, premium</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M20.4 3.5L16 2a4 4 0 01-8 0L3.6 3.5a2 2 0 00-1.3 2.2l.6 3.5a1 1 0 001 .8H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.1a1 1 0 001-.8l.5-3.5a2 2 0 00-1.3-2.2z"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Custom Merch</div><div class="text-[12px] text-zinc-500">Shirts, hats, mugs, bags</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22V15"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Flags &amp; Displays</div><div class="text-[12px] text-zinc-500">Pole, feather, teardrop, tents</div></div>
+              </a>
+            </div>
+          </div>
+          <a href="shop.html" class="btn btn-ghost">Deals</a>
+          <div class="dropdown">
+            <button type="button" class="btn btn-ghost flex items-center gap-1">Discover <svg class="icon-sm" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="dropdown-menu card p-2 w-[635px] grid grid-cols-3 gap-1 shadow-xl">
+              <div>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 px-3 pt-2 pb-1">Resources</div>
+                <a href="templates.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Templates</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Designed for quick edits</div></div>
+                </a>
+                <a href="resources.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Resources</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Prep guides & downloads</div></div>
+                </a>
+                <a href="blog.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Blog</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Trends, tips, and stories</div></div>
+                </a>
+              </div>
+              <div>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 px-3 pt-2 pb-1">Company</div>
+                <a href="about.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">About</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Learn about our company</div></div>
+                </a>
+                <a href="#team" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Team</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Meet our talented team</div></div>
+                </a>
+                <a href="#mission" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Mission</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Our values and vision</div></div>
+                </a>
+              </div>
+              <div>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 px-3 pt-2 pb-1">Support</div>
+                <a href="contact.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M18 3a3 3 0 00-3 3v12a3 3 0 003 3 3 3 0 003-3 3 3 0 00-3-3H6a3 3 0 00-3 3 3 3 0 003 3h12a3 3 0 003-3V6a3 3 0 00-3-3z"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Services</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">What we offer</div></div>
+                </a>
+                <a href="faq.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Support</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Help and guidance</div></div>
+                </a>
+                <a href="contact.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Contact</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Talk with our team</div></div>
+                </a>
+              </div>
+            </div>
+          </div>
+          <a href="faq.html" class="btn btn-ghost">FAQ</a>
+          <a href="contact.html" class="btn btn-ghost">Contact</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button type="button" class="cp-theme-btn" data-theme-toggle aria-label="Toggle color mode">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <a href="cart.html" class="btn btn-ghost p-2 relative hidden sm:inline-flex" aria-label="Cart">
+          <svg class="icon-lg" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+          <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-zinc-900 text-white text-[10px] font-semibold flex items-center justify-center dark:bg-zinc-100 dark:text-zinc-900">2</span>
+        </a>
+        <a href="login.html" class="btn btn-outline hidden sm:inline-flex">Sign in</a>
+        <a href="contact.html" class="btn btn-primary">Get a quote</a>
+        <button type="button" class="lg:hidden btn btn-ghost p-2 -mr-1" data-mobile-nav-open aria-label="Open menu">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="py-16 border-b" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1400px] mx-auto px-6 text-center max-w-3xl">
+    <h1 class="font-display text-[48px] font-bold tracking-tight mb-4">Let's talk.</h1>
+    <p class="text-[16px] text-zinc-600 max-w-xl mx-auto">Quotes, complex jobs, installation questions, or just want to swing by the shop — we're here.</p>
+  </div>
+</section>
+
+<section class="py-16">
+  <div class="max-w-[1400px] mx-auto px-6">
+    <div class="grid lg:grid-cols-[1fr_1fr] gap-12">
+
+      <!-- Contact form -->
+      <div>
+        <div class="card p-8">
+          <h2 class="font-display text-[24px] font-bold tracking-tight mb-1">Send us a message</h2>
+          <p class="text-[13.5px] text-zinc-500 mb-6">We reply within 4 business hours.</p>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="label">First name</label>
+              <input type="text" class="input" placeholder="Jane"/>
+            </div>
+            <div>
+              <label class="label">Last name</label>
+              <input type="text" class="input" placeholder="Doe"/>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="label">Email</label>
+            <input type="email" class="input" placeholder="jane@company.com"/>
+          </div>
+
+          <div class="mb-4">
+            <label class="label">Phone <span class="text-zinc-400 font-normal">(optional)</span></label>
+            <input type="tel" class="input" placeholder="(480) 555-0100"/>
+          </div>
+
+          <div class="mb-4">
+            <label class="label">Company <span class="text-zinc-400 font-normal">(optional)</span></label>
+            <input type="text" class="input" placeholder="Your company"/>
+          </div>
+
+          <div class="mb-4">
+            <label class="label">What can we help with?</label>
+            <select class="select">
+              <option>Get a quote for a project</option>
+              <option>Vehicle wrap inquiry</option>
+              <option>Large format / signage</option>
+              <option>Business cards and stationery</option>
+              <option>Design services</option>
+              <option>Order status question</option>
+              <option>Something else</option>
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label class="label">Tell us more</label>
+            <textarea class="textarea" rows="5" placeholder="Size, quantity, timeline, any details that will help us quote accurately..."></textarea>
+          </div>
+
+          <div class="mb-5">
+            <label class="label">Files <span class="text-zinc-400 font-normal">(optional)</span></label>
+            <div class="border-2 border-dashed border-zinc-200 rounded-lg p-5 text-center hover:border-zinc-400 cursor-pointer">
+              <svg class="mx-auto mb-2 text-zinc-400" width="28" height="28" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div class="text-[13px] font-semibold">Drop files or browse</div>
+              <div class="text-[11.5px] text-zinc-400 mt-0.5">Artwork, references, photos — up to 250MB</div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary w-full">
+            Send message
+            <svg class="icon-sm" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+          <p class="text-[11.5px] text-zinc-400 text-center mt-3">By sending this message, you agree to our Privacy Policy.</p>
+        </div>
+      </div>
+
+      <!-- Contact info + map -->
+      <div class="space-y-6">
+        <!-- Map -->
+        <div class="card overflow-hidden">
+          <div class="map-bg aspect-[5/3] relative">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-zinc-900 text-white flex items-center justify-center shadow-lg z-10">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-zinc-900 opacity-20 animate-ping"></div>
+          </div>
+          <div class="p-5 border-t flex items-center justify-between" style="border-color: hsl(var(--border));">
+            <div>
+              <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Our shop</div>
+              <div class="font-semibold text-[14px] mt-0.5">Chandler, AZ 85226</div>
+            </div>
+            <a href="#" class="btn btn-outline btn-sm">Get directions</a>
+          </div>
+        </div>
+
+        <!-- Quick contact cards -->
+        <div class="grid grid-cols-2 gap-4">
+          <a href="tel:+14809999906" class="card p-5 hover:border-zinc-400 transition">
+            <div class="w-10 h-10 rounded-md bg-zinc-900 text-white flex items-center justify-center mb-3">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92V21a1 1 0 01-1.1 1 19.8 19.8 0 01-8.6-3 19.5 19.5 0 01-6-6A19.8 19.8 0 013.3 4.1 1 1 0 014.3 3H8.4l1.5 5-2 1.5a12 12 0 006 6l1.5-2 5 1.5z"/></svg>
+            </div>
+            <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Call us</div>
+            <div class="font-display text-[18px] font-bold mt-0.5">(480) 999-9906</div>
+            <div class="text-[12px] text-zinc-500">Mon–Fri · 8am–6pm MST</div>
+          </a>
+
+          <a href="mailto:hello@controlp.io" class="card p-5 hover:border-zinc-400 transition">
+            <div class="w-10 h-10 rounded-md bg-zinc-900 text-white flex items-center justify-center mb-3">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </div>
+            <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Email</div>
+            <div class="font-display text-[16px] font-bold mt-0.5 break-all">hello@controlp.io</div>
+            <div class="text-[12px] text-zinc-500">Reply within 4 hours</div>
+          </a>
+
+          <div class="card p-5">
+            <div class="w-10 h-10 rounded-md bg-zinc-900 text-white flex items-center justify-center mb-3">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+            </div>
+            <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Text us</div>
+            <div class="font-display text-[18px] font-bold mt-0.5">Text PRINT</div>
+            <div class="text-[12px] text-zinc-500">to (480) 999-9906</div>
+          </div>
+
+          <div class="card p-5">
+            <div class="w-10 h-10 rounded-md bg-zinc-900 text-white flex items-center justify-center mb-3">
+              <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Hours</div>
+            <div class="font-display text-[16px] font-bold mt-0.5">Mon–Fri 8–6</div>
+            <div class="text-[12px] text-zinc-500">Sat 9–2 · Sun closed</div>
+          </div>
+        </div>
+
+        <!-- Other -->
+        <div class="card p-6">
+          <h3 class="font-semibold text-[15px] mb-4">Looking for something specific?</h3>
+          <div class="space-y-3">
+            <a href="#" class="flex items-center gap-3 p-3 rounded-md hover:bg-zinc-50 border border-zinc-100">
+              <div class="w-8 h-8 rounded-md bg-zinc-100 flex items-center justify-center flex-shrink-0">
+                <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
+              </div>
+              <div class="flex-1">
+                <div class="text-[13.5px] font-semibold">Check order status</div>
+                <div class="text-[11.5px] text-zinc-500">Track your active orders and view history</div>
+              </div>
+              <svg class="icon-sm text-zinc-400" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+            </a>
+            <a href="#" class="flex items-center gap-3 p-3 rounded-md hover:bg-zinc-50 border border-zinc-100">
+              <div class="w-8 h-8 rounded-md bg-zinc-100 flex items-center justify-center flex-shrink-0">
+                <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div class="flex-1">
+                <div class="text-[13.5px] font-semibold">FAQ and help center</div>
+                <div class="text-[11.5px] text-zinc-500">Common questions about files, shipping, turnaround</div>
+              </div>
+              <svg class="icon-sm text-zinc-400" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+            </a>
+            <a href="#" class="flex items-center gap-3 p-3 rounded-md hover:bg-zinc-50 border border-zinc-100">
+              <div class="w-8 h-8 rounded-md bg-zinc-100 flex items-center justify-center flex-shrink-0">
+                <svg class="icon-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div class="flex-1">
+                <div class="text-[13.5px] font-semibold">Design guidelines & templates</div>
+                <div class="text-[11.5px] text-zinc-500">File specs, bleed, color profiles, templates</div>
+              </div>
+              <svg class="icon-sm text-zinc-400" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<footer class="border-t pt-10 pb-6 bg-zinc-50" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+      <span class="font-bold text-[15px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+    </div>
+    <div class="text-[12.5px] text-zinc-500">© 2026 controlp.io · Chandler, Arizona · (480) 999-9906</div>
+  </div>
+</footer>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

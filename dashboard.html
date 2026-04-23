@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem('cp-theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.remove('dark');else if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark');}catch(e){}</script>
+<title>Dashboard — controlp.io</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'};</script>
+<link rel="stylesheet" href="assets/site.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --border: 240 5.9% 90%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --radius: 0.625rem;
+  }
+  * { font-family: 'Inter', system-ui, sans-serif; box-sizing: border-box; }
+  body { background: hsl(240 4.8% 97%); color: hsl(var(--foreground)); }
+  .font-display { font-family: 'Geist', 'Inter', system-ui, sans-serif; letter-spacing: -0.02em; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; border-radius: calc(var(--radius) - 2px); font-size: 14px; font-weight: 500; transition: all 0.15s; cursor: pointer; }
+  .btn-primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); padding: 9px 18px; }
+  .btn-primary:hover { background: hsl(240 5.9% 18%); }
+  .btn-outline { border: 1px solid hsl(var(--border)); background: white; color: hsl(var(--foreground)); padding: 9px 18px; }
+  .btn-outline:hover { background: hsl(var(--muted)); }
+  .btn-ghost { background: transparent; color: hsl(var(--foreground)); padding: 8px 12px; }
+  .btn-ghost:hover { background: hsl(var(--muted)); }
+  .btn-sm { padding: 6px 12px; font-size: 12.5px; }
+
+  .card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+
+  svg.icon { width: 16px; height: 16px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-sm { width: 14px; height: 14px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-lg { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-display { width: 40px; height: 40px; stroke-width: 1.3; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  .product-img { background: linear-gradient(135deg, hsl(240 4.8% 95.9%) 0%, hsl(240 4.8% 98%) 100%); color: hsl(240 3.8% 60%); }
+
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; font-size: 13.5px; color: hsl(var(--muted-foreground)); cursor: pointer; transition: all 0.1s; }
+  .nav-item:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .nav-item.active { background: hsl(var(--primary)); color: white; font-weight: 500; }
+
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+
+  /* Progress bar */
+  .progress { height: 4px; background: hsl(var(--muted)); border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: hsl(var(--primary)); border-radius: 999px; transition: width 0.3s; }
+</style>
+</head>
+<body class="dashboard-app">
+
+<!-- Top header -->
+<header class="dash-header site-header bg-white border-b sticky top-0 z-20 dark:bg-zinc-950 dark:border-zinc-800" style="border-color: hsl(var(--border));">
+  <div class="px-6">
+    <div class="flex items-center justify-between h-14">
+      <div class="flex items-center gap-6">
+        <a href="home.html" class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[12px] font-display">cp</div>
+          <span class="font-bold text-[15px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+        </a>
+        <div class="h-5 w-px bg-zinc-200 dark:bg-zinc-700"></div>
+        <a href="shop.html" class="text-[13px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hidden sm:inline">Shop</a>
+        <span class="text-[13px] text-zinc-500">My Account</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" class="cp-theme-btn" data-theme-toggle aria-label="Toggle color mode">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <button type="button" class="cp-theme-btn lg:hidden" data-mobile-nav-open aria-label="Open menu">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <button class="btn btn-ghost p-2">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </button>
+        <a href="cart.html" class="btn btn-ghost p-2 relative">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+          <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-zinc-900 text-white text-[9.5px] font-semibold flex items-center justify-center dark:bg-zinc-100 dark:text-zinc-900">3</span>
+        </a>
+        <div class="h-5 w-px bg-zinc-200 dark:bg-zinc-700 mx-1"></div>
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-amber-400 text-white flex items-center justify-center text-[12px] font-semibold">SJ</div>
+          <div class="hidden md:block">
+            <div class="text-[13px] font-semibold leading-tight">Sarah Johnson</div>
+            <div class="text-[11px] text-zinc-500 leading-tight">sarah@brightmark.co</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Layout: sidebar + main -->
+<div class="grid grid-cols-[220px_1fr] min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="dash-sidebar bg-white border-r p-4 dark:bg-zinc-950" style="border-color: hsl(var(--border));">
+    <nav class="space-y-0.5">
+      <div class="nav-item active">
+        <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Overview
+      </div>
+      <div class="nav-item">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4z"/></svg>
+        Orders
+        <span class="ml-auto badge bg-zinc-100 text-zinc-600 text-[10px]">4</span>
+      </div>
+      <div class="nav-item">
+        <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v6"/></svg>
+        Artwork library
+      </div>
+      <div class="nav-item">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20.4 14.5L16 10l-4 4-4-4-4 4.5M3 3v18h18"/></svg>
+        Design drafts
+        <span class="ml-auto badge bg-amber-100 text-amber-700 text-[10px]">2</span>
+      </div>
+      <div class="nav-item">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Addresses
+      </div>
+      <div class="nav-item">
+        <svg class="icon-sm" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Payment methods
+      </div>
+      <div class="nav-item">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Downloads
+      </div>
+      <div class="nav-item">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 000-7.8z"/></svg>
+        Saved items
+      </div>
+
+      <div class="h-px bg-zinc-100 my-3"></div>
+
+      <div class="nav-item">
+        <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Account settings
+      </div>
+      <div class="nav-item">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+      </div>
+      <div class="nav-item">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+        Help & support
+      </div>
+    </nav>
+
+    <!-- Promo card -->
+    <div class="card p-4 mt-6 bg-zinc-900 text-white border-zinc-900">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">Refer & earn</div>
+      <div class="text-[13px] font-semibold mb-1">Get $25 off</div>
+      <p class="text-[11.5px] text-zinc-400 leading-relaxed mb-3">Share your link and earn $25 credit when a friend places their first order.</p>
+      <button class="w-full text-[12px] py-1.5 bg-white text-zinc-900 rounded-md font-semibold hover:bg-zinc-100">Copy referral link</button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="dash-main-bg p-6 max-w-[1200px]">
+
+    <!-- Greeting -->
+    <div class="mb-6">
+      <h1 class="font-display text-[26px] font-bold tracking-tight">Welcome back, Sarah</h1>
+      <p class="text-[13.5px] text-zinc-500">Here's what's happening with your orders today.</p>
+    </div>
+
+    <!-- Stats cards -->
+    <div class="grid grid-cols-4 gap-4 mb-6">
+      <div class="card p-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="text-[11.5px] text-zinc-500 uppercase tracking-wider font-semibold">Total orders</div>
+            <div class="font-display text-[26px] font-bold tracking-tight mt-1">47</div>
+            <div class="text-[11.5px] text-emerald-600 mt-1 flex items-center gap-1">
+              <svg class="icon-sm" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              +8 this quarter
+            </div>
+          </div>
+          <div class="w-8 h-8 rounded-md bg-zinc-100 flex items-center justify-center text-zinc-600">
+            <svg class="icon-sm" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="text-[11.5px] text-zinc-500 uppercase tracking-wider font-semibold">Active orders</div>
+            <div class="font-display text-[26px] font-bold tracking-tight mt-1">4</div>
+            <div class="text-[11.5px] text-zinc-500 mt-1">2 in production, 2 shipped</div>
+          </div>
+          <div class="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center text-blue-600">
+            <svg class="icon-sm" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="text-[11.5px] text-zinc-500 uppercase tracking-wider font-semibold">Saved designs</div>
+            <div class="font-display text-[26px] font-bold tracking-tight mt-1">12</div>
+            <div class="text-[11.5px] text-zinc-500 mt-1">in your library</div>
+          </div>
+          <div class="w-8 h-8 rounded-md bg-amber-50 flex items-center justify-center text-amber-600">
+            <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v6"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="text-[11.5px] text-zinc-500 uppercase tracking-wider font-semibold">Store credit</div>
+            <div class="font-display text-[26px] font-bold tracking-tight mt-1">$75.00</div>
+            <div class="text-[11.5px] text-emerald-600 mt-1">from referrals</div>
+          </div>
+          <div class="w-8 h-8 rounded-md bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Two column content -->
+    <div class="grid grid-cols-[1fr_320px] gap-6">
+
+      <!-- Left column -->
+      <div class="space-y-6">
+
+        <!-- Active orders -->
+        <div class="card">
+          <div class="flex items-center justify-between p-5 border-b" style="border-color: hsl(var(--border));">
+            <div>
+              <h2 class="font-semibold text-[15px]">Active orders</h2>
+              <p class="text-[12px] text-zinc-500">Currently in production or on the way</p>
+            </div>
+            <a href="#" class="text-[13px] font-medium hover:underline">View all</a>
+          </div>
+
+          <!-- Order 1 - In Production -->
+          <div class="p-5 border-b flex items-start gap-4" style="border-color: hsl(var(--border));">
+            <div class="w-14 h-14 rounded-md product-img flex items-center justify-center flex-shrink-0">
+              <svg class="icon-display" viewBox="0 0 24 24" style="width:28px; height:28px;"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M7 10h10M7 14h6"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between mb-1">
+                <div>
+                  <div class="font-semibold text-[14px]">Vinyl Banner · 3×6 ft · Qty 2</div>
+                  <div class="text-[12px] text-zinc-500">Order #CP-28419 · Placed Apr 14</div>
+                </div>
+                <div class="text-[13.5px] font-semibold">$108.00</div>
+              </div>
+              <div class="flex items-center gap-2 mb-2">
+                <span class="badge bg-blue-50 text-blue-700">
+                  <span class="status-dot bg-blue-500"></span>
+                  In production
+                </span>
+                <span class="text-[12px] text-zinc-500">Est. ships Sat, Apr 18</span>
+              </div>
+              <!-- Progress -->
+              <div class="flex items-center gap-3 mt-3">
+                <div class="flex-1">
+                  <div class="progress">
+                    <div class="progress-fill" style="width: 45%"></div>
+                  </div>
+                  <div class="flex justify-between text-[11px] text-zinc-400 mt-1.5">
+                    <span class="text-zinc-900 font-semibold">Proof approved</span>
+                    <span class="text-zinc-900 font-semibold">Printing</span>
+                    <span>Shipped</span>
+                    <span>Delivered</span>
+                  </div>
+                </div>
+                <button class="btn btn-outline btn-sm">Track</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order 2 - Shipped -->
+          <div class="p-5 border-b flex items-start gap-4" style="border-color: hsl(var(--border));">
+            <div class="w-14 h-14 rounded-md product-img flex items-center justify-center flex-shrink-0">
+              <svg class="icon-display" viewBox="0 0 24 24" style="width:28px; height:28px;"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between mb-1">
+                <div>
+                  <div class="font-semibold text-[14px]">Standard Business Cards · Qty 500</div>
+                  <div class="text-[12px] text-zinc-500">Order #CP-28402 · Placed Apr 12</div>
+                </div>
+                <div class="text-[13.5px] font-semibold">$48.00</div>
+              </div>
+              <div class="flex items-center gap-2 mb-2">
+                <span class="badge bg-amber-50 text-amber-700">
+                  <span class="status-dot bg-amber-500"></span>
+                  Shipped
+                </span>
+                <span class="text-[12px] text-zinc-500">UPS 1Z999AA10123456784 · Out for delivery</span>
+              </div>
+              <div class="flex items-center gap-3 mt-3">
+                <div class="flex-1">
+                  <div class="progress">
+                    <div class="progress-fill" style="width: 75%"></div>
+                  </div>
+                  <div class="flex justify-between text-[11px] text-zinc-400 mt-1.5">
+                    <span class="text-zinc-900 font-semibold">Proof approved</span>
+                    <span class="text-zinc-900 font-semibold">Printed</span>
+                    <span class="text-zinc-900 font-semibold">Shipped</span>
+                    <span>Delivered</span>
+                  </div>
+                </div>
+                <button class="btn btn-outline btn-sm">Track</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order 3 - Proof Needed -->
+          <div class="p-5 flex items-start gap-4">
+            <div class="w-14 h-14 rounded-md product-img flex items-center justify-center flex-shrink-0">
+              <svg class="icon-display" viewBox="0 0 24 24" style="width:28px; height:28px;"><path d="M3 20h18"/><path d="M12 3L3 20M12 3l9 17"/><path d="M7 14h10"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between mb-1">
+                <div>
+                  <div class="font-semibold text-[14px]">A-Frame Sign · Premium · Qty 1</div>
+                  <div class="text-[12px] text-zinc-500">Order #CP-28431 · Placed today</div>
+                </div>
+                <div class="text-[13.5px] font-semibold">$129.00</div>
+              </div>
+              <div class="flex items-center gap-2 mb-2">
+                <span class="badge bg-red-50 text-red-700">
+                  <span class="status-dot bg-red-500"></span>
+                  Proof approval needed
+                </span>
+                <span class="text-[12px] text-zinc-500">Review within 24hr to avoid delay</span>
+              </div>
+              <div class="flex items-center gap-2 mt-3">
+                <button class="btn btn-primary btn-sm">Review proof</button>
+                <button class="btn btn-outline btn-sm">Request changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent orders -->
+        <div class="card">
+          <div class="flex items-center justify-between p-5 border-b" style="border-color: hsl(var(--border));">
+            <h2 class="font-semibold text-[15px]">Recent orders</h2>
+            <a href="#" class="text-[13px] font-medium hover:underline">View order history</a>
+          </div>
+          <table class="w-full text-[13px]">
+            <thead class="bg-zinc-50 text-[11.5px] uppercase tracking-wider text-zinc-500 font-semibold">
+              <tr>
+                <th class="text-left px-5 py-2.5">Order</th>
+                <th class="text-left px-5 py-2.5">Date</th>
+                <th class="text-left px-5 py-2.5">Items</th>
+                <th class="text-left px-5 py-2.5">Status</th>
+                <th class="text-right px-5 py-2.5">Total</th>
+                <th class="px-5 py-2.5"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-t" style="border-color: hsl(var(--border));">
+                <td class="px-5 py-3.5 font-medium">#CP-28388</td>
+                <td class="px-5 py-3.5 text-zinc-500">Apr 9, 2026</td>
+                <td class="px-5 py-3.5">Retractable Banner Stand · 1 item</td>
+                <td class="px-5 py-3.5"><span class="badge bg-emerald-50 text-emerald-700"><span class="status-dot bg-emerald-500"></span>Delivered</span></td>
+                <td class="px-5 py-3.5 text-right font-medium">$185.00</td>
+                <td class="px-5 py-3.5 text-right"><a href="#" class="text-[12px] font-medium hover:underline">Reorder</a></td>
+              </tr>
+              <tr class="border-t" style="border-color: hsl(var(--border));">
+                <td class="px-5 py-3.5 font-medium">#CP-28371</td>
+                <td class="px-5 py-3.5 text-zinc-500">Apr 2, 2026</td>
+                <td class="px-5 py-3.5">Yard Signs · 25 items</td>
+                <td class="px-5 py-3.5"><span class="badge bg-emerald-50 text-emerald-700"><span class="status-dot bg-emerald-500"></span>Delivered</span></td>
+                <td class="px-5 py-3.5 text-right font-medium">$225.00</td>
+                <td class="px-5 py-3.5 text-right"><a href="#" class="text-[12px] font-medium hover:underline">Reorder</a></td>
+              </tr>
+              <tr class="border-t" style="border-color: hsl(var(--border));">
+                <td class="px-5 py-3.5 font-medium">#CP-28344</td>
+                <td class="px-5 py-3.5 text-zinc-500">Mar 24, 2026</td>
+                <td class="px-5 py-3.5">Tesla Model Y Full Wrap · 1 service</td>
+                <td class="px-5 py-3.5"><span class="badge bg-emerald-50 text-emerald-700"><span class="status-dot bg-emerald-500"></span>Completed</span></td>
+                <td class="px-5 py-3.5 text-right font-medium">$3,850.00</td>
+                <td class="px-5 py-3.5 text-right"><a href="#" class="text-[12px] font-medium hover:underline">View</a></td>
+              </tr>
+              <tr class="border-t" style="border-color: hsl(var(--border));">
+                <td class="px-5 py-3.5 font-medium">#CP-28298</td>
+                <td class="px-5 py-3.5 text-zinc-500">Mar 15, 2026</td>
+                <td class="px-5 py-3.5">T-Shirts · 50 items</td>
+                <td class="px-5 py-3.5"><span class="badge bg-emerald-50 text-emerald-700"><span class="status-dot bg-emerald-500"></span>Delivered</span></td>
+                <td class="px-5 py-3.5 text-right font-medium">$687.50</td>
+                <td class="px-5 py-3.5 text-right"><a href="#" class="text-[12px] font-medium hover:underline">Reorder</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- Right column -->
+      <div class="space-y-6">
+
+        <!-- Design drafts -->
+        <div class="card">
+          <div class="flex items-center justify-between p-5 border-b" style="border-color: hsl(var(--border));">
+            <h2 class="font-semibold text-[14px]">Design drafts</h2>
+            <a href="#" class="text-[12px] font-medium hover:underline">See all</a>
+          </div>
+          <div class="divide-y" style="color: hsl(var(--border));">
+            <div class="p-4 flex items-center gap-3 hover:bg-zinc-50">
+              <div class="w-11 h-11 rounded-md product-img flex items-center justify-center flex-shrink-0">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M7 10h10M7 14h6"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[13px] font-semibold truncate">Grand Opening Banner</div>
+                <div class="text-[11px] text-zinc-500">Draft saved 2 hours ago · 4×8 ft</div>
+              </div>
+              <svg class="icon-sm text-zinc-400" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="p-4 flex items-center gap-3 hover:bg-zinc-50 border-t" style="border-color: hsl(var(--border));">
+              <div class="w-11 h-11 rounded-md product-img flex items-center justify-center flex-shrink-0">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[13px] font-semibold truncate">New Business Cards v3</div>
+                <div class="text-[11px] text-zinc-500">Draft saved Apr 12 · Die-cut</div>
+              </div>
+              <svg class="icon-sm text-zinc-400" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+          <div class="p-4 border-t" style="border-color: hsl(var(--border));">
+            <button class="btn btn-outline btn-sm w-full">
+              <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Start new design
+            </button>
+          </div>
+        </div>
+
+        <!-- Artwork library -->
+        <div class="card">
+          <div class="flex items-center justify-between p-5 border-b" style="border-color: hsl(var(--border));">
+            <h2 class="font-semibold text-[14px]">Artwork library</h2>
+            <a href="#" class="text-[12px] font-medium hover:underline">Manage</a>
+          </div>
+          <div class="p-4 grid grid-cols-3 gap-2">
+            <div class="aspect-square rounded-md product-img flex items-center justify-center relative">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+              <div class="absolute bottom-1 right-1 text-[9px] bg-black/60 text-white px-1 rounded">PDF</div>
+            </div>
+            <div class="aspect-square rounded-md product-img flex items-center justify-center relative">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+              <div class="absolute bottom-1 right-1 text-[9px] bg-black/60 text-white px-1 rounded">AI</div>
+            </div>
+            <div class="aspect-square rounded-md product-img flex items-center justify-center relative">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+              <div class="absolute bottom-1 right-1 text-[9px] bg-black/60 text-white px-1 rounded">PNG</div>
+            </div>
+            <div class="aspect-square rounded-md product-img flex items-center justify-center relative">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+              <div class="absolute bottom-1 right-1 text-[9px] bg-black/60 text-white px-1 rounded">EPS</div>
+            </div>
+            <div class="aspect-square rounded-md product-img flex items-center justify-center relative">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+              <div class="absolute bottom-1 right-1 text-[9px] bg-black/60 text-white px-1 rounded">PDF</div>
+            </div>
+            <div class="aspect-square rounded-md border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center text-zinc-400 hover:border-zinc-400 cursor-pointer">
+              <svg class="icon-sm mb-1" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              <div class="text-[10px]">Upload</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Favorite products -->
+        <div class="card p-5">
+          <h2 class="font-semibold text-[14px] mb-3">Quick reorder</h2>
+          <p class="text-[12px] text-zinc-500 mb-4">Based on your last 30 days of orders</p>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-md product-img flex items-center justify-center flex-shrink-0">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="3" y="6" width="18" height="12" rx="1"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[13px] font-semibold truncate">Vinyl Banner · 3×6</div>
+                <div class="text-[11px] text-zinc-500">Ordered 3× · last Apr 14</div>
+              </div>
+              <button class="btn btn-outline btn-sm">Reorder</button>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-md product-img flex items-center justify-center flex-shrink-0">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="2" y="5" width="20" height="14" rx="2"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[13px] font-semibold truncate">Business Cards · 500</div>
+                <div class="text-[11px] text-zinc-500">Ordered 2× · last Apr 12</div>
+              </div>
+              <button class="btn btn-outline btn-sm">Reorder</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

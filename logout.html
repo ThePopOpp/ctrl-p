@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem('cp-theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.remove('dark');else if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark');}catch(e){}</script>
+<title>Signed out — controlp.io</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'};</script>
+<link rel="stylesheet" href="assets/site.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --background: 0 0% 100%; --foreground: 240 10% 3.9%; --muted: 240 4.8% 95.9%; --border: 240 5.9% 90%; --primary: 240 5.9% 10%; --radius: 0.625rem; }
+  * { font-family: 'Inter', system-ui, sans-serif; }
+  body { background: hsl(240 4.8% 98%); color: hsl(var(--foreground)); }
+  .font-display { font-family: 'Geist', 'Inter', system-ui, sans-serif; letter-spacing: -0.02em; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: calc(var(--radius) - 2px); font-size: 14px; font-weight: 500; transition: all 0.15s; cursor: pointer; }
+  .btn-primary { background: hsl(var(--primary)); color: white; padding: 12px 22px; }
+  .btn-primary:hover { background: hsl(240 5.9% 18%); }
+  .btn-outline { border: 1px solid hsl(var(--border)); padding: 11px 22px; background: white; }
+  .btn-outline:hover { background: hsl(var(--muted)); }
+  .card { background: white; border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
+  svg.icon { width: 16px; height: 16px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-sm { width: 14px; height: 14px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-lg { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Countdown animation */
+  @keyframes countdown {
+    from { stroke-dashoffset: 0; }
+    to { stroke-dashoffset: 282.7; }
+  }
+  .countdown-ring { animation: countdown 5s linear forwards; transform: rotate(-90deg); transform-origin: center; }
+</style>
+</head>
+<body>
+
+<header class="site-header bg-white border-b dark:bg-zinc-950 dark:border-zinc-800" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1200px] mx-auto px-6">
+    <div class="flex items-center justify-between h-16">
+      <a href="home.html" class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+        <span class="font-bold text-[16px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+      </a>
+      <div class="flex items-center gap-2">
+        <button type="button" class="cp-theme-btn" data-theme-toggle aria-label="Toggle color mode">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <button type="button" class="cp-theme-btn lg:hidden" data-mobile-nav-open aria-label="Open menu">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <a href="login.html" class="btn btn-outline text-[13px]" style="padding: 7px 14px;">Sign in again</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="min-h-[calc(100vh-64px)] flex items-center justify-center py-12 px-6">
+  <div class="max-w-md w-full text-center">
+
+    <div class="card p-10">
+      <!-- Success icon with countdown -->
+      <div class="relative w-20 h-20 mx-auto mb-6">
+        <svg class="absolute inset-0 w-full h-full">
+          <circle cx="40" cy="40" r="36" fill="none" stroke="hsl(var(--border))" stroke-width="3"/>
+          <circle class="countdown-ring" cx="40" cy="40" r="36" fill="none" stroke="hsl(var(--primary))" stroke-width="3" stroke-dasharray="226.2" stroke-dashoffset="0" stroke-linecap="round"/>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <h1 class="font-display text-[28px] font-bold tracking-tight mb-2">You've been signed out</h1>
+      <p class="text-[14px] text-zinc-500 mb-7">Thanks for stopping by, Sarah. See you next time.</p>
+
+      <!-- Countdown text -->
+      <div class="text-[12.5px] text-zinc-500 mb-6 flex items-center justify-center gap-1.5">
+        <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Redirecting to home in <span class="font-semibold text-zinc-900" id="countdown">5</span> seconds
+      </div>
+
+      <!-- Actions -->
+      <div class="space-y-2.5">
+        <a href="login.html" class="btn btn-primary w-full">
+          Sign in again
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="home.html" class="btn btn-outline w-full">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Return to homepage
+        </a>
+      </div>
+    </div>
+
+    <!-- Security tip -->
+    <div class="mt-6 p-4 rounded-md bg-zinc-50 border border-zinc-200 text-left">
+      <div class="flex items-start gap-2.5">
+        <svg class="icon-sm mt-0.5 text-zinc-500 flex-shrink-0" viewBox="0 0 24 24"><path d="M12 22s8-4 8-12V5l-8-3-8 3v5c0 8 8 12 8 12z"/></svg>
+        <div class="text-[12.5px] text-zinc-600 leading-relaxed">
+          <strong class="text-zinc-900">Using a shared computer?</strong> For extra security, close all browser windows to fully clear your session.
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="mt-6 text-center">
+      <div class="text-[12.5px] text-zinc-500 mb-2">How was your experience?</div>
+      <div class="flex items-center justify-center gap-1.5">
+        <button class="w-9 h-9 rounded-md border border-zinc-200 bg-white hover:bg-zinc-50 flex items-center justify-center text-[18px]" title="Terrible">☹</button>
+        <button class="w-9 h-9 rounded-md border border-zinc-200 bg-white hover:bg-zinc-50 flex items-center justify-center text-[18px]" title="Poor">😐</button>
+        <button class="w-9 h-9 rounded-md border border-zinc-200 bg-white hover:bg-zinc-50 flex items-center justify-center text-[18px]" title="Okay">🙂</button>
+        <button class="w-9 h-9 rounded-md border border-zinc-200 bg-white hover:bg-zinc-50 flex items-center justify-center text-[18px]" title="Good">😃</button>
+        <button class="w-9 h-9 rounded-md border border-zinc-200 bg-white hover:bg-zinc-50 flex items-center justify-center text-[18px]" title="Amazing">🤩</button>
+      </div>
+    </div>
+
+    <div class="mt-8 text-[11.5px] text-zinc-400">
+      Questions? <a href="mailto:hello@controlp.io" class="hover:text-zinc-900 underline">hello@controlp.io</a> · <a href="tel:+14809999906" class="hover:text-zinc-900 underline">(480) 999-9906</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  let seconds = 5;
+  const el = document.getElementById('countdown');
+  const tick = setInterval(() => {
+    seconds--;
+    if (el) el.textContent = seconds;
+    if (seconds <= 0) clearInterval(tick);
+  }, 1000);
+</script>
+<script src="assets/site.js" defer></script>
+</body>
+</html>

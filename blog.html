@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem('cp-theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.remove('dark');else if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark');}catch(e){}</script>
+<title>The 7 Deadly Sins of Banner Design — controlp.io</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'};</script>
+<link rel="stylesheet" href="assets/site.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --background: 0 0% 100%; --foreground: 240 10% 3.9%; --card: 0 0% 100%; --muted: 240 4.8% 95.9%; --border: 240 5.9% 90%; --primary: 240 5.9% 10%; --radius: 0.625rem; }
+  * { font-family: 'Inter', system-ui, sans-serif; }
+  body { background: hsl(var(--background)); color: hsl(var(--foreground)); transition: background-color 0.2s ease, color 0.2s ease; }
+  .font-display { font-family: 'Geist', 'Inter', system-ui, sans-serif; letter-spacing: -0.02em; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: calc(var(--radius) - 2px); font-size: 14px; font-weight: 500; transition: all 0.15s; cursor: pointer; }
+  .btn-primary { background: hsl(var(--primary)); color: white; padding: 10px 20px; }
+  .btn-outline { border: 1px solid hsl(var(--border)); padding: 10px 20px; }
+  .btn-outline:hover { background: hsl(var(--muted)); }
+  .btn-ghost { padding: 8px 12px; }
+  .btn-ghost:hover { background: hsl(var(--muted)); }
+  .btn-sm { padding: 6px 12px; font-size: 12.5px; }
+  .card { background: white; border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
+  .card-hover:hover { border-color: hsl(240 5.9% 65%); transform: translateY(-2px); box-shadow: 0 10px 30px -12px rgba(0,0,0,0.08); transition: all 0.2s; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500; }
+  svg.icon { width: 16px; height: 16px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-sm { width: 14px; height: 14px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-lg { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+  .post-img { aspect-ratio: 16/9; background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; display: flex; align-items: center; justify-content: center; }
+
+  /* Prose */
+  .prose { font-size: 17px; line-height: 1.75; color: #27272a; }
+  .prose > * + * { margin-top: 1.25em; }
+  .prose h2 { font-family: 'Geist', sans-serif; letter-spacing: -0.02em; font-size: 30px; font-weight: 700; line-height: 1.2; margin-top: 2.2em; margin-bottom: 0.4em; color: #09090b; }
+  .prose h3 { font-family: 'Geist', sans-serif; letter-spacing: -0.015em; font-size: 22px; font-weight: 700; line-height: 1.3; margin-top: 1.8em; margin-bottom: 0.3em; color: #09090b; }
+  .prose p { color: #3f3f46; }
+  .prose a { color: #09090b; text-decoration: underline; text-decoration-color: #d4d4d8; text-underline-offset: 3px; }
+  .prose a:hover { text-decoration-color: #09090b; }
+  .prose strong { color: #09090b; font-weight: 600; }
+  .prose blockquote { border-left: 3px solid #09090b; padding: 12px 0 12px 24px; margin: 1.8em 0; font-style: italic; color: #52525b; font-size: 18px; }
+  .prose ul, .prose ol { margin-left: 22px; }
+  .prose ul { list-style: disc; }
+  .prose ol { list-style: decimal; }
+  .prose li + li { margin-top: 0.5em; }
+  .prose li { padding-left: 4px; }
+  .prose code { background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-size: 14px; font-family: monospace; }
+  .prose figure { margin: 2em 0; }
+  .prose figcaption { font-size: 13px; color: #71717a; text-align: center; margin-top: 8px; font-style: italic; }
+  .pullquote { border-top: 1px solid hsl(var(--border)); border-bottom: 1px solid hsl(var(--border)); padding: 24px 0; margin: 2em 0; font-family: 'Geist', sans-serif; font-size: 24px; line-height: 1.4; letter-spacing: -0.015em; color: #09090b; text-align: center; }
+</style>
+</head>
+<body>
+
+<header class="site-header sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b dark:border-zinc-800 dark:bg-zinc-950/90" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1400px] mx-auto px-6">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center gap-6 lg:gap-8 min-w-0">
+        <a href="home.html" class="flex items-center gap-2 shrink-0">
+          <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+          <span class="font-bold text-[16px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+        </a>
+        <nav class="hidden lg:flex items-center gap-1 text-[14px]">
+          <div class="dropdown">
+            <button type="button" class="btn btn-ghost flex items-center gap-1">Shop <svg class="icon-sm" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="dropdown-menu card p-2 w-[560px] grid grid-cols-2 gap-1 shadow-xl">
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Large Format Prints</div><div class="text-[12px] text-zinc-500">Banners, posters, displays</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 7h14l-2 4h-12z"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Signs</div><div class="text-[12px] text-zinc-500">Standard &amp; custom signage</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M5 17h14"/><path d="M3 17l2-7c.3-1 1.2-2 2.3-2h9.4c1.1 0 2 1 2.3 2l2 7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Vehicle Wraps</div><div class="text-[12px] text-zinc-500">Full wraps, spot graphics, tint</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Business Cards</div><div class="text-[12px] text-zinc-500">Standard, die-cut, premium</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M20.4 3.5L16 2a4 4 0 01-8 0L3.6 3.5a2 2 0 00-1.3 2.2l.6 3.5a1 1 0 001 .8H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.1a1 1 0 001-.8l.5-3.5a2 2 0 00-1.3-2.2z"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Custom Merch</div><div class="text-[12px] text-zinc-500">Shirts, hats, mugs, bags</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22V15"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Flags &amp; Displays</div><div class="text-[12px] text-zinc-500">Pole, feather, teardrop, tents</div></div>
+              </a>
+            </div>
+          </div>
+          <a href="shop.html" class="btn btn-ghost">Deals</a>
+          <div class="dropdown">
+            <button type="button" class="btn btn-ghost flex items-center gap-1">Discover <svg class="icon-sm" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="dropdown-menu card p-2 w-[635px] grid grid-cols-3 gap-1 shadow-xl">
+              <div>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 px-3 pt-2 pb-1">Resources</div>
+                <a href="templates.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Templates</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Designed for quick edits</div></div>
+                </a>
+                <a href="resources.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Resources</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Prep guides & downloads</div></div>
+                </a>
+                <a href="blog.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Blog</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Trends, tips, and stories</div></div>
+                </a>
+              </div>
+              <div>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 px-3 pt-2 pb-1">Company</div>
+                <a href="about.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">About</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Learn about our company</div></div>
+                </a>
+                <a href="#team" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Team</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Meet our talented team</div></div>
+                </a>
+                <a href="#mission" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Mission</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Our values and vision</div></div>
+                </a>
+              </div>
+              <div>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 px-3 pt-2 pb-1">Support</div>
+                <a href="contact.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M18 3a3 3 0 00-3 3v12a3 3 0 003 3 3 3 0 003-3 3 3 0 00-3-3H6a3 3 0 00-3 3 3 3 0 003 3h12a3 3 0 003-3V6a3 3 0 00-3-3z"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Services</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">What we offer</div></div>
+                </a>
+                <a href="faq.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Support</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Help and guidance</div></div>
+                </a>
+                <a href="contact.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Contact</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Talk with our team</div></div>
+                </a>
+              </div>
+            </div>
+          </div>
+          <a href="faq.html" class="btn btn-ghost">FAQ</a>
+          <a href="contact.html" class="btn btn-ghost">Contact</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button type="button" class="cp-theme-btn" data-theme-toggle aria-label="Toggle color mode">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <a href="cart.html" class="btn btn-ghost p-2 relative hidden sm:inline-flex" aria-label="Cart">
+          <svg class="icon-lg" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+          <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-zinc-900 text-white text-[10px] font-semibold flex items-center justify-center dark:bg-zinc-100 dark:text-zinc-900">2</span>
+        </a>
+        <a href="login.html" class="btn btn-outline hidden sm:inline-flex">Sign in</a>
+        <a href="contact.html" class="btn btn-primary">Get a quote</a>
+        <button type="button" class="lg:hidden btn btn-ghost p-2 -mr-1" data-mobile-nav-open aria-label="Open menu">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Breadcrumb -->
+<div class="max-w-[1200px] mx-auto px-6 pt-6">
+  <div class="flex items-center gap-2 text-[12.5px] text-zinc-500">
+    <a href="home.html" class="hover:text-zinc-900">Home</a>
+    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    <a href="blog.html" class="hover:text-zinc-900">Blog</a>
+    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    <a href="blog.html" class="hover:text-zinc-900">Design tips</a>
+  </div>
+</div>
+
+<!-- Article layout -->
+<article class="py-10">
+  <div class="max-w-[1200px] mx-auto px-6">
+    <div class="grid lg:grid-cols-[1fr_240px] gap-10">
+
+      <!-- Main article -->
+      <div>
+        <!-- Header -->
+        <header class="mb-8 max-w-[720px]">
+          <span class="badge bg-zinc-900 text-white mb-4">Design tips</span>
+          <h1 class="font-display text-[44px] font-bold tracking-tight leading-[1.1] mb-5">The 7 deadly sins of banner design (and how to avoid every one)</h1>
+          <p class="text-[18px] text-zinc-600 leading-relaxed mb-6">Seventy percent of the banner artwork that lands in our pre-press queue has at least one of these seven problems. Fix them and your print comes out looking 10× better — every time.</p>
+          <div class="flex items-center justify-between flex-wrap gap-4 pb-6 border-b" style="border-color: hsl(var(--border));">
+            <div class="flex items-center gap-3">
+              <div class="avatar bg-emerald-500">SM</div>
+              <div>
+                <div class="text-[14px] font-semibold">Sofia Mendes</div>
+                <div class="text-[12px] text-zinc-500">Lead Designer · April 14, 2026 · 8 min read</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button class="btn btn-outline btn-sm">
+                <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 000-7.8z"/></svg>
+                Save
+              </button>
+              <button class="btn btn-outline btn-sm">
+                <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                Share
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- Hero image -->
+        <div class="post-img rounded-xl overflow-hidden mb-10">
+          <svg width="140" height="140" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.8" fill="none" stroke-linecap="round" stroke-linejoin="round" class="opacity-60"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M7 10h10M7 14h6"/></svg>
+        </div>
+
+        <!-- Article body -->
+        <div class="prose max-w-[720px]">
+          <p>We've printed more than 40,000 banners at controlp.io. Every single one crossed a pre-press desk where our team spent anywhere from 30 seconds to 30 minutes fixing files before they went to press.</p>
+          <p>After a while you notice patterns. The same handful of mistakes appear over and over, across industries, across skill levels, across every price point. Here are the seven we see most — and exactly how to avoid them in your own work.</p>
+
+          <h2>Sin 1: Tiny text on a big banner</h2>
+          <p>The single most common mistake we see is text that's technically legible at 300 DPI but would be impossible to read from the distance a banner is actually viewed from.</p>
+          <p>A rule of thumb: every 10 feet of viewing distance needs about 1 inch of letter height. A banner viewed from 50 feet away needs letters at least 5 inches tall. If you can't fit that much text at that size, <strong>cut text until you can</strong>. Don't shrink it.</p>
+
+          <figure>
+            <div class="rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-blue-200 aspect-[16/9] flex items-center justify-center">
+              <svg width="100" height="100" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" fill="none" class="opacity-40 text-blue-900"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M7 10h10M7 14h6"/></svg>
+            </div>
+            <figcaption>A clean hierarchy — one dominant message, one supporting, minimal body text.</figcaption>
+          </figure>
+
+          <h2>Sin 2: Forgetting bleed</h2>
+          <p>If your design ends exactly at the trim line with no extra art bleeding past, a printer will either: (a) show a white sliver on the finished edge where the cut missed by 1mm, or (b) force a reprint.</p>
+          <p>We require 0.5" of bleed on all banner artwork. This means your background should extend 0.5" past the final size on every side. Our banner templates have this built in — <a href="#">download them here</a>.</p>
+
+          <h2>Sin 3: Using RGB color</h2>
+          <p>Your computer monitor displays RGB. Our presses print CMYK. The two color spaces don't map perfectly, and if you send an RGB file, something has to convert it — either your software or our RIP. Either way, you've lost control over how your colors look.</p>
+          <p>Convert to CMYK before export. If your design has specific brand colors that must match exactly, <strong>include Pantone references in your order notes</strong> and we'll adjust to hit them.</p>
+
+          <div class="pullquote">
+            "A banner viewed from 50 feet away needs letters at least 5 inches tall. If you can't fit that much text at that size, cut text until you can."
+          </div>
+
+          <h2>Sin 4: Low-resolution images</h2>
+          <p>A logo that looks crisp on your 13" laptop screen at actual size can be a pixelated mess when scaled up to 6 feet across. Every image in your banner art should be at least 150 DPI at the <em>final output size</em>.</p>
+          <p>That 300 DPI photo from your phone? Great at 4×6 inches. Questionable at 2×3 feet. Bad at 6×10 feet. Work backward from your banner size.</p>
+
+          <h2>Sin 5: Unoutlined fonts</h2>
+          <p>If you send an AI or PSD file with live text, we may not have the exact font you used. Some fonts substitute silently. Others break. <strong>Always outline your fonts before exporting for print</strong> (in Illustrator: Type → Create Outlines).</p>
+          <p>If you're exporting a PDF, make sure fonts are embedded (most applications do this by default, but it's worth checking).</p>
+
+          <h2>Sin 6: Too many focal points</h2>
+          <p>A banner has roughly 2 seconds to make its point to a moving audience. Every element competing for attention costs you part of that 2 seconds. The worst banners have five or six equal-weight elements and no clear "this is the thing I want you to remember."</p>
+          <p>The best banners have one dominant message, one supporting message, and minimal other elements. That's it. Pick one thing.</p>
+
+          <h2>Sin 7: Not leaving a safe zone</h2>
+          <p>Grommets, hems, and pole pockets all consume edge real estate. If your critical text or logo sits within 2 inches of the edge, it may get hidden by a grommet or folded into a hem.</p>
+          <p>Keep important content 2 inches inside the trim on all sides. Decorative elements can go right to the bleed. Critical stuff — text, logos, call-to-action — stays inside the safe zone.</p>
+
+          <h2>The short version</h2>
+          <p>Before you upload your next banner design, run through this checklist:</p>
+          <ul>
+            <li><strong>Text is large enough to read from typical viewing distance</strong> (1 inch of height per 10 feet)</li>
+            <li><strong>0.5" bleed on all four sides</strong></li>
+            <li><strong>CMYK color mode</strong></li>
+            <li><strong>All images 150 DPI+ at output size</strong></li>
+            <li><strong>All fonts outlined or embedded</strong></li>
+            <li><strong>One dominant focal point</strong></li>
+            <li><strong>2" safe zone inside the trim</strong></li>
+          </ul>
+          <p>Seven rules. Follow them and your banners will print clean, read clearly, and do their job. Break them and you'll either pay to reprint or cringe every time you drive past your own sign.</p>
+          <p>Questions about your specific project? <a href="#">Reach out</a> — happy to look at your files before you order.</p>
+        </div>
+
+        <!-- Tags -->
+        <div class="mt-10 pt-6 border-t flex items-center gap-2 flex-wrap" style="border-color: hsl(var(--border));">
+          <span class="text-[12px] text-zinc-500 mr-2">Tagged:</span>
+          <span class="badge bg-zinc-100 text-zinc-700">Design tips</span>
+          <span class="badge bg-zinc-100 text-zinc-700">Banners</span>
+          <span class="badge bg-zinc-100 text-zinc-700">File prep</span>
+          <span class="badge bg-zinc-100 text-zinc-700">Best practices</span>
+        </div>
+
+        <!-- Author card -->
+        <div class="mt-8 card p-6 flex items-start gap-4 bg-zinc-50 border-zinc-200">
+          <div class="avatar bg-emerald-500" style="width:56px; height:56px; font-size:18px;">SM</div>
+          <div class="flex-1">
+            <div class="font-semibold text-[16px]">Sofia Mendes</div>
+            <div class="text-[12.5px] text-zinc-500 mb-2">Lead Designer · controlp.io</div>
+            <p class="text-[13.5px] text-zinc-600 leading-relaxed">Sofia has 15 years of print and brand design experience. She's worked with everyone from local bakeries to national franchises and runs all in-house design at controlp.io.</p>
+            <a href="#" class="text-[13px] font-medium hover:underline mt-2 inline-block">See all articles by Sofia →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <aside>
+        <div class="sticky top-24 space-y-5">
+          <div>
+            <h3 class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold mb-3">In this article</h3>
+            <nav class="space-y-2 text-[13px]">
+              <a href="#" class="block py-1.5 pl-3 border-l-2 border-zinc-900 font-medium text-zinc-900">Sin 1: Tiny text</a>
+              <a href="#" class="block py-1.5 pl-3 border-l-2 border-transparent text-zinc-500 hover:text-zinc-900">Sin 2: Forgetting bleed</a>
+              <a href="#" class="block py-1.5 pl-3 border-l-2 border-transparent text-zinc-500 hover:text-zinc-900">Sin 3: Using RGB color</a>
+              <a href="#" class="block py-1.5 pl-3 border-l-2 border-transparent text-zinc-500 hover:text-zinc-900">Sin 4: Low-res images</a>
+              <a href="#" class="block py-1.5 pl-3 border-l-2 border-transparent text-zinc-500 hover:text-zinc-900">Sin 5: Unoutlined fonts</a>
+              <a href="#" class="block py-1.5 pl-3 border-l-2 border-transparent text-zinc-500 hover:text-zinc-900">Sin 6: Too many focal points</a>
+              <a href="#" class="block py-1.5 pl-3 border-l-2 border-transparent text-zinc-500 hover:text-zinc-900">Sin 7: No safe zone</a>
+              <a href="#" class="block py-1.5 pl-3 border-l-2 border-transparent text-zinc-500 hover:text-zinc-900">The short version</a>
+            </nav>
+          </div>
+
+          <div class="card p-5 bg-zinc-900 text-white border-zinc-900">
+            <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">Free resource</div>
+            <h4 class="font-semibold text-[15px] mb-2">Banner design templates</h4>
+            <p class="text-[12.5px] text-zinc-300 leading-relaxed mb-4">Pre-sized templates with bleed and safe zones for every banner size we print.</p>
+            <a href="#" class="btn btn-sm bg-white text-zinc-900 hover:bg-zinc-100 w-full">Download templates</a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</article>
+
+<!-- Related Posts -->
+<section class="py-16 border-t bg-zinc-50" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1200px] mx-auto px-6">
+    <h2 class="font-display text-[28px] font-bold tracking-tight mb-8">Keep reading</h2>
+    <div class="grid md:grid-cols-3 gap-5">
+      <article class="card card-hover overflow-hidden cursor-pointer bg-white">
+        <div class="post-img" style="background: linear-gradient(135deg, #dbeafe, #93c5fd); color: #1e40af;">
+          <svg width="60" height="60" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2" fill="none" class="opacity-60"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        </div>
+        <div class="p-5">
+          <span class="badge bg-pink-50 text-pink-700 mb-2">Design tips</span>
+          <h3 class="font-display text-[17px] font-bold tracking-tight leading-tight mb-2">Business card design: the 2-second rule</h3>
+          <div class="text-[12px] text-zinc-500">Sofia Mendes · 6 min · Apr 8</div>
+        </div>
+      </article>
+      <article class="card card-hover overflow-hidden cursor-pointer bg-white">
+        <div class="post-img" style="background: linear-gradient(135deg, #ede9fe, #c4b5fd); color: #5b21b6;">
+          <svg width="60" height="60" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2" fill="none" class="opacity-60"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="p-5">
+          <span class="badge bg-purple-50 text-purple-700 mb-2">File prep</span>
+          <h3 class="font-display text-[17px] font-bold tracking-tight leading-tight mb-2">CMYK vs RGB: what's the deal?</h3>
+          <div class="text-[12px] text-zinc-500">Sofia Mendes · 4 min · Mar 28</div>
+        </div>
+      </article>
+      <article class="card card-hover overflow-hidden cursor-pointer bg-white">
+        <div class="post-img" style="background: linear-gradient(135deg, #dcfce7, #86efac); color: #166534;">
+          <svg width="60" height="60" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2" fill="none" class="opacity-60"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        </div>
+        <div class="p-5">
+          <span class="badge bg-emerald-50 text-emerald-700 mb-2">Materials</span>
+          <h3 class="font-display text-[17px] font-bold tracking-tight leading-tight mb-2">Choosing between 13oz, 15oz, and 18oz vinyl</h3>
+          <div class="text-[12px] text-zinc-500">Jeremy Waters · 5 min · Apr 2</div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t pt-10 pb-6 bg-zinc-50" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+      <span class="font-bold text-[15px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+    </div>
+    <div class="text-[12.5px] text-zinc-500">© 2026 controlp.io · Chandler, Arizona · (480) 999-9906</div>
+  </div>
+</footer>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

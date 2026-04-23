@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem('cp-theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.remove('dark');else if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark');}catch(e){}</script>
+<title>Order confirmed — controlp.io</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'};</script>
+<link rel="stylesheet" href="assets/site.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --background: 0 0% 100%; --foreground: 240 10% 3.9%; --muted: 240 4.8% 95.9%; --border: 240 5.9% 90%; --primary: 240 5.9% 10%; --radius: 0.625rem; }
+  * { font-family: 'Inter', system-ui, sans-serif; }
+  body { background: hsl(240 4.8% 98%); color: hsl(var(--foreground)); }
+  .font-display { font-family: 'Geist', 'Inter', system-ui, sans-serif; letter-spacing: -0.02em; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: calc(var(--radius) - 2px); font-size: 14px; font-weight: 500; transition: all 0.15s; cursor: pointer; }
+  .btn-primary { background: hsl(var(--primary)); color: white; padding: 11px 22px; }
+  .btn-primary:hover { background: hsl(240 5.9% 18%); }
+  .btn-outline { border: 1px solid hsl(var(--border)); padding: 10px 20px; background: white; }
+  .btn-outline:hover { background: hsl(var(--muted)); }
+  .btn-sm { padding: 6px 12px; font-size: 12.5px; }
+  .card { background: white; border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
+  svg.icon { width: 16px; height: 16px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-sm { width: 14px; height: 14px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-lg { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .product-img { background: linear-gradient(135deg, hsl(240 4.8% 95.9%) 0%, hsl(240 4.8% 98%) 100%); color: hsl(240 3.8% 60%); }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500; }
+
+  /* Timeline */
+  .timeline-step { display: flex; gap: 16px; position: relative; padding-bottom: 20px; }
+  .timeline-step:not(:last-child)::before { content: ''; position: absolute; left: 14px; top: 32px; bottom: 0; width: 2px; background: hsl(var(--border)); }
+  .timeline-step.done:not(:last-child)::before { background: hsl(var(--primary)); }
+  .timeline-dot { width: 30px; height: 30px; border-radius: 50%; background: white; border: 2px solid hsl(var(--border)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: hsl(240 3.8% 60%); z-index: 1; }
+  .timeline-step.done .timeline-dot { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: white; }
+  .timeline-step.active .timeline-dot { background: white; border-color: hsl(var(--primary)); color: hsl(var(--primary)); box-shadow: 0 0 0 4px rgba(0,0,0,0.08); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="site-header bg-white border-b dark:bg-zinc-950 dark:border-zinc-800" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1000px] mx-auto px-6">
+    <div class="flex items-center justify-between h-16">
+      <a href="home.html" class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+        <span class="font-bold text-[16px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+      </a>
+      <div class="flex items-center gap-2">
+        <button type="button" class="cp-theme-btn" data-theme-toggle aria-label="Toggle color mode">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <button type="button" class="cp-theme-btn lg:hidden" data-mobile-nav-open aria-label="Open menu">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <a href="dashboard.html" class="btn btn-outline btn-sm">My account</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="py-12">
+  <div class="max-w-[800px] mx-auto px-6">
+
+    <!-- Success header -->
+    <div class="text-center mb-10">
+      <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-5">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <div class="text-[11.5px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">Order confirmed</div>
+      <h1 class="font-display text-[38px] font-bold tracking-tight mb-3">Thanks, Sarah. We're on it.</h1>
+      <p class="text-[15px] text-zinc-600 max-w-md mx-auto">Your order <span class="font-semibold text-zinc-900">#CP-28432</span> is confirmed. A receipt is on its way to <span class="font-semibold">sarah@brightmark.co</span>.</p>
+    </div>
+
+    <!-- Order at a glance -->
+    <div class="card p-6 mb-5">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
+        <div>
+          <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Order number</div>
+          <div class="font-semibold text-[14px] mt-1 font-mono">#CP-28432</div>
+        </div>
+        <div>
+          <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Order date</div>
+          <div class="font-semibold text-[14px] mt-1">Apr 17, 2026</div>
+        </div>
+        <div>
+          <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Total</div>
+          <div class="font-semibold text-[14px] mt-1">$540.75</div>
+        </div>
+        <div>
+          <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Estimated delivery</div>
+          <div class="font-semibold text-[14px] mt-1">Tue, Apr 21</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Artwork reminder (conditional-looking) -->
+    <div class="card p-5 mb-5 border-amber-300 bg-amber-50">
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-md bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        </div>
+        <div class="flex-1">
+          <div class="font-semibold text-[14.5px] text-amber-900">1 item needs artwork</div>
+          <p class="text-[13px] text-amber-800 mt-0.5 mb-3">Your <strong>Premium Foil Cards</strong> order is pending artwork. Upload within 24 hours to keep your rush production on schedule.</p>
+          <button class="btn btn-sm bg-amber-900 text-white hover:bg-amber-950">Upload artwork now</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- What happens next (timeline) -->
+    <div class="card p-6 mb-5">
+      <h2 class="font-display text-[20px] font-bold tracking-tight mb-5">What happens next</h2>
+
+      <div class="timeline-step done">
+        <div class="timeline-dot">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <div class="flex-1 -mt-0.5">
+          <div class="flex items-center justify-between gap-4">
+            <div class="font-semibold text-[14px]">Order placed</div>
+            <div class="text-[12px] text-zinc-500">Just now</div>
+          </div>
+          <div class="text-[13px] text-zinc-600 mt-0.5">Payment confirmed. Receipt emailed.</div>
+        </div>
+      </div>
+
+      <div class="timeline-step active">
+        <div class="timeline-dot">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="flex-1 -mt-0.5">
+          <div class="flex items-center justify-between gap-4">
+            <div class="font-semibold text-[14px]">Digital proof ready</div>
+            <div class="text-[12px] text-zinc-500">Within 4 business hours</div>
+          </div>
+          <div class="text-[13px] text-zinc-600 mt-0.5">We'll email and text you a proof to review and approve before we print.</div>
+        </div>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-dot">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        </div>
+        <div class="flex-1 -mt-0.5">
+          <div class="flex items-center justify-between gap-4">
+            <div class="font-semibold text-[14px]">In production</div>
+            <div class="text-[12px] text-zinc-500">1–2 business days</div>
+          </div>
+          <div class="text-[13px] text-zinc-600 mt-0.5">After approval, we'll print, finish, and QC your order.</div>
+        </div>
+      </div>
+
+      <div class="timeline-step">
+        <div class="timeline-dot">
+          <svg class="icon-sm" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        </div>
+        <div class="flex-1 -mt-0.5">
+          <div class="flex items-center justify-between gap-4">
+            <div class="font-semibold text-[14px]">Shipped</div>
+            <div class="text-[12px] text-zinc-500">Tracking link by text + email</div>
+          </div>
+          <div class="text-[13px] text-zinc-600 mt-0.5">Estimated arrival <strong>Tue, Apr 21</strong> via UPS Ground.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Summary -->
+    <div class="card p-6 mb-5">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="font-display text-[20px] font-bold tracking-tight">Order summary</h2>
+        <button class="btn btn-outline btn-sm">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Receipt PDF
+        </button>
+      </div>
+
+      <!-- Items -->
+      <div class="space-y-4 pb-5 mb-5 border-b" style="border-color: hsl(var(--border));">
+        <div class="flex gap-3">
+          <div class="w-14 h-14 rounded-md product-img flex items-center justify-center flex-shrink-0 relative">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M7 10h10M7 14h6"/></svg>
+            <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 text-white text-[10px] font-semibold flex items-center justify-center">2</div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-semibold text-[14px]">Vinyl Banner · 3×6 ft</div>
+              <div class="font-semibold text-[14px]">$108.00</div>
+            </div>
+            <div class="text-[12px] text-zinc-500">13oz Gloss · Grommets · Hemming · Standard</div>
+            <div class="flex items-center gap-1 text-emerald-600 text-[11.5px] mt-1"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Artwork uploaded</div>
+          </div>
+        </div>
+
+        <div class="flex gap-3">
+          <div class="w-14 h-14 rounded-md product-img flex items-center justify-center flex-shrink-0 relative">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 text-white text-[10px] font-semibold flex items-center justify-center">5</div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-semibold text-[14px]">Premium 16pt Foil Cards · 500</div>
+              <div class="font-semibold text-[14px]">$340.00</div>
+            </div>
+            <div class="text-[12px] text-zinc-500">Gold foil · Double-sided · Rounded corners · Rush</div>
+            <div class="flex items-center gap-1 text-amber-600 text-[11.5px] mt-1"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>Artwork pending</div>
+          </div>
+        </div>
+
+        <div class="flex gap-3">
+          <div class="w-14 h-14 rounded-md product-img flex items-center justify-center flex-shrink-0 relative">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M3 20h18"/><path d="M12 3L3 20M12 3l9 17"/></svg>
+            <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 text-white text-[10px] font-semibold flex items-center justify-center">1</div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-semibold text-[14px]">Standard A-Frame Sign</div>
+              <div class="font-semibold text-[14px]">$89.00</div>
+            </div>
+            <div class="text-[12px] text-zinc-500">24×36 · Black frame · Double-sided inserts</div>
+            <div class="flex items-center gap-1 text-blue-600 text-[11.5px] mt-1"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8"/></svg>Design service · Sofia will contact you</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Totals -->
+      <div class="space-y-2 text-[13.5px] mb-4">
+        <div class="flex justify-between"><span class="text-zinc-600">Subtotal</span><span>$537.00</span></div>
+        <div class="flex justify-between"><span class="text-zinc-600">Rush production</span><span>$15.00</span></div>
+        <div class="flex justify-between text-emerald-700"><span>Promo WELCOME10</span><span>−$53.70</span></div>
+        <div class="flex justify-between"><span class="text-zinc-600">Shipping</span><span class="text-emerald-700 font-medium">Free</span></div>
+        <div class="flex justify-between"><span class="text-zinc-600">AZ tax</span><span>$42.45</span></div>
+      </div>
+      <div class="flex justify-between items-baseline pt-4 border-t font-display" style="border-color: hsl(var(--border));">
+        <span class="font-semibold text-[15px]">Total paid</span>
+        <span class="text-[24px] font-bold">$540.75</span>
+      </div>
+
+      <!-- Addresses -->
+      <div class="grid md:grid-cols-2 gap-4 mt-6 pt-6 border-t" style="border-color: hsl(var(--border));">
+        <div>
+          <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">Shipping to</div>
+          <div class="text-[13px] leading-relaxed">
+            Sarah Johnson<br/>
+            BrightMark Co<br/>
+            2450 W Chandler Blvd<br/>
+            Chandler, AZ 85226
+          </div>
+        </div>
+        <div>
+          <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">Payment</div>
+          <div class="text-[13px] leading-relaxed flex items-center gap-2">
+            <div class="w-8 h-5 rounded bg-blue-700 text-white flex items-center justify-center text-[8px] font-bold">VISA</div>
+            Visa ending in 4242
+          </div>
+          <div class="text-[12px] text-zinc-500 mt-1">Charged $540.75 · Apr 17, 2026</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next actions -->
+    <div class="grid md:grid-cols-3 gap-4 mb-5">
+      <a href="dashboard.html" class="card p-5 hover:border-zinc-400 transition">
+        <div class="w-9 h-9 rounded-md bg-zinc-900 text-white flex items-center justify-center mb-3">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <div class="font-semibold text-[14px]">Track this order</div>
+        <div class="text-[12.5px] text-zinc-500 mt-0.5">View status and proof in your dashboard</div>
+      </a>
+      <a href="resources.html" class="card p-5 hover:border-zinc-400 transition">
+        <div class="w-9 h-9 rounded-md bg-zinc-900 text-white flex items-center justify-center mb-3">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="font-semibold text-[14px]">Upload artwork</div>
+        <div class="text-[12.5px] text-zinc-500 mt-0.5">Complete files for pending items</div>
+      </a>
+      <a href="contact.html" class="card p-5 hover:border-zinc-400 transition">
+        <div class="w-9 h-9 rounded-md bg-zinc-900 text-white flex items-center justify-center mb-3">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+        </div>
+        <div class="font-semibold text-[14px]">Need help?</div>
+        <div class="text-[12.5px] text-zinc-500 mt-0.5">Text or call (480) 999-9906</div>
+      </a>
+    </div>
+
+    <!-- CTA to shop -->
+    <div class="card p-6 bg-zinc-900 text-white border-zinc-900 text-center">
+      <div class="text-[11.5px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">Refer & earn</div>
+      <h3 class="font-display text-[20px] font-bold mb-2">Share the love — get $25</h3>
+      <p class="text-[13px] text-zinc-300 max-w-md mx-auto mb-4">Share your referral link. When a friend places their first order, you both get $25 in credit.</p>
+      <button class="btn bg-white text-zinc-900 hover:bg-zinc-100 py-2 px-5 text-[13px]">Copy referral link</button>
+    </div>
+
+    <div class="text-center mt-8">
+      <a href="shop.html" class="text-[13.5px] text-zinc-500 hover:text-zinc-900 font-medium">Continue shopping →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t pt-6 pb-6 mt-8 bg-white dark:bg-zinc-950" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1200px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-[11.5px] text-zinc-500">
+    <div>© 2026 controlp.io · Chandler, Arizona · (480) 999-9906</div>
+    <div class="flex items-center gap-4">
+      <a href="contact.html" class="hover:text-zinc-900">Privacy</a>
+      <a href="contact.html" class="hover:text-zinc-900">Terms</a>
+      <a href="faq.html" class="hover:text-zinc-900">Refund policy</a>
+      <a href="contact.html" class="hover:text-zinc-900">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

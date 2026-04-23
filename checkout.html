@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem('cp-theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.remove('dark');else if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark');}catch(e){}</script>
+<title>Checkout — controlp.io</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'};</script>
+<link rel="stylesheet" href="assets/site.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --background: 0 0% 100%; --foreground: 240 10% 3.9%; --muted: 240 4.8% 95.9%; --border: 240 5.9% 90%; --primary: 240 5.9% 10%; --radius: 0.625rem; }
+  * { font-family: 'Inter', system-ui, sans-serif; }
+  body { background: hsl(240 4.8% 98%); color: hsl(var(--foreground)); }
+  .font-display { font-family: 'Geist', 'Inter', system-ui, sans-serif; letter-spacing: -0.02em; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: calc(var(--radius) - 2px); font-size: 14px; font-weight: 500; transition: all 0.15s; cursor: pointer; }
+  .btn-primary { background: hsl(var(--primary)); color: white; padding: 13px 26px; font-size: 15px; }
+  .btn-primary:hover { background: hsl(240 5.9% 18%); }
+  .btn-outline { border: 1px solid hsl(var(--border)); padding: 9px 18px; background: white; }
+  .btn-outline:hover { background: hsl(var(--muted)); }
+  .btn-ghost { padding: 7px 12px; }
+  .btn-ghost:hover { background: hsl(var(--muted)); }
+  .btn-sm { padding: 6px 12px; font-size: 12.5px; }
+  .card { background: white; border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500; }
+  svg.icon { width: 16px; height: 16px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-sm { width: 14px; height: 14px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-lg { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .input, .select { width: 100%; padding: 10px 12px; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); font-size: 14px; background: white; color: hsl(var(--foreground)); outline: none; font-family: inherit; }
+  .input:focus, .select:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(240 5.9% 10% / 0.08); }
+  .label { font-size: 13px; font-weight: 500; margin-bottom: 6px; display: block; color: #3f3f46; }
+  .product-img { background: linear-gradient(135deg, hsl(240 4.8% 95.9%) 0%, hsl(240 4.8% 98%) 100%); color: hsl(240 3.8% 60%); }
+
+  .step { display: flex; align-items: center; gap: 10px; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; border: 1px solid hsl(var(--border)); background: white; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+  .step.active .step-num { background: hsl(var(--primary)); color: white; border-color: hsl(var(--primary)); }
+  .step.done .step-num { background: hsl(var(--primary)); color: white; border-color: hsl(var(--primary)); }
+  .step-label { font-size: 13.5px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .step.active .step-label, .step.done .step-label { color: hsl(var(--foreground)); }
+  .step-line { flex: 1; height: 1px; background: hsl(var(--border)); margin: 0 4px; max-width: 60px; }
+
+  .radio-card { position: relative; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); padding: 14px 16px; cursor: pointer; transition: all 0.15s; background: white; }
+  .radio-card:hover { border-color: hsl(240 5.9% 65%); }
+  .radio-card.selected { border-color: hsl(var(--primary)); box-shadow: inset 0 0 0 1px hsl(var(--primary)); background: hsl(var(--muted)); }
+  .radio-dot { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid hsl(var(--border)); flex-shrink: 0; position: relative; }
+  .radio-card.selected .radio-dot { border-color: hsl(var(--primary)); }
+  .radio-card.selected .radio-dot::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: hsl(var(--primary)); }
+</style>
+</head>
+<body>
+
+<!-- Simplified header for checkout -->
+<header class="site-header bg-white border-b dark:bg-zinc-950 dark:border-zinc-800" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1200px] mx-auto px-6">
+    <div class="flex items-center justify-between h-16">
+      <a href="home.html" class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+        <span class="font-bold text-[16px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+      </a>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button type="button" class="cp-theme-btn" data-theme-toggle aria-label="Toggle color mode">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <button type="button" class="lg:hidden cp-theme-btn" data-mobile-nav-open aria-label="Open menu">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <a href="cart.html" class="hidden sm:inline-flex text-[13px] font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">Back to cart</a>
+        <div class="hidden md:flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400">
+          <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Secure checkout
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="py-10">
+  <div class="max-w-[1200px] mx-auto px-6">
+
+    <!-- Steps -->
+    <div class="flex items-center justify-center mb-10">
+      <div class="step done">
+        <div class="step-num"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <div class="step-label">Cart</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step active">
+        <div class="step-num">2</div>
+        <div class="step-label">Shipping</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-label">Payment</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-label">Review</div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1fr_380px] gap-8">
+
+      <!-- Main form -->
+      <div class="space-y-5">
+
+        <!-- Contact -->
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-display text-[18px] font-bold tracking-tight">Contact information</h2>
+            <a href="login.html" class="text-[12.5px] font-medium hover:underline">Sign in</a>
+          </div>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="label">Email</label>
+              <input type="email" class="input" value="sarah@brightmark.co"/>
+            </div>
+            <div>
+              <label class="label">Phone</label>
+              <input type="tel" class="input" placeholder="(480) 555-0100"/>
+            </div>
+          </div>
+          <label class="flex items-center gap-2 mt-4 cursor-pointer text-[13px]">
+            <input type="checkbox" checked class="w-4 h-4 accent-zinc-900"/>
+            Text me SMS updates about my order
+          </label>
+        </div>
+
+        <!-- Delivery method -->
+        <div class="card p-6">
+          <h2 class="font-display text-[18px] font-bold tracking-tight mb-4">Delivery method</h2>
+          <div class="grid md:grid-cols-2 gap-3 mb-5">
+            <div class="radio-card selected">
+              <div class="flex items-start gap-3">
+                <div class="radio-dot mt-0.5"></div>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2">
+                    <svg class="icon-sm" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                    <div class="font-semibold text-[14px]">Ship it</div>
+                  </div>
+                  <div class="text-[12px] text-zinc-500 mt-1">Delivered to your address · Free on orders $75+</div>
+                </div>
+              </div>
+            </div>
+            <div class="radio-card">
+              <div class="flex items-start gap-3">
+                <div class="radio-dot mt-0.5"></div>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2">
+                    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                    <div class="font-semibold text-[14px]">Local pickup</div>
+                  </div>
+                  <div class="text-[12px] text-zinc-500 mt-1">Chandler, AZ shop · Free · Same-day before 2pm</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Address fields -->
+          <h3 class="font-semibold text-[13.5px] mb-3">Shipping address</h3>
+          <div class="grid md:grid-cols-2 gap-4 mb-3">
+            <div>
+              <label class="label">First name</label>
+              <input type="text" class="input" value="Sarah"/>
+            </div>
+            <div>
+              <label class="label">Last name</label>
+              <input type="text" class="input" value="Johnson"/>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="label">Company <span class="text-zinc-400 font-normal">(optional)</span></label>
+            <input type="text" class="input" value="BrightMark Co"/>
+          </div>
+          <div class="mb-3">
+            <label class="label">Address</label>
+            <input type="text" class="input" placeholder="Street address" value="2450 W Chandler Blvd"/>
+          </div>
+          <div class="mb-3">
+            <label class="label">Apartment, suite, etc. <span class="text-zinc-400 font-normal">(optional)</span></label>
+            <input type="text" class="input" placeholder="Apt 205"/>
+          </div>
+          <div class="grid md:grid-cols-3 gap-4">
+            <div>
+              <label class="label">City</label>
+              <input type="text" class="input" value="Chandler"/>
+            </div>
+            <div>
+              <label class="label">State</label>
+              <select class="select">
+                <option>Arizona</option>
+                <option>California</option>
+                <option>Nevada</option>
+                <option>Texas</option>
+              </select>
+            </div>
+            <div>
+              <label class="label">ZIP</label>
+              <input type="text" class="input" value="85226"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shipping speed -->
+        <div class="card p-6">
+          <h2 class="font-display text-[18px] font-bold tracking-tight mb-4">Shipping speed</h2>
+          <div class="space-y-2">
+            <div class="radio-card selected flex items-center gap-3">
+              <div class="radio-dot"></div>
+              <div class="flex-1 flex items-center justify-between">
+                <div>
+                  <div class="font-semibold text-[14px]">Standard (3–5 business days)</div>
+                  <div class="text-[12px] text-zinc-500">Delivered Tue, Apr 21 – Thu, Apr 23</div>
+                </div>
+                <div class="text-[14px] font-semibold text-emerald-700">Free</div>
+              </div>
+            </div>
+            <div class="radio-card flex items-center gap-3">
+              <div class="radio-dot"></div>
+              <div class="flex-1 flex items-center justify-between">
+                <div>
+                  <div class="font-semibold text-[14px]">Express (2 business days)</div>
+                  <div class="text-[12px] text-zinc-500">Delivered Mon, Apr 20</div>
+                </div>
+                <div class="text-[14px] font-semibold">$18.00</div>
+              </div>
+            </div>
+            <div class="radio-card flex items-center gap-3">
+              <div class="radio-dot"></div>
+              <div class="flex-1 flex items-center justify-between">
+                <div>
+                  <div class="font-semibold text-[14px]">Overnight</div>
+                  <div class="text-[12px] text-zinc-500">Delivered Fri, Apr 18 by end of day</div>
+                </div>
+                <div class="text-[14px] font-semibold">$42.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment method -->
+        <div class="card p-6">
+          <h2 class="font-display text-[18px] font-bold tracking-tight mb-1">Payment</h2>
+          <p class="text-[12.5px] text-zinc-500 mb-4 flex items-center gap-1.5">
+            <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            All transactions are secure and encrypted
+          </p>
+
+          <div class="space-y-2 mb-5">
+            <div class="radio-card selected">
+              <div class="flex items-center gap-3">
+                <div class="radio-dot"></div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <div class="font-semibold text-[14px]">Credit / debit card</div>
+                    <div class="flex gap-1">
+                      <div class="w-8 h-5 rounded bg-blue-700 text-white flex items-center justify-center text-[8px] font-bold">VISA</div>
+                      <div class="w-8 h-5 rounded bg-red-600 text-white flex items-center justify-center text-[7px] font-bold">MC</div>
+                      <div class="w-8 h-5 rounded bg-blue-500 text-white flex items-center justify-center text-[7px] font-bold">AMEX</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4 space-y-3 ml-7">
+                <div>
+                  <label class="label">Card number</label>
+                  <input type="text" class="input" placeholder="1234 1234 1234 1234"/>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="label">Expiration</label>
+                    <input type="text" class="input" placeholder="MM / YY"/>
+                  </div>
+                  <div>
+                    <label class="label">CVC</label>
+                    <input type="text" class="input" placeholder="3 digits"/>
+                  </div>
+                </div>
+                <div>
+                  <label class="label">Name on card</label>
+                  <input type="text" class="input" placeholder="Full name"/>
+                </div>
+              </div>
+            </div>
+
+            <div class="radio-card flex items-center gap-3">
+              <div class="radio-dot"></div>
+              <div class="flex items-center gap-2">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M12 2c5.5 0 10 4.5 10 10s-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2z"/></svg>
+                <span class="font-semibold text-[14px]">PayPal</span>
+              </div>
+            </div>
+
+            <div class="radio-card flex items-center gap-3">
+              <div class="radio-dot"></div>
+              <div class="flex items-center gap-2">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M12 2v20M2 12h20"/></svg>
+                <span class="font-semibold text-[14px]">Affirm — Pay in 4</span>
+                <span class="text-[11.5px] text-zinc-500">$135.19 × 4 payments</span>
+              </div>
+            </div>
+
+            <div class="radio-card flex items-center gap-3">
+              <div class="radio-dot"></div>
+              <div class="flex items-center gap-2">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>
+                <span class="font-semibold text-[14px]">ACH bank transfer</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Billing -->
+          <label class="flex items-center gap-2 cursor-pointer text-[13px] py-3 border-t" style="border-color: hsl(var(--border));">
+            <input type="checkbox" checked class="w-4 h-4 accent-zinc-900"/>
+            Billing address is the same as shipping
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <a href="#" class="flex items-center gap-2 text-[13.5px] font-medium hover:text-zinc-600">
+            <svg class="icon-sm" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Return to cart
+          </a>
+          <button class="btn btn-primary">
+            Place order · $540.75
+            <svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Order summary -->
+      <aside>
+        <div class="card p-5 sticky top-6">
+          <div class="flex items-center justify-between mb-4 pb-4 border-b" style="border-color: hsl(var(--border));">
+            <h3 class="font-semibold text-[14px]">Order summary</h3>
+            <button class="text-[12px] text-zinc-500 hover:text-zinc-900">Edit cart</button>
+          </div>
+
+          <!-- Items -->
+          <div class="space-y-3 mb-5">
+            <div class="flex gap-3">
+              <div class="w-14 h-14 rounded-md product-img flex items-center justify-center flex-shrink-0 relative">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M7 10h10M7 14h6"/></svg>
+                <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 text-white text-[10px] font-semibold flex items-center justify-center">2</div>
+              </div>
+              <div class="flex-1 min-w-0 text-[12.5px]">
+                <div class="font-semibold truncate">Vinyl Banner · 3×6 ft</div>
+                <div class="text-zinc-500 truncate">13oz · Gloss · Grommets</div>
+                <div class="font-semibold mt-0.5">$108.00</div>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <div class="w-14 h-14 rounded-md product-img flex items-center justify-center flex-shrink-0 relative">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 text-white text-[10px] font-semibold flex items-center justify-center">5</div>
+              </div>
+              <div class="flex-1 min-w-0 text-[12.5px]">
+                <div class="font-semibold truncate">Premium Foil Cards · 500</div>
+                <div class="text-zinc-500 truncate">16pt · Double-sided · Rush</div>
+                <div class="font-semibold mt-0.5">$340.00</div>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <div class="w-14 h-14 rounded-md product-img flex items-center justify-center flex-shrink-0 relative">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M12 3L3 20M12 3l9 17"/></svg>
+                <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 text-white text-[10px] font-semibold flex items-center justify-center">1</div>
+              </div>
+              <div class="flex-1 min-w-0 text-[12.5px]">
+                <div class="font-semibold truncate">A-Frame Sign</div>
+                <div class="text-zinc-500 truncate">Standard + Design service</div>
+                <div class="font-semibold mt-0.5">$89.00</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Promo -->
+          <div class="flex items-center justify-between p-2.5 rounded-md bg-emerald-50 text-[12.5px] mb-4">
+            <span class="flex items-center gap-2 text-emerald-700">
+              <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+              <span class="font-medium">WELCOME10</span> applied
+            </span>
+            <button class="text-emerald-600 hover:text-emerald-800">
+              <svg class="icon-sm" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <!-- Totals -->
+          <div class="space-y-2 text-[13px] pt-4 border-t" style="border-color: hsl(var(--border));">
+            <div class="flex justify-between"><span class="text-zinc-600">Subtotal</span><span>$537.00</span></div>
+            <div class="flex justify-between"><span class="text-zinc-600">Rush production</span><span>$15.00</span></div>
+            <div class="flex justify-between text-emerald-700"><span>Promo (10%)</span><span>−$53.70</span></div>
+            <div class="flex justify-between"><span class="text-zinc-600">Shipping</span><span class="text-emerald-700 font-medium">Free</span></div>
+            <div class="flex justify-between"><span class="text-zinc-600">Est. tax</span><span>$42.45</span></div>
+          </div>
+
+          <div class="flex justify-between items-baseline pt-4 mt-3 border-t" style="border-color: hsl(var(--border));">
+            <span class="font-semibold text-[14px]">Total</span>
+            <span class="font-display text-[22px] font-bold">$540.75</span>
+          </div>
+          <div class="text-[11px] text-zinc-500 mt-1">USD · All taxes included</div>
+
+          <!-- Trust -->
+          <div class="mt-5 pt-4 border-t space-y-2 text-[11.5px] text-zinc-600" style="border-color: hsl(var(--border));">
+            <div class="flex items-center gap-2"><svg class="icon-sm text-emerald-600" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>100% print quality guarantee</div>
+            <div class="flex items-center gap-2"><svg class="icon-sm text-emerald-600" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Free reprints on defects</div>
+            <div class="flex items-center gap-2"><svg class="icon-sm text-emerald-600" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Free proofs before we print</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t pt-6 pb-6 mt-8 bg-white dark:bg-zinc-950" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1200px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-[11.5px] text-zinc-500">
+    <div>© 2026 controlp.io · Chandler, Arizona</div>
+    <div class="flex items-center gap-4">
+      <a href="contact.html" class="hover:text-zinc-900">Privacy</a>
+      <a href="contact.html" class="hover:text-zinc-900">Terms</a>
+      <a href="faq.html" class="hover:text-zinc-900">Refund policy</a>
+      <a href="contact.html" class="hover:text-zinc-900">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

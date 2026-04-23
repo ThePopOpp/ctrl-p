@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — controlp.io</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d12;
+    --panel: #11161d;
+    --panel-2: #151b23;
+    --border: #1f2833;
+    --border-soft: #161c25;
+    --text: #e6edf5;
+    --text-dim: #9aa7b8;
+    --text-dimmer: #6a7586;
+    --accent: #3b82f6;
+    --accent-2: #0ea5e9;
+    --gold: #d4a84b;
+  }
+  * { font-family: 'Inter', system-ui, sans-serif; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-size: 13px; }
+  .font-display { font-family: 'Geist', 'Inter', system-ui, sans-serif; letter-spacing: -0.02em; }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+  .panel-2 { background: var(--panel-2); }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; border-radius: 6px; font-size: 12.5px; font-weight: 500; transition: all 0.15s; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: white; padding: 7px 14px; }
+  .btn-primary:hover { background: hsl(217 91% 55%); }
+  .btn-outline { border: 1px solid var(--border); background: transparent; color: var(--text); padding: 7px 14px; }
+  .btn-outline:hover { background: var(--panel-2); }
+  .btn-ghost { background: transparent; color: var(--text); padding: 6px 10px; }
+  .btn-ghost:hover { background: var(--panel-2); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  svg.icon { width: 16px; height: 16px; stroke-width: 1.8; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-sm { width: 14px; height: 14px; stroke-width: 1.8; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-lg { width: 18px; height: 18px; stroke-width: 1.8; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 500; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+
+  .nav-section { font-size: 10.5px; font-weight: 600; color: var(--text-dimmer); text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 12px 6px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 5px; font-size: 12.5px; color: var(--text-dim); cursor: pointer; transition: all 0.1s; }
+  .nav-item:hover { background: var(--panel-2); color: var(--text); }
+  .nav-item.active { background: var(--panel-2); color: var(--text); }
+  .nav-item.active::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 18px; background: var(--accent); border-radius: 0 2px 2px 0; }
+  .nav-item { position: relative; }
+
+  .kpi-sparkline { height: 36px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dimmer); font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 14px; font-size: 12.5px; border-bottom: 1px solid var(--border-soft); }
+  tr:hover td { background: var(--panel-2); }
+
+  .product-icon { width: 36px; height: 36px; border-radius: 6px; background: var(--panel-2); display: flex; align-items: center; justify-content: center; color: var(--text-dim); }
+
+  /* Bar chart */
+  .bar-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; }
+  .bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 999px; }
+
+  /* Tabs */
+  .tab-list { display: flex; gap: 2px; padding: 2px; background: var(--panel-2); border-radius: 6px; width: fit-content; }
+  .tab-btn { padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500; color: var(--text-dim); cursor: pointer; }
+  .tab-btn.active { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+</style>
+</head>
+<body>
+
+<div class="grid grid-cols-[220px_1fr] min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="border-r px-3 py-4" style="border-color: var(--border);">
+    <!-- Brand -->
+    <a href="home.html" class="flex items-center gap-2 px-2 mb-1 no-underline hover:opacity-90" style="text-decoration: none; color: inherit">
+      <div class="w-7 h-7 rounded-md flex items-center justify-center bg-white text-zinc-900 font-bold text-[12px] font-display">cp</div>
+      <div>
+        <div class="font-bold text-[13px] font-display">controlp.io</div>
+        <div class="text-[10px]" style="color: var(--text-dimmer)">Admin console</div>
+      </div>
+    </a>
+
+    <!-- Search -->
+    <div class="mt-4 mb-2">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer hover:border-[var(--text-dimmer)]" style="border-color: var(--border);">
+        <svg class="icon-sm" style="color: var(--text-dimmer)" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span class="text-[11.5px]" style="color: var(--text-dimmer)">Search...</span>
+        <kbd class="ml-auto text-[9.5px] px-1 py-0.5 rounded border" style="border-color: var(--border); color: var(--text-dimmer)">⌘K</kbd>
+      </div>
+    </div>
+
+    <div class="nav-section">Operations</div>
+    <div class="nav-item active">
+      <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4z"/></svg>
+      Orders <span class="ml-auto badge bg-blue-500/20 text-blue-300">24</span>
+    </div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Production <span class="ml-auto badge bg-amber-500/20 text-amber-300">8</span>
+    </div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      Shipments
+    </div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+      Messages <span class="ml-auto badge bg-red-500/20 text-red-300">3</span>
+    </div>
+
+    <div class="nav-section">Catalog</div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      Products
+    </div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg>
+      Vendors
+    </div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v6"/></svg>
+      Artwork
+    </div>
+
+    <div class="nav-section">Growth</div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analytics
+    </div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Customers
+    </div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M9 9h6v6H9z"/></svg>
+      Marketing
+    </div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 7L10 17l-5-5"/></svg>
+      Reviews
+    </div>
+
+    <div class="nav-section">System</div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 3H3v7h6zM21 3h-6v4h6zM21 11h-6v10h6zM9 14H3v7h6z"/></svg>
+      Integrations
+    </div>
+    <div class="nav-item">
+      <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </div>
+
+    <!-- Bottom user -->
+    <div class="absolute bottom-4 left-3 right-3 p-2 rounded-md panel-2 flex items-center gap-2 cursor-pointer" style="background: var(--panel-2);">
+      <div class="w-7 h-7 rounded-full bg-amber-400 flex items-center justify-center text-[10.5px] font-semibold text-zinc-900">JW</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[12px] font-semibold truncate">Jeremy Waters</div>
+        <div class="text-[10px] truncate" style="color: var(--text-dimmer);">Owner · CTO</div>
+      </div>
+      <svg class="icon-sm" style="color: var(--text-dim);" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="p-6 max-w-[1600px]">
+
+    <!-- Top bar -->
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h1 class="font-display text-[22px] font-bold tracking-tight">Dashboard</h1>
+        <div class="text-[12px]" style="color: var(--text-dim);">Friday, April 17, 2026 · Phoenix, AZ</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="tab-list">
+          <button class="tab-btn">Today</button>
+          <button class="tab-btn active">7d</button>
+          <button class="tab-btn">30d</button>
+          <button class="tab-btn">MTD</button>
+          <button class="tab-btn">YTD</button>
+        </div>
+        <button class="btn btn-outline">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
+        <button class="btn btn-primary">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          New order
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="grid grid-cols-4 gap-4 mb-5">
+      <div class="panel p-4">
+        <div class="flex items-start justify-between mb-2">
+          <div class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--text-dim);">Revenue (7d)</div>
+          <span class="badge bg-emerald-500/10 text-emerald-400">+18.4%</span>
+        </div>
+        <div class="font-display text-[26px] font-bold">$48,284</div>
+        <div class="text-[11px]" style="color: var(--text-dim);">vs $40,782 prev week</div>
+        <svg class="kpi-sparkline w-full mt-3" viewBox="0 0 200 36" preserveAspectRatio="none">
+          <polyline points="0,28 20,24 40,22 60,18 80,20 100,14 120,16 140,10 160,12 180,6 200,8" stroke="#10b981" stroke-width="1.5" fill="none"/>
+          <polyline points="0,28 20,24 40,22 60,18 80,20 100,14 120,16 140,10 160,12 180,6 200,8 200,36 0,36" fill="url(#grad-em)" opacity="0.15"/>
+          <defs><linearGradient id="grad-em" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#10b981" stop-opacity="0"/></linearGradient></defs>
+        </svg>
+      </div>
+
+      <div class="panel p-4">
+        <div class="flex items-start justify-between mb-2">
+          <div class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--text-dim);">Orders (7d)</div>
+          <span class="badge bg-emerald-500/10 text-emerald-400">+12</span>
+        </div>
+        <div class="font-display text-[26px] font-bold">147</div>
+        <div class="text-[11px]" style="color: var(--text-dim);">$328 AOV</div>
+        <svg class="kpi-sparkline w-full mt-3" viewBox="0 0 200 36" preserveAspectRatio="none">
+          <polyline points="0,22 20,20 40,18 60,24 80,16 100,18 120,12 140,14 160,10 180,8 200,12" stroke="#3b82f6" stroke-width="1.5" fill="none"/>
+        </svg>
+      </div>
+
+      <div class="panel p-4">
+        <div class="flex items-start justify-between mb-2">
+          <div class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--text-dim);">In production</div>
+          <span class="badge bg-amber-500/10 text-amber-400">8 jobs</span>
+        </div>
+        <div class="font-display text-[26px] font-bold">24</div>
+        <div class="text-[11px]" style="color: var(--text-dim);">6 rush · 18 standard</div>
+        <div class="flex gap-0.5 mt-3 h-[36px] items-end">
+          <div class="flex-1 bg-blue-500/40 rounded-t" style="height: 40%"></div>
+          <div class="flex-1 bg-blue-500/40 rounded-t" style="height: 60%"></div>
+          <div class="flex-1 bg-blue-500/40 rounded-t" style="height: 50%"></div>
+          <div class="flex-1 bg-blue-500/40 rounded-t" style="height: 80%"></div>
+          <div class="flex-1 bg-blue-500/40 rounded-t" style="height: 70%"></div>
+          <div class="flex-1 bg-blue-500/40 rounded-t" style="height: 90%"></div>
+          <div class="flex-1 bg-blue-500 rounded-t" style="height: 100%"></div>
+        </div>
+      </div>
+
+      <div class="panel p-4">
+        <div class="flex items-start justify-between mb-2">
+          <div class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--text-dim);">Approvals needed</div>
+          <span class="badge bg-red-500/10 text-red-400">Urgent</span>
+        </div>
+        <div class="font-display text-[26px] font-bold">5</div>
+        <div class="text-[11px]" style="color: var(--text-dim);">2 overdue · 3 waiting on customer</div>
+        <div class="mt-3 flex items-center gap-2 text-[11.5px]" style="color: var(--text-dim);">
+          <span class="status-dot bg-red-500"></span>
+          Oldest: 2h 14m ago
+        </div>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="grid grid-cols-[1fr_320px] gap-4 mb-5">
+
+      <!-- Revenue chart -->
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="font-semibold text-[14px]">Revenue</h2>
+            <div class="text-[11.5px]" style="color: var(--text-dim);">Daily revenue, last 14 days</div>
+          </div>
+          <div class="flex items-center gap-4 text-[11.5px]">
+            <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>This period</div>
+            <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full" style="background: var(--text-dimmer);"></div>Prev period</div>
+          </div>
+        </div>
+
+        <svg class="w-full" viewBox="0 0 600 200" preserveAspectRatio="none">
+          <!-- Grid -->
+          <line x1="0" y1="50" x2="600" y2="50" stroke="#1f2833" stroke-width="1"/>
+          <line x1="0" y1="100" x2="600" y2="100" stroke="#1f2833" stroke-width="1"/>
+          <line x1="0" y1="150" x2="600" y2="150" stroke="#1f2833" stroke-width="1"/>
+
+          <!-- Previous period (dashed) -->
+          <polyline points="0,130 42,120 85,140 128,110 171,115 214,100 257,125 300,95 342,110 385,85 428,90 471,70 514,85 557,60 600,75" stroke="#6a7586" stroke-width="1.5" fill="none" stroke-dasharray="3,3" opacity="0.6"/>
+
+          <!-- Current period -->
+          <polyline points="0,110 42,100 85,115 128,85 171,95 214,75 257,90 300,60 342,75 385,45 428,55 471,30 514,45 557,20 600,35" stroke="#10b981" stroke-width="2" fill="none"/>
+          <polyline points="0,110 42,100 85,115 128,85 171,95 214,75 257,90 300,60 342,75 385,45 428,55 471,30 514,45 557,20 600,35 600,200 0,200" fill="url(#grad-rev)" opacity="0.2"/>
+
+          <defs><linearGradient id="grad-rev" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#10b981" stop-opacity="0"/></linearGradient></defs>
+
+          <!-- Points -->
+          <circle cx="557" cy="20" r="4" fill="#10b981"/>
+          <circle cx="557" cy="20" r="8" fill="#10b981" opacity="0.2"/>
+        </svg>
+
+        <div class="flex justify-between text-[10.5px] mt-2" style="color: var(--text-dimmer);">
+          <span>Apr 4</span><span>Apr 7</span><span>Apr 10</span><span>Apr 13</span><span>Apr 16</span><span>Today</span>
+        </div>
+      </div>
+
+      <!-- Order pipeline -->
+      <div class="panel p-5">
+        <h2 class="font-semibold text-[14px] mb-1">Order pipeline</h2>
+        <div class="text-[11.5px] mb-4" style="color: var(--text-dim);">Current status distribution</div>
+
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between text-[11.5px] mb-1.5">
+              <span class="flex items-center gap-1.5"><span class="status-dot bg-zinc-500"></span>New</span>
+              <span>5 · <span style="color: var(--text-dim);">$1,240</span></span>
+            </div>
+            <div class="bar-track"><div class="bar-fill bg-zinc-500" style="width: 10%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-[11.5px] mb-1.5">
+              <span class="flex items-center gap-1.5"><span class="status-dot bg-red-500"></span>Awaiting proof approval</span>
+              <span>5 · <span style="color: var(--text-dim);">$2,890</span></span>
+            </div>
+            <div class="bar-track"><div class="bar-fill bg-red-500" style="width: 10%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-[11.5px] mb-1.5">
+              <span class="flex items-center gap-1.5"><span class="status-dot bg-amber-500"></span>In production</span>
+              <span>24 · <span style="color: var(--text-dim);">$8,420</span></span>
+            </div>
+            <div class="bar-track"><div class="bar-fill bg-amber-500" style="width: 48%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-[11.5px] mb-1.5">
+              <span class="flex items-center gap-1.5"><span class="status-dot bg-blue-500"></span>Shipped</span>
+              <span>12 · <span style="color: var(--text-dim);">$4,850</span></span>
+            </div>
+            <div class="bar-track"><div class="bar-fill bg-blue-500" style="width: 24%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-[11.5px] mb-1.5">
+              <span class="flex items-center gap-1.5"><span class="status-dot bg-emerald-500"></span>Delivered (7d)</span>
+              <span>89 · <span style="color: var(--text-dim);">$28,140</span></span>
+            </div>
+            <div class="bar-track"><div class="bar-fill bg-emerald-500" style="width: 100%"></div></div>
+          </div>
+        </div>
+
+        <div class="h-px my-4" style="background: var(--border);"></div>
+
+        <h3 class="font-semibold text-[12.5px] mb-2">Vendor sync</h3>
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between text-[12px]">
+            <div class="flex items-center gap-2">
+              <div class="w-5 h-5 rounded bg-zinc-800 flex items-center justify-center text-[9.5px] font-bold">4O</div>
+              <span>4Over</span>
+            </div>
+            <span class="badge bg-emerald-500/10 text-emerald-400">
+              <span class="status-dot bg-emerald-500"></span>
+              Synced 2m
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-[12px]">
+            <div class="flex items-center gap-2">
+              <div class="w-5 h-5 rounded bg-zinc-800 flex items-center justify-center text-[9.5px] font-bold">B2</div>
+              <span>B2Sign</span>
+            </div>
+            <span class="badge bg-emerald-500/10 text-emerald-400">
+              <span class="status-dot bg-emerald-500"></span>
+              Synced 4m
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-[12px]">
+            <div class="flex items-center gap-2">
+              <div class="w-5 h-5 rounded bg-zinc-800 flex items-center justify-center text-[9.5px] font-bold">MX</div>
+              <span>Max Pro</span>
+            </div>
+            <span class="badge bg-amber-500/10 text-amber-400">
+              <span class="status-dot bg-amber-500"></span>
+              Manual
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders table + Production queue -->
+    <div class="grid grid-cols-[1fr_380px] gap-4 mb-5">
+
+      <!-- Recent Orders -->
+      <div class="panel">
+        <div class="flex items-center justify-between p-4 border-b" style="border-color: var(--border);">
+          <div>
+            <h2 class="font-semibold text-[14px]">Recent orders</h2>
+            <div class="text-[11.5px]" style="color: var(--text-dim);">Last 10 orders</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="tab-list">
+              <button class="tab-btn active">All</button>
+              <button class="tab-btn">New</button>
+              <button class="tab-btn">Flagged</button>
+              <button class="tab-btn">Rush</button>
+            </div>
+            <a href="#" class="text-[12px] font-medium" style="color: var(--accent);">View all</a>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Customer</th>
+              <th>Product</th>
+              <th>Status</th>
+              <th>Vendor</th>
+              <th class="text-right">Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-mono text-[11.5px]">#CP-28431</td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center text-[9px] font-semibold text-zinc-900">SJ</div>
+                  <span>Sarah Johnson</span>
+                </div>
+              </td>
+              <td><span style="color: var(--text-dim);">A-Frame Sign · Premium</span></td>
+              <td><span class="badge bg-red-500/10 text-red-400"><span class="status-dot bg-red-500"></span>Proof pending</span></td>
+              <td><span style="color: var(--text-dim);">In-house</span></td>
+              <td class="text-right font-semibold">$129.00</td>
+              <td class="text-right"><button class="btn btn-ghost btn-sm">→</button></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-[11.5px]">#CP-28430</td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-[9px] font-semibold text-white">TW</div>
+                  <span>Tina Westinghouse</span>
+                </div>
+              </td>
+              <td><span style="color: var(--text-dim);">Business Cards · 1000</span></td>
+              <td><span class="badge bg-blue-500/10 text-blue-400"><span class="status-dot bg-blue-500"></span>Sent to vendor</span></td>
+              <td>
+                <div class="flex items-center gap-1.5">
+                  <div class="w-4 h-4 rounded bg-zinc-800 flex items-center justify-center text-[8px] font-bold">4O</div>
+                  <span style="color: var(--text-dim);">4Over</span>
+                </div>
+              </td>
+              <td class="text-right font-semibold">$84.00</td>
+              <td class="text-right"><button class="btn btn-ghost btn-sm">→</button></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-[11.5px]">#CP-28429</td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-[9px] font-semibold text-white">MG</div>
+                  <span>Mike Gauthier</span>
+                </div>
+              </td>
+              <td><span style="color: var(--text-dim);">Vinyl Banner · 4×10 ft</span></td>
+              <td><span class="badge bg-amber-500/10 text-amber-400"><span class="status-dot bg-amber-500"></span>Printing</span></td>
+              <td>
+                <div class="flex items-center gap-1.5">
+                  <div class="w-4 h-4 rounded bg-zinc-800 flex items-center justify-center text-[8px] font-bold">B2</div>
+                  <span style="color: var(--text-dim);">B2Sign</span>
+                </div>
+              </td>
+              <td class="text-right font-semibold">$98.00</td>
+              <td class="text-right"><button class="btn btn-ghost btn-sm">→</button></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-[11.5px]">#CP-28428</td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-full bg-pink-500 flex items-center justify-center text-[9px] font-semibold text-white">KD</div>
+                  <span>Kristy Dale</span>
+                </div>
+              </td>
+              <td><span style="color: var(--text-dim);">Tesla Model Y Full Wrap</span></td>
+              <td><span class="badge bg-amber-500/10 text-amber-400"><span class="status-dot bg-amber-500"></span>Scheduled</span></td>
+              <td><span style="color: var(--text-dim);">In-house</span></td>
+              <td class="text-right font-semibold">$3,850.00</td>
+              <td class="text-right"><button class="btn btn-ghost btn-sm">→</button></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-[11.5px]">#CP-28427</td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center text-[9px] font-semibold text-white">KF</div>
+                  <span>Ken Fechner</span>
+                </div>
+              </td>
+              <td><span style="color: var(--text-dim);">Custom T-Shirts · 24</span></td>
+              <td><span class="badge bg-blue-500/10 text-blue-400"><span class="status-dot bg-blue-500"></span>Shipped</span></td>
+              <td>
+                <div class="flex items-center gap-1.5">
+                  <div class="w-4 h-4 rounded bg-zinc-800 flex items-center justify-center text-[8px] font-bold">4O</div>
+                  <span style="color: var(--text-dim);">4Over</span>
+                </div>
+              </td>
+              <td class="text-right font-semibold">$340.00</td>
+              <td class="text-right"><button class="btn btn-ghost btn-sm">→</button></td>
+            </tr>
+            <tr>
+              <td class="font-mono text-[11.5px]">#CP-28426</td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[9px] font-semibold text-white">BM</div>
+                  <span>Blake Maddox</span>
+                </div>
+              </td>
+              <td><span style="color: var(--text-dim);">Yard Signs · 50</span></td>
+              <td><span class="badge bg-emerald-500/10 text-emerald-400"><span class="status-dot bg-emerald-500"></span>Delivered</span></td>
+              <td>
+                <div class="flex items-center gap-1.5">
+                  <div class="w-4 h-4 rounded bg-zinc-800 flex items-center justify-center text-[8px] font-bold">B2</div>
+                  <span style="color: var(--text-dim);">B2Sign</span>
+                </div>
+              </td>
+              <td class="text-right font-semibold">$425.00</td>
+              <td class="text-right"><button class="btn btn-ghost btn-sm">→</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Top products + Alerts -->
+      <div class="space-y-4">
+
+        <!-- Top products -->
+        <div class="panel p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-semibold text-[13.5px]">Top products (7d)</h2>
+            <a href="#" class="text-[11.5px] font-medium" style="color: var(--accent);">All</a>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="product-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M7 10h10M7 14h6"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-semibold truncate">Vinyl Banner</div>
+                <div class="text-[10.5px]" style="color: var(--text-dim);">42 orders · $12,480</div>
+              </div>
+              <span class="text-[11px] text-emerald-400">+24%</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="product-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-semibold truncate">Business Cards</div>
+                <div class="text-[10.5px]" style="color: var(--text-dim);">38 orders · $3,420</div>
+              </div>
+              <span class="text-[11px] text-emerald-400">+18%</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="product-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14"/><path d="M3 17l2-7c.3-1 1.2-2 2.3-2h9.4c1.1 0 2 1 2.3 2l2 7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-semibold truncate">Vehicle Wraps</div>
+                <div class="text-[10.5px]" style="color: var(--text-dim);">8 orders · $21,400</div>
+              </div>
+              <span class="text-[11px] text-emerald-400">+42%</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="product-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M12 3L3 20M12 3l9 17"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-semibold truncate">A-Frame Signs</div>
+                <div class="text-[10.5px]" style="color: var(--text-dim);">14 orders · $1,246</div>
+              </div>
+              <span class="text-[11px] text-red-400">−8%</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="product-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.4 3.5L16 2a4 4 0 01-8 0L3.6 3.5a2 2 0 00-1.3 2.2l.6 3.5a1 1 0 001 .8H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.1a1 1 0 001-.8l.5-3.5a2 2 0 00-1.3-2.2z"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-semibold truncate">Custom Apparel</div>
+                <div class="text-[10.5px]" style="color: var(--text-dim);">22 orders · $2,380</div>
+              </div>
+              <span class="text-[11px] text-emerald-400">+6%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div class="panel p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-semibold text-[13.5px]">Operational alerts</h2>
+            <span class="badge bg-red-500/10 text-red-400">4 active</span>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-md bg-red-500/10 flex items-center justify-center text-red-400 flex-shrink-0">
+                <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div class="min-w-0">
+                <div class="text-[12px] font-semibold">Proof overdue · CP-28395</div>
+                <div class="text-[11px]" style="color: var(--text-dim);">Customer hasn't approved for 48h</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-md bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
+                <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8"/></svg>
+              </div>
+              <div class="min-w-0">
+                <div class="text-[12px] font-semibold">Low stock · 15oz Vinyl</div>
+                <div class="text-[11px]" style="color: var(--text-dim);">Only 2 rolls remaining</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-md bg-blue-500/10 flex items-center justify-center text-blue-400 flex-shrink-0">
+                <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+              </div>
+              <div class="min-w-0">
+                <div class="text-[12px] font-semibold">New customer inquiry</div>
+                <div class="text-[11px]" style="color: var(--text-dim);">Fleet wrap quote requested · 12m ago</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-md bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
+                <svg class="icon-sm" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              </div>
+              <div class="min-w-0">
+                <div class="text-[12px] font-semibold">Shipment delayed · CP-28401</div>
+                <div class="text-[11px]" style="color: var(--text-dim);">UPS exception · weather delay</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom row: Customers, Channel, Production Queue -->
+    <div class="grid grid-cols-3 gap-4">
+
+      <!-- New Customers -->
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="font-semibold text-[14px]">New customers</h2>
+            <div class="text-[11.5px]" style="color: var(--text-dim);">Last 7 days</div>
+          </div>
+          <div class="font-display text-[24px] font-bold">28</div>
+        </div>
+        <div class="space-y-2.5">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-[10.5px] font-semibold text-white">JD</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12px] font-semibold truncate">Jasmine Delacroix</div>
+              <div class="text-[10.5px]" style="color: var(--text-dim);">2h ago · Banner inquiry</div>
+            </div>
+            <span class="badge bg-blue-500/10 text-blue-400">Lead</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-full bg-red-500 flex items-center justify-center text-[10.5px] font-semibold text-white">AR</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12px] font-semibold truncate">Adrian Ruiz</div>
+              <div class="text-[10.5px]" style="color: var(--text-dim);">5h ago · First order</div>
+            </div>
+            <span class="badge bg-emerald-500/10 text-emerald-400">$84</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-full bg-teal-500 flex items-center justify-center text-[10.5px] font-semibold text-white">NP</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12px] font-semibold truncate">Nora Patel</div>
+              <div class="text-[10.5px]" style="color: var(--text-dim);">Yesterday · First order</div>
+            </div>
+            <span class="badge bg-emerald-500/10 text-emerald-400">$248</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-[10.5px] font-semibold text-white">CH</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12px] font-semibold truncate">Connor Holloway</div>
+              <div class="text-[10.5px]" style="color: var(--text-dim);">Yesterday · First order</div>
+            </div>
+            <span class="badge bg-emerald-500/10 text-emerald-400">$1,240</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Traffic sources -->
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="font-semibold text-[14px]">Traffic sources</h2>
+            <div class="text-[11.5px]" style="color: var(--text-dim);">Last 7 days</div>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div class="bar-row">
+            <span class="w-20">Direct</span>
+            <div class="bar-track"><div class="bar-fill bg-blue-500" style="width: 38%"></div></div>
+            <span class="w-10 text-right font-semibold">38%</span>
+          </div>
+          <div class="bar-row">
+            <span class="w-20">Google</span>
+            <div class="bar-track"><div class="bar-fill bg-emerald-500" style="width: 28%"></div></div>
+            <span class="w-10 text-right font-semibold">28%</span>
+          </div>
+          <div class="bar-row">
+            <span class="w-20">Referral</span>
+            <div class="bar-track"><div class="bar-fill bg-amber-500" style="width: 16%"></div></div>
+            <span class="w-10 text-right font-semibold">16%</span>
+          </div>
+          <div class="bar-row">
+            <span class="w-20">Instagram</span>
+            <div class="bar-track"><div class="bar-fill bg-pink-500" style="width: 10%"></div></div>
+            <span class="w-10 text-right font-semibold">10%</span>
+          </div>
+          <div class="bar-row">
+            <span class="w-20">Email</span>
+            <div class="bar-track"><div class="bar-fill bg-purple-500" style="width: 6%"></div></div>
+            <span class="w-10 text-right font-semibold">6%</span>
+          </div>
+          <div class="bar-row">
+            <span class="w-20">SMS</span>
+            <div class="bar-track"><div class="bar-fill bg-cyan-500" style="width: 2%"></div></div>
+            <span class="w-10 text-right font-semibold">2%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Production queue -->
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="font-semibold text-[14px]">Production queue</h2>
+            <div class="text-[11.5px]" style="color: var(--text-dim);">Today · 8 jobs</div>
+          </div>
+          <a href="#" class="text-[11.5px] font-medium" style="color: var(--accent);">Manage</a>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-md bg-red-500/10 flex items-center justify-center text-[11px] font-bold text-red-400 flex-shrink-0">R</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12px] font-semibold truncate">#CP-28429 · Vinyl Banner</div>
+              <div class="text-[10.5px]" style="color: var(--text-dim);">On press · 24 min remaining</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-md bg-amber-500/10 flex items-center justify-center text-[11px] font-bold text-amber-400 flex-shrink-0">2</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12px] font-semibold truncate">#CP-28425 · A-Frame Sign</div>
+              <div class="text-[10.5px]" style="color: var(--text-dim);">Queued · printing next</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center text-[11px] font-bold flex-shrink-0" style="color: var(--text-dim);">3</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12px] font-semibold truncate">#CP-28422 · Yard Signs ×25</div>
+              <div class="text-[10.5px]" style="color: var(--text-dim);">Queued · 1h 20m</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center text-[11px] font-bold flex-shrink-0" style="color: var(--text-dim);">4</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12px] font-semibold truncate">#CP-28418 · Window Cling</div>
+              <div class="text-[10.5px]" style="color: var(--text-dim);">Queued · 2h 45m</div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t" style="border-color: var(--border);">
+          <div class="flex items-center justify-between text-[11.5px]">
+            <span style="color: var(--text-dim);">Press utilization</span>
+            <span class="font-semibold text-emerald-400">82%</span>
+          </div>
+          <div class="bar-track mt-2"><div class="bar-fill bg-emerald-500" style="width: 82%"></div></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem('cp-theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.remove('dark');else if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark');}catch(e){}</script>
+<title>Vinyl Banner — controlp.io</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'};</script>
+<link rel="stylesheet" href="assets/site.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --border: 240 5.9% 90%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --radius: 0.625rem;
+  }
+  * { font-family: 'Inter', system-ui, sans-serif; }
+  body { background: hsl(var(--background)); color: hsl(var(--foreground)); transition: background-color 0.2s ease, color 0.2s ease; }
+  .font-display { font-family: 'Geist', 'Inter', system-ui, sans-serif; letter-spacing: -0.02em; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; border-radius: calc(var(--radius) - 2px); font-size: 14px; font-weight: 500; transition: all 0.15s; cursor: pointer; }
+  .btn-primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); padding: 10px 20px; }
+  .btn-primary:hover { background: hsl(240 5.9% 18%); }
+  .btn-outline { border: 1px solid hsl(var(--border)); background: transparent; color: hsl(var(--foreground)); padding: 10px 20px; }
+  .btn-outline:hover { background: hsl(var(--muted)); }
+  .btn-ghost { background: transparent; color: hsl(var(--foreground)); padding: 8px 12px; }
+  .btn-ghost:hover { background: hsl(var(--muted)); }
+  .btn-lg { padding: 13px 26px; font-size: 15px; }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+  .card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); transition: all 0.2s; }
+  .card-hover:hover { border-color: hsl(240 5.9% 65%); transform: translateY(-2px); box-shadow: 0 10px 30px -12px rgba(0,0,0,0.08); }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500; }
+
+  svg.icon { width: 16px; height: 16px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-sm { width: 14px; height: 14px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-lg { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-display { width: 64px; height: 64px; stroke-width: 1.2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.icon-display-xl { width: 180px; height: 180px; stroke-width: 0.8; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.star { width: 12px; height: 12px; fill: currentColor; stroke: none; }
+  svg.star-empty { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .product-img { background: linear-gradient(135deg, hsl(240 4.8% 95.9%) 0%, hsl(240 4.8% 98%) 100%); position: relative; overflow: hidden; color: hsl(240 3.8% 60%); }
+  .product-img::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5) 0%, transparent 50%); pointer-events: none; }
+
+  /* Segmented control (option picker) */
+  .option-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; }
+  .option-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 8px; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); background: white; cursor: pointer; transition: all 0.15s; font-size: 13px; text-align: center; gap: 2px; }
+  .option-btn:hover { border-color: hsl(240 5.9% 65%); }
+  .option-btn.selected { border-color: hsl(var(--primary)); background: hsl(var(--muted)); box-shadow: inset 0 0 0 1px hsl(var(--primary)); }
+  .option-btn .label { font-weight: 600; }
+  .option-btn .sub { font-size: 11px; color: hsl(var(--muted-foreground)); }
+
+  /* Select/input Shadcn-style */
+  .input, .select { width: 100%; padding: 9px 12px; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); font-size: 14px; background: white; color: hsl(var(--foreground)); outline: none; }
+  .input:focus, .select:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(240 5.9% 10% / 0.08); }
+
+  /* Tabs */
+  .tab-list { display: flex; border-bottom: 1px solid hsl(var(--border)); gap: 4px; }
+  .tab { padding: 12px 16px; font-size: 14px; font-weight: 500; color: hsl(var(--muted-foreground)); border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; }
+  .tab:hover { color: hsl(var(--foreground)); }
+  .tab.active { color: hsl(var(--foreground)); border-bottom-color: hsl(var(--primary)); }
+
+  /* Checkboxes */
+  .checkbox { appearance: none; width: 16px; height: 16px; border: 1.5px solid hsl(var(--border)); border-radius: 4px; cursor: pointer; position: relative; flex-shrink: 0; }
+  .checkbox:checked { background: hsl(var(--primary)); border-color: hsl(var(--primary)); }
+  .checkbox:checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+
+  /* Rating breakdown bar */
+  .rating-bar { height: 6px; background: hsl(var(--muted)); border-radius: 999px; overflow: hidden; }
+  .rating-bar-fill { height: 100%; background: hsl(45 95% 55%); border-radius: 999px; }
+</style>
+</head>
+<body>
+
+<!-- Announcement bar -->
+<div class="site-announcement w-full bg-zinc-900 text-zinc-50 text-[12.5px] py-2 px-4 text-center">
+  <div class="flex items-center justify-center gap-3 flex-wrap">
+    <span class="hidden sm:flex items-center gap-1.5">
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Made in Chandler, Arizona
+    </span>
+    <span class="hidden sm:inline opacity-30">·</span>
+    <span class="flex items-center gap-1.5">
+      <svg class="icon-sm" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      Free shipping on orders over $75
+    </span>
+    <span class="opacity-30">·</span>
+    <a href="resources.html" class="underline underline-offset-2 hover:text-white">Resources &amp; file prep guides</a>
+  </div>
+</div>
+
+<header class="site-header sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b dark:border-zinc-800 dark:bg-zinc-950/90" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1400px] mx-auto px-6">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center gap-6 lg:gap-8 min-w-0">
+        <a href="home.html" class="flex items-center gap-2 shrink-0">
+          <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+          <span class="font-bold text-[16px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+        </a>
+        <nav class="hidden lg:flex items-center gap-1 text-[14px]">
+          <div class="dropdown">
+            <button type="button" class="btn btn-ghost flex items-center gap-1">Shop <svg class="icon-sm" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="dropdown-menu card p-2 w-[560px] grid grid-cols-2 gap-1 shadow-xl">
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Large Format Prints</div><div class="text-[12px] text-zinc-500">Banners, posters, displays</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 7h14l-2 4h-12z"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Signs</div><div class="text-[12px] text-zinc-500">Standard &amp; custom signage</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M5 17h14"/><path d="M3 17l2-7c.3-1 1.2-2 2.3-2h9.4c1.1 0 2 1 2.3 2l2 7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Vehicle Wraps</div><div class="text-[12px] text-zinc-500">Full wraps, spot graphics, tint</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Business Cards</div><div class="text-[12px] text-zinc-500">Standard, die-cut, premium</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M20.4 3.5L16 2a4 4 0 01-8 0L3.6 3.5a2 2 0 00-1.3 2.2l.6 3.5a1 1 0 001 .8H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.1a1 1 0 001-.8l.5-3.5a2 2 0 00-1.3-2.2z"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Custom Merch</div><div class="text-[12px] text-zinc-500">Shirts, hats, mugs, bags</div></div>
+              </a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22V15"/></svg>
+                </div>
+                <div><div class="font-semibold text-[13.5px]">Flags &amp; Displays</div><div class="text-[12px] text-zinc-500">Pole, feather, teardrop, tents</div></div>
+              </a>
+            </div>
+          </div>
+          <a href="shop.html" class="btn btn-ghost">Deals</a>
+          <div class="dropdown">
+            <button type="button" class="btn btn-ghost flex items-center gap-1">Discover <svg class="icon-sm" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="dropdown-menu card p-2 w-[635px] grid grid-cols-3 gap-1 shadow-xl">
+              <div>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 px-3 pt-2 pb-1">Resources</div>
+                <a href="templates.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Templates</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Designed for quick edits</div></div>
+                </a>
+                <a href="resources.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Resources</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Prep guides & downloads</div></div>
+                </a>
+                <a href="blog.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Blog</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Trends, tips, and stories</div></div>
+                </a>
+              </div>
+              <div>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 px-3 pt-2 pb-1">Company</div>
+                <a href="about.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">About</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Learn about our company</div></div>
+                </a>
+                <a href="#team" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Team</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Meet our talented team</div></div>
+                </a>
+                <a href="#mission" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Mission</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Our values and vision</div></div>
+                </a>
+              </div>
+              <div>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 px-3 pt-2 pb-1">Support</div>
+                <a href="contact.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M18 3a3 3 0 00-3 3v12a3 3 0 003 3 3 3 0 003-3 3 3 0 00-3-3H6a3 3 0 00-3 3 3 3 0 003 3h12a3 3 0 003-3V6a3 3 0 00-3-3z"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Services</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">What we offer</div></div>
+                </a>
+                <a href="faq.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Support</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Help and guidance</div></div>
+                </a>
+                <a href="contact.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80">
+                  <div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+                  </div>
+                  <div><div class="font-semibold text-[13.5px]">Contact</div><div class="text-[12px] text-zinc-500 whitespace-nowrap">Talk with our team</div></div>
+                </a>
+              </div>
+            </div>
+          </div>
+          <a href="faq.html" class="btn btn-ghost">FAQ</a>
+          <a href="contact.html" class="btn btn-ghost">Contact</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button type="button" class="cp-theme-btn" data-theme-toggle aria-label="Toggle color mode">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <a href="cart.html" class="btn btn-ghost p-2 relative hidden sm:inline-flex" aria-label="Cart">
+          <svg class="icon-lg" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+          <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-zinc-900 text-white text-[10px] font-semibold flex items-center justify-center dark:bg-zinc-100 dark:text-zinc-900">2</span>
+        </a>
+        <a href="login.html" class="btn btn-outline hidden sm:inline-flex">Sign in</a>
+        <a href="contact.html" class="btn btn-primary">Get a quote</a>
+        <button type="button" class="lg:hidden btn btn-ghost p-2 -mr-1" data-mobile-nav-open aria-label="Open menu">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Breadcrumbs -->
+<div class="max-w-[1400px] mx-auto px-6 pt-6">
+  <div class="flex items-center gap-2 text-[12.5px] text-zinc-500">
+    <a href="home.html" class="hover:text-zinc-900">Home</a>
+    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    <a href="shop.html" class="hover:text-zinc-900">Shop</a>
+    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    <a href="#" class="hover:text-zinc-900">Banners</a>
+    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    <span class="text-zinc-900 font-medium">Vinyl Banner</span>
+  </div>
+</div>
+
+<!-- Main Product Section -->
+<section class="py-8">
+  <div class="max-w-[1400px] mx-auto px-6">
+    <div class="grid lg:grid-cols-[1fr_480px] gap-10">
+
+      <!-- Left: Image Gallery -->
+      <div>
+        <div class="grid grid-cols-[80px_1fr] gap-3">
+          <!-- Thumbnails -->
+          <div class="space-y-2">
+            <button class="w-20 h-20 card product-img flex items-center justify-center ring-2 ring-zinc-900">
+              <svg class="icon-display" viewBox="0 0 24 24" style="width:36px; height:36px;"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M7 10h10M7 14h6"/></svg>
+            </button>
+            <button class="w-20 h-20 card product-img flex items-center justify-center hover:border-zinc-400">
+              <svg class="icon-display" viewBox="0 0 24 24" style="width:36px; height:36px;"><rect x="3" y="6" width="18" height="12" rx="1"/><circle cx="5.5" cy="8.5" r="0.8" fill="currentColor"/><circle cx="18.5" cy="8.5" r="0.8" fill="currentColor"/><circle cx="5.5" cy="15.5" r="0.8" fill="currentColor"/><circle cx="18.5" cy="15.5" r="0.8" fill="currentColor"/></svg>
+            </button>
+            <button class="w-20 h-20 card product-img flex items-center justify-center hover:border-zinc-400">
+              <svg class="icon-display" viewBox="0 0 24 24" style="width:36px; height:36px;"><path d="M5 4h14v16H5z"/><path d="M9 4v16M15 4v16"/></svg>
+            </button>
+            <button class="w-20 h-20 card product-img flex items-center justify-center hover:border-zinc-400">
+              <svg class="icon-display" viewBox="0 0 24 24" style="width:36px; height:36px;"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M3 10h18M7 14h3"/></svg>
+            </button>
+            <button class="w-20 h-20 card product-img flex items-center justify-center hover:border-zinc-400 relative">
+              <svg class="icon-display" viewBox="0 0 24 24" style="width:32px; height:32px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <div class="absolute bottom-1.5 left-1.5 badge bg-black/60 text-white text-[9px] px-1.5 py-0.5">0:42</div>
+            </button>
+          </div>
+
+          <!-- Main image -->
+          <div class="card product-img aspect-[4/3] flex items-center justify-center relative">
+            <svg class="icon-display-xl" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M7 10h10M7 14h6"/><circle cx="5.5" cy="8.5" r="0.4"/><circle cx="18.5" cy="8.5" r="0.4"/><circle cx="5.5" cy="15.5" r="0.4"/><circle cx="18.5" cy="15.5" r="0.4"/></svg>
+
+            <div class="absolute top-4 left-4 flex flex-col gap-2">
+              <div class="badge bg-emerald-500 text-white">Best Seller</div>
+              <div class="badge bg-white border border-zinc-200 text-zinc-700">312 reviews</div>
+            </div>
+
+            <div class="absolute top-4 right-4 flex gap-2">
+              <button class="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm border border-zinc-200 flex items-center justify-center hover:bg-white">
+                <svg class="icon-sm text-zinc-600" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 000-7.8z"/></svg>
+              </button>
+              <button class="w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm border border-zinc-200 flex items-center justify-center hover:bg-white">
+                <svg class="icon-sm text-zinc-600" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              </button>
+            </div>
+
+            <button class="absolute bottom-4 right-4 btn btn-ghost btn-sm bg-white/90 backdrop-blur-sm border border-zinc-200">
+              <svg class="icon-sm" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+              View larger
+            </button>
+          </div>
+        </div>
+
+        <!-- Material swatches strip -->
+        <div class="mt-6">
+          <div class="text-[12px] font-semibold uppercase tracking-wider text-zinc-400 mb-3">Material samples</div>
+          <div class="flex gap-2 overflow-x-auto">
+            <button class="card px-4 py-2 hover:border-zinc-400 flex items-center gap-2 text-[13px] whitespace-nowrap">
+              <div class="w-6 h-6 rounded bg-gradient-to-br from-zinc-200 to-zinc-300"></div>
+              13oz Vinyl
+            </button>
+            <button class="card px-4 py-2 hover:border-zinc-400 flex items-center gap-2 text-[13px] whitespace-nowrap">
+              <div class="w-6 h-6 rounded bg-gradient-to-br from-zinc-300 to-zinc-400"></div>
+              15oz Heavy
+            </button>
+            <button class="card px-4 py-2 hover:border-zinc-400 flex items-center gap-2 text-[13px] whitespace-nowrap">
+              <div class="w-6 h-6 rounded bg-gradient-to-br from-zinc-400 to-zinc-500"></div>
+              18oz Blockout
+            </button>
+            <button class="card px-4 py-2 hover:border-zinc-400 flex items-center gap-2 text-[13px] whitespace-nowrap">
+              <div class="w-6 h-6 rounded bg-gradient-to-br from-zinc-300 to-zinc-400 opacity-80 relative overflow-hidden"><div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.3) 1px, transparent 0); background-size: 4px 4px;"></div></div>
+              Mesh Vinyl
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Product info + configurator -->
+      <div>
+        <div class="sticky top-24">
+          <!-- Title block -->
+          <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Large Format Banner · SKU VB-13OZ</div>
+          <h1 class="font-display text-[30px] font-bold tracking-tight mt-1 mb-3">Vinyl Banner</h1>
+
+          <div class="flex items-center gap-3 mb-4">
+            <div class="flex items-center gap-0.5 text-amber-500">
+              <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+              <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+              <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+              <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+              <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+            </div>
+            <span class="text-[13px] font-semibold">4.9</span>
+            <a href="#reviews" class="text-[13px] text-zinc-500 hover:underline">312 reviews</a>
+            <span class="text-zinc-300">·</span>
+            <span class="flex items-center gap-1 text-[13px] text-emerald-600 font-medium">
+              <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+              In stock
+            </span>
+          </div>
+
+          <p class="text-[14px] text-zinc-600 leading-relaxed mb-5">
+            Outdoor-rated scrim vinyl, printed with UV-stable eco-solvent inks. Rip-resistant, waterproof, and built for all weather. Full-bleed custom print with hundreds of finishing options.
+          </p>
+
+          <!-- Configurator -->
+          <div class="card p-5 space-y-5">
+
+            <!-- Size -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-[13px] font-semibold">Size</label>
+                <button class="text-[12px] text-zinc-500 hover:text-zinc-900 underline underline-offset-2">Size guide</button>
+              </div>
+              <div class="grid grid-cols-4 gap-1.5 mb-2">
+                <button class="option-btn"><span class="label">2×4</span><span class="sub">ft</span></button>
+                <button class="option-btn selected"><span class="label">3×6</span><span class="sub">ft</span></button>
+                <button class="option-btn"><span class="label">4×8</span><span class="sub">ft</span></button>
+                <button class="option-btn"><span class="label">Custom</span></button>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="relative">
+                  <input type="text" value="36" class="input pr-10 text-center"/>
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-zinc-400">W in</span>
+                </div>
+                <div class="relative">
+                  <input type="text" value="72" class="input pr-10 text-center"/>
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-zinc-400">H in</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Material -->
+            <div>
+              <label class="text-[13px] font-semibold block mb-2">Material</label>
+              <div class="option-grid" style="grid-template-columns: repeat(3, 1fr)">
+                <button class="option-btn selected"><span class="label">13oz Vinyl</span><span class="sub">Standard</span></button>
+                <button class="option-btn"><span class="label">15oz Heavy</span><span class="sub">+$0.50/sqft</span></button>
+                <button class="option-btn"><span class="label">18oz Blockout</span><span class="sub">+$1.20/sqft</span></button>
+              </div>
+            </div>
+
+            <!-- Finish -->
+            <div>
+              <label class="text-[13px] font-semibold block mb-2">Finish</label>
+              <div class="option-grid" style="grid-template-columns: repeat(2, 1fr)">
+                <button class="option-btn selected"><span class="label">Gloss</span></button>
+                <button class="option-btn"><span class="label">Matte</span></button>
+              </div>
+            </div>
+
+            <!-- Sides -->
+            <div>
+              <label class="text-[13px] font-semibold block mb-2">Printed sides</label>
+              <div class="option-grid" style="grid-template-columns: repeat(2, 1fr)">
+                <button class="option-btn selected"><span class="label">Single side</span></button>
+                <button class="option-btn"><span class="label">Double side</span><span class="sub">+70%</span></button>
+              </div>
+            </div>
+
+            <!-- Grommets -->
+            <div>
+              <label class="text-[13px] font-semibold block mb-2">Grommets</label>
+              <select class="select">
+                <option>Every 24" around perimeter (recommended)</option>
+                <option>Every 12" around perimeter</option>
+                <option>Four corners only</option>
+                <option>No grommets</option>
+              </select>
+            </div>
+
+            <!-- Finishing toggles -->
+            <div>
+              <label class="text-[13px] font-semibold block mb-2">Finishing options</label>
+              <div class="space-y-2">
+                <label class="flex items-center justify-between cursor-pointer py-1">
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox" class="checkbox" checked/>
+                    <span class="text-[13px]">Hemming (all sides)</span>
+                  </div>
+                  <span class="text-[12px] text-zinc-500">+$8.00</span>
+                </label>
+                <label class="flex items-center justify-between cursor-pointer py-1">
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox" class="checkbox"/>
+                    <span class="text-[13px]">Wind slits</span>
+                  </div>
+                  <span class="text-[12px] text-zinc-500">+$6.00</span>
+                </label>
+                <label class="flex items-center justify-between cursor-pointer py-1">
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox" class="checkbox"/>
+                    <span class="text-[13px]">Pole pockets (top & bottom, 3")</span>
+                  </div>
+                  <span class="text-[12px] text-zinc-500">+$12.00</span>
+                </label>
+                <label class="flex items-center justify-between cursor-pointer py-1">
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox" class="checkbox"/>
+                    <span class="text-[13px]">Rope reinforcement</span>
+                  </div>
+                  <span class="text-[12px] text-zinc-500">+$15.00</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Quantity + Turnaround -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-[13px] font-semibold block mb-2">Quantity</label>
+                <div class="flex items-center border border-zinc-200 rounded-md overflow-hidden">
+                  <button class="px-3 py-2 hover:bg-zinc-50 text-zinc-500">
+                    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+                  </button>
+                  <input type="text" value="1" class="flex-1 text-center py-2 text-[14px] font-semibold border-x border-zinc-200 outline-none"/>
+                  <button class="px-3 py-2 hover:bg-zinc-50 text-zinc-500">
+                    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="text-[13px] font-semibold block mb-2">Turnaround</label>
+                <select class="select">
+                  <option>Standard (3–5 days)</option>
+                  <option>Rush (1–2 days, +$15)</option>
+                  <option>Same day (order by 2pm, +$35)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Artwork upload -->
+            <div>
+              <label class="text-[13px] font-semibold block mb-2">Artwork</label>
+              <div class="border-2 border-dashed border-zinc-200 rounded-lg p-6 text-center hover:border-zinc-300 cursor-pointer">
+                <svg class="mx-auto mb-2 text-zinc-400" width="32" height="32" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <div class="text-[13px] font-semibold text-zinc-700 mb-1">Drop your file here or browse</div>
+                <div class="text-[11.5px] text-zinc-400">PDF, AI, EPS, PNG, JPG up to 250MB</div>
+              </div>
+              <div class="flex items-center justify-between mt-2 text-[12px]">
+                <a href="#" class="text-zinc-900 font-medium hover:underline">Upload later →</a>
+                <a href="#" class="text-zinc-900 font-medium hover:underline">I need design help ($85+) →</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Price + CTA box -->
+          <div class="card p-5 mt-4 bg-zinc-50">
+            <div class="flex items-baseline justify-between mb-1">
+              <div>
+                <div class="text-[11.5px] text-zinc-500 uppercase tracking-wider font-semibold">Estimated total</div>
+                <div class="font-display text-[32px] font-bold tracking-tight">$54.00</div>
+              </div>
+              <div class="text-right">
+                <div class="text-[12px] text-zinc-500">36" × 72" · 18 sqft</div>
+                <div class="text-[12px] text-zinc-500">$3.00/sqft</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-[12px] text-zinc-500 mb-4">
+              <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Ships by <span class="font-semibold text-zinc-900">Tue, Apr 21</span> · Delivered <span class="font-semibold text-zinc-900">Fri, Apr 24</span>
+            </div>
+
+            <button class="btn btn-primary btn-lg w-full mb-2">
+              <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+              Add to cart
+            </button>
+            <div class="grid grid-cols-2 gap-2">
+              <button class="btn btn-outline">Save as draft</button>
+              <button class="btn btn-outline">Design in browser</button>
+            </div>
+
+            <div class="mt-4 pt-4 border-t grid grid-cols-3 gap-3 text-center" style="border-color: hsl(var(--border));">
+              <div>
+                <svg class="icon mx-auto text-zinc-600 mb-1" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <div class="text-[11px] font-semibold">Free shipping</div>
+                <div class="text-[10px] text-zinc-500">orders $75+</div>
+              </div>
+              <div>
+                <svg class="icon mx-auto text-zinc-600 mb-1" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0118 0 9 9 0 01-18 0z"/><polyline points="12 7 12 12 15 15"/></svg>
+                <div class="text-[11px] font-semibold">Rush available</div>
+                <div class="text-[10px] text-zinc-500">same-day</div>
+              </div>
+              <div>
+                <svg class="icon mx-auto text-zinc-600 mb-1" viewBox="0 0 24 24"><path d="M12 22s8-4 8-12V5l-8-3-8 3v5c0 8 8 12 8 12z"/></svg>
+                <div class="text-[11px] font-semibold">Print guarantee</div>
+                <div class="text-[10px] text-zinc-500">or reprint free</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs section -->
+    <div class="mt-16 border-t pt-10" style="border-color: hsl(var(--border));">
+      <div class="tab-list">
+        <button class="tab active">Description</button>
+        <button class="tab">Specifications</button>
+        <button class="tab">Shipping & returns</button>
+        <button class="tab">Reviews (312)</button>
+      </div>
+
+      <!-- Description tab -->
+      <div class="grid lg:grid-cols-3 gap-8 mt-8">
+        <div class="lg:col-span-2 space-y-5">
+          <h3 class="font-display text-[22px] font-bold tracking-tight">Built to last through any weather.</h3>
+          <p class="text-[14.5px] text-zinc-600 leading-relaxed">
+            Our flagship vinyl banner is printed on 13oz scrim vinyl with UV-stable eco-solvent inks, making it ideal for both indoor and outdoor use. The material is rip-resistant, waterproof, and engineered to hold vibrant color for up to 2 years outdoors and 5+ years indoors.
+          </p>
+          <p class="text-[14.5px] text-zinc-600 leading-relaxed">
+            Every banner ships with reinforced hems and nickel-plated brass grommets positioned every 24" by default. Customize the grommet pattern, add pole pockets for street-pole installations, or opt for wind slits on large outdoor banners to reduce flag-effect in gusty conditions.
+          </p>
+
+          <h4 class="font-semibold text-[15px] mt-6">What's included</h4>
+          <ul class="space-y-2 text-[14px] text-zinc-600">
+            <li class="flex items-start gap-2"><svg class="icon-sm mt-0.5 text-emerald-600 flex-shrink-0" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Full-bleed custom print on your choice of material</li>
+            <li class="flex items-start gap-2"><svg class="icon-sm mt-0.5 text-emerald-600 flex-shrink-0" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Nickel-plated brass grommets (standard) or custom pattern</li>
+            <li class="flex items-start gap-2"><svg class="icon-sm mt-0.5 text-emerald-600 flex-shrink-0" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Reinforced hemming on all four sides (add-on)</li>
+            <li class="flex items-start gap-2"><svg class="icon-sm mt-0.5 text-emerald-600 flex-shrink-0" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Free file proof within 4 business hours</li>
+            <li class="flex items-start gap-2"><svg class="icon-sm mt-0.5 text-emerald-600 flex-shrink-0" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>100% reprint guarantee on color or print defects</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="card p-5 bg-zinc-50">
+            <h4 class="font-semibold text-[14px] mb-3 flex items-center gap-2">
+              <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zM12 8v4M12 16h.01"/></svg>
+              Design guidelines
+            </h4>
+            <ul class="space-y-2 text-[13px] text-zinc-600">
+              <li>· Add 0.5" bleed on all sides</li>
+              <li>· Outline all fonts to paths</li>
+              <li>· Embed all images at 150 DPI+</li>
+              <li>· CMYK color mode for print</li>
+              <li>· Save as PDF, AI, or EPS</li>
+            </ul>
+            <a href="#" class="btn btn-outline btn-sm w-full mt-4">Download templates</a>
+          </div>
+
+          <div class="card p-5 mt-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-zinc-900 text-white flex items-center justify-center">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
+              </div>
+              <div>
+                <div class="font-semibold text-[13.5px]">Need help designing?</div>
+                <div class="text-[12px] text-zinc-500">Our team designs from $85</div>
+              </div>
+            </div>
+            <button class="btn btn-primary w-full mt-4 text-[13px]">Request design help</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Specs snippet -->
+      <div class="mt-12 border-t pt-10" style="border-color: hsl(var(--border));" id="reviews">
+        <!-- Reviews -->
+        <div class="grid lg:grid-cols-[320px_1fr] gap-10">
+          <!-- Reviews summary -->
+          <div>
+            <h3 class="font-display text-[22px] font-bold tracking-tight mb-4">Customer reviews</h3>
+            <div class="flex items-baseline gap-2 mb-3">
+              <div class="font-display text-[40px] font-bold">4.9</div>
+              <div class="flex items-center gap-0.5 text-amber-500">
+                <svg class="star" viewBox="0 0 24 24" style="width:14px; height:14px"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                <svg class="star" viewBox="0 0 24 24" style="width:14px; height:14px"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                <svg class="star" viewBox="0 0 24 24" style="width:14px; height:14px"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                <svg class="star" viewBox="0 0 24 24" style="width:14px; height:14px"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                <svg class="star" viewBox="0 0 24 24" style="width:14px; height:14px"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+              </div>
+            </div>
+            <div class="text-[12px] text-zinc-500 mb-5">Based on 312 verified reviews</div>
+
+            <div class="space-y-2 mb-6">
+              <div class="flex items-center gap-2 text-[12px]">
+                <span class="w-5 text-zinc-500">5</span>
+                <div class="flex-1 rating-bar"><div class="rating-bar-fill" style="width: 84%"></div></div>
+                <span class="w-10 text-right text-zinc-500">262</span>
+              </div>
+              <div class="flex items-center gap-2 text-[12px]">
+                <span class="w-5 text-zinc-500">4</span>
+                <div class="flex-1 rating-bar"><div class="rating-bar-fill" style="width: 12%"></div></div>
+                <span class="w-10 text-right text-zinc-500">38</span>
+              </div>
+              <div class="flex items-center gap-2 text-[12px]">
+                <span class="w-5 text-zinc-500">3</span>
+                <div class="flex-1 rating-bar"><div class="rating-bar-fill" style="width: 2%"></div></div>
+                <span class="w-10 text-right text-zinc-500">8</span>
+              </div>
+              <div class="flex items-center gap-2 text-[12px]">
+                <span class="w-5 text-zinc-500">2</span>
+                <div class="flex-1 rating-bar"><div class="rating-bar-fill" style="width: 1%"></div></div>
+                <span class="w-10 text-right text-zinc-500">2</span>
+              </div>
+              <div class="flex items-center gap-2 text-[12px]">
+                <span class="w-5 text-zinc-500">1</span>
+                <div class="flex-1 rating-bar"><div class="rating-bar-fill" style="width: 1%"></div></div>
+                <span class="w-10 text-right text-zinc-500">2</span>
+              </div>
+            </div>
+
+            <button class="btn btn-outline w-full">Write a review</button>
+          </div>
+
+          <div>
+            <!-- Filter chips -->
+            <div class="flex items-center gap-2 mb-6 flex-wrap">
+              <span class="badge bg-zinc-900 text-white">All (312)</span>
+              <span class="badge bg-zinc-100 text-zinc-600 cursor-pointer">With photos (87)</span>
+              <span class="badge bg-zinc-100 text-zinc-600 cursor-pointer">Verified (289)</span>
+              <div class="ml-auto">
+                <select class="select text-[12px] py-1.5 px-2 w-auto">
+                  <option>Most helpful</option>
+                  <option>Most recent</option>
+                  <option>Highest rated</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Review items -->
+            <div class="space-y-6">
+              <div class="pb-6 border-b" style="border-color: hsl(var(--border));">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-9 h-9 rounded-full bg-amber-400 flex items-center justify-center text-white font-semibold text-[13px]">KD</div>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold text-[13.5px]">Kristy Dale</span>
+                      <span class="badge bg-emerald-50 text-emerald-700 text-[10px]">Verified</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <div class="flex items-center gap-0.5 text-amber-500">
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                      </div>
+                      <span class="text-[12px] text-zinc-500">· 3 days ago</span>
+                    </div>
+                  </div>
+                </div>
+                <h4 class="font-semibold text-[14px] mb-2">Perfect for our grand opening</h4>
+                <p class="text-[13.5px] text-zinc-600 leading-relaxed mb-3">Ordered a 4×8 banner for our new location. Print quality was outstanding, colors matched our brand exactly, and it arrived 2 days early. Already ordered 3 more for other locations.</p>
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="w-16 h-16 rounded bg-zinc-100 border border-zinc-200"></div>
+                  <div class="w-16 h-16 rounded bg-zinc-100 border border-zinc-200"></div>
+                  <div class="w-16 h-16 rounded bg-zinc-100 border border-zinc-200"></div>
+                </div>
+                <div class="flex items-center gap-4 text-[12px] text-zinc-500">
+                  <button class="flex items-center gap-1 hover:text-zinc-900">
+                    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M7 10v12M15 5.88L14 10h5.83a2 2 0 011.92 2.56l-2.33 8A2 2 0 0117.5 22H4a2 2 0 01-2-2V12a2 2 0 012-2h2.76a2 2 0 001.79-1.11L12 2h0a3.13 3.13 0 013 3.88z"/></svg>
+                    Helpful (24)
+                  </button>
+                  <button class="hover:text-zinc-900">Reply</button>
+                </div>
+              </div>
+
+              <div class="pb-6 border-b" style="border-color: hsl(var(--border));">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-[13px]">MG</div>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold text-[13.5px]">Mike Gauthier</span>
+                      <span class="badge bg-emerald-50 text-emerald-700 text-[10px]">Verified</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <div class="flex items-center gap-0.5 text-amber-500">
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                      </div>
+                      <span class="text-[12px] text-zinc-500">· 1 week ago</span>
+                    </div>
+                  </div>
+                </div>
+                <h4 class="font-semibold text-[14px] mb-2">Held up through monsoon season</h4>
+                <p class="text-[13.5px] text-zinc-600 leading-relaxed mb-3">Bought a 3×6 banner for a community event 6 months ago and it's been out in the Arizona sun and storms ever since. Still looks brand new. These guys know their materials.</p>
+                <div class="flex items-center gap-4 text-[12px] text-zinc-500">
+                  <button class="flex items-center gap-1 hover:text-zinc-900">
+                    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M7 10v12M15 5.88L14 10h5.83a2 2 0 011.92 2.56l-2.33 8A2 2 0 0117.5 22H4a2 2 0 01-2-2V12a2 2 0 012-2h2.76a2 2 0 001.79-1.11L12 2h0a3.13 3.13 0 013 3.88z"/></svg>
+                    Helpful (18)
+                  </button>
+                  <button class="hover:text-zinc-900">Reply</button>
+                </div>
+              </div>
+
+              <div class="pb-6 border-b" style="border-color: hsl(var(--border));">
+                <div class="flex items-start gap-3 mb-2">
+                  <div class="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold text-[13px]">TW</div>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold text-[13.5px]">Tina Westinghouse</span>
+                      <span class="badge bg-emerald-50 text-emerald-700 text-[10px]">Verified</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <div class="flex items-center gap-0.5 text-amber-500">
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                        <svg class="star-empty text-zinc-300" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7L12 16l-6.5 4.5 2-7L2 9h7z"/></svg>
+                      </div>
+                      <span class="text-[12px] text-zinc-500">· 2 weeks ago</span>
+                    </div>
+                  </div>
+                </div>
+                <h4 class="font-semibold text-[14px] mb-2">Great quality, rush order came through</h4>
+                <p class="text-[13.5px] text-zinc-600 leading-relaxed mb-3">Ordered at 1:45pm and it was ready for pickup the same afternoon. Pricing was fair and the banner looked pro. Knocked one star only because the grommets were slightly uneven on one side.</p>
+                <div class="flex items-center gap-4 text-[12px] text-zinc-500">
+                  <button class="flex items-center gap-1 hover:text-zinc-900">
+                    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M7 10v12M15 5.88L14 10h5.83a2 2 0 011.92 2.56l-2.33 8A2 2 0 0117.5 22H4a2 2 0 01-2-2V12a2 2 0 012-2h2.76a2 2 0 001.79-1.11L12 2h0a3.13 3.13 0 013 3.88z"/></svg>
+                    Helpful (9)
+                  </button>
+                  <button class="hover:text-zinc-900">Reply</button>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-outline w-full mt-6">Load 12 more reviews</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Related products -->
+    <div class="mt-16 pt-10 border-t" style="border-color: hsl(var(--border));">
+      <div class="flex items-end justify-between mb-8">
+        <h2 class="font-display text-[28px] font-bold tracking-tight">You might also like</h2>
+        <a href="#" class="btn btn-ghost text-[13px]">See all banners <svg class="icon-sm" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card card-hover overflow-hidden">
+          <div class="product-img aspect-square flex items-center justify-center">
+            <svg class="icon-display" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 8h18M3 13h18M3 18h18M8 3v18M13 3v18M18 3v18"/></svg>
+          </div>
+          <div class="p-4">
+            <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Banner</div>
+            <h3 class="font-semibold text-[14.5px] mt-1 mb-2">Mesh Banners</h3>
+            <div class="text-[14px] font-semibold">From $3.50<span class="text-zinc-400 text-[12px] font-normal">/sqft</span></div>
+          </div>
+        </div>
+        <div class="card card-hover overflow-hidden">
+          <div class="product-img aspect-square flex items-center justify-center">
+            <svg class="icon-display" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="15" rx="1"/><path d="M5 18h14M12 18v3M9 21h6"/></svg>
+          </div>
+          <div class="p-4">
+            <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Display</div>
+            <h3 class="font-semibold text-[14.5px] mt-1 mb-2">Retractable Banner Stand</h3>
+            <div class="text-[14px] font-semibold">From $185</div>
+          </div>
+        </div>
+        <div class="card card-hover overflow-hidden">
+          <div class="product-img aspect-square flex items-center justify-center">
+            <svg class="icon-display" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M12 3c3 0 6 1 6 3s-3 3-6 3-6-1-6-3 3-3 6-3z"/><path d="M12 9c3 0 6 1 6 3s-3 3-6 3-6-1-6-3 3-3 6-3z"/></svg>
+          </div>
+          <div class="p-4">
+            <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Flags</div>
+            <h3 class="font-semibold text-[14.5px] mt-1 mb-2">Pole Banner Set</h3>
+            <div class="text-[14px] font-semibold">From $145<span class="text-zinc-400 text-[12px] font-normal">/set</span></div>
+          </div>
+        </div>
+        <div class="card card-hover overflow-hidden">
+          <div class="product-img aspect-square flex items-center justify-center">
+            <svg class="icon-display" viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M12 3L3 20M12 3l9 17"/><path d="M7 14h10"/></svg>
+          </div>
+          <div class="p-4">
+            <div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Sign</div>
+            <h3 class="font-semibold text-[14.5px] mt-1 mb-2">Standard A-Frame Sign</h3>
+            <div class="text-[14px] font-semibold">From $89<span class="text-zinc-400 text-[12px] font-normal">/ea</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="border-t pt-16 pb-8 mt-10 bg-zinc-50" style="border-color: hsl(var(--border));">
+  <div class="max-w-[1400px] mx-auto px-6">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 pb-4">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+        <span class="font-bold text-[15px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+      </div>
+      <div class="text-[12.5px] text-zinc-500">© 2026 controlp.io · Chandler, Arizona · (480) 999-9906</div>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

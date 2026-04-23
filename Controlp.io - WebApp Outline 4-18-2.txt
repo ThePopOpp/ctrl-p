@@ -1,0 +1,26 @@
+Controlp.io - WebApp Outline 4-18-2026
+All 14 pages delivered. Your controlp.io mockup set is now at 19 HTML files + the Cowork rebuild prompt.
+Marketing pages:
+
+Templates — 480+ template marketplace, colored gradient thumbnails, Free/Premium/Trending badges, hover-to-customize
+Contact — form + pulsing-pin map placeholder, quick contact cards (call/email/text/hours), helper links
+About — story layout with dark shop-image hero, stats strip on black, 4 values, 3 team members (Jeremy/Sofia/Marcus)
+FAQ — search bar, sticky category chips, 5 category groups with expandable accordions, sidebar help card
+Blog archive — featured post + 9-card grid, author avatars, category badges, newsletter CTA
+Blog post — "7 Deadly Sins of Banner Design" full article, TOC sidebar, author card, related posts
+
+Ecommerce flow:
+
+Cart — 3 items showing artwork states (uploaded/pending/design service), promo applied, sticky summary, Affirm option
+Checkout — 4-step progress, contact + shipping + payment + billing on one screen, radio-card pattern for options
+Thank you — success icon, 4-step order timeline, artwork upload reminder in amber alert box, order summary, referral CTA
+
+Authentication:
+
+Login — split-screen with dark testimonial side (Kristy Dale quote + stats), Google/Apple OAuth, magic link option
+Register — flipped split-screen with "10% off first order" pitch, password strength meter, vendor trust row
+Forgot password — centered card, zinc-900 lock icon, info helper box
+Reset password — password strength meter, requirements checklist, blue security note
+Logout — countdown ring animation (5-sec SVG stroke-dashoffset), feedback emoji row, security tip
+
+Every page holds the exact same design system: Inter + Geist fonts, HSL Shadcn tokens, line-icon SVGs only, white cards with hsl(240 5.9% 90%) borders, consistent button/input/badge patterns. Ready to feed to Cowork alongside the original 5 mockups and the rebuild prompt.

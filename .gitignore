@@ -1,0 +1,58 @@
+# Environment
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Production
+build/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.yarn/cache
+.yarn/unplugged
+
+# TypeScript
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+coverage/
+.nyc_output/
+
+# Supabase
+supabase/.branches
+supabase/.temp
+
+# Vercel (if ever used)
+.vercel/
+
+# Turbo
+.turbo/
