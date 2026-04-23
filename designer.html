@@ -18,25 +18,21 @@
   .panel-tab { font-size:12px; padding:7px 12px; border-bottom:2px solid transparent; color:#71717a; cursor:pointer; background:none; border-top:none; border-left:none; border-right:none; transition:all 0.12s; white-space:nowrap; }
   .panel-tab.active { color:#18181b; border-bottom-color:#18181b; font-weight:600; }
 
-  /* Option pill buttons */
   .opt-btn { display:inline-flex; align-items:center; justify-content:center; gap:4px; padding:5px 9px; border-radius:6px; font-size:11.5px; font-weight:500; border:1.5px solid #e4e4e7; background:white; color:#52525b; cursor:pointer; transition:all 0.12s; white-space:nowrap; }
   .opt-btn:hover { border-color:#a1a1aa; color:#18181b; }
   .opt-btn.active { background:#18181b; color:white; border-color:#18181b; }
   .opt-btn.premium.active { background:linear-gradient(135deg,#7c3aed,#4f46e5); border-color:#4f46e5; }
 
-  /* Foil buttons */
   .foil-btn { width:28px; height:28px; border-radius:5px; border:2px solid transparent; cursor:pointer; transition:all 0.12s; flex-shrink:0; }
   .foil-btn:hover { transform:scale(1.1); }
   .foil-btn.active { border-color:#18181b; box-shadow:0 0 0 2px white, 0 0 0 3.5px #18181b; }
 
-  /* Toggle switch */
   .toggle-wrap { display:flex; align-items:center; justify-content:space-between; padding:7px 0; }
   .toggle-track { width:36px; height:20px; border-radius:10px; background:#e4e4e7; position:relative; cursor:pointer; transition:background 0.2s; flex-shrink:0; }
   .toggle-track.on { background:#18181b; }
   .toggle-thumb { width:16px; height:16px; border-radius:50%; background:white; position:absolute; top:2px; left:2px; transition:transform 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
   .toggle-track.on .toggle-thumb { transform:translateX(16px); }
 
-  /* Section accordion */
   .cfg-section { border-bottom:1px solid #f0f0f0; }
   .cfg-header { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; cursor:pointer; font-size:11px; font-weight:700; color:#3f3f46; text-transform:uppercase; letter-spacing:.05em; user-select:none; }
   .cfg-header:hover { background:#fafafa; }
@@ -44,21 +40,17 @@
   .cfg-header.open .chev { transform:rotate(180deg); }
   .cfg-body { padding:0 12px 10px; }
 
-  /* Swatch */
   .swatch { width:20px; height:20px; border-radius:4px; cursor:pointer; border:1.5px solid rgba(0,0,0,0.08); transition:transform 0.1s; flex-shrink:0; }
   .swatch:hover { transform:scale(1.15); }
   .swatch.selected { outline:2px solid #3b82f6; outline-offset:1.5px; }
 
-  /* Canvas area */
   .canvas-bg { background-color:#e8e8e8; background-image:linear-gradient(45deg,#d8d8d8 25%,transparent 25%),linear-gradient(-45deg,#d8d8d8 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d8d8d8 75%),linear-gradient(-45deg,transparent 75%,#d8d8d8 75%); background-size:12px 12px; background-position:0 0,0 6px,6px -6px,-6px 0; }
 
-  /* Side switcher */
   .side-tab { padding:6px 18px; font-size:12px; font-weight:500; border:1.5px solid #e4e4e7; cursor:pointer; background:white; color:#71717a; transition:all 0.12s; }
   .side-tab:first-child { border-radius:7px 0 0 7px; border-right:none; }
   .side-tab:last-child { border-radius:0 7px 7px 0; }
   .side-tab.active { background:#18181b; color:white; border-color:#18181b; }
 
-  /* Layer row */
   .layer-row { display:flex; align-items:center; gap:6px; padding:7px 10px; border-bottom:1px solid #f4f4f5; cursor:pointer; transition:background 0.1s; }
   .layer-row:hover { background:#f9f9f9; }
   .layer-row.selected { background:#eff6ff; }
@@ -66,11 +58,9 @@
   .l-btn:hover { background:#f4f4f5; color:#52525b; }
   .l-btn.del:hover { background:#fef2f2; color:#ef4444; }
 
-  /* Upload zone */
   .upload-zone { border:2px dashed #d4d4d8; border-radius:8px; padding:18px 10px; text-align:center; background:#fafafa; cursor:pointer; transition:all 0.15s; }
   .upload-zone:hover { border-color:#3b82f6; background:#eff6ff; }
 
-  /* Design card */
   .design-card { border:1.5px solid #e4e4e7; border-radius:7px; padding:6px 4px; cursor:pointer; transition:all 0.12s; display:flex; align-items:center; justify-content:center; min-height:70px; background:white; }
   .design-card:hover { border-color:#3b82f6; background:#eff6ff; }
   .design-card.selected { border-color:#2563eb; background:#eff6ff; }
@@ -88,20 +78,15 @@
   .tb-btn:disabled { opacity:.3; cursor:default; }
   .tb-btn:disabled:hover { background:none; }
 
-  /* Price summary bar */
   .price-row { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#71717a; padding:2px 0; }
   .price-row.total { font-size:13px; font-weight:700; color:#18181b; padding-top:6px; border-top:1px solid #e4e4e7; margin-top:4px; }
 
-  /* Spec badge */
   .spec-badge { display:inline-flex; align-items:center; gap:3px; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:4px; padding:2px 6px; font-size:10.5px; color:#52525b; font-weight:500; }
-
-  /* Corner preview shapes */
-  .corner-preview { width:28px; height:18px; background:#18181b; display:block; }
 </style>
 </head>
 <body>
 
-<!-- ══════════════ TOP TOOLBAR ══════════════ -->
+<!-- TOP TOOLBAR -->
 <div style="height:48px;background:#18181b;border-bottom:1px solid #3f3f46;display:flex;align-items:center;justify-content:space-between;padding:0 10px;user-select:none;flex-shrink:0;">
   <div style="display:flex;align-items:center;gap:2px;">
     <button class="tb-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button>
@@ -126,7 +111,7 @@
   </div>
 </div>
 
-<!-- ══════════════ BODY ══════════════ -->
+<!-- BODY -->
 <div style="display:flex;height:calc(100vh - 48px);">
 
   <!-- TOOL RAIL -->
@@ -157,19 +142,19 @@
   <!-- CANVAS AREA -->
   <div class="canvas-bg" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
 
-    <!-- Side switcher (shown for BC) -->
+    <!-- Side switcher (BC only) -->
     <div id="side-switcher" style="position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;z-index:10;box-shadow:0 1px 4px rgba(0,0,0,0.12);border-radius:8px;">
       <button onclick="setSide('front')" id="side-front" class="side-tab active">Front</button>
       <button onclick="setSide('back')" id="side-back" class="side-tab">Back</button>
     </div>
 
-    <!-- Canvas hint labels -->
+    <!-- Canvas hint labels (BC only) -->
     <div id="canvas-labels" style="position:absolute;top:60px;right:20px;display:flex;flex-direction:column;gap:5px;z-index:5;">
       <div style="display:flex;align-items:center;gap:5px;font-size:10.5px;color:#71717a;"><div style="width:20px;height:2px;background:#ff9999;border-top:1px dashed #ff9999;"></div>Bleed</div>
       <div style="display:flex;align-items:center;gap:5px;font-size:10.5px;color:#71717a;"><div style="width:20px;height:2px;border-top:1.5px dashed #93c5fd;"></div>Safe zone</div>
     </div>
 
-    <!-- White canvas container -->
+    <!-- Canvas container -->
     <div id="card-wrapper" style="position:relative;display:flex;align-items:center;justify-content:center;">
       <svg id="card-svg" style="display:block;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.18));"></svg>
     </div>
@@ -180,9 +165,11 @@
   </div>
 </div>
 
-<!-- ══════════════ JAVASCRIPT ══════════════ -->
 <script>
-// ─── Business card config state ───
+// ─── Product state ───
+let currentProduct = 'bc'; // 'bc' | 'wa' | null (null = picker)
+
+// ─── Business card state ───
 const bc = {
   size: 'standard',
   quantity: 250,
@@ -212,9 +199,52 @@ const PRICES = {
   finish: { matte:0, gloss:0, 'soft-touch':12, velvet:15, satin:8, silk:10, uncoated:0 },
   shape: { rectangle:0, 'rounded-rect':0, circle:10, oval:8, leaf:15, custom:20 },
   effects: { foil:25, spotUV:15, raisedSpotUV:20, letterpress:30, edgePainting:18 },
-  sides: { front:0, both:10 },
 };
 
+// ─── Wall art state ───
+const wa = {
+  size: '24x36',
+  frameColor: 'black',
+  frameMaterial: 'wood',
+  quantity: 1,
+};
+
+const WA_SIZES = {
+  // Landscape / rectangle
+  '16x24':  { label: '16" × 24"',  w: 16, h: 24, group: 'landscape' },
+  '24x36':  { label: '24" × 36"',  w: 24, h: 36, group: 'landscape' },
+  '24x46':  { label: '24" × 46"',  w: 24, h: 46, group: 'landscape' },
+  '24x60':  { label: '24" × 60"',  w: 24, h: 60, group: 'landscape' },
+  '24x72':  { label: '24" × 72"',  w: 24, h: 72, group: 'landscape' },
+  '36x46':  { label: '36" × 46"',  w: 36, h: 46, group: 'landscape' },
+  '36x60':  { label: '36" × 60"',  w: 36, h: 60, group: 'landscape' },
+  '36x72':  { label: '36" × 72"',  w: 36, h: 72, group: 'landscape' },
+  '46x60':  { label: '46" × 60"',  w: 46, h: 60, group: 'landscape' },
+  '46x72':  { label: '46" × 72"',  w: 46, h: 72, group: 'landscape' },
+  '60x72':  { label: '60" × 72"',  w: 60, h: 72, group: 'landscape' },
+  // Square
+  '16x16':  { label: '16" × 16"',  w: 16, h: 16, group: 'square' },
+  '24x24':  { label: '24" × 24"',  w: 24, h: 24, group: 'square' },
+  '36x36':  { label: '36" × 36"',  w: 36, h: 36, group: 'square' },
+  '46x46':  { label: '46" × 46"',  w: 46, h: 46, group: 'square' },
+  '60x60':  { label: '60" × 60"',  w: 60, h: 60, group: 'square' },
+  '72x72':  { label: '72" × 72"',  w: 72, h: 72, group: 'square' },
+};
+
+const WA_PRICES = {
+  size: {
+    '16x16': 79,  '16x24': 89,
+    '24x24': 99,  '24x36': 129, '24x46': 149, '24x60': 179, '24x72': 199,
+    '36x36': 149, '36x46': 169, '36x60': 199, '36x72': 229,
+    '46x46': 199, '46x60': 229, '46x72': 259,
+    '60x60': 249, '60x72': 299,
+    '72x72': 329,
+  },
+  frameMaterial: { wood: 0, 'pvc-composite': -15, aluminum: 25 },
+  frameColor: { black: 0, white: 5, pecan: 10 },
+};
+
+// ─── Price calculation ───
 function calcPrice() {
   let p = (PRICES.qty[bc.quantity] || 59);
   p += PRICES.paper[bc.paper] || 0;
@@ -230,12 +260,19 @@ function calcPrice() {
   return p;
 }
 
+function calcWaPrice() {
+  const base = WA_PRICES.size[wa.size] || 129;
+  const mat  = WA_PRICES.frameMaterial[wa.frameMaterial] || 0;
+  const col  = WA_PRICES.frameColor[wa.frameColor] || 0;
+  return (base + mat + col) * wa.quantity;
+}
+
 function updatePrice() {
-  const p = calcPrice();
+  const p = currentProduct === 'wa' ? calcWaPrice() : calcPrice();
   document.getElementById('price-badge').textContent = '$' + p.toFixed(2);
 }
 
-// ─── Canvas rendering ───
+// ─── BC canvas ───
 function getCardDimensions() {
   const s = SIZES[bc.size];
   const maxW = 460, maxH = 320;
@@ -252,7 +289,6 @@ function getCornerRadius(cw, ch) {
 function getClipPath(cw, ch, r, id) {
   const bleed = 8;
   const bw = cw + bleed * 2, bh = ch + bleed * 2;
-
   if (bc.shape === 'circle') {
     const cr = Math.min(cw, ch) / 2;
     return `<clipPath id="${id}"><circle cx="${cw/2}" cy="${ch/2}" r="${cr}"/></clipPath>
@@ -267,7 +303,6 @@ function getClipPath(cw, ch, r, id) {
     return `<clipPath id="${id}"><path d="${lp}"/></clipPath>
             <clipPath id="${id}-bleed"><path d="M${bw/2},0 C${bw},0 ${bw},${bh/2} ${bw/2},${bh} C0,${bh} 0,${bh/2} ${bw/2},0 Z"/></clipPath>`;
   }
-  // Default: rounded rect
   const rx = (bc.shape === 'rounded-rect') ? Math.max(r, 6) : r;
   return `<clipPath id="${id}"><rect x="0" y="0" width="${cw}" height="${ch}" rx="${rx}" ry="${rx}"/></clipPath>
           <clipPath id="${id}-bleed"><rect x="${-bleed}" y="${-bleed}" width="${bw}" height="${bh}" rx="${rx + bleed * 0.5}" ry="${rx + bleed * 0.5}"/></clipPath>`;
@@ -279,10 +314,8 @@ function buildCardSVG() {
   const bleed = 8, safe = 14;
   const bw = cw + bleed * 2, bh = ch + bleed * 2;
   const id = 'card-clip';
-
   const clips = getClipPath(cw, ch, r, id);
 
-  // Foil shimmer overlay
   const foilColors = {
     gold: ['#f6e27a','#d4a017','#f9e784','#b8860b'],
     silver: ['#e8e8e8','#b0b0b0','#f0f0f0','#909090'],
@@ -301,17 +334,14 @@ function buildCardSVG() {
     <rect x="0" y="0" width="${cw}" height="${ch}" fill="url(#foil-grad)" clip-path="url(#${id})"/>
   ` : '';
 
-  // Spot UV gloss overlay
   const spotUVOverlay = (bc.effects.spotUV || bc.effects.raisedSpotUV) ? `
     <rect x="${cw*0.1}" y="${ch*0.1}" width="${cw*0.8}" height="${ch*0.8}" rx="${r}" fill="white" opacity="0.18"/>
   ` : '';
 
-  // Edge painting
   const edgePaint = bc.effects.edgePainting ? `
     <rect x="0" y="0" width="${cw}" height="${ch}" rx="${r}" fill="none" stroke="${bc.effects.edgePainting}" stroke-width="4" clip-path="url(#${id})"/>
   ` : '';
 
-  // Finish texture overlay
   const finishOverlay = {
     matte: `<rect x="0" y="0" width="${cw}" height="${ch}" fill="rgba(255,255,255,0.04)" clip-path="url(#${id})"/>`,
     gloss: `<rect x="0" y="0" width="${cw}" height="${ch}" fill="rgba(255,255,255,0.12)" clip-path="url(#${id})"/>`,
@@ -321,13 +351,8 @@ function buildCardSVG() {
     kraft: `<rect x="0" y="0" width="${cw}" height="${ch}" fill="rgba(180,130,80,0.08)" clip-path="url(#${id})"/>`,
   }[bc.finish] || '';
 
-  // Paper color tint
-  const paperTint = {
-    standard: '#ffffff', premium: '#fafdf8', ultra: '#f8fafd',
-    cotton: '#fdf9f4', kraft: '#e8d8b8', pvc: '#f0f8ff',
-  }[bc.paper] || '#ffffff';
+  const paperTint = { standard:'#ffffff', premium:'#fafdf8', ultra:'#f8fafd', cotton:'#fdf9f4', kraft:'#e8d8b8', pvc:'#f0f8ff' }[bc.paper] || '#ffffff';
 
-  // Side indicator
   const sideLabel = bc.activeSide === 'front'
     ? `<text x="${cw/2}" y="${ch/2 + 4}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(9, cw*0.036)}" fill="#c4c4c4" font-weight="500">Front — Add your design</text>`
     : `<text x="${cw/2}" y="${ch/2 + 4}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(9, cw*0.036)}" fill="#c4c4c4" font-weight="500">Back — ${bc.sides === 'front' ? 'Add back design (enable double-sided)' : 'Add your design'}</text>`;
@@ -337,35 +362,17 @@ function buildCardSVG() {
   const svgContent = `
 <svg viewBox="-${bleed} -${bleed} ${bw} ${bh}" width="${bw}" height="${bh}" xmlns="http://www.w3.org/2000/svg">
   <defs>${clips}</defs>
-
-  <!-- Bleed area -->
   <rect x="-${bleed}" y="-${bleed}" width="${bw}" height="${bh}" fill="#ffd7d7" rx="${r + bleed * 0.4}" ry="${r + bleed * 0.4}" opacity="0.35"/>
-
-  <!-- Card body -->
   <rect x="0" y="0" width="${cw}" height="${ch}" fill="${paperTint}" clip-path="url(#${id})"/>
   ${finishOverlay}
-
-  <!-- Bleed guide -->
   <rect x="-${bleed}" y="-${bleed}" width="${bw}" height="${bh}" fill="none" stroke="#ff9999" stroke-width="1" stroke-dasharray="4 3" rx="${r + bleed * 0.4}" ry="${r + bleed * 0.4}" opacity="0.7"/>
-
-  <!-- Safe zone guide -->
   <rect x="${safe}" y="${safe}" width="${cw - safe*2}" height="${ch - safe*2}" fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" rx="${Math.max(0, r - safe * 0.4)}" ry="${Math.max(0, r - safe * 0.4)}" opacity="0.8"/>
-
-  <!-- Design layer -->
   ${designGroup}
-
-  <!-- Special effects -->
   ${foilOverlay}
   ${spotUVOverlay}
   ${edgePaint}
-
-  <!-- Card outline -->
   <rect x="0" y="0" width="${cw}" height="${ch}" fill="none" stroke="#d0d0d0" stroke-width="1" clip-path="url(#${id})" rx="${r}" ry="${r}"/>
-
-  <!-- Placeholder label -->
-  ${designGroup.includes('</text>') ? '' : sideLabel}
-
-  <!-- Selection group (hidden) -->
+  ${sideLabel}
   <g id="selection-group" opacity="0">
     <rect id="sel-rect" x="${safe}" y="${safe}" width="${cw - safe*2}" height="${ch - safe*2}" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="4 3" rx="2"/>
     <rect x="${safe - 4}" y="${safe - 4}" width="8" height="8" rx="1.5" fill="white" stroke="#2563eb" stroke-width="1.5"/>
@@ -382,7 +389,145 @@ function buildCardSVG() {
   updateSizeLabel();
 }
 
+// ─── Wall art canvas ───
+function buildFramedPrintSVG() {
+  const s = WA_SIZES[wa.size];
+  const maxW = 460, maxH = 330;
+  const aspect = s.w / s.h;
+  let cw, ch;
+  if (aspect >= 1) {
+    cw = maxW; ch = Math.round(maxW / aspect);
+    if (ch > maxH) { ch = maxH; cw = Math.round(maxH * aspect); }
+  } else {
+    ch = maxH; cw = Math.round(maxH * aspect);
+    if (cw > maxW) { cw = maxW; ch = Math.round(maxW / aspect); }
+  }
+  cw = Math.max(cw, 140); ch = Math.max(ch, 120);
+
+  const fw = 20; // frame border width px
+  const mt = 12; // mat board width px
+  const ix = fw + mt, iy = fw + mt;
+  const iw = cw - ix * 2;
+  const ih = ch - iy * 2;
+
+  const frameColorMap = {
+    black: { fill: '#1c1c1c', inner: '#0d0d0d', hi: '#383838' },
+    white: { fill: '#ece8e2', inner: '#ccc8c2', hi: '#f5f2ee' },
+    pecan: { fill: '#7a5230', inner: '#5a3818', hi: '#9a6840' },
+  };
+  const fc = frameColorMap[wa.frameColor];
+
+  let fgDef = '';
+  let fgRef = fc.fill;
+
+  if (wa.frameMaterial === 'wood') {
+    fgDef = `<linearGradient id="fg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="${fc.hi}"/>
+      <stop offset="25%"  stop-color="${fc.fill}"/>
+      <stop offset="55%"  stop-color="${fc.inner}"/>
+      <stop offset="80%"  stop-color="${fc.fill}"/>
+      <stop offset="100%" stop-color="${fc.hi}"/>
+    </linearGradient>`;
+    fgRef = 'url(#fg)';
+  } else if (wa.frameMaterial === 'aluminum') {
+    const sh = wa.frameColor === 'black'
+      ? ['#4a4a4a','#1a1a1a','#3a3a3a','#0d0d0d']
+      : wa.frameColor === 'white'
+      ? ['#f8f5f0','#c8c5c0','#e8e5e0','#b8b5b0']
+      : ['#c09060','#7a5230','#a07040','#5a3818'];
+    fgDef = `<linearGradient id="fg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="${sh[0]}"/>
+      <stop offset="30%"  stop-color="${sh[1]}"/>
+      <stop offset="65%"  stop-color="${sh[2]}"/>
+      <stop offset="100%" stop-color="${sh[3]}"/>
+    </linearGradient>`;
+    fgRef = 'url(#fg)';
+  }
+
+  const vw = cw + 20, vh = ch + 20;
+  const ox = 8, oy = 8;
+
+  const matLabel = wa.frameMaterial === 'pvc-composite' ? 'PVC/Composite' : wa.frameMaterial.charAt(0).toUpperCase() + wa.frameMaterial.slice(1);
+  const colLabel = wa.frameColor.charAt(0).toUpperCase() + wa.frameColor.slice(1);
+  const fs = Math.max(10, Math.min(15, iw * 0.065));
+  const fs2 = Math.max(9, Math.min(12, iw * 0.045));
+
+  const svgEl = document.getElementById('card-svg');
+  svgEl.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
+  svgEl.setAttribute('width', String(vw));
+  svgEl.setAttribute('height', String(vh));
+  svgEl.style.filter = 'drop-shadow(0 8px 28px rgba(0,0,0,0.22))';
+
+  svgEl.innerHTML = `
+    <defs>
+      ${fgDef}
+      <pattern id="check" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
+        <rect width="14" height="14" fill="#e4e4e4"/>
+        <rect width="7" height="7" fill="#d4d4d4"/>
+        <rect x="7" y="7" width="7" height="7" fill="#d4d4d4"/>
+      </pattern>
+      <clipPath id="print-clip">
+        <rect x="${ox+ix}" y="${oy+iy}" width="${iw}" height="${ih}"/>
+      </clipPath>
+      <linearGradient id="glass-grad" x1="0%" y1="0%" x2="40%" y2="100%">
+        <stop offset="0%"   stop-color="white" stop-opacity="0.2"/>
+        <stop offset="100%" stop-color="white" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+
+    <!-- Outer frame body -->
+    <rect x="${ox}" y="${oy}" width="${cw}" height="${ch}" rx="2" fill="${fgRef}"/>
+
+    <!-- Frame bevel: top/left lighter -->
+    <polygon points="${ox},${oy} ${ox+cw},${oy} ${ox+cw-fw},${oy+fw} ${ox+fw},${oy+fw}" fill="${fc.hi}" opacity="0.22"/>
+    <polygon points="${ox},${oy} ${ox+fw},${oy+fw} ${ox+fw},${oy+ch-fw} ${ox},${oy+ch}" fill="${fc.hi}" opacity="0.14"/>
+    <!-- Frame bevel: bottom/right darker -->
+    <polygon points="${ox+cw},${oy+ch} ${ox},${oy+ch} ${ox+fw},${oy+ch-fw} ${ox+cw-fw},${oy+ch-fw}" fill="${fc.inner}" opacity="0.3"/>
+    <polygon points="${ox+cw},${oy+ch} ${ox+cw-fw},${oy+ch-fw} ${ox+cw-fw},${oy+fw} ${ox+cw},${oy}" fill="${fc.inner}" opacity="0.22"/>
+
+    <!-- Mat board -->
+    <rect x="${ox+fw}" y="${oy+fw}" width="${cw-fw*2}" height="${ch-fw*2}" fill="#f5f2ec"/>
+    <rect x="${ox+fw}" y="${oy+fw}" width="${cw-fw*2}" height="${ch-fw*2}" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="2"/>
+    <rect x="${ox+fw+1}" y="${oy+fw+1}" width="${cw-fw*2-2}" height="${ch-fw*2-2}" fill="none" stroke="rgba(0,0,0,0.05)" stroke-width="1"/>
+
+    <!-- Print area -->
+    <rect x="${ox+ix}" y="${oy+iy}" width="${iw}" height="${ih}" fill="url(#check)"/>
+    <rect x="${ox+ix}" y="${oy+iy}" width="${iw}" height="${ih}" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+
+    <!-- Design layer (clipped to print area) -->
+    <g id="canvas-design" clip-path="url(#print-clip)"></g>
+
+    <!-- Placeholder text -->
+    <text x="${ox+ix+iw/2}" y="${oy+iy+ih/2 - 8}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${fs}" fill="#a1a1aa" font-weight="500">Add your design</text>
+    <text x="${ox+ix+iw/2}" y="${oy+iy+ih/2 + 12}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${fs2}" fill="#c4c4c4">${s.label}  ·  ${colLabel} ${matLabel}</text>
+
+    <!-- Glass glare overlay -->
+    <rect x="${ox+fw}" y="${oy+fw}" width="${cw-fw*2}" height="${ch-fw*2}" fill="url(#glass-grad)"/>
+  `;
+
+  updateSizeLabel();
+}
+
+// ─── Canvas dispatcher ───
+function buildCanvas() {
+  const switcher = document.getElementById('side-switcher');
+  const labels   = document.getElementById('canvas-labels');
+  if (switcher) switcher.style.display = (currentProduct === 'bc') ? 'flex' : 'none';
+  if (labels)   labels.style.display   = (currentProduct === 'bc') ? 'flex' : 'none';
+  if (currentProduct === 'wa') buildFramedPrintSVG();
+  else buildCardSVG();
+  updatePrice();
+}
+
 function updateSizeLabel() {
+  const el = document.getElementById('size-label');
+  if (!el) return;
+  if (currentProduct === 'wa') {
+    const s = WA_SIZES[wa.size];
+    const mat = wa.frameMaterial === 'pvc-composite' ? 'PVC/Composite' : wa.frameMaterial.charAt(0).toUpperCase() + wa.frameMaterial.slice(1);
+    el.textContent = `${s.label}  ·  ${mat}  ·  ${wa.frameColor.charAt(0).toUpperCase() + wa.frameColor.slice(1)} frame`;
+    return;
+  }
   const s = SIZES[bc.size];
   const extras = [];
   if (bc.effects.foil) extras.push(bc.effects.foil.charAt(0).toUpperCase() + bc.effects.foil.slice(1) + ' Foil');
@@ -390,11 +535,10 @@ function updateSizeLabel() {
   if (bc.effects.raisedSpotUV) extras.push('Raised UV');
   if (bc.effects.letterpress) extras.push('Letterpress');
   if (bc.effects.edgePainting) extras.push('Edge Paint');
-  const label = `${s.in}  ·  ${bc.quantity} cards  ·  ${bc.paper.charAt(0).toUpperCase() + bc.paper.slice(1)} / ${bc.thickness}` + (extras.length ? '  ·  ' + extras.join(', ') : '');
-  document.getElementById('size-label').textContent = label;
+  el.textContent = `${s.in}  ·  ${bc.quantity} cards  ·  ${bc.paper.charAt(0).toUpperCase() + bc.paper.slice(1)} / ${bc.thickness}` + (extras.length ? '  ·  ' + extras.join(', ') : '');
 }
 
-// ─── Option setters ───
+// ─── BC option setters ───
 function setOpt(key, val, groupClass) {
   bc[key] = val;
   if (groupClass) {
@@ -402,30 +546,22 @@ function setOpt(key, val, groupClass) {
       b.classList.toggle('active', b.dataset.val === String(val));
     });
   }
-  buildCardSVG();
-  updatePrice();
+  buildCanvas();
 }
 
-function setEffect(key, val) {
-  bc.effects[key] = val;
-  buildCardSVG();
-  updatePrice();
-}
+function setEffect(key, val) { bc.effects[key] = val; buildCanvas(); }
 
 function toggleEffect(key) {
   bc.effects[key] = !bc.effects[key];
-  // Mutual exclusion: spotUV and raisedSpotUV
   if (key === 'raisedSpotUV' && bc.effects.raisedSpotUV) bc.effects.spotUV = false;
   if (key === 'spotUV' && bc.effects.spotUV) bc.effects.raisedSpotUV = false;
-  buildCardSVG();
-  updatePrice();
-  setTool('swap'); // re-render panel to sync toggles
+  buildCanvas();
+  setTool('swap');
 }
 
 function setFoil(foilKey) {
   bc.effects.foil = bc.effects.foil === foilKey ? null : foilKey;
-  buildCardSVG();
-  updatePrice();
+  buildCanvas();
   setTool('swap');
 }
 
@@ -436,8 +572,194 @@ function setSide(side) {
   buildCardSVG();
 }
 
-// ─── Panel templates ───
+// ─── Wall art setters ───
+function setWa(key, val) {
+  wa[key] = val;
+  buildCanvas();
+  setTool('swap');
+}
+
+// ─── Product picker ───
+function selectProduct(product) {
+  currentProduct = product;
+  layers = [];
+  buildCanvas();
+  setTool('swap');
+}
+
+function showProductPicker() {
+  currentProduct = null;
+  document.getElementById('side-switcher').style.display = 'none';
+  document.getElementById('canvas-labels').style.display = 'none';
+  setTool('swap');
+}
+
+// ─── Panel renders ───
 function renderSwap() {
+  if (!currentProduct) return renderProductPicker();
+  if (currentProduct === 'wa') return renderWallArt();
+  return renderBC();
+}
+
+function renderProductPicker() {
+  return `
+    <div style="padding:14px 12px 10px;border-bottom:1px solid #f0f0f0;">
+      <div style="font-size:13.5px;font-weight:700;color:#18181b;margin-bottom:3px;">Choose a Product</div>
+      <div style="font-size:11px;color:#71717a;">Select what you'd like to customize</div>
+    </div>
+    <div style="padding:10px;display:flex;flex-direction:column;gap:7px;">
+
+      <button onclick="selectProduct('bc')" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #e4e4e7;border-radius:8px;background:white;cursor:pointer;text-align:left;width:100%;transition:all .12s;" onmouseover="this.style.borderColor='#93c5fd';this.style.background='#f8fbff'" onmouseout="this.style.borderColor='#e4e4e7';this.style.background='white'">
+        <div style="width:42px;height:28px;background:#18181b;border-radius:3px;flex-shrink:0;"></div>
+        <div style="flex:1;text-align:left;">
+          <div style="font-size:12.5px;font-weight:600;color:#18181b;">Business Cards</div>
+          <div style="font-size:10.5px;color:#71717a;margin-top:2px;">Standard, Slim, Square, Mini &amp; more</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <button onclick="selectProduct('wa')" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #e4e4e7;border-radius:8px;background:white;cursor:pointer;text-align:left;width:100%;transition:all .12s;" onmouseover="this.style.borderColor='#93c5fd';this.style.background='#f8fbff'" onmouseout="this.style.borderColor='#e4e4e7';this.style.background='white'">
+        <div style="width:38px;height:38px;border-radius:3px;flex-shrink:0;background:#7a5230;position:relative;overflow:hidden;">
+          <div style="position:absolute;inset:4px;background:#f0ede8;border-radius:1px;"></div>
+          <div style="position:absolute;inset:7px;background:#e0ddd8;border-radius:1px;"></div>
+        </div>
+        <div style="flex:1;text-align:left;">
+          <div style="font-size:12.5px;font-weight:600;color:#18181b;">Wall Art / Framed Prints</div>
+          <div style="font-size:10.5px;color:#71717a;margin-top:2px;">16"–72"  ·  Wood, PVC, Aluminum</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <div style="padding:10px 4px 4px;font-size:10.5px;color:#a1a1aa;text-align:center;line-height:1.6;">More products coming soon —<br>banners, signs, vehicle wraps &amp; more</div>
+    </div>`;
+}
+
+function renderWallArt() {
+  const sec = (title, body, open=false) => `
+    <div class="cfg-section">
+      <div class="cfg-header${open?' open':''}" onclick="toggleSection(this)">
+        <span>${title}</span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="cfg-body" style="${open?'':'display:none'}">${body}</div>
+    </div>`;
+
+  const landscape = Object.entries(WA_SIZES).filter(([,s]) => s.group === 'landscape');
+  const square    = Object.entries(WA_SIZES).filter(([,s]) => s.group === 'square');
+
+  const sizeBtn = ([key, s]) => `
+    <button onclick="setWa('size','${key}')" class="opt-btn wa-size${wa.size===key?' active':''}" data-val="${key}"
+      style="justify-content:space-between;width:100%;font-size:11px;padding:5px 9px;">
+      <span>${s.label}</span>
+      <span style="font-size:10px;opacity:.65;margin-left:8px;">$${WA_PRICES.size[key]}</span>
+    </button>`;
+
+  const frameColors = [
+    { key:'black', label:'Black', bg:'#1c1c1c', border:'#333' },
+    { key:'white', label:'White', bg:'#ece8e2', border:'#ccc8c2' },
+    { key:'pecan', label:'Pecan', bg:'#7a5230', border:'#5a3818' },
+  ];
+
+  const frameMaterials = [
+    { key:'wood',          label:'Wood',          sub:'Natural grain finish',  adj: WA_PRICES.frameMaterial['wood'] },
+    { key:'pvc-composite', label:'PVC / Composite', sub:'Lightweight, moisture-resistant', adj: WA_PRICES.frameMaterial['pvc-composite'] },
+    { key:'aluminum',      label:'Aluminum',       sub:'Brushed modern profile', adj: WA_PRICES.frameMaterial['aluminum'] },
+  ];
+
+  const priceBreakdown = () => {
+    const base   = WA_PRICES.size[wa.size] || 129;
+    const matAdj = WA_PRICES.frameMaterial[wa.frameMaterial] || 0;
+    const colAdj = WA_PRICES.frameColor[wa.frameColor] || 0;
+    const unit   = base + matAdj + colAdj;
+    const total  = calcWaPrice();
+    return [
+      `<div class="price-row"><span>Base (${WA_SIZES[wa.size].label})</span><span>$${base}</span></div>`,
+      matAdj !== 0 ? `<div class="price-row"><span>Frame material</span><span>${matAdj > 0 ? '+' : ''}$${matAdj}</span></div>` : '',
+      colAdj > 0  ? `<div class="price-row"><span>Frame color</span><span>+$${colAdj}</span></div>` : '',
+      wa.quantity > 1 ? `<div class="price-row"><span>Qty × ${wa.quantity}</span><span>$${unit} × ${wa.quantity}</span></div>` : '',
+      `<div class="price-row total"><span>Total</span><span>$${total}</span></div>`,
+    ].join('');
+  };
+
+  return `
+    <!-- Product header -->
+    <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button onclick="showProductPicker()" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Products
+      </button>
+      <span style="color:#d4d4d8;">›</span>
+      <span style="font-size:11.5px;font-weight:600;color:#18181b;">Wall Art / Prints</span>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;" class="thin-scroll">
+
+      ${sec('Print Size', `
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Landscape / Rectangle</div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">${landscape.map(sizeBtn).join('')}</div>
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Square</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">${square.map(sizeBtn).join('')}</div>
+      `, true)}
+
+      ${sec('Frame Color', `
+        <div style="display:flex;gap:7px;">
+          ${frameColors.map(c => `
+            <button onclick="setWa('frameColor','${c.key}')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 6px;border:1.5px solid ${wa.frameColor===c.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${wa.frameColor===c.key?'#eff6ff':'white'};cursor:pointer;transition:all .12s;">
+              <div style="width:30px;height:30px;border-radius:50%;background:${c.bg};border:2px solid ${c.border};box-shadow:0 1px 3px rgba(0,0,0,0.15);"></div>
+              <span style="font-size:11px;font-weight:500;color:#52525b;">${c.label}</span>
+              ${WA_PRICES.frameColor[c.key] > 0 ? `<span style="font-size:9px;color:#a1a1aa;">+$${WA_PRICES.frameColor[c.key]}</span>` : ''}
+            </button>`).join('')}
+        </div>
+      `, true)}
+
+      ${sec('Frame Material', `
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          ${frameMaterials.map(m => `
+            <button onclick="setWa('frameMaterial','${m.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${wa.frameMaterial===m.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${wa.frameMaterial===m.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;">
+              <div style="text-align:left;">
+                <div style="font-size:12px;font-weight:600;color:#18181b;">${m.label}</div>
+                <div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${m.sub}</div>
+              </div>
+              <span style="font-size:11px;font-weight:600;color:${m.adj<0?'#16a34a':m.adj>0?'#52525b':'#a1a1aa'};">
+                ${m.adj === 0 ? 'Included' : (m.adj > 0 ? '+' : '') + '$' + m.adj}
+              </span>
+            </button>`).join('')}
+        </div>
+      `, true)}
+
+      ${sec('Quantity', `
+        <select onchange="wa.quantity=parseInt(this.value);buildCanvas();updatePrice();setTool('swap');" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">
+          ${[1,2,3,5,10,15,20,25,50].map(q => {
+            const unit = (WA_PRICES.size[wa.size]||129) + (WA_PRICES.frameMaterial[wa.frameMaterial]||0) + (WA_PRICES.frameColor[wa.frameColor]||0);
+            return `<option value="${q}"${wa.quantity===q?' selected':''}>${q} print${q>1?'s':''} — $${unit * q}</option>`;
+          }).join('')}
+        </select>
+        <div style="margin-top:6px;font-size:10.5px;color:#a1a1aa;line-height:1.5;">Each print ships with frame hardware &amp; hanging kit included.</div>
+      `, true)}
+
+      <!-- Single-sided notice -->
+      <div style="margin:8px 12px;padding:9px 10px;background:#fefce8;border:1px solid #fef08a;border-radius:6px;display:flex;align-items:flex-start;gap:7px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span style="font-size:10.5px;color:#92400e;line-height:1.5;">Single-sided print only. Printed on premium photo paper and professionally mounted in the frame.</span>
+      </div>
+
+      <!-- Price summary -->
+      <div style="padding:12px;background:#fafafa;border-top:1px solid #f0f0f0;margin-top:4px;">
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Price Breakdown</div>
+        ${priceBreakdown()}
+      </div>
+
+      <!-- Add to cart -->
+      <div style="padding:10px 12px 16px;">
+        <button onclick="handleDone()" style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:#18181b;color:white;border:none;cursor:pointer;">
+          Add to Cart — $${calcWaPrice()}
+        </button>
+      </div>
+
+    </div>`;
+}
+
+function renderBC() {
   const toggle = (key, label, sub='') => `
     <div class="toggle-wrap">
       <div>
@@ -460,10 +782,10 @@ function renderSwap() {
   `).join('');
 
   const cornerOpts = [
-    { key:'square',        svg:`<rect x="1" y="1" width="16" height="12" fill="currentColor"/>`,                                   label:'Square'  },
-    { key:'soft-round',    svg:`<rect x="1" y="1" width="16" height="12" rx="2" fill="currentColor"/>`,                            label:'Slight'  },
-    { key:'rounded',       svg:`<rect x="1" y="1" width="16" height="12" rx="4" fill="currentColor"/>`,                            label:'Rounded' },
-    { key:'extra-rounded', svg:`<rect x="1" y="1" width="16" height="12" rx="6" fill="currentColor"/>`,                            label:'Extra'   },
+    { key:'square',        svg:`<rect x="1" y="1" width="16" height="12" fill="currentColor"/>`,             label:'Square'  },
+    { key:'soft-round',    svg:`<rect x="1" y="1" width="16" height="12" rx="2" fill="currentColor"/>`,      label:'Slight'  },
+    { key:'rounded',       svg:`<rect x="1" y="1" width="16" height="12" rx="4" fill="currentColor"/>`,      label:'Rounded' },
+    { key:'extra-rounded', svg:`<rect x="1" y="1" width="16" height="12" rx="6" fill="currentColor"/>`,      label:'Extra'   },
   ].map(o => `
     <button onclick="setOpt('corners','${o.key}','bc-corner')" class="opt-btn bc-corner${bc.corners === o.key ? ' active' : ''}" data-val="${o.key}" style="flex-direction:column;gap:4px;padding:7px 5px;min-width:46px;">
       <svg viewBox="0 0 18 14" width="32" height="22" style="color:${bc.corners === o.key ? 'white' : '#71717a'}">${o.svg}</svg>
@@ -472,12 +794,12 @@ function renderSwap() {
   `).join('');
 
   const shapeOpts = [
-    { key:'rectangle',    svg:`<rect x="1" y="2" width="16" height="10" fill="currentColor"/>`,                                                       label:'Rect'   },
-    { key:'rounded-rect', svg:`<rect x="1" y="2" width="16" height="10" rx="3" fill="currentColor"/>`,                                                label:'Round'  },
-    { key:'circle',       svg:`<circle cx="9" cy="7" r="5.5" fill="currentColor"/>`,                                                                   label:'Circle' },
-    { key:'oval',         svg:`<ellipse cx="9" cy="7" rx="8" ry="5" fill="currentColor"/>`,                                                            label:'Oval'   },
-    { key:'leaf',         svg:`<path d="M9,2 C14,2 16,7 9,12 C2,7 4,2 9,2Z" fill="currentColor"/>`,                                                   label:'Leaf'   },
-    { key:'custom',       svg:`<path d="M2,9 L5,2 L12,2 L16,6 L14,12 L4,12Z" fill="currentColor"/>`,                                                  label:'Custom' },
+    { key:'rectangle',    svg:`<rect x="1" y="2" width="16" height="10" fill="currentColor"/>`,                         label:'Rect'   },
+    { key:'rounded-rect', svg:`<rect x="1" y="2" width="16" height="10" rx="3" fill="currentColor"/>`,                  label:'Round'  },
+    { key:'circle',       svg:`<circle cx="9" cy="7" r="5.5" fill="currentColor"/>`,                                     label:'Circle' },
+    { key:'oval',         svg:`<ellipse cx="9" cy="7" rx="8" ry="5" fill="currentColor"/>`,                              label:'Oval'   },
+    { key:'leaf',         svg:`<path d="M9,2 C14,2 16,7 9,12 C2,7 4,2 9,2Z" fill="currentColor"/>`,                     label:'Leaf'   },
+    { key:'custom',       svg:`<path d="M2,9 L5,2 L12,2 L16,6 L14,12 L4,12Z" fill="currentColor"/>`,                    label:'Custom' },
   ].map(o => `
     <button onclick="setOpt('shape','${o.key}','bc-shape')" class="opt-btn bc-shape${bc.shape === o.key ? ' active' : ''}" data-val="${o.key}" style="flex-direction:column;gap:4px;padding:7px 5px;min-width:46px;">
       <svg viewBox="0 0 18 14" width="32" height="22" style="color:${bc.shape === o.key ? 'white' : '#71717a'}">${o.svg}</svg>
@@ -489,13 +811,13 @@ function renderSwap() {
     <button onclick="setOpt('${key}','${val}','${cls}')" class="opt-btn ${cls}${bc[key] === val ? ' active' : ''}" data-val="${val}">${lbl}</button>
   `).join('');
 
-  const sectionHTML = (title, body, openDefault=false) => `
+  const sec = (title, body, open=false) => `
     <div class="cfg-section">
-      <div class="cfg-header${openDefault ? ' open' : ''}" onclick="toggleSection(this)">
+      <div class="cfg-header${open?' open':''}" onclick="toggleSection(this)">
         <span>${title}</span>
         <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
-      <div class="cfg-body" style="${openDefault ? '' : 'display:none'}">${body}</div>
+      <div class="cfg-body" style="${open?'':'display:none'}">${body}</div>
     </div>`;
 
   const priceRows = () => {
@@ -517,9 +839,8 @@ function renderSwap() {
   };
 
   return `
-    <!-- Product header -->
-    <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;">
-      <button onclick="setTool('swap')" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;">
+    <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button onclick="showProductPicker()" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         Products
       </button>
@@ -527,28 +848,24 @@ function renderSwap() {
       <span style="font-size:11.5px;font-weight:600;color:#18181b;">Business Cards</span>
     </div>
 
-    <!-- Scroll container -->
     <div style="flex:1;overflow-y:auto;" class="thin-scroll">
 
-      ${sectionHTML('Size', `<div style="display:flex;flex-direction:column;gap:5px;">${sizeGrid}</div>`, true)}
+      ${sec('Size', `<div style="display:flex;flex-direction:column;gap:5px;">${sizeGrid}</div>`, true)}
 
-      ${sectionHTML('Quantity', `
-        <select onchange="setOpt('quantity', parseInt(this.value), null); buildCardSVG(); updatePrice();" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">
+      ${sec('Quantity', `
+        <select onchange="setOpt('quantity', parseInt(this.value), null); buildCanvas(); updatePrice();" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">
           ${[50,100,250,500,1000,2500,5000].map(q => `<option value="${q}"${bc.quantity===q?' selected':''}>${q} cards — $${PRICES.qty[q]}</option>`).join('')}
         </select>`, true)}
 
-      ${sectionHTML('Sides', `
+      ${sec('Sides', `
         <div style="display:flex;gap:6px;">
-          <button onclick="bc.sides='front';document.getElementById('side-back').style.opacity='0.4';setTool('swap');buildCardSVG();updatePrice();" class="opt-btn bc-sides${bc.sides==='front'?' active':''}" data-val="front" style="flex:1;">Front Only</button>
-          <button onclick="bc.sides='both';document.getElementById('side-back').style.opacity='1';setTool('swap');buildCardSVG();updatePrice();" class="opt-btn bc-sides${bc.sides==='both'?' active':''}" data-val="both" style="flex:1;">Front & Back</button>
+          <button onclick="bc.sides='front';document.getElementById('side-back').style.opacity='0.4';setTool('swap');buildCanvas();" class="opt-btn bc-sides${bc.sides==='front'?' active':''}" data-val="front" style="flex:1;">Front Only</button>
+          <button onclick="bc.sides='both';document.getElementById('side-back').style.opacity='1';setTool('swap');buildCanvas();" class="opt-btn bc-sides${bc.sides==='both'?' active':''}" data-val="both" style="flex:1;">Front &amp; Back</button>
         </div>`, true)}
 
-      ${sectionHTML('Paper Type', `
+      ${sec('Paper Type', `
         <div style="display:flex;flex-wrap:wrap;gap:5px;">
-          ${optGroup([
-            ['standard','Standard'],['premium','Premium'],['ultra','Ultra'],
-            ['cotton','Cotton'],['kraft','Kraft'],['pvc','Plastic / PVC']
-          ], 'paper', 'bc-paper')}
+          ${optGroup([['standard','Standard'],['premium','Premium'],['ultra','Ultra'],['cotton','Cotton'],['kraft','Kraft'],['pvc','Plastic / PVC']], 'paper', 'bc-paper')}
         </div>
         <div style="margin-top:8px;font-size:10.5px;color:#a1a1aa;line-height:1.5;">${{
           standard:'100lb cover stock — crisp, affordable.',
@@ -559,7 +876,7 @@ function renderSwap() {
           pvc:'Frosted or clear plastic — durable and waterproof.',
         }[bc.paper]}</div>`, true)}
 
-      ${sectionHTML('Thickness', `
+      ${sec('Thickness', `
         <div style="display:flex;gap:5px;flex-wrap:wrap;">
           ${optGroup([['14pt','14pt'],['16pt','16pt'],['18pt','18pt'],['32pt','32pt Ultra']], 'thickness', 'bc-thickness')}
         </div>
@@ -570,12 +887,9 @@ function renderSwap() {
           '32pt':'Double-layer ultra thick — unforgettable.',
         }[bc.thickness]}</div>`, true)}
 
-      ${sectionHTML('Finish', `
+      ${sec('Finish', `
         <div style="display:flex;flex-wrap:wrap;gap:5px;">
-          ${optGroup([
-            ['matte','Matte'],['gloss','Gloss'],['soft-touch','Soft Touch'],
-            ['velvet','Velvet'],['satin','Satin'],['silk','Silk'],['uncoated','Uncoated']
-          ], 'finish', 'bc-finish')}
+          ${optGroup([['matte','Matte'],['gloss','Gloss'],['soft-touch','Soft Touch'],['velvet','Velvet'],['satin','Satin'],['silk','Silk'],['uncoated','Uncoated']], 'finish', 'bc-finish')}
         </div>
         <div style="margin-top:6px;font-size:10.5px;color:#a1a1aa;">${{
           matte:'Smooth non-reflective surface.',
@@ -587,14 +901,13 @@ function renderSwap() {
           uncoated:'Raw, writable paper surface.',
         }[bc.finish]}</div>`)}
 
-      ${sectionHTML('Corners', `<div style="display:flex;gap:5px;flex-wrap:wrap;">${cornerOpts}</div>`, true)}
+      ${sec('Corners', `<div style="display:flex;gap:5px;flex-wrap:wrap;">${cornerOpts}</div>`, true)}
 
-      ${sectionHTML('Cut Shape', `
+      ${sec('Cut Shape', `
         <div style="display:flex;gap:5px;flex-wrap:wrap;">${shapeOpts}</div>
         ${bc.shape !== 'rectangle' && bc.shape !== 'rounded-rect' ? `<div style="margin-top:6px;display:flex;align-items:center;gap:4px;font-size:10.5px;color:#f97316;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Die cut shapes require extra production time.</div>` : ''}`, true)}
 
-      ${sectionHTML('Special Effects', `
-        <!-- Foil -->
+      ${sec('Special Effects', `
         <div style="margin-bottom:10px;">
           <div style="font-size:10.5px;font-weight:600;color:#52525b;margin-bottom:7px;text-transform:uppercase;letter-spacing:.04em;">Foil Stamping</div>
           <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
@@ -611,12 +924,10 @@ function renderSwap() {
             </div>
           </div>
         </div>
-        <!-- UV / Letterpress toggles -->
         <div style="border-top:1px solid #f4f4f5;padding-top:8px;">
           ${toggle('spotUV','Spot UV','Gloss highlights over matte areas')}
           ${toggle('raisedSpotUV','Raised Spot UV','Tactile 3D gloss coating')}
           ${toggle('letterpress','Letterpress','Debossed ink impression')}
-          <!-- Edge painting -->
           <div class="toggle-wrap" style="flex-direction:column;align-items:flex-start;gap:6px;">
             <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
               <div>
@@ -628,19 +939,17 @@ function renderSwap() {
             ${bc.effects.edgePainting ? `
               <div style="display:flex;flex-wrap:wrap;gap:5px;padding-left:2px;">
                 ${['#18181b','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#ffffff','#d4a017'].map(c=>`
-                  <div onclick="bc.effects.edgePainting='${c}';buildCardSVG();setTool('swap');" style="width:22px;height:22px;border-radius:4px;background:${c};border:${bc.effects.edgePainting===c?'2px solid #3b82f6':'1.5px solid rgba(0,0,0,0.1)'};cursor:pointer;transition:transform .1s;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></div>
+                  <div onclick="bc.effects.edgePainting='${c}';buildCanvas();setTool('swap');" style="width:22px;height:22px;border-radius:4px;background:${c};border:${bc.effects.edgePainting===c?'2px solid #3b82f6':'1.5px solid rgba(0,0,0,0.1)'};cursor:pointer;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></div>
                 `).join('')}
               </div>` : ''}
           </div>
         </div>`)}
 
-      <!-- Price summary -->
       <div style="padding:12px;background:#fafafa;border-top:1px solid #f0f0f0;margin-top:4px;">
         <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Price Breakdown</div>
         ${priceRows()}
       </div>
 
-      <!-- Add to cart -->
       <div style="padding:10px 12px 16px;">
         <button onclick="handleDone()" style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:#18181b;color:white;border:none;cursor:pointer;">
           Add to Cart — $${calcPrice()}
@@ -652,8 +961,7 @@ function renderSwap() {
 
 function toggleEdgePaint() {
   bc.effects.edgePainting = bc.effects.edgePainting ? null : '#18181b';
-  buildCardSVG();
-  updatePrice();
+  buildCanvas();
   setTool('swap');
 }
 
@@ -664,6 +972,7 @@ function toggleSection(header) {
   body.style.display = isOpen ? 'none' : 'block';
 }
 
+// ─── Other panel renders ───
 function renderImage() {
   return `
     <div style="padding:8px 10px 6px;border-bottom:1px solid #f0f0f0;">
@@ -738,7 +1047,7 @@ function renderText() {
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;">
         ${['#18181b','#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#f1f5f9','#64748b','#d4a017','#fecaca','#fed7aa','#fef08a','#bbf7d0'].map(c=>`
-          <div style="width:20px;height:20px;border-radius:4px;background:${c};border:1.5px solid rgba(0,0,0,0.08);cursor:pointer;" onclick="this.parentNode.previousElementSibling.children[0].style.background='${c}'" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></div>`).join('')}
+          <div style="width:20px;height:20px;border-radius:4px;background:${c};border:1.5px solid rgba(0,0,0,0.08);cursor:pointer;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></div>`).join('')}
       </div>
       <div style="margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:11px;color:#71717a;">Transparency</span><span style="font-size:11px;font-family:monospace;color:#52525b;">1.00</span></div>
@@ -776,7 +1085,7 @@ function renderLayers() {
   const baseRow = `
     <div class="layer-row" style="opacity:.45;">
       <div style="width:15px;height:15px;border-radius:3px;flex-shrink:0;background:#dde3ea;border:1px solid #c5cdd6;"></div>
-      <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#52525b;">Base card</span>
+      <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#52525b;">Base ${currentProduct === 'wa' ? 'print' : 'card'}</span>
       <button class="l-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></button>
     </div>`;
   return `
@@ -791,7 +1100,7 @@ function renderLayers() {
           <div class="layer-row${selLayer===i?' selected':''}" onclick="selLayer=${i};setTool('layers')">
             <div style="width:15px;height:15px;border-radius:3px;flex-shrink:0;background:${l.color};border:1px solid rgba(0,0,0,.1);"></div>
             <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.name}</span>
-            <button class="l-btn" title="Reorder" onclick="event.stopPropagation()"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+            <button class="l-btn" onclick="event.stopPropagation()"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
             <button class="l-btn" onclick="event.stopPropagation();toggleVis(${i})"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${l.visible?'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>':'<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'}</svg></button>
             <button class="l-btn del" onclick="event.stopPropagation();deleteLayer(${i})"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button>
           </div>`).join('') + baseRow}
@@ -818,7 +1127,7 @@ function renderSaved() {
     </div>`;
 }
 
-// ─── State ───
+// ─── App state ───
 let currentTool = 'swap';
 let layers = [];
 let selLayer = -1;
@@ -852,7 +1161,8 @@ function applyDesign(i, name) {
     <line x1="${cw*0.3}" y1="${ch*0.6}" x2="${cw*0.7}" y2="${ch*0.6}" stroke="#e4e4e7" stroke-width="1"/>
     <text x="${cw/2}" y="${ch*0.73}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(6,cw*0.032)}" fill="#a1a1aa">hello@controlp.io  ·  (480) 999-9906</text>
     <text x="${cw/2}" y="${ch*0.84}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(6,cw*0.030)}" fill="#a1a1aa">controlp.io</text>`;
-  document.getElementById('selection-group').setAttribute('opacity', '1');
+  const sg = document.getElementById('selection-group');
+  if (sg) sg.setAttribute('opacity', '1');
   layers = layers.filter(l => l.type !== 'design');
   layers.unshift({ name, type: 'design', color: '#18181b', visible: true });
   document.getElementById('btn-undo').disabled = false;
@@ -893,6 +1203,7 @@ function simulateUpload() {
 }
 
 function toggleVis(i) { layers[i].visible = !layers[i].visible; setTool('layers'); }
+
 function deleteLayer(i) {
   layers.splice(i, 1);
   if (layers.length === 0) {
@@ -916,18 +1227,33 @@ function toggleRuler() {
 }
 
 function showSpecs() {
+  if (currentProduct === 'wa') {
+    const s = WA_SIZES[wa.size];
+    const mat = wa.frameMaterial === 'pvc-composite' ? 'PVC/Composite' : wa.frameMaterial.charAt(0).toUpperCase() + wa.frameMaterial.slice(1);
+    alert(`Wall Art / Framed Print Specs\n\nSize: ${s.label}\nFrame Color: ${wa.frameColor.charAt(0).toUpperCase() + wa.frameColor.slice(1)}\nFrame Material: ${mat}\nQuantity: ${wa.quantity}\nPrint: Single-sided, premium photo paper\n\nTotal: $${calcWaPrice()}`);
+    return;
+  }
+  if (!currentProduct) return;
   const s = SIZES[bc.size];
   alert(`Business Card Specs\n\nSize: ${s.in}\nQuantity: ${bc.quantity}\nPaper: ${bc.paper} / ${bc.thickness}\nFinish: ${bc.finish}\nCorners: ${bc.corners}\nShape: ${bc.shape}\nSides: ${bc.sides}\n\nEffects: ${Object.entries(bc.effects).filter(([,v])=>v).map(([k,v])=>k+(typeof v==='string'?' ('+v+')':'')).join(', ')||'None'}\n\nTotal: $${calcPrice()}`);
 }
 
 function handleDone() {
+  if (currentProduct === 'wa') {
+    const s = WA_SIZES[wa.size];
+    const mat = wa.frameMaterial === 'pvc-composite' ? 'PVC/Composite' : wa.frameMaterial.charAt(0).toUpperCase() + wa.frameMaterial.slice(1);
+    if (confirm(`Add to cart?\n\n${s.label}  ·  ${wa.frameColor.charAt(0).toUpperCase() + wa.frameColor.slice(1)} ${mat} frame\nQty: ${wa.quantity}\n\nTotal: $${calcWaPrice()}`)) {
+      window.location.href = 'cart.html';
+    }
+    return;
+  }
   if (confirm(`Add ${bc.quantity} business cards to cart?\n\nTotal: $${calcPrice()}`)) {
     window.location.href = 'cart.html';
   }
 }
 
 // ─── Init ───
-buildCardSVG();
+buildCanvas();
 setTool('swap');
 </script>
 </body>
