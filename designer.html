@@ -247,6 +247,68 @@ const WA_PRICES = {
   frameColor: { black: 0, white: 5, pecan: 10 },
 };
 
+// ─── Banner state ───
+const BN_SIZES = {
+  '2x4':  { w:24,  h:48,  label:"2'×4'",   in:'24"×48"',   group:'vertical' },
+  '2x6':  { w:24,  h:72,  label:"2'×6'",   in:'24"×72"',   group:'vertical' },
+  '3x6':  { w:36,  h:72,  label:"3'×6'",   in:'36"×72"',   group:'vertical' },
+  '4x8':  { w:48,  h:96,  label:"4'×8'",   in:'48"×96"',   group:'vertical' },
+  '4x10': { w:48,  h:120, label:"4'×10'",  in:'48"×120"',  group:'vertical' },
+  '6x2':  { w:72,  h:24,  label:"6'×2'",   in:'72"×24"',   group:'horizontal' },
+  '8x3':  { w:96,  h:36,  label:"8'×3'",   in:'96"×36"',   group:'horizontal' },
+};
+const BN_PRICES = {
+  size: { '2x4':29, '2x6':45, '3x6':59, '4x8':89, '4x10':109, '6x2':65, '8x3':89 },
+  material: { vinyl:0, mesh:8, blockout:12, fabric:18 },
+  finish: { hemmed:0, grommets:5, 'pole-pocket':5 },
+};
+const bn = { size:'2x6', material:'vinyl', finish:'grommets', quantity:1 };
+
+// ─── Rigid sign state ───
+const RS_SIZES = {
+  '12x18': { w:12, h:18, label:'12"×18"', in:'12"×18"', group:'portrait' },
+  '18x24': { w:18, h:24, label:'18"×24"', in:'18"×24"', group:'portrait' },
+  '24x36': { w:24, h:36, label:'24"×36"', in:'24"×36"', group:'portrait' },
+  '18x12': { w:18, h:12, label:'18"×12"', in:'18"×12"', group:'landscape' },
+  '24x18': { w:24, h:18, label:'24"×18"', in:'24"×18"', group:'landscape' },
+  '36x24': { w:36, h:24, label:'36"×24"', in:'36"×24"', group:'landscape' },
+};
+const RS_PRICES = {
+  size: { '12x18':18, '18x24':28, '24x36':45, '18x12':18, '24x18':28, '36x24':45 },
+  material: { coroplast:0, pvc:8, aluminum:15 },
+};
+const rs = { size:'18x24', material:'coroplast', sides:'single', quantity:1 };
+
+// ─── A-Frame state ───
+const AF_SIZES = {
+  '18x24': { w:18, h:24, label:'18"×24"', in:'18"×24"' },
+  '22x28': { w:22, h:28, label:'22"×28"', in:'22"×28"' },
+  '24x36': { w:24, h:36, label:'24"×36"', in:'24"×36"' },
+};
+const AF_PRICES = {
+  size: { '18x24':39, '22x28':49, '24x36':65 },
+  insertType: { coroplast:0, pvc:8 },
+  sides: { single:0, double:15 },
+};
+const af = { size:'18x24', insertType:'coroplast', sides:'double', quantity:1 };
+
+// ─── Flag state ───
+const FL_SIZES = {
+  'feather-s':  { w:18, h:72,  label:'Feather S',  in:'18"×72"',  shape:'feather' },
+  'feather-m':  { w:18, h:96,  label:'Feather M',  in:'18"×96"',  shape:'feather' },
+  'feather-l':  { w:22, h:138, label:'Feather L',  in:'22"×138"', shape:'feather' },
+  'feather-xl': { w:24, h:168, label:'Feather XL', in:'24"×168"', shape:'feather' },
+  'tear-s':     { w:24, h:72,  label:'Teardrop S', in:'24"×72"',  shape:'teardrop' },
+  'tear-m':     { w:36, h:96,  label:'Teardrop M', in:'36"×96"',  shape:'teardrop' },
+  'tear-l':     { w:48, h:120, label:'Teardrop L', in:'48"×120"', shape:'teardrop' },
+};
+const FL_PRICES = {
+  size: { 'feather-s':49, 'feather-m':59, 'feather-l':79, 'feather-xl':99, 'tear-s':59, 'tear-m':79, 'tear-l':99 },
+  base: { 'ground-spike':0, 'cross-base':12, 'water-base':18 },
+  sides: { single:0, double:15 },
+};
+const fl = { size:'feather-m', base:'ground-spike', sides:'single', quantity:1 };
+
 // ─── Price calculation ───
 function calcPrice() {
   let p = (PRICES.qty[bc.quantity] || 59);
@@ -269,9 +331,27 @@ function calcWaPrice() {
   const col  = WA_PRICES.frameColor[wa.frameColor] || 0;
   return (base + mat + col) * wa.quantity;
 }
+function calcBnPrice() {
+  return ((BN_PRICES.size[bn.size] || 45) + (BN_PRICES.material[bn.material] || 0) + (BN_PRICES.finish[bn.finish] || 0)) * bn.quantity;
+}
+function calcRsPrice() {
+  return ((RS_PRICES.size[rs.size] || 28) + (RS_PRICES.material[rs.material] || 0)) * rs.quantity;
+}
+function calcAfPrice() {
+  return ((AF_PRICES.size[af.size] || 39) + (AF_PRICES.insertType[af.insertType] || 0) + (AF_PRICES.sides[af.sides] || 0)) * af.quantity;
+}
+function calcFlPrice() {
+  return ((FL_PRICES.size[fl.size] || 59) + (FL_PRICES.base[fl.base] || 0) + (FL_PRICES.sides[fl.sides] || 0)) * fl.quantity;
+}
 
 function updatePrice() {
-  const p = currentProduct === 'wa' ? calcWaPrice() : calcPrice();
+  let p;
+  if      (currentProduct === 'wa') p = calcWaPrice();
+  else if (currentProduct === 'bn') p = calcBnPrice();
+  else if (currentProduct === 'rs') p = calcRsPrice();
+  else if (currentProduct === 'af') p = calcAfPrice();
+  else if (currentProduct === 'fl') p = calcFlPrice();
+  else p = calcPrice();
   document.getElementById('price-badge').textContent = '$' + p.toFixed(2);
 }
 
@@ -527,13 +607,206 @@ function getWaPrintArea() {
   return { cw, ch, fw, mt, ox, oy, ix, iy, iw: cw - ix * 2, ih: ch - iy * 2 };
 }
 
+// ─── Banner canvas ───
+function buildBannerSVG() {
+  const s = BN_SIZES[bn.size];
+  const maxW = 460, maxH = 310;
+  const aspect = s.w / s.h;
+  let cw, ch;
+  if (aspect >= 1) { cw = maxW; ch = Math.round(maxW / aspect); if (ch > maxH) { ch = maxH; cw = Math.round(maxH * aspect); } }
+  else             { ch = maxH; cw = Math.round(maxH * aspect); if (cw > maxW) { cw = maxW; ch = Math.round(maxW / aspect); } }
+  cw = Math.max(cw, 100); ch = Math.max(ch, 80);
+  const bleed = 8, safe = 14, bw = cw + bleed*2, bh = ch + bleed*2;
+  const matBg = { vinyl:'#f8f8f8', mesh:'#eef2f6', blockout:'#1e2030', fabric:'#f5f0e8' }[bn.material];
+  const matLbl = { vinyl:'13oz Vinyl', mesh:'9oz Mesh', blockout:'18oz Blockout', fabric:'Fabric' }[bn.material];
+  const txtClr = bn.material === 'blockout' ? '#8a8a9a' : '#b0b0b0';
+  const meshDots = bn.material === 'mesh' ? `<defs><pattern id="mp" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".6" fill="rgba(0,0,0,0.06)"/></pattern></defs><rect x="0" y="0" width="${cw}" height="${ch}" fill="url(#mp)"/>` : '';
+  const grommets = bn.finish === 'grommets' ? `<circle cx="12" cy="12" r="5" fill="none" stroke="#888" stroke-width="1.5"/><circle cx="${cw-12}" cy="12" r="5" fill="none" stroke="#888" stroke-width="1.5"/><circle cx="12" cy="${ch-12}" r="5" fill="none" stroke="#888" stroke-width="1.5"/><circle cx="${cw-12}" cy="${ch-12}" r="5" fill="none" stroke="#888" stroke-width="1.5"/>` : '';
+  const polePocket = bn.finish === 'pole-pocket' ? `<line x1="0" y1="${ch*0.06}" x2="${cw}" y2="${ch*0.06}" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/><line x1="0" y1="${ch*0.94}" x2="${cw}" y2="${ch*0.94}" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>` : '';
+  const svgEl = document.getElementById('card-svg');
+  svgEl.setAttribute('viewBox', `-${bleed} -${bleed} ${bw} ${bh}`);
+  svgEl.setAttribute('width', String(bw)); svgEl.setAttribute('height', String(bh));
+  svgEl.style.filter = 'drop-shadow(0 8px 28px rgba(0,0,0,0.2))';
+  svgEl.innerHTML = `
+    <clipPath id="bn-clip"><rect x="0" y="0" width="${cw}" height="${ch}"/></clipPath>
+    <rect x="${-bleed}" y="${-bleed}" width="${bw}" height="${bh}" fill="#ffd7d7" opacity=".28" rx="2"/>
+    <rect x="0" y="0" width="${cw}" height="${ch}" fill="${matBg}" clip-path="url(#bn-clip)"/>
+    ${meshDots}${grommets}${polePocket}
+    <rect x="${-bleed}" y="${-bleed}" width="${bw}" height="${bh}" fill="none" stroke="#ff9999" stroke-width="1" stroke-dasharray="4 3" rx="2" opacity=".7"/>
+    <rect x="${safe}" y="${safe}" width="${cw-safe*2}" height="${ch-safe*2}" fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>
+    <g id="canvas-design" clip-path="url(#bn-clip)"></g>
+    <g id="bn-placeholder">
+      <text x="${cw/2}" y="${ch/2-8}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(10,Math.min(16,cw*.065))}" fill="${txtClr}" font-weight="500">Add your design</text>
+      <text x="${cw/2}" y="${ch/2+12}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(8,Math.min(12,cw*.04))}" fill="${txtClr}">${s.label}  ·  ${matLbl}</text>
+    </g>
+    <rect x="0" y="0" width="${cw}" height="${ch}" fill="none" stroke="#d0d0d0" stroke-width="1"/>`;
+  updateSizeLabel();
+}
+
+function getBnPrintArea() {
+  const s = BN_SIZES[bn.size];
+  const maxW = 460, maxH = 310;
+  const aspect = s.w / s.h;
+  let cw, ch;
+  if (aspect >= 1) { cw = maxW; ch = Math.round(maxW / aspect); if (ch > maxH) { ch = maxH; cw = Math.round(maxH * aspect); } }
+  else             { ch = maxH; cw = Math.round(maxH * aspect); if (cw > maxW) { cw = maxW; ch = Math.round(maxW / aspect); } }
+  cw = Math.max(cw, 100); ch = Math.max(ch, 80);
+  return { ox:0, oy:0, ix:0, iy:0, iw:cw, ih:ch };
+}
+
+// ─── Rigid sign canvas ───
+function buildRigidSignSVG() {
+  const s = RS_SIZES[rs.size];
+  const maxW = 460, maxH = 310;
+  const aspect = s.w / s.h;
+  let cw, ch;
+  if (aspect >= 1) { cw = maxW; ch = Math.round(maxW / aspect); if (ch > maxH) { ch = maxH; cw = Math.round(maxH * aspect); } }
+  else             { ch = maxH; cw = Math.round(maxH * aspect); if (cw > maxW) { cw = maxW; ch = Math.round(maxW / aspect); } }
+  cw = Math.max(cw, 100); ch = Math.max(ch, 80);
+  const bleed = 8, safe = 12, bw = cw + bleed*2, bh = ch + bleed*2;
+  const matBg = { coroplast:'#f5f5f5', pvc:'#f0f0f5', aluminum:'url(#al-g)' }[rs.material] || '#f5f5f5';
+  const matLbl = { coroplast:'Coroplast', pvc:'PVC Board', aluminum:'Aluminum' }[rs.material];
+  const alGrad = rs.material === 'aluminum' ? `<defs><linearGradient id="al-g" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f0f0f0"/><stop offset="50%" stop-color="#e0e0e0"/><stop offset="100%" stop-color="#ebebeb"/></linearGradient></defs>` : '';
+  const corrLines = rs.material === 'coroplast' ? Array.from({length:Math.floor(cw/6)},(_,i)=>`<line x1="${i*6+3}" y1="0" x2="${i*6+3}" y2="${ch}" stroke="rgba(0,0,0,0.035)" stroke-width="1"/>`).join('') : '';
+  const svgEl = document.getElementById('card-svg');
+  svgEl.setAttribute('viewBox', `-${bleed} -${bleed} ${bw} ${bh}`);
+  svgEl.setAttribute('width', String(bw)); svgEl.setAttribute('height', String(bh));
+  svgEl.style.filter = 'drop-shadow(0 8px 28px rgba(0,0,0,0.2))';
+  svgEl.innerHTML = `
+    ${alGrad}
+    <clipPath id="rs-clip"><rect x="0" y="0" width="${cw}" height="${ch}" rx="2"/></clipPath>
+    <rect x="${-bleed}" y="${-bleed}" width="${bw}" height="${bh}" fill="#ffd7d7" opacity=".28" rx="2"/>
+    <rect x="0" y="0" width="${cw}" height="${ch}" fill="${matBg}" rx="2" clip-path="url(#rs-clip)"/>
+    ${corrLines}
+    <rect x="${-bleed}" y="${-bleed}" width="${bw}" height="${bh}" fill="none" stroke="#ff9999" stroke-width="1" stroke-dasharray="4 3" rx="2" opacity=".7"/>
+    <rect x="${safe}" y="${safe}" width="${cw-safe*2}" height="${ch-safe*2}" fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" rx="1" opacity=".8"/>
+    <g id="canvas-design" clip-path="url(#rs-clip)"></g>
+    <g id="rs-placeholder">
+      <text x="${cw/2}" y="${ch/2-8}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(10,Math.min(16,cw*.065))}" fill="#b0b0b0" font-weight="500">Add your design</text>
+      <text x="${cw/2}" y="${ch/2+12}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(8,Math.min(12,cw*.04))}" fill="#c8c8c8">${s.label}  ·  ${matLbl}</text>
+    </g>
+    <rect x="0" y="0" width="${cw}" height="${ch}" fill="none" stroke="#d0d0d0" stroke-width="1" rx="2"/>`;
+  updateSizeLabel();
+}
+
+function getRsPrintArea() {
+  const s = RS_SIZES[rs.size];
+  const maxW = 460, maxH = 310;
+  const aspect = s.w / s.h;
+  let cw, ch;
+  if (aspect >= 1) { cw = maxW; ch = Math.round(maxW / aspect); if (ch > maxH) { ch = maxH; cw = Math.round(maxH * aspect); } }
+  else             { ch = maxH; cw = Math.round(maxH * aspect); if (cw > maxW) { cw = maxW; ch = Math.round(maxW / aspect); } }
+  cw = Math.max(cw, 100); ch = Math.max(ch, 80);
+  return { ox:0, oy:0, ix:0, iy:0, iw:cw, ih:ch };
+}
+
+// ─── A-Frame canvas ───
+function buildAFrameSVG() {
+  const s = AF_SIZES[af.size];
+  const maxIW = 300, maxIH = 220;
+  const iAspect = s.w / s.h;
+  let iw, ih;
+  if (iAspect >= 1) { iw = maxIW; ih = Math.round(maxIW / iAspect); if (ih > maxIH) { ih = maxIH; iw = Math.round(maxIH * iAspect); } }
+  else              { ih = maxIH; iw = Math.round(maxIH * iAspect); if (iw > maxIW) { iw = maxIW; ih = Math.round(maxIW / iAspect); } }
+  iw = Math.max(iw, 80); ih = Math.max(ih, 80);
+  const legH = Math.round(ih * 0.4), spread = Math.round(iw * 0.12);
+  const cw = iw + spread * 2 + 20, ch = ih + legH + 20;
+  const sx = (cw - iw) / 2, sy = 10;
+  const lLx = sx - spread, lRx = sx + iw + spread, legBotY = ch - 8;
+  const insertBg = af.insertType === 'pvc' ? '#f0f0f5' : '#f5f5f5';
+  const svgEl = document.getElementById('card-svg');
+  svgEl.setAttribute('viewBox', `0 0 ${cw} ${ch}`);
+  svgEl.setAttribute('width', String(cw)); svgEl.setAttribute('height', String(ch));
+  svgEl.style.filter = 'drop-shadow(0 8px 28px rgba(0,0,0,0.2))';
+  const braceY = sy + ih + legH * 0.5;
+  svgEl.innerHTML = `
+    <clipPath id="af-clip"><rect x="${sx}" y="${sy}" width="${iw}" height="${ih}"/></clipPath>
+    <line x1="${sx+iw*.15}" y1="${sy+ih}" x2="${lLx}" y2="${legBotY}" stroke="#888" stroke-width="3" stroke-linecap="round"/>
+    <line x1="${sx+iw*.85}" y1="${sy+ih}" x2="${lRx}" y2="${legBotY}" stroke="#888" stroke-width="3" stroke-linecap="round"/>
+    <line x1="${lLx+(lRx-lLx)*.2}" y1="${braceY}" x2="${lRx-(lRx-lLx)*.2}" y2="${braceY}" stroke="#aaa" stroke-width="2" stroke-linecap="round"/>
+    <rect x="${sx-6}" y="${sy-6}" width="${iw+12}" height="${ih+12}" fill="#ffd7d7" opacity=".28" rx="2"/>
+    <rect x="${sx}" y="${sy}" width="${iw}" height="${ih}" fill="${insertBg}" clip-path="url(#af-clip)"/>
+    <rect x="${sx-6}" y="${sy-6}" width="${iw+12}" height="${ih+12}" fill="none" stroke="#ff9999" stroke-width="1" stroke-dasharray="4 3" rx="2" opacity=".7"/>
+    <rect x="${sx+12}" y="${sy+12}" width="${iw-24}" height="${ih-24}" fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>
+    <g id="canvas-design" clip-path="url(#af-clip)"></g>
+    <g id="af-placeholder">
+      <text x="${sx+iw/2}" y="${sy+ih/2-8}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(9,Math.min(14,iw*.065))}" fill="#b0b0b0" font-weight="500">Add your design</text>
+      <text x="${sx+iw/2}" y="${sy+ih/2+12}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(7,Math.min(11,iw*.04))}" fill="#c0c0c0">${s.label}  ·  A-Frame Insert</text>
+    </g>
+    <rect x="${sx}" y="${sy}" width="${iw}" height="${ih}" fill="none" stroke="#c8c8c8" stroke-width="1.5" rx="1"/>`;
+  updateSizeLabel();
+}
+
+function getAfPrintArea() {
+  const s = AF_SIZES[af.size];
+  const maxIW = 300, maxIH = 220;
+  const iAspect = s.w / s.h;
+  let iw, ih;
+  if (iAspect >= 1) { iw = maxIW; ih = Math.round(maxIW / iAspect); if (ih > maxIH) { ih = maxIH; iw = Math.round(maxIH * iAspect); } }
+  else              { ih = maxIH; iw = Math.round(maxIH * iAspect); if (iw > maxIW) { iw = maxIW; ih = Math.round(maxIW / iAspect); } }
+  iw = Math.max(iw, 80); ih = Math.max(ih, 80);
+  const legH = Math.round(ih * 0.4), spread = Math.round(iw * 0.12);
+  const cw = iw + spread * 2 + 20;
+  const sx = (cw - iw) / 2;
+  return { ox: sx, oy: 10, ix: 0, iy: 0, iw, ih };
+}
+
+// ─── Flag canvas ───
+function buildFlagSVG() {
+  const s = FL_SIZES[fl.size];
+  const maxW = 240, maxH = 300;
+  const aspect = s.w / s.h;
+  let cw, ch;
+  ch = maxH; cw = Math.round(maxH * aspect);
+  if (cw > maxW) { cw = maxW; ch = Math.round(maxW / aspect); }
+  cw = Math.max(cw, 55); ch = Math.max(ch, 100);
+  const vw = cw + 20, vh = ch + 30, ox = 10, oy = 5;
+  let fp;
+  if (s.shape === 'feather') {
+    fp = `M${ox},${oy} C${ox+cw*.65},${oy} ${ox+cw},${oy+ch*.15} ${ox+cw*.82},${oy+ch*.38} C${ox+cw*.65},${oy+ch*.58} ${ox+cw*.28},${oy+ch*.72} ${ox},${oy+ch} Z`;
+  } else {
+    fp = `M${ox},${oy+ch*.5} C${ox},${oy} ${ox+cw},${oy} ${ox+cw},${oy+ch*.5} C${ox+cw},${oy+ch*.82} ${ox+cw/2},${oy+ch} ${ox+cw/2},${oy+ch} C${ox+cw/2},${oy+ch} ${ox},${oy+ch*.82} ${ox},${oy+ch*.5} Z`;
+  }
+  const svgEl = document.getElementById('card-svg');
+  svgEl.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
+  svgEl.setAttribute('width', String(vw)); svgEl.setAttribute('height', String(vh));
+  svgEl.style.filter = 'drop-shadow(0 8px 28px rgba(0,0,0,0.2))';
+  svgEl.innerHTML = `
+    <defs><clipPath id="fl-clip"><path d="${fp}"/></clipPath></defs>
+    <line x1="${ox-4}" y1="${oy-5}" x2="${ox-4}" y2="${oy+ch+22}" stroke="#888" stroke-width="3" stroke-linecap="round"/>
+    <path d="${fp}" fill="#f5f5f5"/>
+    <g id="canvas-design" clip-path="url(#fl-clip)"></g>
+    <g id="fl-placeholder">
+      <text x="${ox+cw*.45}" y="${oy+ch*.36}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(7,Math.min(13,cw*.13))}" fill="#b0b0b0" font-weight="500">Add your</text>
+      <text x="${ox+cw*.45}" y="${oy+ch*.5}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(7,Math.min(13,cw*.13))}" fill="#b0b0b0" font-weight="500">design</text>
+      <text x="${ox+cw*.45}" y="${oy+ch*.63}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(6,Math.min(9,cw*.09))}" fill="#c8c8c8">${s.label}</text>
+    </g>
+    <path d="${fp}" fill="none" stroke="#c8c8c8" stroke-width="1.5"/>`;
+  updateSizeLabel();
+}
+
+function getFlPrintArea() {
+  const s = FL_SIZES[fl.size];
+  const maxW = 240, maxH = 300;
+  const aspect = s.w / s.h;
+  let cw, ch;
+  ch = maxH; cw = Math.round(maxH * aspect);
+  if (cw > maxW) { cw = maxW; ch = Math.round(maxW / aspect); }
+  cw = Math.max(cw, 55); ch = Math.max(ch, 100);
+  return { ox: 10, oy: 5, ix: 0, iy: 0, iw: cw, ih: ch };
+}
+
 // ─── Canvas dispatcher ───
 function buildCanvas() {
   const switcher = document.getElementById('side-switcher');
   const labels   = document.getElementById('canvas-labels');
   if (switcher) switcher.style.display = (currentProduct === 'bc') ? 'flex' : 'none';
   if (labels)   labels.style.display   = (currentProduct === 'bc') ? 'flex' : 'none';
-  if (currentProduct === 'wa') buildFramedPrintSVG();
+  if      (currentProduct === 'wa') buildFramedPrintSVG();
+  else if (currentProduct === 'bn') buildBannerSVG();
+  else if (currentProduct === 'rs') buildRigidSignSVG();
+  else if (currentProduct === 'af') buildAFrameSVG();
+  else if (currentProduct === 'fl') buildFlagSVG();
   else buildCardSVG();
   updatePrice();
 }
@@ -545,6 +818,28 @@ function updateSizeLabel() {
     const s = WA_SIZES[wa.size];
     const mat = wa.frameMaterial === 'pvc-composite' ? 'PVC/Composite' : wa.frameMaterial.charAt(0).toUpperCase() + wa.frameMaterial.slice(1);
     el.textContent = `${s.label}  ·  ${mat}  ·  ${wa.frameColor.charAt(0).toUpperCase() + wa.frameColor.slice(1)} frame`;
+    return;
+  }
+  if (currentProduct === 'bn') {
+    const s = BN_SIZES[bn.size];
+    const mat = { vinyl:'13oz Vinyl', mesh:'9oz Mesh', blockout:'18oz Blockout', fabric:'Fabric' }[bn.material];
+    el.textContent = `${s.label}  ·  ${mat}  ·  ${bn.finish.replace(/-/g,' ')}`;
+    return;
+  }
+  if (currentProduct === 'rs') {
+    const s = RS_SIZES[rs.size];
+    const mat = { coroplast:'Coroplast', pvc:'PVC Board', aluminum:'Aluminum' }[rs.material];
+    el.textContent = `${s.label}  ·  ${mat}  ·  ${rs.quantity} pc`;
+    return;
+  }
+  if (currentProduct === 'af') {
+    const s = AF_SIZES[af.size];
+    el.textContent = `${s.label}  ·  A-Frame  ·  ${af.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}`;
+    return;
+  }
+  if (currentProduct === 'fl') {
+    const s = FL_SIZES[fl.size];
+    el.textContent = `${s.label}  ·  ${fl.base.replace(/-/g,' ')}  ·  ${fl.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}`;
     return;
   }
   const s = SIZES[bc.size];
@@ -592,11 +887,11 @@ function setSide(side) {
 }
 
 // ─── Wall art setters ───
-function setWa(key, val) {
-  wa[key] = val;
-  buildCanvas();
-  setTool('swap');
-}
+function setWa(key, val) { wa[key] = val; buildCanvas(); setTool('swap'); }
+function setBn(key, val) { bn[key] = val; buildCanvas(); setTool('swap'); }
+function setRs(key, val) { rs[key] = val; buildCanvas(); setTool('swap'); }
+function setAf(key, val) { af[key] = val; buildCanvas(); setTool('swap'); }
+function setFl(key, val) { fl[key] = val; buildCanvas(); setTool('swap'); }
 
 // ─── Product picker ───
 function selectProduct(product) {
@@ -617,6 +912,10 @@ function showProductPicker() {
 function renderSwap() {
   if (!currentProduct) return renderProductPicker();
   if (currentProduct === 'wa') return renderWallArt();
+  if (currentProduct === 'bn') return renderBanner();
+  if (currentProduct === 'rs') return renderRigidSign();
+  if (currentProduct === 'af') return renderAFrame();
+  if (currentProduct === 'fl') return renderFlag();
   return renderBC();
 }
 
@@ -649,7 +948,56 @@ function renderProductPicker() {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
 
-      <div style="padding:10px 4px 4px;font-size:10.5px;color:#a1a1aa;text-align:center;line-height:1.6;">More products coming soon —<br>banners, signs, vehicle wraps &amp; more</div>
+      <button onclick="selectProduct('bn')" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #e4e4e7;border-radius:8px;background:white;cursor:pointer;text-align:left;width:100%;transition:all .12s;" onmouseover="this.style.borderColor='#93c5fd';this.style.background='#f8fbff'" onmouseout="this.style.borderColor='#e4e4e7';this.style.background='white'">
+        <div style="width:42px;height:28px;background:#f0f0f0;border-radius:2px;flex-shrink:0;border:1.5px solid #d0d0d0;display:flex;align-items:center;justify-content:center;">
+          <div style="width:28px;height:16px;background:#3b82f6;border-radius:1px;opacity:.7;"></div>
+        </div>
+        <div style="flex:1;text-align:left;">
+          <div style="font-size:12.5px;font-weight:600;color:#18181b;">Banners</div>
+          <div style="font-size:10.5px;color:#71717a;margin-top:2px;">Vinyl, Mesh, Blockout, Fabric</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <button onclick="selectProduct('rs')" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #e4e4e7;border-radius:8px;background:white;cursor:pointer;text-align:left;width:100%;transition:all .12s;" onmouseover="this.style.borderColor='#93c5fd';this.style.background='#f8fbff'" onmouseout="this.style.borderColor='#e4e4e7';this.style.background='white'">
+        <div style="width:42px;height:28px;background:#e8e8e8;border-radius:2px;flex-shrink:0;border:1.5px solid #ccc;"></div>
+        <div style="flex:1;text-align:left;">
+          <div style="font-size:12.5px;font-weight:600;color:#18181b;">Rigid Signs</div>
+          <div style="font-size:10.5px;color:#71717a;margin-top:2px;">Coroplast, PVC Board, Aluminum</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <button onclick="selectProduct('af')" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #e4e4e7;border-radius:8px;background:white;cursor:pointer;text-align:left;width:100%;transition:all .12s;" onmouseover="this.style.borderColor='#93c5fd';this.style.background='#f8fbff'" onmouseout="this.style.borderColor='#e4e4e7';this.style.background='white'">
+        <div style="width:36px;height:36px;flex-shrink:0;position:relative;">
+          <svg viewBox="0 0 36 36" style="width:36px;height:36px;">
+            <line x1="6" y1="34" x2="18" y2="6" stroke="#888" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="30" y1="34" x2="18" y2="6" stroke="#888" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="8" y1="23" x2="28" y2="23" stroke="#aaa" stroke-width="1.5" stroke-linecap="round"/>
+            <rect x="8" y="6" width="20" height="14" fill="#e8e8e8" stroke="#bbb" stroke-width="1.2"/>
+          </svg>
+        </div>
+        <div style="flex:1;text-align:left;">
+          <div style="font-size:12.5px;font-weight:600;color:#18181b;">A-Frame Signs</div>
+          <div style="font-size:10.5px;color:#71717a;margin-top:2px;">18×24, 22×28, 24×36</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <button onclick="selectProduct('fl')" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #e4e4e7;border-radius:8px;background:white;cursor:pointer;text-align:left;width:100%;transition:all .12s;" onmouseover="this.style.borderColor='#93c5fd';this.style.background='#f8fbff'" onmouseout="this.style.borderColor='#e4e4e7';this.style.background='white'">
+        <div style="width:28px;height:38px;flex-shrink:0;">
+          <svg viewBox="0 0 28 38" style="width:28px;height:38px;">
+            <line x1="3" y1="0" x2="3" y2="38" stroke="#888" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M3,2 C16,2 22,8 20,16 C18,24 10,28 3,34 Z" fill="#3b82f6" opacity=".5"/>
+          </svg>
+        </div>
+        <div style="flex:1;text-align:left;">
+          <div style="font-size:12.5px;font-weight:600;color:#18181b;">Flags</div>
+          <div style="font-size:10.5px;color:#71717a;margin-top:2px;">Feather &amp; Teardrop styles</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
     </div>`;
 }
 
@@ -978,6 +1326,132 @@ function renderBC() {
     </div>`;
 }
 
+function renderBanner() {
+  const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
+  const sBtn = ([k,s]) => `<button onclick="setBn('size','${k}')" class="opt-btn bn-size${bn.size===k?' active':''}" data-val="${k}" style="justify-content:space-between;width:100%;font-size:11px;padding:5px 9px;"><span>${s.label}</span><span style="font-size:10px;opacity:.65;margin-left:8px;">$${BN_PRICES.size[k]}</span></button>`;
+  const vSizes = Object.entries(BN_SIZES).filter(([,s])=>s.group==='vertical');
+  const hSizes = Object.entries(BN_SIZES).filter(([,s])=>s.group==='horizontal');
+  const materials = [{key:'vinyl',label:'13oz Vinyl',sub:'Best all-around outdoor',adj:0},{key:'mesh',label:'9oz Mesh',sub:'Wind-resistant perforated',adj:BN_PRICES.material.mesh},{key:'blockout',label:'18oz Blockout',sub:'Opaque, dark background ready',adj:BN_PRICES.material.blockout},{key:'fabric',label:'Fabric',sub:'Indoor events, soft texture',adj:BN_PRICES.material.fabric}];
+  const finishes = [{key:'hemmed',label:'Hemmed Edges',sub:'Reinforced sewn border',adj:0},{key:'grommets',label:'Grommets',sub:'Metal corner/edge eyelets',adj:BN_PRICES.finish.grommets},{key:'pole-pocket',label:'Pole Pocket',sub:'Top &amp; bottom sleeve',adj:BN_PRICES.finish['pole-pocket']}];
+  const base=BN_PRICES.size[bn.size]||45, matAdj=BN_PRICES.material[bn.material]||0, finAdj=BN_PRICES.finish[bn.finish]||0, unit=base+matAdj+finAdj, total=unit*bn.quantity;
+  return `
+    <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button onclick="showProductPicker()" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Products</button>
+      <span style="color:#d4d4d8;">›</span><span style="font-size:11.5px;font-weight:600;color:#18181b;">Banners</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;" class="thin-scroll">
+      ${sec('Size', `
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Vertical</div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">${vSizes.map(sBtn).join('')}</div>
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Horizontal</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">${hSizes.map(sBtn).join('')}</div>`, true)}
+      ${sec('Material', `<div style="display:flex;flex-direction:column;gap:5px;">${materials.map(m=>`<button onclick="setBn('material','${m.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${bn.material===m.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${bn.material===m.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${m.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${m.sub}</div></div><span style="font-size:11px;font-weight:600;color:${m.adj>0?'#52525b':'#a1a1aa'};">${m.adj===0?'Included':'+$'+m.adj}</span></button>`).join('')}</div>`, true)}
+      ${sec('Finish / Hardware', `<div style="display:flex;flex-direction:column;gap:5px;">${finishes.map(f=>`<button onclick="setBn('finish','${f.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${bn.finish===f.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${bn.finish===f.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${f.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${f.sub}</div></div><span style="font-size:11px;font-weight:600;color:${f.adj>0?'#52525b':'#a1a1aa'};">${f.adj===0?'Included':'+$'+f.adj}</span></button>`).join('')}</div>`, true)}
+      ${sec('Quantity', `<select onchange="bn.quantity=parseInt(this.value);buildCanvas();updatePrice();setTool('swap');" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">${[1,2,3,5,10,25,50].map(q=>`<option value="${q}"${bn.quantity===q?' selected':''}>${q} banner${q>1?'s':''} — $${unit*q}</option>`).join('')}</select>`, true)}
+      <div style="padding:12px;background:#fafafa;border-top:1px solid #f0f0f0;margin-top:4px;">
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Price Breakdown</div>
+        <div class="price-row"><span>Base (${BN_SIZES[bn.size].label})</span><span>$${base}</span></div>
+        ${matAdj>0?`<div class="price-row"><span>Material upgrade</span><span>+$${matAdj}</span></div>`:''}
+        ${finAdj>0?`<div class="price-row"><span>Finish / hardware</span><span>+$${finAdj}</span></div>`:''}
+        ${bn.quantity>1?`<div class="price-row"><span>Qty × ${bn.quantity}</span><span>$${unit} × ${bn.quantity}</span></div>`:''}
+        <div class="price-row total"><span>Total</span><span>$${total}</span></div>
+      </div>
+      <div style="padding:10px 12px 16px;"><button onclick="handleDone()" style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:#18181b;color:white;border:none;cursor:pointer;">Add to Cart — $${total}</button></div>
+    </div>`;
+}
+
+function renderRigidSign() {
+  const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
+  const sBtn = ([k,s]) => `<button onclick="setRs('size','${k}')" class="opt-btn rs-size${rs.size===k?' active':''}" data-val="${k}" style="justify-content:space-between;width:100%;font-size:11px;padding:5px 9px;"><span>${s.label}</span><span style="font-size:10px;opacity:.65;margin-left:8px;">$${RS_PRICES.size[k]}</span></button>`;
+  const pSizes = Object.entries(RS_SIZES).filter(([,s])=>s.group==='portrait');
+  const lSizes = Object.entries(RS_SIZES).filter(([,s])=>s.group==='landscape');
+  const materials = [{key:'coroplast',label:'Coroplast',sub:'Lightweight corrugated plastic',adj:0},{key:'pvc',label:'PVC Board',sub:'Rigid, smooth, weatherproof',adj:RS_PRICES.material.pvc},{key:'aluminum',label:'Aluminum',sub:'Durable metal, premium look',adj:RS_PRICES.material.aluminum}];
+  const base=RS_PRICES.size[rs.size]||28, matAdj=RS_PRICES.material[rs.material]||0, unit=base+matAdj, total=unit*rs.quantity;
+  return `
+    <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button onclick="showProductPicker()" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Products</button>
+      <span style="color:#d4d4d8;">›</span><span style="font-size:11.5px;font-weight:600;color:#18181b;">Rigid Signs</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;" class="thin-scroll">
+      ${sec('Size', `
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Portrait</div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">${pSizes.map(sBtn).join('')}</div>
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Landscape</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">${lSizes.map(sBtn).join('')}</div>`, true)}
+      ${sec('Material', `<div style="display:flex;flex-direction:column;gap:5px;">${materials.map(m=>`<button onclick="setRs('material','${m.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${rs.material===m.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${rs.material===m.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${m.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${m.sub}</div></div><span style="font-size:11px;font-weight:600;color:${m.adj>0?'#52525b':'#a1a1aa'};">${m.adj===0?'Included':'+$'+m.adj}</span></button>`).join('')}</div>`, true)}
+      ${sec('Quantity', `<select onchange="rs.quantity=parseInt(this.value);buildCanvas();updatePrice();setTool('swap');" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">${[1,2,3,5,10,25,50,100].map(q=>`<option value="${q}"${rs.quantity===q?' selected':''}>${q} sign${q>1?'s':''} — $${unit*q}</option>`).join('')}</select>`, true)}
+      <div style="padding:12px;background:#fafafa;border-top:1px solid #f0f0f0;margin-top:4px;">
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Price Breakdown</div>
+        <div class="price-row"><span>Base (${RS_SIZES[rs.size].label})</span><span>$${base}</span></div>
+        ${matAdj>0?`<div class="price-row"><span>Material upgrade</span><span>+$${matAdj}</span></div>`:''}
+        ${rs.quantity>1?`<div class="price-row"><span>Qty × ${rs.quantity}</span><span>$${unit} × ${rs.quantity}</span></div>`:''}
+        <div class="price-row total"><span>Total</span><span>$${total}</span></div>
+      </div>
+      <div style="padding:10px 12px 16px;"><button onclick="handleDone()" style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:#18181b;color:white;border:none;cursor:pointer;">Add to Cart — $${total}</button></div>
+    </div>`;
+}
+
+function renderAFrame() {
+  const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
+  const insertTypes = [{key:'coroplast',label:'Coroplast Insert',sub:'Lightweight, weatherproof',adj:0},{key:'pvc',label:'PVC Insert',sub:'Rigid smooth finish',adj:AF_PRICES.insertType.pvc}];
+  const sidesOpts = [{key:'single',label:'Single-Sided',sub:'Print on front panel only',adj:0},{key:'double',label:'Double-Sided',sub:'Print on both panels',adj:AF_PRICES.sides.double}];
+  const base=AF_PRICES.size[af.size]||39, insAdj=AF_PRICES.insertType[af.insertType]||0, sidesAdj=AF_PRICES.sides[af.sides]||0, unit=base+insAdj+sidesAdj, total=unit*af.quantity;
+  return `
+    <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button onclick="showProductPicker()" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Products</button>
+      <span style="color:#d4d4d8;">›</span><span style="font-size:11.5px;font-weight:600;color:#18181b;">A-Frame Signs</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;" class="thin-scroll">
+      ${sec('Insert Size', `<div style="display:flex;flex-direction:column;gap:4px;">${Object.entries(AF_SIZES).map(([k,s])=>`<button onclick="setAf('size','${k}')" class="opt-btn af-size${af.size===k?' active':''}" data-val="${k}" style="justify-content:space-between;width:100%;font-size:11px;padding:5px 9px;"><span>${s.label}</span><span style="font-size:10px;opacity:.65;margin-left:8px;">$${AF_PRICES.size[k]}</span></button>`).join('')}</div>`, true)}
+      ${sec('Insert Material', `<div style="display:flex;flex-direction:column;gap:5px;">${insertTypes.map(m=>`<button onclick="setAf('insertType','${m.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${af.insertType===m.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${af.insertType===m.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${m.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${m.sub}</div></div><span style="font-size:11px;font-weight:600;color:${m.adj>0?'#52525b':'#a1a1aa'};">${m.adj===0?'Included':'+$'+m.adj}</span></button>`).join('')}</div>`, true)}
+      ${sec('Sides', `<div style="display:flex;flex-direction:column;gap:5px;">${sidesOpts.map(s=>`<button onclick="setAf('sides','${s.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${af.sides===s.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${af.sides===s.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${s.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${s.sub}</div></div><span style="font-size:11px;font-weight:600;color:${s.adj>0?'#52525b':'#a1a1aa'};">${s.adj===0?'Included':'+$'+s.adj}</span></button>`).join('')}</div>`, true)}
+      ${sec('Quantity', `<select onchange="af.quantity=parseInt(this.value);buildCanvas();updatePrice();setTool('swap');" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">${[1,2,3,5,10].map(q=>`<option value="${q}"${af.quantity===q?' selected':''}>${q} frame${q>1?'s':''} — $${unit*q}</option>`).join('')}</select>`, true)}
+      <div style="padding:12px;background:#fafafa;border-top:1px solid #f0f0f0;margin-top:4px;">
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Price Breakdown</div>
+        <div class="price-row"><span>Base (${AF_SIZES[af.size].label})</span><span>$${base}</span></div>
+        ${insAdj>0?`<div class="price-row"><span>Insert material</span><span>+$${insAdj}</span></div>`:''}
+        ${sidesAdj>0?`<div class="price-row"><span>Double-sided</span><span>+$${sidesAdj}</span></div>`:''}
+        ${af.quantity>1?`<div class="price-row"><span>Qty × ${af.quantity}</span><span>$${unit} × ${af.quantity}</span></div>`:''}
+        <div class="price-row total"><span>Total</span><span>$${total}</span></div>
+      </div>
+      <div style="padding:10px 12px 16px;"><button onclick="handleDone()" style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:#18181b;color:white;border:none;cursor:pointer;">Add to Cart — $${total}</button></div>
+    </div>`;
+}
+
+function renderFlag() {
+  const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
+  const featherSizes = Object.entries(FL_SIZES).filter(([,s])=>s.shape==='feather');
+  const tearSizes    = Object.entries(FL_SIZES).filter(([,s])=>s.shape==='teardrop');
+  const sBtn = ([k,s]) => `<button onclick="setFl('size','${k}')" class="opt-btn fl-size${fl.size===k?' active':''}" data-val="${k}" style="justify-content:space-between;width:100%;font-size:11px;padding:5px 9px;"><span>${s.label}</span><span style="font-size:10px;opacity:.65;margin-left:8px;">$${FL_PRICES.size[k]}</span></button>`;
+  const bases = [{key:'ground-spike',label:'Ground Spike',sub:'Outdoor grass/dirt',adj:0},{key:'cross-base',label:'Cross Base',sub:'Hard floor, indoor/outdoor',adj:FL_PRICES.base['cross-base']},{key:'water-base',label:'Water Base',sub:'Weighted, stable on pavement',adj:FL_PRICES.base['water-base']}];
+  const sidesOpts = [{key:'single',label:'Single-Sided',sub:'One-sided print',adj:0},{key:'double',label:'Double-Sided',sub:'Visible from both sides',adj:FL_PRICES.sides.double}];
+  const base=FL_PRICES.size[fl.size]||59, baseAdj=FL_PRICES.base[fl.base]||0, sidesAdj=FL_PRICES.sides[fl.sides]||0, unit=base+baseAdj+sidesAdj, total=unit*fl.quantity;
+  return `
+    <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button onclick="showProductPicker()" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Products</button>
+      <span style="color:#d4d4d8;">›</span><span style="font-size:11.5px;font-weight:600;color:#18181b;">Flags</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;" class="thin-scroll">
+      ${sec('Shape &amp; Size', `
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Feather</div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">${featherSizes.map(sBtn).join('')}</div>
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Teardrop</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">${tearSizes.map(sBtn).join('')}</div>`, true)}
+      ${sec('Base Hardware', `<div style="display:flex;flex-direction:column;gap:5px;">${bases.map(b2=>`<button onclick="setFl('base','${b2.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${fl.base===b2.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${fl.base===b2.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${b2.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${b2.sub}</div></div><span style="font-size:11px;font-weight:600;color:${b2.adj>0?'#52525b':'#a1a1aa'};">${b2.adj===0?'Included':'+$'+b2.adj}</span></button>`).join('')}</div>`, true)}
+      ${sec('Sides', `<div style="display:flex;flex-direction:column;gap:5px;">${sidesOpts.map(s2=>`<button onclick="setFl('sides','${s2.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${fl.sides===s2.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${fl.sides===s2.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${s2.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${s2.sub}</div></div><span style="font-size:11px;font-weight:600;color:${s2.adj>0?'#52525b':'#a1a1aa'};">${s2.adj===0?'Included':'+$'+s2.adj}</span></button>`).join('')}</div>`, true)}
+      ${sec('Quantity', `<select onchange="fl.quantity=parseInt(this.value);buildCanvas();updatePrice();setTool('swap');" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">${[1,2,3,5,10].map(q=>`<option value="${q}"${fl.quantity===q?' selected':''}>${q} flag${q>1?'s':''} — $${unit*q}</option>`).join('')}</select>`, true)}
+      <div style="padding:12px;background:#fafafa;border-top:1px solid #f0f0f0;margin-top:4px;">
+        <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Price Breakdown</div>
+        <div class="price-row"><span>Base (${FL_SIZES[fl.size].label})</span><span>$${base}</span></div>
+        ${baseAdj>0?`<div class="price-row"><span>Base hardware</span><span>+$${baseAdj}</span></div>`:''}
+        ${sidesAdj>0?`<div class="price-row"><span>Double-sided</span><span>+$${sidesAdj}</span></div>`:''}
+        ${fl.quantity>1?`<div class="price-row"><span>Qty × ${fl.quantity}</span><span>$${unit} × ${fl.quantity}</span></div>`:''}
+        <div class="price-row total"><span>Total</span><span>$${total}</span></div>
+      </div>
+      <div style="padding:10px 12px 16px;"><button onclick="handleDone()" style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:#18181b;color:white;border:none;cursor:pointer;">Add to Cart — $${total}</button></div>
+    </div>`;
+}
+
 function toggleEdgePaint() {
   bc.effects.edgePainting = bc.effects.edgePainting ? null : '#18181b';
   buildCanvas();
@@ -1107,7 +1581,7 @@ function renderLayers() {
   const baseRow = `
     <div class="layer-row" style="opacity:.45;">
       <div style="width:15px;height:15px;border-radius:3px;flex-shrink:0;background:#dde3ea;border:1px solid #c5cdd6;"></div>
-      <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#52525b;">Base ${currentProduct === 'wa' ? 'print' : 'card'}</span>
+      <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#52525b;">Base ${{ wa:'print', bn:'banner', rs:'sign', af:'insert', fl:'flag' }[currentProduct] || 'card'}</span>
       <button class="l-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></button>
     </div>`;
   return `
@@ -1159,6 +1633,14 @@ function addShape() {
   if (currentProduct === 'wa') {
     const p = getWaPrintArea();
     ax = p.ox + p.ix; ay = p.oy + p.iy; aw = p.iw; ah = p.ih;
+  } else if (currentProduct === 'bn') {
+    const p = getBnPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
+  } else if (currentProduct === 'rs') {
+    const p = getRsPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
+  } else if (currentProduct === 'af') {
+    const p = getAfPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
+  } else if (currentProduct === 'fl') {
+    const p = getFlPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
   } else {
     const { cw, ch } = getCardDimensions();
     ax = 0; ay = 0; aw = cw; ah = ch;
@@ -1389,19 +1871,33 @@ function addImageToCanvas(dataUrl, name) {
 
   if (currentProduct === 'wa') {
     const p = getWaPrintArea();
-    img.setAttribute('x', String(p.ox + p.ix));
-    img.setAttribute('y', String(p.oy + p.iy));
-    img.setAttribute('width', String(p.iw));
-    img.setAttribute('height', String(p.ih));
-    // hide placeholder once we have a design
-    const ph = document.getElementById('wa-placeholder');
-    if (ph) ph.setAttribute('display', 'none');
+    img.setAttribute('x', String(p.ox + p.ix)); img.setAttribute('y', String(p.oy + p.iy));
+    img.setAttribute('width', String(p.iw)); img.setAttribute('height', String(p.ih));
+    const ph = document.getElementById('wa-placeholder'); if (ph) ph.setAttribute('display', 'none');
+  } else if (currentProduct === 'bn') {
+    const p = getBnPrintArea();
+    img.setAttribute('x', String(p.ox)); img.setAttribute('y', String(p.oy));
+    img.setAttribute('width', String(p.iw)); img.setAttribute('height', String(p.ih));
+    const ph = document.getElementById('bn-placeholder'); if (ph) ph.setAttribute('display', 'none');
+  } else if (currentProduct === 'rs') {
+    const p = getRsPrintArea();
+    img.setAttribute('x', String(p.ox)); img.setAttribute('y', String(p.oy));
+    img.setAttribute('width', String(p.iw)); img.setAttribute('height', String(p.ih));
+    const ph = document.getElementById('rs-placeholder'); if (ph) ph.setAttribute('display', 'none');
+  } else if (currentProduct === 'af') {
+    const p = getAfPrintArea();
+    img.setAttribute('x', String(p.ox)); img.setAttribute('y', String(p.oy));
+    img.setAttribute('width', String(p.iw)); img.setAttribute('height', String(p.ih));
+    const ph = document.getElementById('af-placeholder'); if (ph) ph.setAttribute('display', 'none');
+  } else if (currentProduct === 'fl') {
+    const p = getFlPrintArea();
+    img.setAttribute('x', String(p.ox)); img.setAttribute('y', String(p.oy));
+    img.setAttribute('width', String(p.iw)); img.setAttribute('height', String(p.ih));
+    const ph = document.getElementById('fl-placeholder'); if (ph) ph.setAttribute('display', 'none');
   } else {
     const { cw, ch } = getCardDimensions();
-    img.setAttribute('x', '0');
-    img.setAttribute('y', '0');
-    img.setAttribute('width', String(cw));
-    img.setAttribute('height', String(ch));
+    img.setAttribute('x', '0'); img.setAttribute('y', '0');
+    img.setAttribute('width', String(cw)); img.setAttribute('height', String(ch));
   }
 
   img.setAttribute('href', dataUrl);
@@ -1439,13 +1935,36 @@ function toggleRuler() {
 }
 
 function showSpecs() {
+  if (!currentProduct) return;
   if (currentProduct === 'wa') {
     const s = WA_SIZES[wa.size];
     const mat = wa.frameMaterial === 'pvc-composite' ? 'PVC/Composite' : wa.frameMaterial.charAt(0).toUpperCase() + wa.frameMaterial.slice(1);
     alert(`Wall Art / Framed Print Specs\n\nSize: ${s.label}\nFrame Color: ${wa.frameColor.charAt(0).toUpperCase() + wa.frameColor.slice(1)}\nFrame Material: ${mat}\nQuantity: ${wa.quantity}\nPrint: Single-sided, premium photo paper\n\nTotal: $${calcWaPrice()}`);
     return;
   }
-  if (!currentProduct) return;
+  if (currentProduct === 'bn') {
+    const s = BN_SIZES[bn.size];
+    const mat = { vinyl:'13oz Vinyl', mesh:'9oz Mesh', blockout:'18oz Blockout', fabric:'Fabric' }[bn.material];
+    alert(`Banner Specs\n\nSize: ${s.label} (${s.in})\nMaterial: ${mat}\nFinish: ${bn.finish.replace(/-/g,' ')}\nQuantity: ${bn.quantity}\n\nTotal: $${calcBnPrice()}`);
+    return;
+  }
+  if (currentProduct === 'rs') {
+    const s = RS_SIZES[rs.size];
+    const mat = { coroplast:'Coroplast', pvc:'PVC Board', aluminum:'Aluminum' }[rs.material];
+    alert(`Rigid Sign Specs\n\nSize: ${s.label} (${s.in})\nMaterial: ${mat}\nQuantity: ${rs.quantity}\n\nTotal: $${calcRsPrice()}`);
+    return;
+  }
+  if (currentProduct === 'af') {
+    const s = AF_SIZES[af.size];
+    const ins = { coroplast:'Coroplast', pvc:'PVC' }[af.insertType];
+    alert(`A-Frame Sign Specs\n\nInsert Size: ${s.label}\nInsert Material: ${ins}\nSides: ${af.sides}\nQuantity: ${af.quantity}\n\nTotal: $${calcAfPrice()}`);
+    return;
+  }
+  if (currentProduct === 'fl') {
+    const s = FL_SIZES[fl.size];
+    alert(`Flag Specs\n\nSize: ${s.label} (${s.in})\nShape: ${s.shape.charAt(0).toUpperCase()+s.shape.slice(1)}\nBase: ${fl.base.replace(/-/g,' ')}\nSides: ${fl.sides}\nQuantity: ${fl.quantity}\n\nTotal: $${calcFlPrice()}`);
+    return;
+  }
   const s = SIZES[bc.size];
   alert(`Business Card Specs\n\nSize: ${s.in}\nQuantity: ${bc.quantity}\nPaper: ${bc.paper} / ${bc.thickness}\nFinish: ${bc.finish}\nCorners: ${bc.corners}\nShape: ${bc.shape}\nSides: ${bc.sides}\n\nEffects: ${Object.entries(bc.effects).filter(([,v])=>v).map(([k,v])=>k+(typeof v==='string'?' ('+v+')':'')).join(', ')||'None'}\n\nTotal: $${calcPrice()}`);
 }
@@ -1454,14 +1973,30 @@ function handleDone() {
   if (currentProduct === 'wa') {
     const s = WA_SIZES[wa.size];
     const mat = wa.frameMaterial === 'pvc-composite' ? 'PVC/Composite' : wa.frameMaterial.charAt(0).toUpperCase() + wa.frameMaterial.slice(1);
-    if (confirm(`Add to cart?\n\n${s.label}  ·  ${wa.frameColor.charAt(0).toUpperCase() + wa.frameColor.slice(1)} ${mat} frame\nQty: ${wa.quantity}\n\nTotal: $${calcWaPrice()}`)) {
-      window.location.href = 'cart.html';
-    }
+    if (confirm(`Add to cart?\n\n${s.label}  ·  ${wa.frameColor.charAt(0).toUpperCase()+wa.frameColor.slice(1)} ${mat} frame\nQty: ${wa.quantity}\n\nTotal: $${calcWaPrice()}`)) window.location.href = 'cart.html';
     return;
   }
-  if (confirm(`Add ${bc.quantity} business cards to cart?\n\nTotal: $${calcPrice()}`)) {
-    window.location.href = 'cart.html';
+  if (currentProduct === 'bn') {
+    const s = BN_SIZES[bn.size];
+    if (confirm(`Add to cart?\n\n${s.label} Banner  ·  ${bn.material}  ·  ${bn.finish}\nQty: ${bn.quantity}\n\nTotal: $${calcBnPrice()}`)) window.location.href = 'cart.html';
+    return;
   }
+  if (currentProduct === 'rs') {
+    const s = RS_SIZES[rs.size];
+    if (confirm(`Add to cart?\n\n${s.label} Rigid Sign  ·  ${rs.material}\nQty: ${rs.quantity}\n\nTotal: $${calcRsPrice()}`)) window.location.href = 'cart.html';
+    return;
+  }
+  if (currentProduct === 'af') {
+    const s = AF_SIZES[af.size];
+    if (confirm(`Add to cart?\n\nA-Frame Sign  ·  ${s.label}  ·  ${af.sides}-sided\nQty: ${af.quantity}\n\nTotal: $${calcAfPrice()}`)) window.location.href = 'cart.html';
+    return;
+  }
+  if (currentProduct === 'fl') {
+    const s = FL_SIZES[fl.size];
+    if (confirm(`Add to cart?\n\n${s.label} Flag  ·  ${fl.base.replace(/-/g,' ')}  ·  ${fl.sides}-sided\nQty: ${fl.quantity}\n\nTotal: $${calcFlPrice()}`)) window.location.href = 'cart.html';
+    return;
+  }
+  if (confirm(`Add ${bc.quantity} business cards to cart?\n\nTotal: $${calcPrice()}`)) window.location.href = 'cart.html';
 }
 
 // ─── Init ───

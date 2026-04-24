@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>try{var t=localStorage.getItem('cp-theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.remove('dark');else if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark');}catch(e){}</script>
+<title>Vision Art Chart — controlp.io</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'};</script>
+<link rel="stylesheet" href="assets/site.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=Playfair+Display:wght@400;600;700&family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--background:0 0% 100%;--foreground:240 10% 3.9%;--card:0 0% 100%;--muted:240 4.8% 95.9%;--muted-foreground:240 3.8% 46.1%;--border:240 5.9% 90%;--primary:240 5.9% 10%;--primary-foreground:0 0% 98%;--radius:0.625rem;}
+  .dark{--background:240 10% 3.9%;--foreground:0 0% 98%;--card:240 10% 3.9%;--muted:240 3.7% 15.9%;--muted-foreground:240 5% 64.9%;--border:240 3.7% 15.9%;--primary:0 0% 98%;--primary-foreground:240 5.9% 10%;}
+  *{font-family:'Inter',system-ui,sans-serif;}
+  body{background:hsl(var(--background));color:hsl(var(--foreground));transition:background-color 0.2s ease,color 0.2s ease;}
+  .font-display{font-family:'Geist','Inter',system-ui,sans-serif;letter-spacing:-0.02em;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;border-radius:calc(var(--radius) - 2px);font-size:14px;font-weight:500;transition:all 0.15s;cursor:pointer;}
+  .btn-primary{background:hsl(var(--primary));color:hsl(var(--primary-foreground));padding:10px 20px;}
+  .btn-primary:hover{opacity:.88;}
+  .btn-outline{border:1px solid hsl(var(--border));background:transparent;color:hsl(var(--foreground));padding:10px 20px;}
+  .btn-outline:hover{background:hsl(var(--muted));}
+  .btn-ghost{background:transparent;color:hsl(var(--foreground));padding:8px 12px;}
+  .btn-ghost:hover{background:hsl(var(--muted));}
+  .btn-lg{padding:13px 26px;font-size:15px;}
+  .btn-sm{padding:6px 12px;font-size:13px;}
+  .card{background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--radius);transition:all 0.2s;}
+  .card-hover:hover{border-color:hsl(240 5.9% 65%);transform:translateY(-2px);box-shadow:0 10px 30px -12px rgba(0,0,0,0.08);}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;}
+  svg.icon{width:16px;height:16px;stroke-width:2;stroke:currentColor;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+  svg.icon-sm{width:14px;height:14px;stroke-width:2;stroke:currentColor;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+  svg.icon-lg{width:20px;height:20px;stroke-width:2;stroke:currentColor;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+  svg.star{width:12px;height:12px;fill:currentColor;stroke:none;}
+  .product-img{background:linear-gradient(135deg,hsl(240 4.8% 95.9%) 0%,hsl(240 4.8% 98%) 100%);position:relative;overflow:hidden;color:hsl(240 3.8% 60%);}
+  .input,.select{width:100%;padding:9px 12px;border:1px solid hsl(var(--border));border-radius:calc(var(--radius) - 2px);font-size:14px;background:hsl(var(--card));color:hsl(var(--foreground));outline:none;}
+  .input:focus,.select:focus{border-color:hsl(var(--primary));box-shadow:0 0 0 3px hsl(240 5.9% 10% / 0.08);}
+  .input.upper{text-transform:uppercase;}
+  .tab-list{display:flex;border-bottom:1px solid hsl(var(--border));gap:4px;}
+  .tab{padding:12px 16px;font-size:14px;font-weight:500;color:hsl(var(--muted-foreground));border-bottom:2px solid transparent;cursor:pointer;transition:all 0.15s;}
+  .tab:hover{color:hsl(var(--foreground));}
+  .tab.active{color:hsl(var(--foreground));border-bottom-color:hsl(var(--primary));}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+  .spec-table{width:100%;border-collapse:collapse;}
+  .spec-table tr{border-bottom:1px solid hsl(var(--border));}
+  .spec-table tr:last-child{border-bottom:none;}
+  .spec-table td{padding:10px 0;font-size:13.5px;vertical-align:top;}
+  .spec-table td:first-child{color:hsl(var(--muted-foreground));width:44%;font-weight:500;}
+  .rating-bar{height:6px;background:hsl(var(--muted));border-radius:999px;overflow:hidden;}
+  .rating-bar-fill{height:100%;background:hsl(45 95% 55%);border-radius:999px;}
+  .dropdown{position:relative;}
+  .dropdown-menu{position:absolute;top:100%;right:0;margin-top:6px;opacity:0;pointer-events:none;transition:all 0.15s;transform:translateY(-4px);z-index:20;}
+  .dropdown:hover .dropdown-menu,.dropdown:focus-within .dropdown-menu{opacity:1;pointer-events:auto;transform:translateY(0);}
+
+  /* ── Configurator layout (vac- prefix) ── */
+  .vac-grid{display:grid;grid-template-columns:1fr;gap:24px;padding:32px 0;}
+  @media(min-width:1024px){.vac-grid{grid-template-columns:420px 1fr;}}
+  .vac-sticky{position:static;}
+  @media(min-width:1024px){.vac-sticky{position:sticky;top:88px;align-self:start;}}
+  .vac-preview-card{background:transparent;border:1px solid transparent;border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .vac-frame{padding:18px;box-shadow:0 20px 40px -10px rgba(0,0,0,0.28),0 4px 12px rgba(0,0,0,0.15),inset 0 0 0 2px rgba(0,0,0,0.08);border-radius:2px;width:100%;max-width:460px;}
+  .vac-mat{box-shadow:inset 0 0 0 1px rgba(0,0,0,0.08);aspect-ratio:800/1100;overflow:hidden;}
+  .vac-size-label{font-size:11px;color:hsl(var(--muted-foreground));letter-spacing:1px;text-transform:uppercase;text-align:center;}
+  .vac-panel{background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--radius);padding:20px;margin-bottom:14px;}
+  .vac-panel-title{font-size:14px;font-weight:600;margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;}
+  .vac-subsection{padding-top:14px;margin-top:14px;border-top:1px solid hsl(var(--border));}
+  .vac-subsection-title{font-size:11.5px;font-weight:600;color:hsl(var(--muted-foreground));margin:0 0 10px;letter-spacing:0.5px;text-transform:uppercase;}
+  .vac-stack{display:flex;flex-direction:column;gap:12px;}
+  .vac-stack-sm{display:flex;flex-direction:column;gap:8px;}
+  .vac-field{display:flex;flex-direction:column;gap:6px;}
+  .vac-label{font-size:13px;font-weight:500;color:hsl(var(--foreground));}
+  .vac-row-3{display:grid;grid-template-columns:52px 1fr 90px;gap:6px;align-items:center;}
+  .vac-row-exports{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .vac-tab-group{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:hsl(var(--muted));padding:3px;border-radius:8px;}
+  .vac-tab-btn{height:30px;border:none;background:transparent;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500;color:hsl(var(--muted-foreground));border-radius:6px;transition:background 120ms;}
+  .vac-tab-btn.active{background:hsl(var(--card));color:hsl(var(--foreground));box-shadow:0 1px 2px rgba(0,0,0,0.06);}
+  .vac-swatch-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
+  .vac-swatch{height:36px;border:2px solid transparent;border-radius:5px;cursor:pointer;padding:0;transition:transform 100ms;}
+  .vac-swatch:hover{transform:scale(1.06);}
+  .vac-swatch.active{border-color:hsl(var(--primary));box-shadow:0 0 0 2px hsl(var(--card)),0 0 0 4px hsl(var(--primary));}
+  .vac-swatch-labels{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;font-size:10px;color:hsl(var(--muted-foreground));text-align:center;margin-top:4px;}
+  .vac-slider-row{display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:center;}
+  .vac-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:hsl(var(--border));border-radius:2px;outline:none;margin:0;}
+  .vac-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:hsl(var(--primary));border-radius:50%;cursor:pointer;border:2px solid hsl(var(--card));box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+  .vac-slider::-moz-range-thumb{width:16px;height:16px;background:hsl(var(--primary));border-radius:50%;cursor:pointer;border:2px solid hsl(var(--card));}
+  .vac-slider-value{text-align:right;font-family:ui-monospace,monospace;font-size:12px;color:hsl(var(--muted-foreground));}
+  .vac-color-picker{display:flex;align-items:center;gap:8px;}
+  .vac-color-picker input[type="color"]{width:36px;height:36px;padding:0;border:1px solid hsl(var(--border));border-radius:8px;background:transparent;cursor:pointer;}
+  .vac-color-picker input[type="color"]::-webkit-color-swatch-wrapper{padding:3px;}
+  .vac-color-picker input[type="color"]::-webkit-color-swatch{border:none;border-radius:5px;}
+  .vac-color-hex{flex:1;text-transform:uppercase;font-family:ui-monospace,monospace;font-size:13px;}
+  .vac-muted{font-size:12px;color:hsl(var(--muted-foreground));margin-top:4px;}
+  .vac-mono{font-family:ui-monospace,monospace;font-size:12px;color:hsl(var(--muted-foreground));}
+  .vac-order-cta{background:hsl(var(--muted));border:1px solid hsl(var(--border));border-radius:var(--radius);padding:20px;margin-top:4px;}
+  #vac-app-loading{display:flex;align-items:center;justify-content:center;min-height:320px;color:hsl(var(--muted-foreground));font-size:14px;}
+</style>
+</head>
+<body>
+
+<!-- Announcement Bar -->
+<div class="site-announcement w-full bg-zinc-900 text-zinc-50 text-[12.5px] py-2 px-4 text-center">
+  <div class="flex items-center justify-center gap-3 flex-wrap">
+    <span class="hidden sm:flex items-center gap-1.5"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Made in Chandler, Arizona</span>
+    <span class="hidden sm:inline opacity-30">·</span>
+    <span class="flex items-center gap-1.5"><svg class="icon-sm" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Free shipping on orders over $75</span>
+    <span class="opacity-30">·</span>
+    <a href="resources.html" class="underline underline-offset-2 hover:text-white">Resources &amp; file prep guides</a>
+  </div>
+</div>
+
+<!-- Site Header -->
+<header class="site-header sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b dark:border-zinc-800 dark:bg-zinc-950/90" style="border-color:hsl(var(--border));">
+  <div class="max-w-[1400px] mx-auto px-6">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center gap-6 lg:gap-8 min-w-0">
+        <a href="home.html" class="flex items-center gap-2 shrink-0">
+          <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 text-white font-bold text-[13px] font-display">cp</div>
+          <span class="font-bold text-[16px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+        </a>
+        <nav class="hidden lg:flex items-center gap-1 text-[14px]">
+          <div class="dropdown">
+            <button type="button" class="btn btn-ghost flex items-center gap-1">Shop <svg class="icon-sm" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="dropdown-menu card p-2 w-[560px] grid grid-cols-2 gap-1 shadow-xl">
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80"><div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300"><svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></div><div><div class="font-semibold text-[13.5px]">Large Format Prints</div><div class="text-[12px] text-zinc-500">Banners, posters, displays</div></div></a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80"><div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 7h14l-2 4h-12z"/></svg></div><div><div class="font-semibold text-[13.5px]">Signs</div><div class="text-[12px] text-zinc-500">Standard &amp; custom signage</div></div></a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80"><div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300"><svg class="icon" viewBox="0 0 24 24"><path d="M5 17h14"/><path d="M3 17l2-7c.3-1 1.2-2 2.3-2h9.4c1.1 0 2 1 2.3 2l2 7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></div><div><div class="font-semibold text-[13.5px]">Vehicle Wraps</div><div class="text-[12px] text-zinc-500">Full wraps, spot graphics, tint</div></div></a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80"><div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div><div><div class="font-semibold text-[13.5px]">Business Cards</div><div class="text-[12px] text-zinc-500">Standard, die-cut, premium</div></div></a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80"><div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300"><svg class="icon" viewBox="0 0 24 24"><path d="M20.4 3.5L16 2a4 4 0 01-8 0L3.6 3.5a2 2 0 00-1.3 2.2l.6 3.5a1 1 0 001 .8H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.1a1 1 0 001-.8l.5-3.5a2 2 0 00-1.3-2.2z"/></svg></div><div><div class="font-semibold text-[13.5px]">Custom Merch</div><div class="text-[12px] text-zinc-500">Shirts, hats, mugs, bags</div></div></a>
+              <a href="shop.html" class="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80"><div class="w-9 h-9 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300"><svg class="icon" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22V15"/></svg></div><div><div class="font-semibold text-[13.5px]">Flags &amp; Displays</div><div class="text-[12px] text-zinc-500">Pole, feather, teardrop, tents</div></div></a>
+            </div>
+          </div>
+          <a href="shop.html" class="btn btn-ghost">Deals</a>
+          <a href="faq.html" class="btn btn-ghost">FAQ</a>
+          <a href="contact.html" class="btn btn-ghost">Contact</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button type="button" class="cp-theme-btn" data-theme-toggle aria-label="Toggle color mode">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <a href="cart.html" class="btn btn-ghost p-2 relative hidden sm:inline-flex" aria-label="Cart">
+          <svg class="icon-lg" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+          <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-zinc-900 text-white text-[10px] font-semibold flex items-center justify-center dark:bg-zinc-100 dark:text-zinc-900">2</span>
+        </a>
+        <a href="login.html" class="btn btn-outline hidden sm:inline-flex">Sign in</a>
+        <a href="contact.html" class="btn btn-primary">Get a quote</a>
+        <button type="button" class="lg:hidden btn btn-ghost p-2 -mr-1" data-mobile-nav-open aria-label="Open menu">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Breadcrumbs -->
+<div class="max-w-[1400px] mx-auto px-6 pt-6">
+  <div class="flex items-center gap-2 text-[12.5px] text-zinc-500 flex-wrap">
+    <a href="home.html" class="hover:text-zinc-900 dark:hover:text-zinc-100">Home</a>
+    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    <a href="shop.html" class="hover:text-zinc-900 dark:hover:text-zinc-100">Shop</a>
+    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    <a href="shop.html?category=custom-art" class="hover:text-zinc-900 dark:hover:text-zinc-100">Custom Art</a>
+    <svg class="icon-sm" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    <span class="text-zinc-900 dark:text-zinc-100 font-medium">Vision Art Chart</span>
+  </div>
+</div>
+
+<!-- Product Header -->
+<section class="max-w-[1400px] mx-auto px-6 pt-6 pb-2">
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-2 flex-wrap">
+        <span class="badge bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">New</span>
+        <span class="badge bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Custom Art Print</span>
+        <span class="badge bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">All 50 States</span>
+      </div>
+      <h1 class="font-display text-[32px] sm:text-[38px] font-bold tracking-tight leading-tight">Vision Art Chart</h1>
+      <p class="text-zinc-500 dark:text-zinc-400 text-[15px] mt-1.5 max-w-xl">Custom eye-chart art print styled with your state and cities. Perfect for doctor's offices, clinics, and home décor.</p>
+      <div class="flex items-center gap-2 mt-3">
+        <div class="flex items-center gap-0.5 text-amber-400">
+          <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg>
+        </div>
+        <span class="text-[13px] font-medium">4.9</span>
+        <span class="text-[13px] text-zinc-400">(47 reviews)</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <button class="btn btn-ghost btn-sm gap-1.5">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 000-7.8z"/></svg>Save
+      </button>
+      <button class="btn btn-ghost btn-sm gap-1.5">
+        <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Configurator (React renders here) -->
+<section class="max-w-[1400px] mx-auto px-6">
+  <div id="vac-app">
+    <div id="vac-app-loading">Loading configurator…</div>
+  </div>
+</section>
+
+<!-- Info Tabs -->
+<section class="max-w-[1400px] mx-auto px-6 mt-4" id="tabs-section">
+  <div class="tab-list">
+    <button class="tab active" onclick="openTab('description')">Description</button>
+    <button class="tab" onclick="openTab('specs')">Specifications</button>
+    <button class="tab" onclick="openTab('fileprep')">File Prep</button>
+    <button class="tab" onclick="openTab('reviews')">Reviews</button>
+  </div>
+
+  <div id="panel-description" class="tab-panel active py-8">
+    <div class="grid lg:grid-cols-2 gap-10">
+      <div class="prose prose-sm max-w-none">
+        <h3 class="font-display text-[20px] font-bold tracking-tight mb-3">About the Vision Art Chart</h3>
+        <p class="text-[14.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">The Vision Art Chart is a custom eye-chart art print that replaces the classic Snellen letters with the cities of your chosen state — a perfect blend of function-inspired design and local pride. Each chart follows the traditional Snellen acuity scale (20/200 down to 20/15) and is formatted for framing at standard print sizes.</p>
+        <p class="text-[14.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">Available for all 50 US states. Choose your state, customize city names, adjust typography, pick a frame color, and export a press-ready print file. Ideal for optometry offices, ophthalmology clinics, vision centers, and home décor.</p>
+        <ul class="space-y-2 text-[14px] text-zinc-600 dark:text-zinc-400">
+          <li class="flex items-start gap-2"><svg class="icon-sm text-emerald-500 mt-0.5 shrink-0" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>State silhouette + city names at Snellen acuity scale</li>
+          <li class="flex items-start gap-2"><svg class="icon-sm text-emerald-500 mt-0.5 shrink-0" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Fully customizable cities, typography, background &amp; frame</li>
+          <li class="flex items-start gap-2"><svg class="icon-sm text-emerald-500 mt-0.5 shrink-0" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Export as PNG (2400×3300 px), SVG, or press-ready PDF at 300 DPI</li>
+          <li class="flex items-start gap-2"><svg class="icon-sm text-emerald-500 mt-0.5 shrink-0" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Printed on premium matte archival stock, ready to frame</li>
+          <li class="flex items-start gap-2"><svg class="icon-sm text-emerald-500 mt-0.5 shrink-0" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Bulk pricing available for clinics ordering 10+</li>
+        </ul>
+      </div>
+      <div class="space-y-4">
+        <div class="card p-5">
+          <h4 class="font-semibold text-[14px] mb-3">Common Use Cases</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"><svg class="icon-sm text-zinc-400 shrink-0" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Optometry office walls</div>
+            <div class="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"><svg class="icon-sm text-zinc-400 shrink-0" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Vision clinic waiting rooms</div>
+            <div class="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"><svg class="icon-sm text-zinc-400 shrink-0" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Office &amp; lobby décor</div>
+            <div class="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"><svg class="icon-sm text-zinc-400 shrink-0" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 000-7.8z"/></svg>State-pride home gifts</div>
+            <div class="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"><svg class="icon-sm text-zinc-400 shrink-0" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Patient gifts &amp; branded merch</div>
+            <div class="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"><svg class="icon-sm text-zinc-400 shrink-0" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Retail frame &amp; gift shops</div>
+          </div>
+        </div>
+        <div class="card p-5">
+          <h4 class="font-semibold text-[14px] mb-3">Production</h4>
+          <p class="text-[13.5px] text-zinc-500 dark:text-zinc-400 leading-relaxed">Printed in-house in Chandler, AZ on 100 lb matte text stock using archival UV inks. Turnaround 2–3 business days. Ships flat in protective packaging. Rush available.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-specs" class="tab-panel py-8">
+    <div class="grid lg:grid-cols-2 gap-8">
+      <div>
+        <h3 class="font-display text-[20px] font-bold tracking-tight mb-4">Specifications</h3>
+        <table class="spec-table">
+          <tr><td>Available sizes</td><td>11″×14″, 16″×20″, 18″×24″, 24″×36″</td></tr>
+          <tr><td>Aspect ratio</td><td>8:11 (portrait)</td></tr>
+          <tr><td>Print resolution</td><td>300 DPI (press-ready)</td></tr>
+          <tr><td>Paper stock</td><td>100 lb matte text, acid-free archival</td></tr>
+          <tr><td>Ink</td><td>UV-cured pigment, fade-resistant</td></tr>
+          <tr><td>Chart scale</td><td>Snellen acuity 20/200 – 20/15 (8 rows)</td></tr>
+          <tr><td>State options</td><td>All 50 US states</td></tr>
+          <tr><td>Turnaround</td><td>2–3 business days standard; 1-day rush available</td></tr>
+          <tr><td>Shipping</td><td>Ships flat; free on orders over $75</td></tr>
+          <tr><td>File formats</td><td>PNG (2400×3300), SVG, PDF (300 DPI)</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3 class="font-display text-[20px] font-bold tracking-tight mb-4">Frame Options</h3>
+        <table class="spec-table">
+          <tr><td>Maple</td><td>Light wood grain finish, natural look</td></tr>
+          <tr><td>Walnut</td><td>Dark warm-brown wood grain</td></tr>
+          <tr><td>Black</td><td>Matte black, modern/minimal</td></tr>
+          <tr><td>White</td><td>Crisp white, clean aesthetic</td></tr>
+          <tr><td>Gold</td><td>Brushed gold metal finish</td></tr>
+          <tr><td>Cherry</td><td>Deep cherry-red wood grain</td></tr>
+        </table>
+        <p class="text-[12.5px] text-zinc-400 mt-3">Frame is a decorative border printed as part of the artwork. Physical frames available as add-on.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-fileprep" class="tab-panel py-8">
+    <div class="max-w-2xl">
+      <h3 class="font-display text-[20px] font-bold tracking-tight mb-4">File Prep Guide</h3>
+      <div class="space-y-5 text-[14px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+        <p>The Vision Art Chart configurator generates press-ready files directly — no design work required. Use the Export panel in the configurator to download your file in PNG, SVG, or PDF format.</p>
+        <div class="card p-5">
+          <h4 class="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Recommended export for print orders</h4>
+          <p>Use <strong>PDF export</strong> for the most accurate print output. PDF is generated at 300 DPI and fits your selected print size with white margins if the aspect ratio differs. For lossless vector output, use SVG.</p>
+        </div>
+        <div class="card p-5">
+          <h4 class="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">PNG export</h4>
+          <p>PNG exports at 2400×3300 px (3× the 800×1100 canvas), suitable for most home printing services and digital display. Not recommended for large-format prints above 18×24.</p>
+        </div>
+        <div class="card p-5">
+          <h4 class="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Custom modifications</h4>
+          <p>Need a custom layout, brand logo, or a size not listed? <a href="contact.html" class="underline">Contact us</a> for a custom quote. We work directly from your SVG export.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-reviews" class="tab-panel py-8">
+    <div class="grid lg:grid-cols-[280px_1fr] gap-10">
+      <div>
+        <div class="text-[56px] font-bold leading-none">4.9</div>
+        <div class="flex items-center gap-1 text-amber-400 mt-1">
+          <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg>
+          <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg>
+        </div>
+        <div class="text-[13px] text-zinc-400 mt-1">Based on 47 reviews</div>
+        <div class="space-y-2 mt-4">
+          <div class="flex items-center gap-2"><span class="text-[12px] w-4">5</span><div class="rating-bar flex-1"><div class="rating-bar-fill" style="width:89%"></div></div><span class="text-[12px] text-zinc-400 w-6">42</span></div>
+          <div class="flex items-center gap-2"><span class="text-[12px] w-4">4</span><div class="rating-bar flex-1"><div class="rating-bar-fill" style="width:9%"></div></div><span class="text-[12px] text-zinc-400 w-6">4</span></div>
+          <div class="flex items-center gap-2"><span class="text-[12px] w-4">3</span><div class="rating-bar flex-1"><div class="rating-bar-fill" style="width:2%"></div></div><span class="text-[12px] text-zinc-400 w-6">1</span></div>
+          <div class="flex items-center gap-2"><span class="text-[12px] w-4">2</span><div class="rating-bar flex-1"><div class="rating-bar-fill" style="width:0%"></div></div><span class="text-[12px] text-zinc-400 w-6">0</span></div>
+          <div class="flex items-center gap-2"><span class="text-[12px] w-4">1</span><div class="rating-bar flex-1"><div class="rating-bar-fill" style="width:0%"></div></div><span class="text-[12px] text-zinc-400 w-6">0</span></div>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-1"><span class="font-semibold text-[14px]">Dr. Maria T.</span><div class="flex text-amber-400 gap-0.5"><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg></div></div>
+          <p class="text-[13.5px] text-zinc-500 dark:text-zinc-400">Ordered 6 AZ charts for our clinic network. Every patient asks about them. Print quality is excellent and the configurator made it so easy to customize with our local cities.</p>
+          <div class="text-[12px] text-zinc-400 mt-2">Verified · 18×24 · Walnut frame</div>
+        </div>
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-1"><span class="font-semibold text-[14px]">James R.</span><div class="flex text-amber-400 gap-0.5"><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3 1.2-6.8-5-4.9 6.9-1z"/></svg></div></div>
+          <p class="text-[13.5px] text-zinc-500 dark:text-zinc-400">Got the TX version for my home office. Looks incredible in the maple frame. Fast shipping and packed really well — arrived in perfect condition.</p>
+          <div class="text-[12px] text-zinc-400 mt-2">Verified · 11×14 · Maple frame</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Related Products -->
+<section class="max-w-[1400px] mx-auto px-6">
+  <div class="mt-16 pt-10 border-t" style="border-color:hsl(var(--border));">
+    <div class="flex items-end justify-between mb-8">
+      <h2 class="font-display text-[28px] font-bold tracking-tight">You might also like</h2>
+      <a href="shop.html" class="btn btn-ghost text-[13px]">See all products <svg class="icon-sm" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <a href="yard-sign.html" class="card card-hover overflow-hidden block">
+        <div class="product-img aspect-square flex items-center justify-center"><svg style="width:56px;height:56px;stroke-width:1.2;stroke:currentColor;fill:none;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="13" rx="1"/><line x1="12" y1="16" x2="12" y2="21"/><line x1="9" y1="18" x2="15" y2="18"/></svg></div>
+        <div class="p-4"><div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Yard Signs</div><h3 class="font-semibold text-[14.5px] mt-1 mb-2">Yard Sign &amp; H-Stake</h3><div class="text-[13px] text-zinc-500 flex items-center gap-1"><svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Sign in for pricing</div></div>
+      </a>
+      <a href="reverse-acrylic-lit.html" class="card card-hover overflow-hidden block">
+        <div class="aspect-square relative overflow-hidden" style="background:#12131a;"><img src="https://www.b2sign.com/image/thumb/240222/4Of2RPYZ-s1000.jpg" alt="Reverse Acrylic Lit Sign" class="w-full h-full object-cover"></div>
+        <div class="p-4"><div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Channel Letters</div><h3 class="font-semibold text-[14.5px] mt-1 mb-2">Reverse Acrylic Lit Sign</h3><div class="text-[13px] text-zinc-500 flex items-center gap-1"><svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Sign in for pricing</div></div>
+      </a>
+      <a href="product.html" class="card card-hover overflow-hidden block">
+        <div class="product-img aspect-square flex items-center justify-center"><svg style="width:56px;height:56px;stroke-width:1.2;stroke:currentColor;fill:none;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="10" rx="1"/><path d="M8 15v3M16 15v3M6 18h12"/></svg></div>
+        <div class="p-4"><div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Sign</div><h3 class="font-semibold text-[14.5px] mt-1 mb-2">Aluminum Sign Panel</h3><div class="text-[14px] font-semibold">From $45<span class="text-zinc-400 text-[12px] font-normal">/ea</span></div></div>
+      </a>
+      <a href="product.html" class="card card-hover overflow-hidden block">
+        <div class="product-img aspect-square flex items-center justify-center"><svg style="width:56px;height:56px;stroke-width:1.2;stroke:currentColor;fill:none;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 3v18"/></svg></div>
+        <div class="p-4"><div class="text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">Rigid Sign</div><h3 class="font-semibold text-[14.5px] mt-1 mb-2">Gatorboard Print</h3><div class="text-[14px] font-semibold">From $28<span class="text-zinc-400 text-[12px] font-normal">/ea</span></div></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="border-t pt-16 pb-8 mt-10 bg-zinc-50 dark:bg-zinc-950/50" style="border-color:hsl(var(--border));">
+  <div class="max-w-[1400px] mx-auto px-6">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 pb-4">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold text-[13px] font-display">cp</div>
+        <span class="font-bold text-[15px] font-display tracking-tight">controlp<span class="text-zinc-400">.io</span></span>
+      </div>
+      <div class="text-[12.5px] text-zinc-500">© 2026 controlp.io · Chandler, Arizona · (480) 999-9906</div>
+    </div>
+  </div>
+</footer>
+
+<!-- CDN: React 18, htm, jsPDF -->
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
+<script crossorigin src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<!-- Vision Art Chart configurator -->
+<script src="assets/vision-chart.js" defer></script>
+
+<script src="assets/site.js" defer></script>
+<script>
+function openTab(name) {
+  var order = ['description','specs','fileprep','reviews'];
+  document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('active', order[i] === name); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + name); });
+  document.getElementById('tabs-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+</body>
+</html>
