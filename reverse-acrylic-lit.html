@@ -147,41 +147,16 @@
           <!-- Thumbnails -->
           <div class="space-y-2">
             <!-- Thumb 1: Lit front view -->
-            <button onclick="selectThumb(this,'lit')" class="w-20 h-20 overflow-hidden rounded-lg border-2 border-zinc-900 dark:border-zinc-100 product-img product-img-dark flex items-center justify-center">
-              <svg viewBox="0 0 80 60" width="80" height="60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs><filter id="t1g"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-                <rect width="80" height="60" fill="#12131a"/>
-                <rect x="8" y="12" width="64" height="36" rx="2" fill="#2a2a35"/>
-                <rect x="8" y="12" width="64" height="36" rx="2" fill="none" stroke="#3a3a48" stroke-width="0.8"/>
-                <text x="40" y="35" text-anchor="middle" fill="#b8d8ff" font-size="14" font-weight="700" font-family="Arial" filter="url(#t1g)" opacity="0.9">SIGN</text>
-              </svg>
+            <button onclick="selectThumb(this,'lit')" class="w-20 h-20 overflow-hidden rounded-lg border-2 border-zinc-900 dark:border-zinc-100">
+              <img src="https://www.b2sign.com/image/thumb/240222/4Of2RPYZ-s1000.jpg" alt="Reverse acrylic lit sign — lit view" class="w-full h-full object-cover">
             </button>
-            <!-- Thumb 2: Day/unlit -->
-            <button onclick="selectThumb(this,'unlit')" class="w-20 h-20 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700 product-img flex items-center justify-center hover:border-zinc-400">
-              <svg viewBox="0 0 80 60" width="80" height="60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="80" height="60" fill="#f1f1f1"/>
-                <rect x="8" y="12" width="64" height="36" rx="2" fill="#c8c8c8"/>
-                <rect x="8" y="12" width="64" height="36" rx="2" fill="none" stroke="#b0b0b0" stroke-width="0.8"/>
-                <line x1="8" y1="18" x2="72" y2="18" stroke="#d5d5d5" stroke-width="0.5"/>
-                <line x1="8" y1="24" x2="72" y2="24" stroke="#d5d5d5" stroke-width="0.5"/>
-                <line x1="8" y1="30" x2="72" y2="30" stroke="#d5d5d5" stroke-width="0.5"/>
-                <line x1="8" y1="36" x2="72" y2="36" stroke="#d5d5d5" stroke-width="0.5"/>
-                <text x="40" y="35" text-anchor="middle" fill="#888" font-size="11" font-weight="700" font-family="Arial">SIGN</text>
-              </svg>
+            <!-- Thumb 2: Environment 1 -->
+            <button onclick="selectThumb(this,'unlit')" class="w-20 h-20 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400">
+              <img src="https://www.b2sign.com/image/thumb/230818/3E3z3Ent_s1000.jpg" alt="Reverse acrylic lit sign — environment view 1" class="w-full h-full object-cover">
             </button>
-            <!-- Thumb 3: Layer construction -->
-            <button onclick="selectThumb(this,'layers')" class="w-20 h-20 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700 product-img flex items-center justify-center hover:border-zinc-400">
-              <svg viewBox="0 0 80 60" width="80" height="60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="80" height="60" fill="#f8f8f8"/>
-                <rect x="10" y="10" width="60" height="7" rx="1" fill="#b0b0b0" stroke="#999" stroke-width="0.5"/>
-                <text x="40" y="17" text-anchor="middle" fill="#555" font-size="5" font-family="Arial">STEEL FACE</text>
-                <rect x="13" y="19" width="54" height="6" rx="1" fill="#9ecfff" opacity="0.7" stroke="#7ab8f5" stroke-width="0.5"/>
-                <text x="40" y="25" text-anchor="middle" fill="#3a7fd5" font-size="5" font-family="Arial">ACRYLIC</text>
-                <rect x="16" y="27" width="48" height="5" rx="1" fill="#fff3a0" stroke="#e6c800" stroke-width="0.5"/>
-                <text x="40" y="32" text-anchor="middle" fill="#8a7200" font-size="4.5" font-family="Arial">LED STRIP</text>
-                <rect x="10" y="34" width="60" height="7" rx="1" fill="#d0d0d0" stroke="#aaa" stroke-width="0.5"/>
-                <text x="40" y="41" text-anchor="middle" fill="#555" font-size="5" font-family="Arial">RETURNS</text>
-              </svg>
+            <!-- Thumb 3: Environment 2 -->
+            <button onclick="selectThumb(this,'layers')" class="w-20 h-20 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400">
+              <img src="https://www.b2sign.com/image/thumb/230818/vDGBgJbU_s1000.jpg" alt="Reverse acrylic lit sign — environment view 2" class="w-full h-full object-cover">
             </button>
             <!-- Thumb 4: Raceway -->
             <button onclick="selectThumb(this,'raceway')" class="w-20 h-20 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700 product-img flex items-center justify-center hover:border-zinc-400">
@@ -200,121 +175,18 @@
           <div id="main-img" class="card product-img product-img-dark aspect-[4/3] flex items-center justify-center relative rounded-xl overflow-hidden">
 
             <!-- LIT view (default) -->
-            <div id="view-lit" class="absolute inset-0 flex items-center justify-center">
-              <svg viewBox="0 0 480 320" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-                <defs>
-                  <filter id="glow-strong" x="-40%" y="-80%" width="180%" height="260%">
-                    <feGaussianBlur stdDeviation="8" result="b1"/>
-                    <feGaussianBlur stdDeviation="3" result="b2" in="SourceGraphic"/>
-                    <feMerge><feMergeNode in="b1"/><feMergeNode in="b1"/><feMergeNode in="b2"/><feMergeNode in="SourceGraphic"/></feMerge>
-                  </filter>
-                  <filter id="glow-soft" x="-60%" y="-60%" width="220%" height="220%">
-                    <feGaussianBlur stdDeviation="12"/>
-                  </filter>
-                  <filter id="steel-shadow">
-                    <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
-                  </filter>
-                  <linearGradient id="steel-face" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#6e6e72"/>
-                    <stop offset="25%" stop-color="#a8a8ac"/>
-                    <stop offset="50%" stop-color="#989898"/>
-                    <stop offset="75%" stop-color="#b2b2b6"/>
-                    <stop offset="100%" stop-color="#6a6a6e"/>
-                  </linearGradient>
-                  <linearGradient id="return-side" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stop-color="#484848"/>
-                    <stop offset="100%" stop-color="#606060"/>
-                  </linearGradient>
-                </defs>
-                <!-- Dark wall -->
-                <rect width="480" height="320" fill="#0e0f16"/>
-                <!-- Ambient glow behind sign -->
-                <ellipse cx="240" cy="158" rx="190" ry="95" fill="#4a8fff" opacity="0.06" filter="url(#glow-soft)"/>
-                <!-- Returns (depth sides) -->
-                <rect x="55" y="82" width="10" height="156" fill="url(#return-side)" opacity="0.9"/>
-                <rect x="55" y="82" width="370" height="10" fill="#505050" opacity="0.9"/>
-                <!-- Sign panel — steel face -->
-                <rect x="60" y="88" width="362" height="144" rx="3" fill="url(#steel-face)" filter="url(#steel-shadow)"/>
-                <!-- Brushed steel texture lines -->
-                <g stroke="#ffffff" stroke-width="0.4" opacity="0.08">
-                  <line x1="60" y1="96" x2="422" y2="96"/><line x1="60" y1="104" x2="422" y2="104"/>
-                  <line x1="60" y1="112" x2="422" y2="112"/><line x1="60" y1="120" x2="422" y2="120"/>
-                  <line x1="60" y1="128" x2="422" y2="128"/><line x1="60" y1="136" x2="422" y2="136"/>
-                  <line x1="60" y1="144" x2="422" y2="144"/><line x1="60" y1="152" x2="422" y2="152"/>
-                  <line x1="60" y1="160" x2="422" y2="160"/><line x1="60" y1="168" x2="422" y2="168"/>
-                  <line x1="60" y1="176" x2="422" y2="176"/><line x1="60" y1="184" x2="422" y2="184"/>
-                  <line x1="60" y1="192" x2="422" y2="192"/><line x1="60" y1="200" x2="422" y2="200"/>
-                  <line x1="60" y1="208" x2="422" y2="208"/><line x1="60" y1="216" x2="422" y2="216"/>
-                  <line x1="60" y1="224" x2="422" y2="224"/>
-                </g>
-                <!-- Glowing letter halo areas (simulate lit acrylic cutouts) -->
-                <text x="240" y="178" text-anchor="middle" fill="#c8e4ff" font-size="72" font-weight="800" font-family="Arial Black, Arial" opacity="0.9" filter="url(#glow-strong)">SIGN</text>
-                <!-- Subtle edge LED strip glow along bottom of returns -->
-                <rect x="62" y="228" width="358" height="2" fill="#6ab0ff" opacity="0.25" filter="url(#glow-soft)"/>
-                <!-- Power cord indicator -->
-                <line x1="240" y1="234" x2="240" y2="252" stroke="#444" stroke-width="3" stroke-linecap="round"/>
-                <circle cx="240" cy="255" r="3" fill="#555"/>
-              </svg>
+            <div id="view-lit" class="absolute inset-0">
+              <img src="https://www.b2sign.com/image/thumb/240222/4Of2RPYZ-s1000.jpg" alt="Reverse acrylic lit sign — lit view" class="w-full h-full object-cover">
             </div>
 
-            <!-- UNLIT day view -->
-            <div id="view-unlit" class="hidden absolute inset-0 flex items-center justify-center">
-              <svg viewBox="0 0 480 320" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-                <defs>
-                  <linearGradient id="steel2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#7e7e82"/>
-                    <stop offset="30%" stop-color="#b8b8bc"/>
-                    <stop offset="60%" stop-color="#a8a8ac"/>
-                    <stop offset="100%" stop-color="#707074"/>
-                  </linearGradient>
-                  <filter id="sd2"><feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.2"/></filter>
-                </defs>
-                <rect width="480" height="320" fill="#e8e8e8"/>
-                <rect x="55" y="82" width="10" height="156" fill="#585858" opacity="0.9"/>
-                <rect x="55" y="82" width="370" height="10" fill="#606060" opacity="0.9"/>
-                <rect x="60" y="88" width="362" height="144" rx="3" fill="url(#steel2)" filter="url(#sd2)"/>
-                <g stroke="#ffffff" stroke-width="0.4" opacity="0.12">
-                  <line x1="60" y1="100" x2="422" y2="100"/><line x1="60" y1="114" x2="422" y2="114"/>
-                  <line x1="60" y1="128" x2="422" y2="128"/><line x1="60" y1="142" x2="422" y2="142"/>
-                  <line x1="60" y1="156" x2="422" y2="156"/><line x1="60" y1="170" x2="422" y2="170"/>
-                  <line x1="60" y1="184" x2="422" y2="184"/><line x1="60" y1="198" x2="422" y2="198"/>
-                  <line x1="60" y1="212" x2="422" y2="212"/>
-                </g>
-                <!-- Unlit letter cutouts — show acrylic translucent behind -->
-                <text x="240" y="178" text-anchor="middle" fill="#d8e8f8" font-size="72" font-weight="800" font-family="Arial Black, Arial" opacity="0.7">SIGN</text>
-                <text x="240" y="258" text-anchor="middle" fill="#888" font-size="12" font-family="Inter, Arial">Unlit — daytime appearance</text>
-              </svg>
+            <!-- Environment view 1 -->
+            <div id="view-unlit" class="hidden absolute inset-0">
+              <img src="https://www.b2sign.com/image/thumb/230818/3E3z3Ent_s1000.jpg" alt="Reverse acrylic lit sign — environment view 1" class="w-full h-full object-cover">
             </div>
 
-            <!-- LAYERS construction view -->
-            <div id="view-layers" class="hidden absolute inset-0 flex items-center justify-center">
-              <svg viewBox="0 0 480 320" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-                <rect width="480" height="320" fill="#f7f7f7"/>
-                <!-- Layer 1: Steel face -->
-                <rect x="60" y="40" width="360" height="44" rx="3" fill="#b0b0b0" stroke="#888" stroke-width="1"/>
-                <text x="240" y="58" text-anchor="middle" fill="#444" font-size="12" font-weight="700" font-family="Inter,Arial">Stainless Steel Face (0.8mm / 1mm)</text>
-                <text x="240" y="74" text-anchor="middle" fill="#777" font-size="10" font-family="Inter,Arial">Brushed or custom Pantone-C finish · letter cutouts</text>
-                <!-- Connecting lines -->
-                <line x1="240" y1="84" x2="240" y2="94" stroke="#ccc" stroke-width="1.5" stroke-dasharray="3,2"/>
-                <!-- Layer 2: Acrylic -->
-                <rect x="80" y="94" width="320" height="38" rx="3" fill="#9ecfff" fill-opacity="0.5" stroke="#7ab4f0" stroke-width="1"/>
-                <text x="240" y="112" text-anchor="middle" fill="#1a4a8a" font-size="12" font-weight="700" font-family="Inter,Arial">Polycarbonate Translucent Acrylic (0.4")</text>
-                <text x="240" y="125" text-anchor="middle" fill="#3a6ab0" font-size="10" font-family="Inter,Arial">Backlit by LEDs · diffuses light evenly</text>
-                <line x1="240" y1="132" x2="240" y2="142" stroke="#ccc" stroke-width="1.5" stroke-dasharray="3,2"/>
-                <!-- Layer 3: LED -->
-                <rect x="100" y="142" width="280" height="34" rx="3" fill="#fff9c0" stroke="#e0c800" stroke-width="1"/>
-                <text x="240" y="158" text-anchor="middle" fill="#7a6400" font-size="12" font-weight="700" font-family="Inter,Arial">LED Strip (Mynice IP67 · 10000–12000K)</text>
-                <text x="240" y="171" text-anchor="middle" fill="#8a7200" font-size="10" font-family="Inter,Arial">0.7W &amp; 1.2W modules · 160° beam angle</text>
-                <line x1="240" y1="176" x2="240" y2="186" stroke="#ccc" stroke-width="1.5" stroke-dasharray="3,2"/>
-                <!-- Layer 4: Returns -->
-                <rect x="60" y="186" width="360" height="34" rx="3" fill="#d0d0d0" stroke="#aaa" stroke-width="1"/>
-                <text x="240" y="202" text-anchor="middle" fill="#444" font-size="12" font-weight="700" font-family="Inter,Arial">Steel Returns (2" or 3" depth)</text>
-                <text x="240" y="215" text-anchor="middle" fill="#777" font-size="10" font-family="Inter,Arial">0.8mm / 1mm stainless · encloses LED housing</text>
-                <line x1="240" y1="220" x2="240" y2="230" stroke="#ccc" stroke-width="1.5" stroke-dasharray="3,2"/>
-                <!-- Layer 5: Transformer -->
-                <rect x="140" y="230" width="200" height="30" rx="3" fill="#e8e8e8" stroke="#bbb" stroke-width="1"/>
-                <text x="240" y="249" text-anchor="middle" fill="#555" font-size="11" font-weight="600" font-family="Inter,Arial">12V / 5A Transformer · 3-ft cord (std)</text>
-              </svg>
+            <!-- Environment view 2 -->
+            <div id="view-layers" class="hidden absolute inset-0">
+              <img src="https://www.b2sign.com/image/thumb/230818/vDGBgJbU_s1000.jpg" alt="Reverse acrylic lit sign — environment view 2" class="w-full h-full object-cover">
             </div>
 
             <!-- RACEWAY view -->
@@ -868,9 +740,9 @@ function selectThumb(btn, view) {
     const el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('hidden', v !== view);
   });
-  // Dark bg only for lit/unlit views
+  // Keep dark bg for image views; remove for diagram views
   const mainImg = document.getElementById('main-img');
-  mainImg.classList.toggle('product-img-dark', view === 'lit' || view === 'unlit');
+  mainImg.classList.toggle('product-img-dark', view !== 'raceway');
 }
 
 function selectOpt(btn) {
