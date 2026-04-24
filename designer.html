@@ -44,7 +44,7 @@
   .swatch:hover { transform:scale(1.15); }
   .swatch.selected { outline:2px solid #3b82f6; outline-offset:1.5px; }
 
-  .canvas-bg { background-color:#e8e8e8; background-image:linear-gradient(45deg,#d8d8d8 25%,transparent 25%),linear-gradient(-45deg,#d8d8d8 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d8d8d8 75%),linear-gradient(-45deg,transparent 75%,#d8d8d8 75%); background-size:12px 12px; background-position:0 0,0 6px,6px -6px,-6px 0; }
+  .canvas-bg { background-color:#f7f7f7; }
 
   .side-tab { padding:6px 18px; font-size:12px; font-weight:500; border:1.5px solid #e4e4e7; cursor:pointer; background:white; color:#71717a; transition:all 0.12s; }
   .side-tab:first-child { border-radius:7px 0 0 7px; border-right:none; }
@@ -127,6 +127,9 @@
     </button>
     <button onclick="setTool('text')" id="tool-text" class="tool-btn">
       <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>Add Text
+    </button>
+    <button onclick="setTool('shapes')" id="tool-shapes" class="tool-btn">
+      <svg viewBox="0 0 24 24"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="4.5"/><polygon points="2 22 11 22 6.5 15"/><rect x="13" y="13" width="9" height="9" rx="1"/></svg>Shapes
     </button>
     <button onclick="setTool('layers')" id="tool-layers" class="tool-btn">
       <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Manage Layers
@@ -461,11 +464,6 @@ function buildFramedPrintSVG() {
   svgEl.innerHTML = `
     <defs>
       ${fgDef}
-      <pattern id="check" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
-        <rect width="14" height="14" fill="#e4e4e4"/>
-        <rect width="7" height="7" fill="#d4d4d4"/>
-        <rect x="7" y="7" width="7" height="7" fill="#d4d4d4"/>
-      </pattern>
       <clipPath id="print-clip">
         <rect x="${ox+ix}" y="${oy+iy}" width="${iw}" height="${ih}"/>
       </clipPath>
@@ -491,21 +489,42 @@ function buildFramedPrintSVG() {
     <rect x="${ox+fw+1}" y="${oy+fw+1}" width="${cw-fw*2-2}" height="${ch-fw*2-2}" fill="none" stroke="rgba(0,0,0,0.05)" stroke-width="1"/>
 
     <!-- Print area -->
-    <rect x="${ox+ix}" y="${oy+iy}" width="${iw}" height="${ih}" fill="url(#check)"/>
-    <rect x="${ox+ix}" y="${oy+iy}" width="${iw}" height="${ih}" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+    <rect x="${ox+ix}" y="${oy+iy}" width="${iw}" height="${ih}" fill="#f7f7f7"/>
+    <rect x="${ox+ix}" y="${oy+iy}" width="${iw}" height="${ih}" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
 
     <!-- Design layer (clipped to print area) -->
     <g id="canvas-design" clip-path="url(#print-clip)"></g>
 
-    <!-- Placeholder text -->
-    <text x="${ox+ix+iw/2}" y="${oy+iy+ih/2 - 8}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${fs}" fill="#a1a1aa" font-weight="500">Add your design</text>
-    <text x="${ox+ix+iw/2}" y="${oy+iy+ih/2 + 12}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${fs2}" fill="#c4c4c4">${s.label}  ·  ${colLabel} ${matLabel}</text>
+    <!-- Placeholder text (hidden once design is added) -->
+    <g id="wa-placeholder">
+      <text x="${ox+ix+iw/2}" y="${oy+iy+ih/2 - 8}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${fs}" fill="#b0b0b0" font-weight="500">Add your design</text>
+      <text x="${ox+ix+iw/2}" y="${oy+iy+ih/2 + 12}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${fs2}" fill="#c8c8c8">${s.label}  ·  ${colLabel} ${matLabel}</text>
+    </g>
 
     <!-- Glass glare overlay -->
     <rect x="${ox+fw}" y="${oy+fw}" width="${cw-fw*2}" height="${ch-fw*2}" fill="url(#glass-grad)"/>
   `;
 
   updateSizeLabel();
+}
+
+// ─── Wall art print area coordinates ───
+function getWaPrintArea() {
+  const s = WA_SIZES[wa.size];
+  const maxW = 460, maxH = 330;
+  const aspect = s.w / s.h;
+  let cw, ch;
+  if (aspect >= 1) {
+    cw = maxW; ch = Math.round(maxW / aspect);
+    if (ch > maxH) { ch = maxH; cw = Math.round(maxH * aspect); }
+  } else {
+    ch = maxH; cw = Math.round(maxH * aspect);
+    if (cw > maxW) { cw = maxW; ch = Math.round(maxW / aspect); }
+  }
+  cw = Math.max(cw, 140); ch = Math.max(ch, 120);
+  const fw = 20, mt = 12, ox = 8, oy = 8;
+  const ix = fw + mt, iy = fw + mt;
+  return { cw, ch, fw, mt, ox, oy, ix, iy, iw: cw - ix * 2, ih: ch - iy * 2 };
 }
 
 // ─── Canvas dispatcher ───
@@ -989,11 +1008,14 @@ function renderImage() {
       </div>
     </div>
     <div style="padding:12px;">
-      <div class="upload-zone" onclick="simulateUpload()">
+      <div class="upload-zone" onclick="triggerImageUpload()"
+        ondragover="event.preventDefault();this.style.borderColor='#3b82f6';this.style.background='#eff6ff';"
+        ondragleave="this.style.borderColor='';this.style.background='';"
+        ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleDrop(event);">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px;display:block;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <div style="font-size:10.5px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Click or drop images here</div>
         <div style="display:inline-block;background:#2563eb;color:white;font-size:11.5px;font-weight:700;padding:7px 18px;border-radius:5px;cursor:pointer;margin-bottom:8px;">BROWSE FILE</div>
-        <div style="font-size:10.5px;color:#a1a1aa;margin-top:4px;">SVG, PNG, JPG, PDF  ·  300dpi+</div>
+        <div style="font-size:10.5px;color:#a1a1aa;margin-top:4px;">PNG, JPG, SVG, WebP  ·  300dpi+</div>
       </div>
       <div style="margin-top:10px;padding:8px 10px;background:#fafafa;border-radius:6px;border:1px solid #f0f0f0;">
         <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Tips for best results</div>
@@ -1127,6 +1149,159 @@ function renderSaved() {
     </div>`;
 }
 
+// ─── Shape state ───
+const shapeState = { type: 'rect', fillColor: '#3b82f6', strokeColor: 'none', strokeWidth: 0, opacity: 1 };
+
+function addShape() {
+  const g = document.getElementById('canvas-design');
+  if (!g) return;
+  let ax, ay, aw, ah;
+  if (currentProduct === 'wa') {
+    const p = getWaPrintArea();
+    ax = p.ox + p.ix; ay = p.oy + p.iy; aw = p.iw; ah = p.ih;
+  } else {
+    const { cw, ch } = getCardDimensions();
+    ax = 0; ay = 0; aw = cw; ah = ch;
+  }
+  const cx = ax + aw / 2, cy = ay + ah / 2;
+  const size = Math.min(aw, ah) * 0.45;
+  const fill = shapeState.fillColor;
+  const stroke = shapeState.strokeColor;
+  const sw = shapeState.strokeWidth;
+  const op = shapeState.opacity;
+  const ns = 'http://www.w3.org/2000/svg';
+  let el, name = 'Shape';
+
+  if (shapeState.type === 'rect') {
+    el = document.createElementNS(ns, 'rect');
+    el.setAttribute('x', cx - size/2); el.setAttribute('y', cy - size*0.62/2);
+    el.setAttribute('width', size); el.setAttribute('height', size * 0.62);
+    name = 'Rectangle';
+  } else if (shapeState.type === 'rounded-rect') {
+    el = document.createElementNS(ns, 'rect');
+    el.setAttribute('x', cx - size/2); el.setAttribute('y', cy - size*0.62/2);
+    el.setAttribute('width', size); el.setAttribute('height', size * 0.62);
+    el.setAttribute('rx', size * 0.1);
+    name = 'Rounded Rect';
+  } else if (shapeState.type === 'circle') {
+    el = document.createElementNS(ns, 'circle');
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', size / 2);
+    name = 'Circle';
+  } else if (shapeState.type === 'triangle') {
+    el = document.createElementNS(ns, 'polygon');
+    el.setAttribute('points', `${cx},${cy-size/2} ${cx+size/2},${cy+size/2} ${cx-size/2},${cy+size/2}`);
+    name = 'Triangle';
+  } else if (shapeState.type === 'star') {
+    const or = size/2, ir = or * 0.42;
+    const pts = Array.from({length:10}, (_,i) => {
+      const a = i * Math.PI/5 - Math.PI/2;
+      const r = i % 2 === 0 ? or : ir;
+      return `${cx + r*Math.cos(a)},${cy + r*Math.sin(a)}`;
+    }).join(' ');
+    el = document.createElementNS(ns, 'polygon');
+    el.setAttribute('points', pts);
+    name = 'Star';
+  } else if (shapeState.type === 'line') {
+    el = document.createElementNS(ns, 'line');
+    el.setAttribute('x1', cx - size/2); el.setAttribute('y1', cy);
+    el.setAttribute('x2', cx + size/2); el.setAttribute('y2', cy);
+    el.setAttribute('stroke', fill !== 'none' ? fill : '#18181b');
+    el.setAttribute('stroke-width', Math.max(sw, 3));
+    el.setAttribute('stroke-linecap', 'round');
+    el.setAttribute('opacity', op);
+    g.appendChild(el);
+    layers.unshift({ name: 'Line', type: 'shape', color: fill !== 'none' ? fill : '#18181b', visible: true });
+    document.getElementById('btn-undo').disabled = false;
+    const ph = document.getElementById('wa-placeholder');
+    if (ph) ph.setAttribute('display', 'none');
+    setTool('layers');
+    return;
+  }
+
+  if (el) {
+    el.setAttribute('fill', fill);
+    if (stroke !== 'none') { el.setAttribute('stroke', stroke); el.setAttribute('stroke-width', sw || 1); }
+    el.setAttribute('opacity', op);
+    g.appendChild(el);
+    layers.unshift({ name, type: 'shape', color: fill !== 'none' ? fill : stroke, visible: true });
+    document.getElementById('btn-undo').disabled = false;
+    const ph = document.getElementById('wa-placeholder');
+    if (ph) ph.setAttribute('display', 'none');
+    setTool('layers');
+  }
+}
+
+function renderShapes() {
+  const types = [
+    { key:'rect',         label:'Rectangle', svg:'<rect x="2" y="5" width="20" height="14" stroke="currentColor" fill="none" stroke-width="2"/>' },
+    { key:'rounded-rect', label:'Rounded',   svg:'<rect x="2" y="5" width="20" height="14" rx="4" stroke="currentColor" fill="none" stroke-width="2"/>' },
+    { key:'circle',       label:'Circle',    svg:'<circle cx="12" cy="12" r="9" stroke="currentColor" fill="none" stroke-width="2"/>' },
+    { key:'triangle',     label:'Triangle',  svg:'<polygon points="12,3 22,21 2,21" stroke="currentColor" fill="none" stroke-width="2" stroke-linejoin="round"/>' },
+    { key:'star',         label:'Star',      svg:'<polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" stroke="currentColor" fill="none" stroke-width="1.8"/>' },
+    { key:'line',         label:'Line',      svg:'<line x1="3" y1="20" x2="21" y2="4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>' },
+  ];
+  const swatches = ['#18181b','#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4','#64748b','#d4a017'];
+
+  return `
+    <div style="padding:8px 12px 8px;border-bottom:1px solid #f0f0f0;flex-shrink:0;">
+      <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;">Shape</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;">
+        ${types.map(t => `
+          <button onclick="shapeState.type='${t.key}';setTool('shapes');" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border:1.5px solid ${shapeState.type===t.key?'#2563eb':'#e4e4e7'};border-radius:6px;background:${shapeState.type===t.key?'#eff6ff':'white'};cursor:pointer;transition:all .12s;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="color:${shapeState.type===t.key?'#2563eb':'#71717a'}">${t.svg}</svg>
+            <span style="font-size:9px;font-weight:500;color:${shapeState.type===t.key?'#2563eb':'#52525b'};">${t.label}</span>
+          </button>`).join('')}
+      </div>
+    </div>
+    <div style="padding:10px 12px;overflow-y:auto;flex:1;" class="thin-scroll">
+
+      <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Fill Color</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;">
+        ${swatches.map(c=>`<div onclick="shapeState.fillColor='${c}';document.getElementById('sfill-sw').style.background='${c}';document.getElementById('sfill-hex').value='${c}';"
+          style="width:22px;height:22px;border-radius:4px;background:${c};border:${c==='#ffffff'?'1.5px solid #e4e4e7':'1.5px solid rgba(0,0,0,0.08)'};cursor:pointer;${shapeState.fillColor===c?'outline:2px solid #3b82f6;outline-offset:1px;':''}"
+          onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></div>`).join('')}
+        <div onclick="shapeState.fillColor='none';document.getElementById('sfill-sw').style.background='transparent';document.getElementById('sfill-hex').value='none';"
+          style="width:22px;height:22px;border-radius:4px;background:white;border:1.5px dashed #d4d4d8;cursor:pointer;display:flex;align-items:center;justify-content:center;"
+          onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+        <div id="sfill-sw" style="width:26px;height:26px;border-radius:5px;background:${shapeState.fillColor==='none'?'transparent':shapeState.fillColor};border:1px solid #e4e4e7;flex-shrink:0;"></div>
+        <input id="sfill-hex" value="${shapeState.fillColor}"
+          oninput="shapeState.fillColor=this.value;document.getElementById('sfill-sw').style.background=(this.value==='none'?'transparent':this.value);"
+          style="flex:1;border:1px solid #e4e4e7;border-radius:5px;padding:5px 8px;font-size:12px;font-family:monospace;outline:none;"/>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Stroke Color</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">
+        ${['none',...swatches.slice(0,9)].map(c=>`<div onclick="shapeState.strokeColor='${c}';"
+          style="width:22px;height:22px;border-radius:4px;background:${c==='none'?'white':c};border:${c==='none'?'1.5px dashed #d4d4d8':(c==='#ffffff'?'1.5px solid #e4e4e7':'1.5px solid rgba(0,0,0,0.08)')};cursor:pointer;${shapeState.strokeColor===c?'outline:2px solid #3b82f6;outline-offset:1px;':''}"
+          onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></div>`).join('')}
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:11px;color:#71717a;">Stroke Width</span>
+          <span id="ssw-val" style="font-size:11px;font-family:monospace;">${shapeState.strokeWidth}px</span>
+        </div>
+        <input type="range" min="0" max="20" value="${shapeState.strokeWidth}"
+          oninput="shapeState.strokeWidth=parseInt(this.value);document.getElementById('ssw-val').textContent=this.value+'px';"
+          style="width:100%;accent-color:#18181b;cursor:pointer;"/>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:11px;color:#71717a;">Opacity</span>
+          <span id="sop-val" style="font-size:11px;font-family:monospace;">${Math.round(shapeState.opacity*100)}%</span>
+        </div>
+        <input type="range" min="0" max="100" value="${Math.round(shapeState.opacity*100)}"
+          oninput="shapeState.opacity=parseInt(this.value)/100;document.getElementById('sop-val').textContent=this.value+'%';"
+          style="width:100%;accent-color:#18181b;cursor:pointer;"/>
+      </div>
+
+      <button onclick="addShape()" style="width:100%;padding:9px;border-radius:6px;font-size:13px;font-weight:600;background:#18181b;color:white;border:none;cursor:pointer;">+ Add Shape to Canvas</button>
+    </div>`;
+}
+
 // ─── App state ───
 let currentTool = 'swap';
 let layers = [];
@@ -1139,7 +1314,7 @@ function setTool(tool) {
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('tool-' + tool);
   if (btn) btn.classList.add('active');
-  const map = { swap: renderSwap, image: renderImage, designs: renderDesigns, text: renderText, layers: renderLayers, saved: renderSaved };
+  const map = { swap: renderSwap, image: renderImage, designs: renderDesigns, text: renderText, shapes: renderShapes, layers: renderLayers, saved: renderSaved };
   document.getElementById('tool-panel').innerHTML = map[tool]?.() || '';
 }
 
@@ -1183,24 +1358,61 @@ function addTextLayer() {
   setTool('layers');
 }
 
-function simulateUpload() {
+function triggerImageUpload() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => addImageToCanvas(evt.target.result, file.name);
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+function handleDrop(e) {
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = evt => addImageToCanvas(evt.target.result, file.name);
+  reader.readAsDataURL(file);
+}
+
+function addImageToCanvas(dataUrl, name) {
   const g = document.getElementById('canvas-design');
   if (!g) return;
-  const { cw, ch } = getCardDimensions();
-  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  rect.setAttribute('x', String(cw * 0.07)); rect.setAttribute('y', String(ch * 0.08));
-  rect.setAttribute('width', String(cw * 0.28)); rect.setAttribute('height', String(ch * 0.84));
-  rect.setAttribute('fill', '#18181b'); rect.setAttribute('rx', '3');
-  const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  label.setAttribute('x', String(cw * 0.21)); label.setAttribute('y', String(ch * 0.55));
-  label.setAttribute('text-anchor', 'middle'); label.setAttribute('font-size', String(Math.max(7, cw * 0.036)));
-  label.setAttribute('fill', 'white'); label.setAttribute('font-family', 'Inter,sans-serif');
-  label.textContent = 'LOGO';
-  g.appendChild(rect); g.appendChild(label);
-  layers.unshift({ name: 'Logo upload', type: 'image', color: '#8b5cf6', visible: true });
+  const ns = 'http://www.w3.org/2000/svg';
+  const img = document.createElementNS(ns, 'image');
+  img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+
+  if (currentProduct === 'wa') {
+    const p = getWaPrintArea();
+    img.setAttribute('x', String(p.ox + p.ix));
+    img.setAttribute('y', String(p.oy + p.iy));
+    img.setAttribute('width', String(p.iw));
+    img.setAttribute('height', String(p.ih));
+    // hide placeholder once we have a design
+    const ph = document.getElementById('wa-placeholder');
+    if (ph) ph.setAttribute('display', 'none');
+  } else {
+    const { cw, ch } = getCardDimensions();
+    img.setAttribute('x', '0');
+    img.setAttribute('y', '0');
+    img.setAttribute('width', String(cw));
+    img.setAttribute('height', String(ch));
+  }
+
+  img.setAttribute('href', dataUrl);
+  g.appendChild(img);
+  const label = name ? name.replace(/\.[^.]+$/, '') : 'Image';
+  layers.unshift({ name: label, type: 'image', color: '#8b5cf6', visible: true });
   document.getElementById('btn-undo').disabled = false;
   setTool('layers');
 }
+
+function simulateUpload() { triggerImageUpload(); }
 
 function toggleVis(i) { layers[i].visible = !layers[i].visible; setTool('layers'); }
 
