@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root { --background: 0 0% 100%; --foreground: 240 10% 3.9%; --card: 0 0% 100%; --muted: 240 4.8% 95.9%; --border: 240 5.9% 90%; --primary: 240 5.9% 10%; --radius: 0.625rem; }
+  .dark { --background: 240 10% 3.9%; --foreground: 0 0% 98%; --card: 240 10% 3.9%; --muted: 240 3.7% 15.9%; --border: 240 3.7% 15.9%; --primary: 0 0% 98%; }
   * { font-family: 'Inter', system-ui, sans-serif; }
   body { background: hsl(var(--background)); color: hsl(var(--foreground)); transition: background-color 0.2s ease, color 0.2s ease; }
   .font-display { font-family: 'Geist', 'Inter', system-ui, sans-serif; letter-spacing: -0.02em; }
@@ -28,9 +29,12 @@
   svg.icon-sm { width: 14px; height: 14px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
   svg.icon-lg { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
-  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 500; border: 1px solid hsl(var(--border)); cursor: pointer; transition: all 0.15s; background: white; white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 500; border: 1px solid hsl(var(--border)); cursor: pointer; transition: all 0.15s; background: white; color: hsl(var(--foreground)); white-space: nowrap; }
   .chip:hover { border-color: hsl(var(--primary)); }
   .chip.active { background: hsl(var(--primary)); color: white; border-color: hsl(var(--primary)); }
+  .dark .chip { background: hsl(240 10% 8%); color: hsl(0 0% 88%); border-color: hsl(240 3.7% 20%); }
+  .dark .chip:hover { border-color: hsl(0 0% 70%); }
+  .dark .chip.active { background: hsl(0 0% 95%); color: hsl(240 10% 3.9%); border-color: hsl(0 0% 95%); }
 
   .post-img { aspect-ratio: 16/10; position: relative; overflow: hidden; }
   .bg-1 { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; }
@@ -207,7 +211,7 @@
 </section>
 
 <!-- Category filter -->
-<section class="border-b sticky top-16 z-20 bg-white/95 backdrop-blur-md" style="border-color: hsl(var(--border));">
+<section class="border-b sticky top-16 z-20 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md" style="border-color: hsl(var(--border));">
   <div class="max-w-[1200px] mx-auto px-6 py-4">
     <div class="flex items-center gap-2 overflow-x-auto">
       <button class="chip active">All articles</button>
