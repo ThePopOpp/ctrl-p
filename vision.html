@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Vision Art Chart Generator — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: #f4f4f1;
+    color: #111;
+    min-height: 100vh;
+  }
+  .font-serif { font-family: 'DM Serif Display', serif; }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+  .header { background: #fff; border-bottom: 1px solid #e5e7eb; }
+  .header-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0;
+  }
+  .header h1 { font-size: 22px; margin: 0; font-weight: 400; }
+  .grid-main {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 24px 0;
+  }
+  @media (min-width: 1024px) {
+    .grid-main { grid-template-columns: 440px 1fr; }
+  }
+
+  .preview-wrap { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  .frame {
+    padding: 22px;
+    box-shadow:
+      0 20px 40px -10px rgba(0,0,0,0.25),
+      0 4px 12px rgba(0,0,0,0.15),
+      inset 0 0 0 2px rgba(0,0,0,0.08);
+    border-radius: 2px;
+    width: 100%;
+    max-width: 560px;
+  }
+  .mat {
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+    aspect-ratio: 800 / 1100;
+    overflow: hidden;
+  }
+  .size-label {
+    font-size: 12px; color: #6b7280;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .preview-card {
+    background: #f5f5f2;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 32px;
+  }
+
+  .card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 20px; margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 15px; font-weight: 600; margin: 0 0 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .subsection {
+    padding-top: 16px; margin-top: 16px;
+    border-top: 1px solid #f3f4f6;
+  }
+  .subsection-title {
+    font-size: 13px; font-weight: 500;
+    color: #374151; margin: 0 0 10px;
+    letter-spacing: 0.2px;
+  }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .stack-sm { display: flex; flex-direction: column; gap: 8px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .label { font-size: 13px; font-weight: 500; color: #374151; }
+  .input, .select {
+    width: 100%; height: 36px; padding: 0 12px; font-size: 14px;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+    outline: none; font-family: inherit; color: #111;
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .input:focus, .select:focus {
+    border-color: #111;
+    box-shadow: 0 0 0 3px rgba(17,17,17,0.08);
+  }
+  .input.upper { text-transform: uppercase; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 36px; padding: 0 14px; font-size: 14px; font-weight: 500;
+    border: 1px solid #e5e7eb; background: #fff; border-radius: 8px;
+    cursor: pointer; font-family: inherit; color: #111;
+    transition: background 120ms, border-color 120ms;
+  }
+  .btn:hover:not(:disabled) { background: #f9fafb; border-color: #d1d5db; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost { border: none; background: transparent; height: 28px; padding: 0 8px; font-size: 13px; }
+  .btn-ghost:hover { background: #f3f4f6; }
+  .row-3 { display: grid; grid-template-columns: 46px 1fr 96px; gap: 8px; align-items: center; }
+  .row-exports { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .muted { color: #6b7280; font-size: 12px; margin-top: 8px; }
+  .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: #6b7280; }
+  .sticky { position: static; }
+  @media (min-width: 1024px) { .sticky { position: sticky; top: 24px; } }
+
+  /* Tab group (segmented control) */
+  .tab-group {
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    background: #f3f4f6; padding: 3px; border-radius: 8px;
+    gap: 0;
+  }
+  .tab-btn {
+    height: 30px; border: none; background: transparent; cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: 500; color: #374151;
+    border-radius: 6px; transition: background 120ms;
+  }
+  .tab-btn.active { background: #fff; color: #111; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+  /* Color pickers */
+  .color-picker {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .color-picker input[type="color"] {
+    width: 36px; height: 36px; padding: 0; border: 1px solid #e5e7eb;
+    border-radius: 8px; background: transparent; cursor: pointer;
+  }
+  .color-picker input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
+  .color-picker input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+  .color-hex {
+    flex: 1; text-transform: uppercase; font-family: ui-monospace, monospace; font-size: 13px;
+  }
+
+  /* Slider */
+  .slider-row {
+    display: grid; grid-template-columns: 1fr 56px; gap: 8px; align-items: center;
+  }
+  .slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; outline: none; margin: 0;
+  }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; background: #111; border-radius: 50%;
+    cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .slider::-moz-range-thumb {
+    width: 18px; height: 18px; background: #111; border-radius: 50%;
+    cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .slider-value {
+    text-align: right; font-family: ui-monospace, monospace; font-size: 13px; color: #374151;
+  }
+
+  /* Frame swatches */
+  .swatch-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+  }
+  .swatch {
+    height: 40px; border: 2px solid transparent; border-radius: 6px;
+    cursor: pointer; padding: 0; position: relative;
+    transition: transform 100ms;
+  }
+  .swatch:hover { transform: scale(1.05); }
+  .swatch.active {
+    border-color: #111;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #111;
+  }
+  .swatch-labels {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+    font-size: 10px; color: #6b7280; text-align: center;
+    margin-top: 6px;
+  }
+
+  .error-banner {
+    background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+    padding: 12px 16px; border-radius: 8px; font-size: 14px;
+    margin: 16px 0;
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="container header-inner">
+    <h1 class="font-serif">Vision Art Chart Generator</h1>
+    <span class="muted" style="margin:0">Step 2 · justify + style controls</span>
+  </div>
+</header>
+
+<div class="container">
+  <div id="app"></div>
+  <noscript><div class="error-banner">This demo requires JavaScript to be enabled.</div></noscript>
+</div>
+
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
+<script crossorigin src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<script>
+(function () {
+  function bootError(msg) {
+    document.getElementById("app").innerHTML =
+      '<div class="error-banner"><strong>Failed to load.</strong> ' + msg + '</div>';
+  }
+  if (!window.React || !window.ReactDOM || !window.htm) {
+    bootError("Required scripts did not load. Check network.");
+    return;
+  }
+
+  var React = window.React;
+  var ReactDOM = window.ReactDOM;
+  var useState = React.useState;
+  var useMemo = React.useMemo;
+  var useRef = React.useRef;
+  var forwardRef = React.forwardRef;
+  var html = window.htm.bind(React.createElement);
+
+  // ============ DATA ============
+  var STATES = {
+    AZ: {
+      abbr: "AZ", name: "Arizona",
+      svgViewBox: "0 0 100 110",
+      svgPath: "M 2 2 L 96 2 L 96 78 L 70 78 L 70 92 L 55 104 L 35 104 L 0 88 L 0 6 Z",
+      abbrRightLabel: "2.14 / 1912",
+      defaultCities: [
+        { label: "PHX", rightLabel: "10 / 86" },
+        { label: "FLAG", rightLabel: "69 / 09" },
+        { label: "TEMPE", rightLabel: "11 / 65" },
+        { label: "TUCSON", rightLabel: "23 / 89" },
+        { label: "GILBERT", rightLabel: "12 / 37" },
+        { label: "SCTTSDL", rightLabel: "12 / 47" }
+      ]
+    },
+    CA: {
+      abbr: "CA", name: "California",
+      svgViewBox: "0 0 100 180",
+      svgPath: "M 12 0 L 62 0 L 62 40 L 100 90 L 100 140 L 70 180 L 0 180 L 0 30 Z",
+      abbrRightLabel: "9.9 / 1850",
+      defaultCities: [
+        { label: "LA", rightLabel: "10 / 81" },
+        { label: "SF", rightLabel: "4 / 50" },
+        { label: "SANDIEGO", rightLabel: "7 / 69" },
+        { label: "SAC", rightLabel: "2 / 18" },
+        { label: "FRESNO", rightLabel: "5 / 42" },
+        { label: "SNJS", rightLabel: "10 / 08" }
+      ]
+    },
+    TX: {
+      abbr: "TX", name: "Texas",
+      svgViewBox: "0 0 120 110",
+      svgPath: "M 10 0 L 80 0 L 80 10 L 115 15 L 120 55 L 90 90 L 75 100 L 60 108 L 45 100 L 35 85 L 20 80 L 8 60 L 0 40 L 5 10 Z",
+      abbrRightLabel: "12.29 / 1845",
+      defaultCities: [
+        { label: "HOU", rightLabel: "7 / 13" },
+        { label: "DAL", rightLabel: "2 / 41" },
+        { label: "AUS", rightLabel: "7 / 85" },
+        { label: "SANANTONIO", rightLabel: "5 / 18" },
+        { label: "FTWORTH", rightLabel: "6 / 07" },
+        { label: "ELPASO", rightLabel: "5 / 15" }
+      ]
+    },
+    NY: {
+      abbr: "NY", name: "New York",
+      svgViewBox: "0 0 140 90",
+      svgPath: "M 0 40 L 25 30 L 40 15 L 55 5 L 70 0 L 95 10 L 110 20 L 130 15 L 140 30 L 135 55 L 120 80 L 100 85 L 80 90 L 55 85 L 40 75 L 25 65 L 10 55 Z",
+      abbrRightLabel: "7.26 / 1788",
+      defaultCities: [
+        { label: "NYC", rightLabel: "10 / 01" },
+        { label: "BUF", rightLabel: "4 / 32" },
+        { label: "ROCH", rightLabel: "4 / 23" },
+        { label: "SYRACUSE", rightLabel: "12 / 14" },
+        { label: "ALBANY", rightLabel: "7 / 22" },
+        { label: "YONKERS", rightLabel: "4 / 07" }
+      ]
+    },
+    FL: {
+      abbr: "FL", name: "Florida",
+      svgViewBox: "0 0 130 100",
+      svgPath: "M 0 0 L 90 0 L 95 15 L 100 30 L 110 45 L 120 60 L 125 80 L 115 95 L 95 100 L 80 85 L 70 65 L 50 50 L 30 45 L 10 30 Z",
+      abbrRightLabel: "3.3 / 1845",
+      defaultCities: [
+        { label: "MIA", rightLabel: "7 / 96" },
+        { label: "ORL", rightLabel: "7 / 75" },
+        { label: "TAMPA", rightLabel: "7 / 55" },
+        { label: "JACKSON", rightLabel: "10 / 91" },
+        { label: "TLH", rightLabel: "11 / 25" },
+        { label: "FTLAUD", rightLabel: "3 / 27" }
+      ]
+    }
+  };
+  var STATE_KEYS = Object.keys(STATES);
+  var ACUITY = ["20/200","20/100","20/70","20/50","20/40","20/30","20/20","20/15"];
+
+  var FONTS = [
+    { key: "dm-sans", label: "DM Sans", stack: "'DM Sans', system-ui, sans-serif" },
+    { key: "inter", label: "Inter", stack: "'Inter', system-ui, sans-serif" },
+    { key: "helvetica", label: "Helvetica", stack: "'Helvetica Neue', Helvetica, Arial, sans-serif" },
+    { key: "dm-serif", label: "DM Serif Display", stack: "'DM Serif Display', Georgia, serif" },
+    { key: "playfair", label: "Playfair Display", stack: "'Playfair Display', Georgia, serif" },
+    { key: "mono", label: "Roboto Mono", stack: "'Roboto Mono', ui-monospace, monospace" }
+  ];
+
+  var FRAMES = {
+    maple:  { label: "Maple",  gradient: "linear-gradient(135deg, #e8d2a4 0%, #c9a46e 50%, #e8d2a4 100%)" },
+    walnut: { label: "Walnut", gradient: "linear-gradient(135deg, #8b6f47 0%, #4d3a20 50%, #8b6f47 100%)" },
+    black:  { label: "Black",  gradient: "linear-gradient(135deg, #3a3a3a 0%, #0a0a0a 50%, #3a3a3a 100%)" },
+    white:  { label: "White",  gradient: "linear-gradient(135deg, #fafafa 0%, #e2e2dc 50%, #fafafa 100%)" },
+    gold:   { label: "Gold",   gradient: "linear-gradient(135deg, #e6c358 0%, #a8851a 50%, #e6c358 100%)" },
+    cherry: { label: "Cherry", gradient: "linear-gradient(135deg, #a0522d 0%, #6b2e1a 50%, #a0522d 100%)" }
+  };
+  var FRAME_KEYS = Object.keys(FRAMES);
+
+  var PRINT_SIZES = {
+    "11x14": { w: 11, h: 14, label: "11″ × 14″" },
+    "16x20": { w: 16, h: 20, label: "16″ × 20″" },
+    "18x24": { w: 18, h: 24, label: "18″ × 24″" },
+    "24x36": { w: 24, h: 36, label: "24″ × 36″" }
+  };
+
+  function buildDefault(stateKey) {
+    var s = STATES[stateKey];
+    var cities = s.defaultCities.slice();
+    while (cities.length < 6) cities.push({ label: "", rightLabel: "" });
+    return {
+      stateKey: stateKey,
+      abbrRightLabel: s.abbrRightLabel || "",
+      cities: cities.slice(0, 6),
+      footerTitle: "VISION ART CO.",
+      footerSubtitle: "2026 // CHANDLER, AZ",
+      // Design:
+      justifyWidth: 300,
+      fontStack: FONTS[0].stack,
+      bgType: "solid",
+      bgColor1: "#fafaf7",
+      bgColor2: "#ffffff",
+      bgAngle: 180,
+      frameColor: "maple",
+      printSize: "18x24"
+    };
+  }
+
+  // Convert CSS-style angle (0=up) to SVG linearGradient coords in [0,1]
+  function gradientCoords(angleDeg) {
+    var rad = angleDeg * Math.PI / 180;
+    var dx = Math.sin(rad);
+    var dy = -Math.cos(rad);
+    return {
+      x1: 0.5 - 0.5 * dx,
+      y1: 0.5 - 0.5 * dy,
+      x2: 0.5 + 0.5 * dx,
+      y2: 0.5 + 0.5 * dy
+    };
+  }
+
+  // ============ CHART SVG ============
+  var ChartSVG = forwardRef(function ChartSVG(props, ref) {
+    var config = props.config;
+    var state = STATES[config.stateKey];
+    if (!state) return null;
+
+    var W = 800, H = 1100, MARGIN = 48, CX = W / 2;
+    var SIL_CY = 175, SIL_MAX = 170;
+    var vb = state.svgViewBox.split(/\s+/).map(Number);
+    var vbW = vb[2], vbH = vb[3];
+    var scale = Math.min(SIL_MAX / vbW, SIL_MAX / vbH);
+    var silW = vbW * scale, silH = vbH * scale;
+    var ROW_Y = [SIL_CY, 355, 475, 570, 650, 720, 782, 838];
+    var SIZES = [0, 108, 92, 72, 56, 46, 38, 32];
+    var LEFT_X = 90, RIGHT_X = W - 90;
+
+    var padded = config.cities.slice();
+    while (padded.length < 6) padded.push({ label: "", rightLabel: "" });
+
+    var g = gradientCoords(config.bgAngle);
+
+    var leftLabels = ACUITY.map(function (label, i) {
+      var parts = label.split("/");
+      return html`
+        <g key=${"L"+i} transform=${"translate(" + LEFT_X + "," + ROW_Y[i] + ")"}>
+          <text x="-2" y="-6" textAnchor="end" fontSize="14" fill="#111" fontWeight="500">${parts[0]}</text>
+          <line x1="-28" y1="0" x2="2" y2="0" stroke="#111" strokeWidth="0.8" />
+          <text x="-2" y="14" textAnchor="end" fontSize="14" fill="#111" fontWeight="500">${parts[1]}</text>
+        </g>
+      `;
+    });
+
+    var rightData = [config.abbrRightLabel].concat(padded.slice(0, 6).map(function (c) { return c.rightLabel || ""; }));
+    var rightLabels = rightData.map(function (raw, idx) {
+      if (!raw) return null;
+      var rowIdx = idx + 1;
+      var parts = raw.split("/").map(function (s) { return s.trim(); });
+      if (parts.length !== 2) {
+        return html`<text key=${"R"+idx} x=${RIGHT_X} y=${ROW_Y[rowIdx]} fontSize="14" fill="#111">${raw}</text>`;
+      }
+      return html`
+        <g key=${"R"+idx} transform=${"translate(" + RIGHT_X + "," + ROW_Y[rowIdx] + ")"}>
+          <text x="0" y="-6" fontSize="14" fill="#111" fontWeight="500">${parts[0]}</text>
+          <line x1="-2" y1="0" x2="32" y2="0" stroke="#111" strokeWidth="0.8" />
+          <text x="0" y="14" fontSize="14" fill="#111" fontWeight="500">${parts[1]}</text>
+        </g>
+      `;
+    });
+
+    // Justified city rows: textLength set to config.justifyWidth, lengthAdjust=spacing
+    // so letters keep their shape and SVG only adjusts inter-letter spacing.
+    var cityRows = padded.slice(0, 6).map(function (c, i) {
+      var label = c.label || "";
+      // Empty rows shouldn't render (prevents weird SVG behavior with zero-length text)
+      if (!label) return null;
+      return html`
+        <text key=${"C"+i}
+              x=${CX} y=${ROW_Y[i+2]}
+              textAnchor="middle" dominantBaseline="middle"
+              fontSize=${SIZES[i+2]} fontWeight="600" fill="#111"
+              textLength=${config.justifyWidth}
+              lengthAdjust="spacingAndGlyphs">
+          ${label}
+        </text>
+      `;
+    });
+
+    return html`
+      <svg ref=${ref}
+           xmlns="http://www.w3.org/2000/svg"
+           viewBox=${"0 0 " + W + " " + H}
+           width="100%" height="100%"
+           style=${{ fontFamily: config.fontStack, display: "block" }}>
+        <defs>
+          <linearGradient id="vaBgGradient" x1=${g.x1} y1=${g.y1} x2=${g.x2} y2=${g.y2}>
+            <stop offset="0%" stopColor=${config.bgColor1} />
+            <stop offset="100%" stopColor=${config.bgColor2} />
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width=${W} height=${H}
+              fill=${config.bgType === "gradient" ? "url(#vaBgGradient)" : config.bgColor1} />
+        <rect x=${MARGIN} y=${MARGIN} width=${W - MARGIN*2} height=${H - MARGIN*2}
+              fill="none" stroke="#111" strokeWidth="1" />
+        <g transform=${"translate(" + (CX - silW/2) + "," + (SIL_CY - silH/2) + ") scale(" + scale + ")"}>
+          <path d=${state.svgPath} fill="#111" />
+        </g>
+        <text x=${CX} y=${ROW_Y[1]}
+              textAnchor="middle" dominantBaseline="middle"
+              fontSize=${SIZES[1]} fontWeight="700" fill="#111" letterSpacing="4">
+          ${state.abbr}
+        </text>
+        ${cityRows}
+        ${leftLabels}
+        ${rightLabels}
+        <g transform=${"translate(" + (W - 220) + "," + (H - 130) + ")"}>
+          <rect x="0" y="0" width="170" height="60" fill="none" stroke="#111" strokeWidth="0.8" />
+          <text x="12" y="20" fontSize="11" fontWeight="700" letterSpacing="1" fill="#111">
+            ${(config.footerTitle || "").toUpperCase()}
+          </text>
+          <line x1="0" y1="32" x2="170" y2="32" stroke="#111" strokeWidth="0.5" />
+          <text x="12" y="48" fontSize="9" fill="#111" letterSpacing="0.5">
+            ${config.footerSubtitle || ""}
+          </text>
+        </g>
+      </svg>
+    `;
+  });
+
+  // ============ EXPORT UTILS ============
+  function serialize(svg) {
+    var c = svg.cloneNode(true);
+    c.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    c.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+    return new XMLSerializer().serializeToString(c);
+  }
+  function dl(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  function exportSVG(svg, filename) {
+    dl(new Blob([serialize(svg)], { type: "image/svg+xml;charset=utf-8" }), filename);
+  }
+  function rasterize(svg, pxW, pxH) {
+    var src = serialize(svg);
+    var blob = new Blob([src], { type: "image/svg+xml;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = function () {
+        try {
+          var canvas = document.createElement("canvas");
+          canvas.width = pxW; canvas.height = pxH;
+          var ctx = canvas.getContext("2d");
+          // Transparent fill unless background is part of SVG (which it now is)
+          ctx.drawImage(img, 0, 0, pxW, pxH);
+          URL.revokeObjectURL(url);
+          resolve(canvas);
+        } catch (e) {
+          URL.revokeObjectURL(url); reject(e);
+        }
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error("SVG rasterization failed"));
+      };
+      img.src = url;
+    });
+  }
+  function exportPNG(svg, filename) {
+    return rasterize(svg, 800 * 3, 1100 * 3).then(function (canvas) {
+      return new Promise(function (res, rej) {
+        canvas.toBlob(function (b) {
+          if (!b) return rej(new Error("toBlob failed"));
+          dl(b, filename); res();
+        }, "image/png");
+      });
+    });
+  }
+  // Fit chart aspect into page with centering. No stretching.
+  function computeFit(chartAspect, pageW, pageH) {
+    var pageAspect = pageW / pageH;
+    var chartW, chartH;
+    if (chartAspect >= pageAspect) {
+      // Chart wider/equal → fit page width
+      chartW = pageW;
+      chartH = pageW / chartAspect;
+    } else {
+      // Chart narrower → fit page height
+      chartH = pageH;
+      chartW = pageH * chartAspect;
+    }
+    return {
+      w: chartW, h: chartH,
+      x: (pageW - chartW) / 2,
+      y: (pageH - chartH) / 2
+    };
+  }
+  function exportPDF(svg, filename, printSize) {
+    if (!window.jspdf) return Promise.reject(new Error("jsPDF not loaded"));
+    var size = PRINT_SIZES[printSize];
+    var chartAspect = 800 / 1100;
+    var fit = computeFit(chartAspect, size.w, size.h);
+    // Rasterize at up to 300 DPI, capped so large prints don't blow up the canvas.
+    // Max ~5400px longest edge keeps canvas under ~100 MB and renders in ~1s.
+    var MAX_DIM = 5400;
+    var pxW = fit.w * 300;
+    var pxH = fit.h * 300;
+    var maxAxis = Math.max(pxW, pxH);
+    if (maxAxis > MAX_DIM) {
+      var s = MAX_DIM / maxAxis;
+      pxW *= s; pxH *= s;
+    }
+    pxW = Math.round(pxW); pxH = Math.round(pxH);
+    return rasterize(svg, pxW, pxH).then(function (canvas) {
+      // JPEG at 95% is visually indistinguishable from PNG for this content
+      // and produces a ~3-5 MB PDF instead of 80+ MB.
+      // For lossless print output, use the SVG export.
+      var dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+      var jsPDF = window.jspdf.jsPDF;
+      var pdf = new jsPDF({ orientation: "portrait", unit: "in", format: [size.w, size.h] });
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, size.w, size.h, "F");
+      pdf.addImage(dataUrl, "JPEG", fit.x, fit.y, fit.w, fit.h);
+      pdf.save(filename);
+    });
+  }
+
+  // ============ APP ============
+  function App() {
+    var s = useState("AZ"); var stateKey = s[0]; var setStateKey = s[1];
+    var c = useState(function () { return buildDefault("AZ"); });
+    var config = c[0]; var setConfig = c[1];
+    var svgRef = useRef(null);
+    var b = useState(null); var busy = b[0]; var setBusy = b[1];
+
+    var activeState = useMemo(function () { return STATES[stateKey]; }, [stateKey]);
+    var activeFrame = FRAMES[config.frameColor] || FRAMES.maple;
+    var activeSize = PRINT_SIZES[config.printSize];
+
+    function handleStateChange(e) {
+      var next = e.target.value;
+      setStateKey(next);
+      // Only reset state-dependent fields; preserve design choices
+      setConfig(function (prev) {
+        var fresh = buildDefault(next);
+        return Object.assign(fresh, {
+          fontStack: prev.fontStack,
+          bgType: prev.bgType,
+          bgColor1: prev.bgColor1,
+          bgColor2: prev.bgColor2,
+          bgAngle: prev.bgAngle,
+          frameColor: prev.frameColor,
+          printSize: prev.printSize,
+          justifyWidth: prev.justifyWidth
+        });
+      });
+    }
+    function updateConfig(patch) {
+      setConfig(function (p) { return Object.assign({}, p, patch); });
+    }
+    function updateCity(i, patch) {
+      setConfig(function (p) {
+        return Object.assign({}, p, {
+          cities: p.cities.map(function (cty, idx) {
+            return idx === i ? Object.assign({}, cty, patch) : cty;
+          })
+        });
+      });
+    }
+    function resetCities() {
+      var fresh = buildDefault(stateKey);
+      updateConfig({
+        abbrRightLabel: fresh.abbrRightLabel,
+        cities: fresh.cities
+      });
+    }
+    function doExport(kind) {
+      if (!svgRef.current) return;
+      var base = "vision-art-" + activeState.abbr.toLowerCase();
+      setBusy(kind);
+      var done = function () { setBusy(null); };
+      var fail = function (err) { console.error(err); alert("Export failed: " + err.message); setBusy(null); };
+      try {
+        if (kind === "svg") { exportSVG(svgRef.current, base + ".svg"); done(); }
+        else if (kind === "png") exportPNG(svgRef.current, base + ".png").then(done, fail);
+        else exportPDF(svgRef.current, base + ".pdf", config.printSize).then(done, fail);
+      } catch (err) { fail(err); }
+    }
+
+    var hints = ["20/70","20/50","20/40","20/30","20/20","20/15"];
+
+    var stateOptions = STATE_KEYS.map(function (k) {
+      return html`<option key=${k} value=${k}>${STATES[k].name} (${k})</option>`;
+    });
+
+    var cityInputs = config.cities.map(function (cty, i) {
+      return html`
+        <div key=${i} className="row-3">
+          <div className="mono">${hints[i]}</div>
+          <input className="input upper" value=${cty.label}
+            onChange=${function (e) { updateCity(i, { label: e.target.value }); }}
+            placeholder="CITY" />
+          <input className="input" value=${cty.rightLabel || ""}
+            onChange=${function (e) { updateCity(i, { rightLabel: e.target.value }); }}
+            placeholder="10 / 86" />
+        </div>
+      `;
+    });
+
+    var frameSwatches = FRAME_KEYS.map(function (k) {
+      return html`
+        <button key=${k} className=${"swatch" + (config.frameColor === k ? " active" : "")}
+                style=${{ background: FRAMES[k].gradient }}
+                title=${FRAMES[k].label}
+                onClick=${function () { updateConfig({ frameColor: k }); }} />
+      `;
+    });
+    var frameLabels = FRAME_KEYS.map(function (k) {
+      return html`<div key=${k}>${FRAMES[k].label}</div>`;
+    });
+
+    function ColorField(props) {
+      return html`
+        <div className="color-picker">
+          <input type="color" value=${props.value}
+            onChange=${function (e) { props.onChange(e.target.value); }} />
+          <input className="input color-hex" value=${props.value}
+            onChange=${function (e) { props.onChange(e.target.value); }} />
+        </div>
+      `;
+    }
+
+    return html`
+      <div className="grid-main">
+        <div>
+
+          <div className="card">
+            <div className="card-title">Chart content</div>
+            <div className="stack">
+              <div className="field">
+                <label className="label">State</label>
+                <select className="select" value=${stateKey} onChange=${handleStateChange}>
+                  ${stateOptions}
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Row-1 annotation (statehood date, etc.)</label>
+                <input className="input" value=${config.abbrRightLabel}
+                  onChange=${function (e) { updateConfig({ abbrRightLabel: e.target.value }); }}
+                  placeholder="2.14 / 1912" />
+              </div>
+            </div>
+
+            <div className="subsection">
+              <div style=${{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"10px"}}>
+                <div className="subsection-title" style=${{margin:0}}>Cities</div>
+                <button className="btn btn-ghost" onClick=${resetCities}>↺ Reset</button>
+              </div>
+              <div className="stack-sm">${cityInputs}</div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title">Design</div>
+
+            <div className="stack-sm">
+              <div className="subsection-title">Row justification width</div>
+              <div className="slider-row">
+                <input type="range" min="150" max="500" step="1"
+                  className="slider"
+                  value=${config.justifyWidth}
+                  onChange=${function (e) { updateConfig({ justifyWidth: Number(e.target.value) }); }} />
+                <span className="slider-value">${config.justifyWidth}px</span>
+              </div>
+              <div className="muted" style=${{marginTop:0}}>All city rows expand to this width.</div>
+            </div>
+
+            <div className="subsection">
+              <div className="subsection-title">Typography</div>
+              <select className="select" value=${config.fontStack}
+                onChange=${function (e) { updateConfig({ fontStack: e.target.value }); }}>
+                ${FONTS.map(function (f) {
+                  return html`<option key=${f.key} value=${f.stack}>${f.label}</option>`;
+                })}
+              </select>
+            </div>
+
+            <div className="subsection">
+              <div className="subsection-title">Background</div>
+              <div className="tab-group" style=${{marginBottom:"10px"}}>
+                <button className=${"tab-btn" + (config.bgType === "solid" ? " active" : "")}
+                        onClick=${function () { updateConfig({ bgType: "solid" }); }}>Solid</button>
+                <button className=${"tab-btn" + (config.bgType === "gradient" ? " active" : "")}
+                        onClick=${function () { updateConfig({ bgType: "gradient" }); }}>Gradient</button>
+              </div>
+              ${config.bgType === "solid"
+                ? html`<${ColorField} value=${config.bgColor1}
+                    onChange=${function (v) { updateConfig({ bgColor1: v }); }} />`
+                : html`
+                  <div className="stack-sm">
+                    <div className="field">
+                      <label className="label">Start</label>
+                      <${ColorField} value=${config.bgColor1}
+                        onChange=${function (v) { updateConfig({ bgColor1: v }); }} />
+                    </div>
+                    <div className="field">
+                      <label className="label">End</label>
+                      <${ColorField} value=${config.bgColor2}
+                        onChange=${function (v) { updateConfig({ bgColor2: v }); }} />
+                    </div>
+                    <div className="field">
+                      <label className="label">Angle</label>
+                      <div className="slider-row">
+                        <input type="range" min="0" max="360" step="1"
+                          className="slider"
+                          value=${config.bgAngle}
+                          onChange=${function (e) { updateConfig({ bgAngle: Number(e.target.value) }); }} />
+                        <span className="slider-value">${config.bgAngle}°</span>
+                      </div>
+                    </div>
+                  </div>
+                `}
+            </div>
+
+            <div className="subsection">
+              <div className="subsection-title">Frame</div>
+              <div className="swatch-grid">${frameSwatches}</div>
+              <div className="swatch-labels">${frameLabels}</div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title">Footer stamp</div>
+            <div className="stack-sm">
+              <div className="field">
+                <label className="label">Title</label>
+                <input className="input" value=${config.footerTitle}
+                  onChange=${function (e) { updateConfig({ footerTitle: e.target.value }); }} />
+              </div>
+              <div className="field">
+                <label className="label">Subtitle</label>
+                <input className="input" value=${config.footerSubtitle}
+                  onChange=${function (e) { updateConfig({ footerSubtitle: e.target.value }); }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title">Output</div>
+            <div className="stack-sm">
+              <div className="field">
+                <label className="label">Print size</label>
+                <select className="select" value=${config.printSize}
+                  onChange=${function (e) { updateConfig({ printSize: e.target.value }); }}>
+                  ${Object.keys(PRINT_SIZES).map(function (k) {
+                    return html`<option key=${k} value=${k}>${PRINT_SIZES[k].label}</option>`;
+                  })}
+                </select>
+              </div>
+              <div className="row-exports" style=${{marginTop:"4px"}}>
+                <button className="btn" disabled=${!!busy} onClick=${function () { doExport("png"); }}>
+                  ${busy === "png" ? "…" : "PNG"}
+                </button>
+                <button className="btn" disabled=${!!busy} onClick=${function () { doExport("svg"); }}>
+                  ${busy === "svg" ? "…" : "SVG"}
+                </button>
+                <button className="btn" disabled=${!!busy} onClick=${function () { doExport("pdf"); }}>
+                  ${busy === "pdf" ? "…" : "PDF"}
+                </button>
+              </div>
+              <div className="muted" style=${{marginTop:0}}>
+                PDF exports at 300 DPI on ${activeSize.label}. Chart is fit with white margins if aspect differs.
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div className="sticky">
+          <div className="preview-card">
+            <div className="preview-wrap">
+              <div className="frame" style=${{ background: activeFrame.gradient }}>
+                <div className="mat">
+                  <${ChartSVG} ref=${svgRef} config=${config} />
+                </div>
+              </div>
+              <div className="size-label">${activeSize.label} · ${activeFrame.label} frame</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  try {
+    var root = ReactDOM.createRoot(document.getElementById("app"));
+    root.render(html`<${App} />`);
+  } catch (err) {
+    bootError("React mount error: " + err.message);
+    console.error(err);
+  }
+})();
+</script>
+
+</body>
+</html>
