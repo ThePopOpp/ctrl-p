@@ -266,7 +266,9 @@
       footerTitle: 'VISION ART CO.',
       footerSubtitle: '2026 // CHANDLER, AZ',
       footerLogoDataUrl: null,
-      justifyWidth: 300,
+      letterSpacing: 6,
+      textAlign: 'center',
+      justifyLetterWidth: 340,
       citySpacing: 0,
       fontStack: FONTS[0].stack,
       bgType: 'solid',
@@ -303,6 +305,12 @@
     var footerY = Math.min(H - 80, Math.max(H - 130, ROW_Y[7] + 90));
     var SIZES = [0, 108, 92, 72, 56, 46, 38, 32];
     var LEFT_X = 90, RIGHT_X = W - 90;
+    var CITY_LEFT_X = 210, CITY_RIGHT_X = W - 210;
+    var cityLetterSpacing = Number(config.letterSpacing);
+    if (!isFinite(cityLetterSpacing)) cityLetterSpacing = 6;
+    var cityAlign = config.textAlign || 'center';
+    var justifyLetterWidth = Number(config.justifyLetterWidth);
+    if (!isFinite(justifyLetterWidth)) justifyLetterWidth = 340;
 
     var padded = config.cities.slice();
     while (padded.length < 6) padded.push({ label:'', rightLabel:'' });
@@ -339,14 +347,29 @@
 
     var cityRows = padded.slice(0,6).map(function (c, i) {
       if (!c.label) return null;
+      var label = String(c.label);
+      var rowFontSize = SIZES[i+2];
+      var rowX = CX;
+      var rowAnchor = 'middle';
+      var rowLetterSpacing = cityLetterSpacing;
+      if (cityAlign === 'left') {
+        rowX = CITY_LEFT_X;
+        rowAnchor = 'start';
+      } else if (cityAlign === 'right') {
+        rowX = CITY_RIGHT_X;
+        rowAnchor = 'end';
+      } else if (cityAlign === 'justify') {
+        var approxGlyphWidth = label.replace(/\s/g, '').length * rowFontSize * 0.58;
+        var gaps = Math.max(label.length - 1, 1);
+        rowLetterSpacing = Math.max(cityLetterSpacing, (justifyLetterWidth - approxGlyphWidth) / gaps);
+      }
       return html`
         <text key=${'C'+i}
-              x=${CX} y=${ROW_Y[i+2]}
-              textAnchor="middle" dominantBaseline="middle"
-              fontSize=${SIZES[i+2]} fontWeight="600" fill="#111"
-              textLength=${config.justifyWidth}
-              lengthAdjust="spacingAndGlyphs">
-          ${c.label}
+              x=${rowX} y=${ROW_Y[i+2]}
+              textAnchor=${rowAnchor} dominantBaseline="middle"
+              fontSize=${rowFontSize} fontWeight="600" fill="#111"
+              letterSpacing=${rowLetterSpacing}>
+          ${label}
         </text>
       `;
     });
@@ -381,8 +404,11 @@
         <g transform=${'translate('+(W-220)+','+footerY+')'}>
           <rect x="0" y="0" width="170" height="60" fill="none" stroke="#111" strokeWidth="0.8" />
           ${config.footerLogoDataUrl
-            ? html`<image href=${config.footerLogoDataUrl} x="12" y="5" width="146" height="22" preserveAspectRatio="xMinYMid meet" />`
+            ? html`<image href=${config.footerLogoDataUrl} x="10" y="6" width="24" height="20" preserveAspectRatio="xMidYMid meet" />`
             : html`<text x="12" y="20" fontSize="11" fontWeight="700" letterSpacing="1" fill="#111">${(config.footerTitle || '').toUpperCase()}</text>`}
+          ${config.footerLogoDataUrl
+            ? html`<text x="42" y="20" fontSize="11" fontWeight="700" letterSpacing="1" fill="#111">${(config.footerTitle || '').toUpperCase()}</text>`
+            : null}
           <line x1="0" y1="32" x2="170" y2="32" stroke="#111" strokeWidth="0.5" />
           <text x="12" y="48" fontSize="9" fill="#111" letterSpacing="0.5">
             ${config.footerSubtitle || ''}
@@ -471,6 +497,9 @@
     var config = c[0]; var setConfig = c[1];
     var svgRef = useRef(null);
     var b = useState(null); var busy = b[0]; var setBusy = b[1];
+    var z = useState(100); var zoom = z[0]; var setZoom = z[1];
+    var o = useState({ chart:true, design:true, footer:false, export:false });
+    var openPanels = o[0]; var setOpenPanels = o[1];
     var activeState = useMemo(function(){ return STATES[stateKey]; }, [stateKey]);
     var activeFrame = FRAMES[config.frameColor] || FRAMES.maple;
     var activeSize = PRINT_SIZES[config.printSize];
@@ -484,7 +513,8 @@
           fontStack: prev.fontStack, bgType: prev.bgType,
           bgColor1: prev.bgColor1, bgColor2: prev.bgColor2,
           bgAngle: prev.bgAngle, frameColor: prev.frameColor,
-          printSize: prev.printSize, justifyWidth: prev.justifyWidth,
+          printSize: prev.printSize, letterSpacing: prev.letterSpacing,
+          textAlign: prev.textAlign, justifyLetterWidth: prev.justifyLetterWidth,
           citySpacing: prev.citySpacing,
           footerTitle: prev.footerTitle, footerSubtitle: prev.footerSubtitle,
           footerLogoDataUrl: prev.footerLogoDataUrl
@@ -500,6 +530,29 @@
       reader.readAsDataURL(file);
     }
     function updateConfig(patch) { setConfig(function(p){ return Object.assign({},p,patch); }); }
+    function updateZoom(value) {
+      var next = Math.max(50, Math.min(200, Number(value) || 100));
+      setZoom(next);
+    }
+    function togglePanel(key) {
+      setOpenPanels(function(prev) {
+        var next = Object.assign({}, prev);
+        next[key] = !next[key];
+        return next;
+      });
+    }
+    function toggleTheme() {
+      var dark = document.documentElement.classList.toggle('dark');
+      try { localStorage.setItem('cp-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    }
+    function openMobileNav() {
+      var nav = document.getElementById('cp-mobile-nav');
+      if (!nav) return;
+      nav.classList.add('cp-mobile-nav--open');
+      nav.classList.remove('cp-mobile-nav--sub');
+      nav.setAttribute('aria-hidden', 'false');
+      document.documentElement.classList.add('cp-mobile-nav-open');
+    }
     function updateCity(i, patch) {
       setConfig(function(p) {
         return Object.assign({},p,{ cities: p.cities.map(function(cty,idx){ return idx===i ? Object.assign({},cty,patch) : cty; }) });
@@ -559,16 +612,137 @@
     var frameLabels = FRAME_KEYS.map(function(k){
       return html`<div key=${k}>${FRAMES[k].label}</div>`;
     });
-
     return html`
       <div className="vac-grid">
+        <div className="vac-editor-bar">
+          <div className="vac-editor-actions">
+            <a href="home.html" className="vac-editor-brand">
+              <span className="vac-editor-mark">cp</span>
+              <span>controlp<span style=${{color:'#9ca3af'}}>.io</span></span>
+            </a>
+            <nav className="vac-editor-nav" aria-label="Primary">
+              <div className="vac-editor-dropdown">
+                <button type="button" className="vac-editor-action">Shop <svg className="icon-sm" viewBox="0 0 24 24"><path d="M7 9.5L12 14.5L17 9.5" /></svg></button>
+                <div className="vac-editor-menu">
+                  ${[
+                    ['Large Format Prints','Banners, posters, displays','M13 8V12M13 16V16.01M4 6L10 3L14 5L20 2V18L14 21L10 19L4 22V6Z'],
+                    ['Signs','Standard & custom signage','M4 2L4 22M4 3H20L17.3 8L20 13H4V3Z'],
+                    ['Vehicle Wraps','Full wraps, spot graphics','M4 17V19M20 17V19M21 7L19 9M3 7L5 9M7 13H7.01M17 13H17.01M7 17H17C19.2 17 21 15.2 21 13C21 10.8 19.2 9 17 9H7C4.8 9 3 10.8 3 13C3 15.2 4.8 17 7 17Z'],
+                    ['Business Cards','Standard, die-cut, premium','M3 7H21V17H3V7ZM7 11H12M7 14H17'],
+                    ['Custom Merch','Shirts, hats, mugs, bags','M12 21L5 17V7L12 3L19 7V17L12 21Z'],
+                    ['Flags & Displays','Pole, feather, teardrop','M4 2V22M4 3H20L17 8L20 13H4']
+                  ].map(function(item){
+                    return html`<a href="shop.html" className="vac-menu-link">
+                      <span className="vac-menu-icon"><svg viewBox="0 0 24 24"><path d=${item[2]} /></svg></span>
+                      <span><span className="vac-menu-main">${item[0]}</span><span className="vac-menu-sub">${item[1]}</span></span>
+                    </a>`;
+                  })}
+                </div>
+              </div>
+              <div className="vac-editor-dropdown">
+                <button type="button" className="vac-editor-action">Discover <svg className="icon-sm" viewBox="0 0 24 24"><path d="M7 9.5L12 14.5L17 9.5" /></svg></button>
+                <div className="vac-editor-menu three">
+                  <div>
+                    <div className="vac-editor-menu-title">Resources</div>
+                    ${[
+                      ['Templates','Designed for quick edits','templates.html','M14 2H6V22H18V8L14 2Z'],
+                      ['Resources','Prep guides & downloads','resources.html','M4 19.5C4 18.1 5.1 17 6.5 17H20V2H6.5C5.1 2 4 3.1 4 4.5V19.5Z'],
+                      ['Blog','Trends, tips, and stories','blog.html','M4 5H20M4 12H20M4 19H14']
+                    ].map(function(item){ return html`<a href=${item[2]} className="vac-menu-link"><span className="vac-menu-icon"><svg viewBox="0 0 24 24"><path d=${item[3]} /></svg></span><span><span className="vac-menu-main">${item[0]}</span><span className="vac-menu-sub">${item[1]}</span></span></a>`; })}
+                  </div>
+                  <div>
+                    <div className="vac-editor-menu-title">Company</div>
+                    ${[
+                      ['About','Learn about our company','about.html','M12 14C14.2 14 16 12.2 16 10S14.2 6 12 6 8 7.8 8 10 9.8 14 12 14ZM4 22C4.8 18.6 7.8 16 12 16S19.2 18.6 20 22'],
+                      ['Team','Meet our talented team','about.html#team','M17 21V19C17 16.8 15.2 15 13 15H7C4.8 15 3 16.8 3 19V21M21 21V19C21 17.3 20 15.9 18.5 15.3M10 11C12.2 11 14 9.2 14 7S12.2 3 10 3 6 4.8 6 7 7.8 11 10 11Z'],
+                      ['Mission','Our values and vision','about.html#mission','M12 22C17.5 22 22 17.5 22 12S17.5 2 12 2 2 6.5 2 12 6.5 22 12 22ZM12 6V12L16 14']
+                    ].map(function(item){ return html`<a href=${item[2]} className="vac-menu-link"><span className="vac-menu-icon"><svg viewBox="0 0 24 24"><path d=${item[3]} /></svg></span><span><span className="vac-menu-main">${item[0]}</span><span className="vac-menu-sub">${item[1]}</span></span></a>`; })}
+                  </div>
+                  <div>
+                    <div className="vac-editor-menu-title">Support</div>
+                    ${[
+                      ['Services','What we offer','contact.html','M18 3A3 3 0 0 0 15 6V18A3 3 0 1 0 18 15H6A3 3 0 1 0 6 21H18A3 3 0 0 0 21 18V6A3 3 0 0 0 18 3Z'],
+                      ['Support','Help and guidance','faq.html','M23 7L16 12L23 17V7ZM1 5H16V19H1V5Z'],
+                      ['Contact','Talk with our team','contact.html','M2 4H22V20H2V4ZM22 7L12 12L2 7']
+                    ].map(function(item){ return html`<a href=${item[2]} className="vac-menu-link"><span className="vac-menu-icon"><svg viewBox="0 0 24 24"><path d=${item[3]} /></svg></span><span><span className="vac-menu-main">${item[0]}</span><span className="vac-menu-sub">${item[1]}</span></span></a>`; })}
+                  </div>
+                </div>
+              </div>
+              <a href="shop.html?deal=1" className="vac-editor-action">Deals</a>
+              <a href="faq.html" className="vac-editor-action">FAQ</a>
+              <a href="contact.html" className="vac-editor-action">Contact</a>
+            </nav>
+          </div>
+          <div className="vac-editor-actions">
+            <button type="button" className="vac-editor-search">
+              <svg className="icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="M21 21L16.7 16.7" /></svg>
+              <span>Search products...</span>
+              <kbd>⌘K</kbd>
+            </button>
+            <button type="button" className="cp-theme-btn" onClick=${toggleTheme} aria-label="Toggle color mode">
+              <svg className="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.9504 12.9504C20.6381 12.9832 20.321 13 20 13C15.0294 13 11 8.97054 11 3.99997C11 3.67897 11.0168 3.36188 11.0496 3.04956C6.52579 3.52435 3 7.35042 3 12C3 16.9705 7.02944 21 12 21C16.6496 21 20.4756 17.4742 20.9504 12.9504Z" /></svg>
+              <svg className="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2V2.00995M22 12V12.0099M2 12V12.0099M19 5V5.00995M19 19V19.0099M5 19V19.0099M5 5V5.00995M12 22V22.0099M18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12Z" /></svg>
+            </button>
+            <a href="cart.html" className="vac-editor-icon" aria-label="Cart">
+              <svg className="icon-sm" viewBox="0 0 24 24"><path d="M6 6H21L19 14H8L6 6ZM6 6L5 3H2M9 20H9.01M18 20H18.01" /></svg>
+              <span className="vac-editor-count">2</span>
+            </a>
+            <a href="login.html" className="vac-editor-signin">Sign in</a>
+            <a href="contact.html" className="vac-editor-done">Get a quote</a>
+            <button type="button" className="cp-theme-btn vac-editor-mobile" onClick=${openMobileNav} aria-label="Open menu">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M21 12H3M21 18H3" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="vac-tool-rail">
+          <button type="button" className="vac-rail-btn active">
+            <svg viewBox="0 0 24 24"><path d="M4 5H20M4 12H20M4 19H20" /></svg>
+            Chart
+          </button>
+          <button type="button" className="vac-rail-btn">
+            <svg viewBox="0 0 24 24"><path d="M4 4H20V20H4V4Z" /><path d="M8 16L11 13L13 15L16 11L20 16" /></svg>
+            Design
+          </button>
+          <button type="button" className="vac-rail-btn">
+            <svg viewBox="0 0 24 24"><path d="M4 7H20M7 4V20M17 4V20M4 17H20" /></svg>
+            Footer
+          </button>
+          <button type="button" className="vac-rail-btn">
+            <svg viewBox="0 0 24 24"><path d="M12 3V15M12 15L7 10M12 15L17 10M4 21H20" /></svg>
+            Export
+          </button>
+        </div>
+
+        <div className="vac-preview-stage">
+          <div className="vac-preview-card" style=${{ transform:'scale('+(zoom / 100)+')' }}>
+            <div className="vac-frame" style=${{ background: activeFrame.gradient }}>
+              <div className="vac-mat">
+                <${ChartSVG} ref=${svgRef} config=${config} />
+              </div>
+            </div>
+            <div className="vac-size-label">${activeSize.label} - ${activeFrame.label} frame</div>
+          </div>
+          <div className="vac-zoom-tool" aria-label="Preview zoom">
+            <button type="button" className="vac-zoom-btn" onClick=${function(){ updateZoom(zoom + 10); }} aria-label="Zoom in">+</button>
+            <input className="vac-zoom-slider" type="range" min="50" max="200" step="5"
+              value=${zoom}
+              onChange=${function(e){ updateZoom(e.target.value); }}
+              aria-label="Zoom percentage" />
+            <button type="button" className="vac-zoom-btn" onClick=${function(){ updateZoom(zoom - 10); }} aria-label="Zoom out">-</button>
+            <div className="vac-zoom-percent">${zoom}%</div>
+          </div>
+        </div>
 
         <!-- ── Left: Controls ── -->
-        <div>
+        <div className="vac-sticky">
 
           <!-- State + Content -->
-          <div className="vac-panel">
-            <div className="vac-panel-title">Chart Content</div>
+          <div className=${'vac-panel'+(openPanels.chart === false ? ' collapsed' : '')}>
+            <div className=${'vac-panel-title'+(openPanels.chart !== false ? ' open' : '')} onClick=${function(){ togglePanel('chart'); }}>
+              <span>Chart Content</span>
+              <svg viewBox="0 0 24 24"><path d="M6 9L12 15L18 9" /></svg>
+            </div>
             <div className="vac-stack">
               <div className="vac-field">
                 <label className="vac-label">State</label>
@@ -594,19 +768,50 @@
           </div>
 
           <!-- Design -->
-          <div className="vac-panel">
-            <div className="vac-panel-title">Design</div>
+          <div className=${'vac-panel'+(openPanels.design === false ? ' collapsed' : '')}>
+            <div className=${'vac-panel-title'+(openPanels.design !== false ? ' open' : '')} onClick=${function(){ togglePanel('design'); }}>
+              <span>Design</span>
+              <svg viewBox="0 0 24 24"><path d="M6 9L12 15L18 9" /></svg>
+            </div>
 
             <div className="vac-stack-sm">
-              <div className="vac-subsection-title">Row justification width</div>
-              <div className="vac-slider-row">
-                <input type="range" min="150" max="500" step="1" className="vac-slider"
-                  value=${config.justifyWidth}
-                  onChange=${function(e){ updateConfig({justifyWidth:Number(e.target.value)}); }} />
-                <span className="vac-slider-value">${config.justifyWidth}px</span>
+              <div className="vac-subsection-title">Text alignment</div>
+              <div className="vac-tab-group">
+                <button className=${'vac-tab-btn'+(config.textAlign==='left'?' active':'')}
+                        onClick=${function(){ updateConfig({textAlign:'left'}); }}>Left</button>
+                <button className=${'vac-tab-btn'+(config.textAlign==='center'?' active':'')}
+                        onClick=${function(){ updateConfig({textAlign:'center'}); }}>Center</button>
+                <button className=${'vac-tab-btn'+(config.textAlign==='right'?' active':'')}
+                        onClick=${function(){ updateConfig({textAlign:'right'}); }}>Right</button>
+                <button className=${'vac-tab-btn'+(config.textAlign==='justify'?' active':'')}
+                        onClick=${function(){ updateConfig({textAlign:'justify'}); }}>Justify</button>
               </div>
-              <div className="vac-muted">Controls inter-letter spacing across all city rows.</div>
+              <div className="vac-muted">Aligns city rows or justifies them by adding letter spacing only.</div>
             </div>
+
+            <div className="vac-stack-sm">
+              <div className="vac-subsection-title">Letter spacing</div>
+              <div className="vac-slider-row">
+                <input type="range" min="-2" max="48" step="0.5" className="vac-slider"
+                  value=${config.letterSpacing}
+                  onChange=${function(e){ updateConfig({letterSpacing:Number(e.target.value)}); }} />
+                <span className="vac-slider-value">${config.letterSpacing}px</span>
+              </div>
+              <div className="vac-muted">Adds tracking between letters across all city rows without stretching the glyphs.</div>
+            </div>
+
+            ${config.textAlign==='justify' ? html`
+              <div className="vac-stack-sm">
+                <div className="vac-subsection-title">Justify width</div>
+                <div className="vac-slider-row">
+                  <input type="range" min="220" max="520" step="1" className="vac-slider"
+                    value=${config.justifyLetterWidth}
+                    onChange=${function(e){ updateConfig({justifyLetterWidth:Number(e.target.value)}); }} />
+                  <span className="vac-slider-value">${config.justifyLetterWidth}px</span>
+                </div>
+                <div className="vac-muted">Sets the target row width for justified city letters.</div>
+              </div>
+            ` : null}
 
             <div className="vac-stack-sm">
               <div className="vac-subsection-title">City row margin</div>
@@ -660,8 +865,11 @@
           </div>
 
           <!-- Footer Stamp -->
-          <div className="vac-panel">
-            <div className="vac-panel-title">Footer Stamp</div>
+          <div className=${'vac-panel'+(openPanels.footer === false ? ' collapsed' : '')}>
+            <div className=${'vac-panel-title'+(openPanels.footer !== false ? ' open' : '')} onClick=${function(){ togglePanel('footer'); }}>
+              <span>Footer Stamp</span>
+              <svg viewBox="0 0 24 24"><path d="M6 9L12 15L18 9" /></svg>
+            </div>
             <div className="vac-stack-sm">
               <div className="vac-field">
                 <label className="vac-label">Brand Logo</label>
@@ -677,7 +885,7 @@
                       Upload logo image
                       <input type="file" accept="image/*" onChange=${handleLogoUpload} style=${{display:'none'}} />
                     </label>`}
-                <div className="vac-muted">PNG, JPG or SVG · Logo replaces title text in footer stamp</div>
+                <div className="vac-muted">PNG, JPG or SVG · Logo appears beside the footer title</div>
               </div>
               <div className="vac-field">
                 <label className="vac-label">Title</label>
@@ -693,8 +901,11 @@
           </div>
 
           <!-- Export -->
-          <div className="vac-panel">
-            <div className="vac-panel-title">Export File</div>
+          <div className=${'vac-panel'+(openPanels.export === false ? ' collapsed' : '')}>
+            <div className=${'vac-panel-title'+(openPanels.export !== false ? ' open' : '')} onClick=${function(){ togglePanel('export'); }}>
+              <span>Export File</span>
+              <svg viewBox="0 0 24 24"><path d="M6 9L12 15L18 9" /></svg>
+            </div>
             <div className="vac-stack-sm">
               <div className="vac-field">
                 <label className="vac-label">Print size</label>
@@ -730,20 +941,7 @@
           </div>
 
         </div>
-
-        <!-- ── Right: Preview ── -->
-        <div className="vac-sticky">
-          <div className="vac-preview-card">
-            <div className="vac-frame" style=${{ background: activeFrame.gradient }}>
-              <div className="vac-mat">
-                <${ChartSVG} ref=${svgRef} config=${config} />
-              </div>
-            </div>
-            <div className="vac-size-label">${activeSize.label} · ${activeFrame.label} frame</div>
-          </div>
-        </div>
-
-      </div>
+</div>
     `;
   }
 
