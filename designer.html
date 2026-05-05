@@ -192,7 +192,7 @@
 
 <script>
 // ─── Product state ───
-let currentProduct = 'bc'; // 'bc' | 'wa' | null (null = picker)
+let currentProduct = 'hat'; // 'hat' | 'bc' | 'wa' | null (null = picker)
 let canvasZoom = 1.0;
 function setZoom(level) {
   canvasZoom = Math.max(0.25, Math.min(4, level));
@@ -366,6 +366,166 @@ const FL_PRICES = {
 };
 const fl = { size:'feather-m', base:'ground-spike', sides:'single', activeSide:'front', quantity:1, sideLayers:{ front:[], back:[] } };
 
+// ─── Hat designer model ───
+const decorationMethods = {
+  'screen-print': { label:'Screen Print', family:'Printing', setupFee:35, basePrice:5, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:24 },
+  'dtg': { label:'DTG Printing', family:'Printing', setupFee:25, basePrice:7, priceType:'per-location', supportsGradients:true, prefersVector:false, minQty:1 },
+  'dtf': { label:'DTF Transfer', family:'Printing', setupFee:25, basePrice:6, priceType:'per-location', supportsGradients:true, prefersVector:false, minQty:12 },
+  'vinyl-transfer': { label:'Vinyl Transfer', family:'Printing', setupFee:20, basePrice:6, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:12 },
+  'heat-press': { label:'Heat Press', family:'Printing', setupFee:20, basePrice:6, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:12 },
+  'reflective-print': { label:'Reflective Print', family:'Printing', setupFee:35, basePrice:8, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:24 },
+  'metallic-foil': { label:'Metallic Foil Print', family:'Printing', setupFee:45, basePrice:9, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:24 },
+  'glow-print': { label:'Glow Print', family:'Printing', setupFee:45, basePrice:9, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:24 },
+  'standard-embroidery': { label:'Standard Embroidery', family:'Embroidery', setupFee:35, basePrice:8, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:12 },
+  'puff-embroidery': { label:'Puff Embroidery', family:'Embroidery', setupFee:45, basePrice:12, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:24 },
+  '3d-puff-embroidery': { label:'3D Puff Embroidery', family:'Embroidery', setupFee:50, basePrice:14, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:24 },
+  'flat-stitch-embroidery': { label:'Flat Stitch Embroidery', family:'Embroidery', setupFee:35, basePrice:7, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:12 },
+  'chain-stitch-embroidery': { label:'Chain Stitch Embroidery', family:'Embroidery', setupFee:45, basePrice:10, priceType:'per-location', supportsGradients:false, prefersVector:true, minQty:24 },
+  'woven-label-patch': { label:'Woven Label Patch', family:'Patch', setupFee:45, basePrice:8, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:24 },
+  'small-patch': { label:'Small Patch', family:'Patch', setupFee:40, basePrice:7, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:24 },
+  'embroidered-patch': { label:'Embroidered Patch', family:'Patch', setupFee:50, basePrice:10, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:24 },
+  'merrowed-patch': { label:'Merrowed Edge Patch', family:'Patch', setupFee:55, basePrice:11, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:24 },
+  'leather-patch': { label:'Leather Patch', family:'Patch', setupFee:50, basePrice:10, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:24 },
+  'faux-leather-patch': { label:'Faux Leather Patch', family:'Patch', setupFee:45, basePrice:9, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:24 },
+  'pvc-patch': { label:'PVC Patch', family:'Patch', setupFee:60, basePrice:12, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:50 },
+  'silicone-patch': { label:'Silicone Patch', family:'Patch', setupFee:60, basePrice:12, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:50 },
+  'rubber-patch': { label:'Rubber Patch', family:'Patch', setupFee:60, basePrice:12, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:50 },
+  'printed-patch': { label:'Full Color Printed Patch', family:'Patch', setupFee:40, basePrice:8, priceType:'per-patch', supportsGradients:true, prefersVector:false, minQty:24 },
+  'sublimated-patch': { label:'Sublimated Patch', family:'Patch', setupFee:45, basePrice:9, priceType:'per-patch', supportsGradients:true, prefersVector:false, minQty:24 },
+  'chenille-patch': { label:'Chenille Patch', family:'Patch', setupFee:65, basePrice:14, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:50 },
+  'hook-loop-patch': { label:'Hook-and-Loop Patch', family:'Patch', setupFee:60, basePrice:13, priceType:'per-patch', supportsGradients:false, prefersVector:true, minQty:24 },
+  'sewn-side-tag': { label:'Sewn Side Tag', family:'Branding', setupFee:35, basePrice:3, priceType:'per-tag', supportsGradients:false, prefersVector:true, minQty:24 },
+  'sewn-rear-tag': { label:'Sewn Rear Tag', family:'Branding', setupFee:35, basePrice:3, priceType:'per-tag', supportsGradients:false, prefersVector:true, minQty:24 },
+  'inside-label': { label:'Inside Label', family:'Branding', setupFee:30, basePrice:2, priceType:'per-label', supportsGradients:false, prefersVector:true, minQty:24 },
+  'branded-sweatband': { label:'Branded Sweatband', family:'Branding', setupFee:60, basePrice:5, priceType:'per-hat', supportsGradients:false, prefersVector:true, minQty:50 },
+  'custom-hang-tag': { label:'Custom Hang Tag', family:'Branding', setupFee:25, basePrice:1.5, priceType:'per-tag', supportsGradients:true, prefersVector:false, minQty:24 },
+  'sticker-on-bill': { label:'Sticker on Bill', family:'Branding', setupFee:20, basePrice:1.25, priceType:'per-sticker', supportsGradients:true, prefersVector:false, minQty:24 },
+  'hardhat-decal': { label:'Hardhat Vinyl Decal', family:'Decal', setupFee:20, basePrice:4, priceType:'per-decal', supportsGradients:true, prefersVector:true, minQty:1 },
+  'hardhat-reflective-decal': { label:'Hardhat Reflective Decal', family:'Decal', setupFee:25, basePrice:6, priceType:'per-decal', supportsGradients:false, prefersVector:true, minQty:1 },
+  'safety-label': { label:'Safety Label', family:'Decal', setupFee:20, basePrice:4, priceType:'per-decal', supportsGradients:false, prefersVector:true, minQty:1 },
+  'hat-band': { label:'Hat Band Customization', family:'Accessory', setupFee:45, basePrice:12, priceType:'per-band', supportsGradients:false, prefersVector:true, minQty:12 },
+  'metal-badge': { label:'Metal Badge', family:'Accessory', setupFee:75, basePrice:18, priceType:'per-badge', supportsGradients:false, prefersVector:true, minQty:24 },
+  'leather-band': { label:'Laser Engraved Leather Band', family:'Accessory', setupFee:60, basePrice:16, priceType:'per-band', supportsGradients:false, prefersVector:true, minQty:12 },
+  'woven-tag': { label:'Woven Tag', family:'Accessory', setupFee:35, basePrice:3, priceType:'per-tag', supportsGradients:false, prefersVector:true, minQty:24 },
+};
+
+const hatProducts = [
+  {
+    id:'standard-snapback', name:'Standard Snapback', category:'Hats', basePrice:14, structure:'structured',
+    baseColors:['Black','White','Navy','Gray','Red','Royal Blue','Green'],
+    views:['front','left','right','back','bill'],
+    zones:[
+      { id:'front-panel', name:'Front Panel', view:'front', maxWidthInches:4.75, maxHeightInches:2.5, allowedMethods:['standard-embroidery','puff-embroidery','3d-puff-embroidery','flat-stitch-embroidery','dtf','screen-print','leather-patch','faux-leather-patch','pvc-patch','silicone-patch','rubber-patch','printed-patch','embroidered-patch','merrowed-patch','woven-label-patch'] },
+      { id:'left-side', name:'Left Side', view:'left', maxWidthInches:2.5, maxHeightInches:1.25, allowedMethods:['standard-embroidery','flat-stitch-embroidery','dtf','leather-patch','woven-label-patch','sewn-side-tag'] },
+      { id:'right-side', name:'Right Side', view:'right', maxWidthInches:2.5, maxHeightInches:1.25, allowedMethods:['standard-embroidery','flat-stitch-embroidery','dtf','leather-patch','woven-label-patch','sewn-side-tag'] },
+      { id:'back-arch', name:'Back Arch', view:'back', maxWidthInches:3.5, maxHeightInches:1, allowedMethods:['standard-embroidery','flat-stitch-embroidery','dtf','sewn-rear-tag'] },
+      { id:'bill-top', name:'Bill Top', view:'bill', maxWidthInches:3.75, maxHeightInches:1.4, allowedMethods:['screen-print','dtf','vinyl-transfer','sticker-on-bill'] },
+      { id:'bill-underside', name:'Bill Underside', view:'bill', maxWidthInches:3.75, maxHeightInches:1.4, allowedMethods:['screen-print','dtf','vinyl-transfer'] },
+      { id:'sewn-side-tag', name:'Sewn Side Tag', view:'left', maxWidthInches:1, maxHeightInches:.55, allowedMethods:['sewn-side-tag'] },
+    ],
+    restrictions:['Puff embroidery requires bold artwork.','Sewn tags use a standard tag size.']
+  },
+  {
+    id:'flat-bill-snapback', name:'Flat Bill Snapback', category:'Hats', basePrice:15, structure:'structured',
+    baseColors:['Black','White','Navy','Gray','Red','Royal Blue'],
+    views:['front','left','right','back','bill top','bill underside'],
+    zones:[
+      { id:'front-panel', name:'Front Panel', view:'front', maxWidthInches:5.75, maxHeightInches:3.15, allowedMethods:['standard-embroidery','puff-embroidery','3d-puff-embroidery','dtf','screen-print','leather-patch','pvc-patch','silicone-patch','printed-patch','embroidered-patch','chenille-patch'] },
+      { id:'left-side', name:'Left Side', view:'left', maxWidthInches:2.5, maxHeightInches:1.25, allowedMethods:['standard-embroidery','flat-stitch-embroidery','dtf','sewn-side-tag'] },
+      { id:'right-side', name:'Right Side', view:'right', maxWidthInches:2.5, maxHeightInches:1.25, allowedMethods:['standard-embroidery','flat-stitch-embroidery','dtf','sewn-side-tag'] },
+      { id:'back-arch', name:'Back Arch', view:'back', maxWidthInches:3.5, maxHeightInches:1, allowedMethods:['standard-embroidery','dtf','sewn-rear-tag'] },
+      { id:'bill-top', name:'Bill Top', view:'bill top', maxWidthInches:4, maxHeightInches:1.55, allowedMethods:['screen-print','dtf','vinyl-transfer','metallic-foil','sticker-on-bill'] },
+      { id:'bill-underside', name:'Bill Underside', view:'bill underside', maxWidthInches:4, maxHeightInches:1.55, allowedMethods:['screen-print','dtf','vinyl-transfer','glow-print'] },
+    ],
+    restrictions:['Bill underside printing is available on flat bill and snapback styles.']
+  },
+  {
+    id:'trucker-hat', name:'Trucker Hat', category:'Hats', basePrice:13, structure:'structured',
+    baseColors:['Black / White','Black','Navy / White','Charcoal / Black','Red / White','Royal / White'],
+    views:['front','left','right','back','bill'],
+    zones:[
+      { id:'front-panel', name:'Front Foam Panel', view:'front', maxWidthInches:4.5, maxHeightInches:2.35, allowedMethods:['standard-embroidery','puff-embroidery','dtf','screen-print','leather-patch','pvc-patch','printed-patch','embroidered-patch'] },
+      { id:'left-mesh', name:'Left Mesh Panel', view:'left', maxWidthInches:2.25, maxHeightInches:1.1, allowedMethods:['sewn-side-tag'], material:'mesh' },
+      { id:'right-mesh', name:'Right Mesh Panel', view:'right', maxWidthInches:2.25, maxHeightInches:1.1, allowedMethods:['sewn-side-tag'], material:'mesh' },
+      { id:'back-mesh', name:'Back Mesh', view:'back', maxWidthInches:2.5, maxHeightInches:1, allowedMethods:['sewn-rear-tag'], material:'mesh' },
+      { id:'bill-top', name:'Bill Top', view:'bill', maxWidthInches:3.5, maxHeightInches:1.25, allowedMethods:['screen-print','dtf','vinyl-transfer','sticker-on-bill'] },
+    ],
+    restrictions:['Embroidery and patches are not allowed directly on mesh panels.']
+  },
+  {
+    id:'dad-hat', name:'Dad Hat', category:'Hats', basePrice:12, structure:'soft',
+    baseColors:['Black','White','Navy','Khaki','Olive','Stone','Washed Blue'],
+    views:['front','left','right','back strap'],
+    zones:[
+      { id:'front-center', name:'Front Center', view:'front', maxWidthInches:4, maxHeightInches:2, allowedMethods:['standard-embroidery','flat-stitch-embroidery','puff-embroidery','small-patch','leather-patch','faux-leather-patch','woven-label-patch','embroidered-patch'] },
+      { id:'left-side', name:'Left Side', view:'left', maxWidthInches:2.25, maxHeightInches:1, allowedMethods:['standard-embroidery','flat-stitch-embroidery','sewn-side-tag'] },
+      { id:'right-side', name:'Right Side', view:'right', maxWidthInches:2.25, maxHeightInches:1, allowedMethods:['standard-embroidery','flat-stitch-embroidery','sewn-side-tag'] },
+      { id:'back-strap', name:'Back Strap Area', view:'back strap', maxWidthInches:2.75, maxHeightInches:.8, allowedMethods:['standard-embroidery','flat-stitch-embroidery','sewn-rear-tag'] },
+    ],
+    restrictions:['Large rigid patches can distort soft crowns.','Puff embroidery is production-review only on soft crowns.']
+  },
+  {
+    id:'beanie', name:'Beanie', category:'Hats', basePrice:11, structure:'cuff',
+    baseColors:['Black','Heather Gray','Navy','Charcoal','Red','Forest Green'],
+    views:['front cuff','left cuff','right cuff','back cuff'],
+    zones:[
+      { id:'front-cuff', name:'Front Cuff', view:'front cuff', maxWidthInches:3.75, maxHeightInches:1.25, allowedMethods:['standard-embroidery','flat-stitch-embroidery','woven-label-patch','leather-patch','faux-leather-patch','silicone-patch','sewn-side-tag'] },
+      { id:'left-cuff', name:'Left Cuff', view:'left cuff', maxWidthInches:2.25, maxHeightInches:1, allowedMethods:['standard-embroidery','woven-label-patch','sewn-side-tag'] },
+      { id:'right-cuff', name:'Right Cuff', view:'right cuff', maxWidthInches:2.25, maxHeightInches:1, allowedMethods:['standard-embroidery','woven-label-patch','sewn-side-tag'] },
+      { id:'back-cuff', name:'Back Cuff', view:'back cuff', maxWidthInches:2.75, maxHeightInches:1, allowedMethods:['standard-embroidery','woven-label-patch','sewn-rear-tag'] },
+    ],
+    restrictions:['No screen print, DTG, or large hard patches.','Artwork should stay centered on cuff zones.']
+  },
+  {
+    id:'construction-hardhat', name:'Construction Hardhat', category:'Safety', basePrice:18, structure:'rigid-safety',
+    baseColors:['Yellow','White','Blue','Orange','Red','Green'],
+    views:['front','left','right','rear'],
+    zones:[
+      { id:'front', name:'Front', view:'front', maxWidthInches:3.25, maxHeightInches:1.5, allowedMethods:['hardhat-decal','hardhat-reflective-decal','safety-label'] },
+      { id:'left-side', name:'Left Side', view:'left', maxWidthInches:3, maxHeightInches:1.25, allowedMethods:['hardhat-decal','hardhat-reflective-decal','safety-label'] },
+      { id:'right-side', name:'Right Side', view:'right', maxWidthInches:3, maxHeightInches:1.25, allowedMethods:['hardhat-decal','hardhat-reflective-decal','safety-label'] },
+      { id:'rear', name:'Rear', view:'rear', maxWidthInches:3, maxHeightInches:1.25, allowedMethods:['hardhat-decal','hardhat-reflective-decal','safety-label'] },
+    ],
+    restrictions:['Safety item: decals only. No embroidery, sewn tags, patches, heat press, or structural modification.']
+  },
+  {
+    id:'cowboy-hat', name:'Cowboy Hat', category:'Hats', basePrice:29, structure:'western',
+    baseColors:['Brown','Black','Tan','Ivory','Gray'],
+    views:['front band','left band','right band','back band','brim'],
+    zones:[
+      { id:'front-band', name:'Front Band', view:'front band', maxWidthInches:4.5, maxHeightInches:.8, allowedMethods:['hat-band','leather-band','metal-badge','embroidered-patch','woven-tag'] },
+      { id:'left-band', name:'Left Band', view:'left band', maxWidthInches:3.25, maxHeightInches:.8, allowedMethods:['hat-band','leather-band','metal-badge','woven-tag'] },
+      { id:'right-band', name:'Right Band', view:'right band', maxWidthInches:3.25, maxHeightInches:.8, allowedMethods:['hat-band','leather-band','metal-badge','woven-tag'] },
+      { id:'back-band', name:'Back Band', view:'back band', maxWidthInches:3.25, maxHeightInches:.8, allowedMethods:['hat-band','leather-band','woven-tag'] },
+      { id:'brim-marking', name:'Brim Marking', view:'brim', maxWidthInches:2, maxHeightInches:.75, allowedMethods:['leather-patch','metal-badge'] },
+    ],
+    restrictions:['Cowboy hats use bands, badges, leather details, and accessories instead of direct crown printing.']
+  }
+];
+
+const hat = {
+  productId:'standard-snapback',
+  baseColor:'Black',
+  view:'front',
+  zoneId:'front-panel',
+  methodId:'standard-embroidery',
+  quantity:24,
+  threadColor:'#ffffff',
+  patchMaterial:'leather',
+  patchShape:'rectangle',
+  tagColor:'#18181b',
+  tagThreadColor:'#ffffff',
+  rush:false,
+  artwork:null,
+};
+
+const hatMockupAssets = {
+  'flat-bill-snapback': {
+    front: 'templates/flat-bill-hats/custom-flat-bill-hat-mockup-front-view.svg',
+    frontPng: 'templates/flat-bill-hats/custom-flat-bill-hat-mockup-front-view.png'
+  }
+};
+
 // ─── Price calculation ───
 function calcPrice() {
   let p = (PRICES.qty[bc.quantity] || 59);
@@ -401,9 +561,77 @@ function calcFlPrice() {
   return ((FL_PRICES.size[fl.size] || 59) + (FL_PRICES.base[fl.base] || 0) + (FL_PRICES.sides[fl.sides] || 0)) * fl.quantity;
 }
 
+function getHatProduct() {
+  return hatProducts.find(p => p.id === hat.productId) || hatProducts[0];
+}
+
+function getHatZone(product = getHatProduct()) {
+  return product.zones.find(z => z.id === hat.zoneId) || product.zones[0];
+}
+
+function isHatProduct(productId) {
+  return hatProducts.some(p => p.id === productId);
+}
+
+function getHatBaseColorHex(color) {
+  return {
+    Black:'#18181b', White:'#f8fafc', Navy:'#1e3a8a', Gray:'#71717a', Red:'#dc2626', 'Royal Blue':'#2563eb', Green:'#15803d',
+    'Black / White':'#18181b', 'Navy / White':'#1e3a8a', 'Charcoal / Black':'#3f3f46', 'Red / White':'#dc2626', 'Royal / White':'#2563eb',
+    Khaki:'#b59f73', Olive:'#556b2f', Stone:'#d6d3d1', 'Washed Blue':'#6b8fb8', 'Heather Gray':'#a1a1aa', Charcoal:'#3f3f46', 'Forest Green':'#166534',
+    Yellow:'#facc15', Blue:'#2563eb', Orange:'#f97316', Brown:'#6b3f24', Tan:'#c4a484', Ivory:'#faf7ed'
+  }[color] || '#18181b';
+}
+
+function evaluateHatRules(product = getHatProduct(), zone = getHatZone(product), methodId = hat.methodId) {
+  const method = decorationMethods[methodId];
+  const warnings = [];
+  const errors = [];
+  if (!product || !zone) errors.push('Select a valid hat product and decoration zone.');
+  if (zone && methodId && !zone.allowedMethods.includes(methodId)) errors.push('This decoration method is not available for the selected zone.');
+  if (product?.id === 'construction-hardhat' && method && !['Decal'].includes(method.family)) errors.push('Hardhats only support approved adhesive decals or safety labels.');
+  if (product?.id === 'beanie' && ['screen-print','dtg'].includes(methodId)) errors.push('Beanies cannot use DTG or screen print.');
+  if (zone?.material === 'mesh' && method && ['Embroidery','Patch'].includes(method.family)) errors.push('Trucker mesh zones cannot receive embroidery or patches directly.');
+  if (zone?.id === 'bill-underside' && !['standard-snapback','flat-bill-snapback'].includes(product?.id)) errors.push('Bill underside printing is only available on snapbacks and flat bill hats.');
+  if (method?.family === 'Branding' && ['construction-hardhat','cowboy-hat'].includes(product?.id)) errors.push('Sewn branding tags are only available on eligible fabric hats.');
+  if (product?.id === 'cowboy-hat' && method && ['Printing','Embroidery'].includes(method.family) && !['embroidered-patch'].includes(methodId)) errors.push('Cowboy hats use band, badge, leather, or accessory methods for this model.');
+  if (product?.structure === 'soft' && methodId === 'puff-embroidery') warnings.push('Puff embroidery can distort soft crowns; production review is recommended.');
+  if (methodId?.includes('puff')) warnings.push('Puff embroidery works best with bold shapes and thicker lettering.');
+  if (method && !method.supportsGradients) warnings.push('This decoration method may not support gradients or tiny text.');
+  if (method?.prefersVector) warnings.push('Vector artwork is preferred for this method.');
+  if (zone && (zone.maxWidthInches < 2.5 || zone.maxHeightInches < 1)) warnings.push('This is a compact zone; keep artwork simple and centered.');
+  if (hat.artwork) {
+    const ext = hat.artwork.ext;
+    if (['jpg','jpeg','png'].includes(ext) && method?.prefersVector) warnings.push('Raster artwork may need cleanup or vector conversion for this method.');
+    if (hat.artwork.tooLarge) warnings.push('This artwork may exceed the selected zone dimensions.');
+    if (hat.artwork.lowResolution) warnings.push('Artwork resolution may be low for the selected decoration size.');
+  }
+  return { valid: errors.length === 0, errors, warnings };
+}
+
+function getAvailableHatMethods(product = getHatProduct(), zone = getHatZone(product)) {
+  return (zone?.allowedMethods || []).filter(id => decorationMethods[id] && evaluateHatRules(product, zone, id).errors.length === 0);
+}
+
+function calcHatPrice() {
+  const product = getHatProduct();
+  const zone = getHatZone(product);
+  const method = decorationMethods[hat.methodId] || {};
+  const qty = Math.max(1, Number(hat.quantity) || 1);
+  const locationCount = Math.max(1, layers.length ? 1 : 1);
+  const unitBase = product.basePrice || 12;
+  const decoUnit = method.basePrice || 0;
+  const setup = method.setupFee || 0;
+  const tagFee = ['sewn-side-tag','sewn-rear-tag','inside-label','custom-hang-tag'].includes(hat.methodId) ? 15 : 0;
+  const patchSizeFee = decorationMethods[hat.methodId]?.family === 'Patch' && zone && zone.maxWidthInches > 4 ? 2 : 0;
+  const rushFee = hat.rush ? 35 : 0;
+  const total = (unitBase + decoUnit + patchSizeFee) * qty * locationCount + setup + tagFee + rushFee;
+  return Math.round(total);
+}
+
 function updatePrice() {
   let p;
-  if      (currentProduct === 'wa') p = calcWaPrice();
+  if      (currentProduct === 'hat') p = calcHatPrice();
+  else if (currentProduct === 'wa') p = calcWaPrice();
   else if (currentProduct === 'bn') p = calcBnPrice();
   else if (currentProduct === 'rs') p = calcRsPrice();
   else if (currentProduct === 'af') p = calcAfPrice();
@@ -928,6 +1156,88 @@ function getFlPrintArea() {
   return { ox: g.ox, oy: g.oy, ix: 0, iy: 0, iw: g.flagW, ih: g.flagH };
 }
 
+function getHatCanvasGeometry() {
+  const product = getHatProduct();
+  const zone = getHatZone(product);
+  const cw = 520, ch = 360;
+  if (product.id === 'flat-bill-snapback' && zone?.id === 'front-panel') {
+    return { cw, ch, printArea:{ ox:150, oy:116, iw:220, ih:108 } };
+  }
+  const zoneW = Math.min(180, Math.max(54, (zone?.maxWidthInches || 3) * 38));
+  const zoneH = Math.min(92, Math.max(22, (zone?.maxHeightInches || 1) * 36));
+  let zx = cw / 2 - zoneW / 2, zy = 146 - zoneH / 2;
+  const view = zone?.view || hat.view || 'front';
+  if (view.includes('left')) { zx = 142; zy = 148 - zoneH / 2; }
+  if (view.includes('right')) { zx = cw - 142 - zoneW; zy = 148 - zoneH / 2; }
+  if (view.includes('back') || view === 'rear') { zx = cw / 2 - zoneW / 2; zy = 172 - zoneH / 2; }
+  if (view.includes('bill')) { zx = cw / 2 - zoneW / 2; zy = 255 - zoneH / 2; }
+  if (view.includes('cuff')) { zx = cw / 2 - zoneW / 2; zy = 222 - zoneH / 2; }
+  if (view.includes('band')) { zx = cw / 2 - zoneW / 2; zy = 184 - zoneH / 2; }
+  if (product.id === 'cowboy-hat' && view === 'brim') { zx = cw / 2 - zoneW / 2; zy = 252 - zoneH / 2; }
+  return { cw, ch, printArea:{ ox:zx, oy:zy, iw:zoneW, ih:zoneH } };
+}
+
+function getHatPrintArea() {
+  return getHatCanvasGeometry().printArea;
+}
+
+function getHatMockupMarkup(product, zone, cw, ch) {
+  const zoneView = zone?.view || hat.view || 'front';
+  const asset = hatMockupAssets[product.id];
+  if (!asset || zoneView !== 'front') return '';
+  return `
+    <image href="${asset.front}" x="82" y="-12" width="356" height="384" preserveAspectRatio="xMidYMid meet"/>
+    <text x="${cw / 2}" y="${ch - 12}" text-anchor="middle" font-size="9" font-family="Inter, sans-serif" fill="#a1a1aa">Flat bill front mockup</text>`;
+}
+
+function buildHatSVG() {
+  const product = getHatProduct();
+  const zone = getHatZone(product);
+  const rules = evaluateHatRules(product, zone, hat.methodId);
+  const { cw, ch, printArea } = getHatCanvasGeometry();
+  const color = getHatBaseColorHex(hat.baseColor);
+  const accent = hat.baseColor.includes('/') ? '#f8fafc' : color;
+  const isDark = ['Black','Navy','Charcoal','Brown'].some(c => hat.baseColor.includes(c));
+  const seam = isDark ? '#2f2f36' : 'rgba(24,24,27,.18)';
+  const clipId = 'hat-zone-clip';
+  const mockupMarkup = getHatMockupMarkup(product, zone, cw, ch);
+  const stageFill = mockupMarkup ? 'none' : '#f8fafc';
+  let hatMarkup = '';
+
+  if (mockupMarkup) {
+    hatMarkup = mockupMarkup;
+  } else if (product.id === 'beanie') {
+    hatMarkup = `<path d="M150,114 C170,58 350,58 370,114 L392,232 C396,258 376,280 346,280 H174 C144,280 124,258 128,232 Z" fill="${color}"/><rect x="126" y="205" width="268" height="66" rx="18" fill="${color}" stroke="${seam}" stroke-width="2"/><path d="M154,220 H366 M154,240 H366 M154,260 H366" stroke="${seam}" stroke-width="1.2" opacity=".55"/>`;
+  } else if (product.id === 'construction-hardhat') {
+    hatMarkup = `<path d="M88,210 C94,104 164,70 260,70 C356,70 426,104 432,210 L462,224 C454,244 414,258 260,258 C106,258 66,244 58,224 Z" fill="${color}"/><path d="M160,100 C184,86 226,78 260,78 C294,78 336,86 360,100" fill="none" stroke="${seam}" stroke-width="7" stroke-linecap="round" opacity=".45"/><path d="M260,76 V226 M210,88 C198,130 198,174 210,222 M310,88 C322,130 322,174 310,222" stroke="${seam}" stroke-width="4" opacity=".35"/>`;
+  } else if (product.id === 'cowboy-hat') {
+    hatMarkup = `<ellipse cx="260" cy="250" rx="210" ry="54" fill="${color}"/><path d="M142,222 C154,98 198,72 228,98 C244,74 276,74 292,98 C322,72 366,98 378,222 Z" fill="${color}" stroke="${seam}" stroke-width="2"/><path d="M142,196 C196,216 324,216 378,196 L378,220 C324,238 196,238 142,220 Z" fill="#3b2a1f" opacity=".85"/><path d="M88,248 C146,282 374,282 432,248" fill="none" stroke="${seam}" stroke-width="3" opacity=".45"/>`;
+  } else {
+    const mesh = product.id === 'trucker-hat';
+    hatMarkup = `<path d="M116,222 C122,96 172,58 260,58 C348,58 398,96 404,222 Z" fill="${accent}"/><path d="M118,222 C124,100 174,62 260,62 C346,62 396,100 402,222 Z" fill="${color}" opacity="${mesh ? '.72' : '1'}"/>${mesh ? `<path d="M314,90 L394,220 M338,86 L404,202 M360,96 L402,174 M320,118 H396 M326,146 H402 M332,174 H400" stroke="${seam}" stroke-width="1.2" opacity=".65"/>` : ''}<path d="M260,62 V222 M158,110 C192,132 224,142 260,142 C296,142 328,132 362,110" stroke="${seam}" stroke-width="2" opacity=".55" fill="none"/><path d="M120,222 C164,252 356,252 400,222 L470,272 C398,304 122,304 50,272 Z" fill="${color}"/><path d="M80,270 C154,292 366,292 440,270" fill="none" stroke="${seam}" stroke-width="3" opacity=".45"/><circle cx="260" cy="56" r="11" fill="${color}" stroke="${seam}" stroke-width="1.5"/><circle cx="194" cy="130" r="4" fill="${seam}"/><circle cx="326" cy="130" r="4" fill="${seam}"/>`;
+  }
+
+  const status = rules.errors.length ? '#ef4444' : (rules.warnings.length ? '#f59e0b' : '#16a34a');
+  const svgEl = document.getElementById('card-svg');
+  svgEl.setAttribute('viewBox', `0 0 ${cw} ${ch}`);
+  svgEl.setAttribute('width', String(cw));
+  svgEl.setAttribute('height', String(ch));
+  svgEl.style.filter = 'drop-shadow(0 8px 24px rgba(0,0,0,0.18))';
+  svgEl.innerHTML = `
+    <defs>
+      <clipPath id="${clipId}"><rect x="${printArea.ox}" y="${printArea.oy}" width="${printArea.iw}" height="${printArea.ih}" rx="8"/></clipPath>
+      <linearGradient id="hat-shine" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff" stop-opacity=".24"/><stop offset="58%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".16"/></linearGradient>
+    </defs>
+    <rect x="0" y="0" width="${cw}" height="${ch}" fill="${stageFill}" rx="18"/>
+    ${hatMarkup}
+    ${mockupMarkup ? '' : `<rect x="0" y="0" width="${cw}" height="${ch}" fill="url(#hat-shine)" rx="18"/>`}
+    <rect x="${printArea.ox}" y="${printArea.oy}" width="${printArea.iw}" height="${printArea.ih}" rx="8" fill="${status}" opacity=".09" stroke="${status}" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="${printArea.ox + printArea.iw / 2}" y="${printArea.oy - 8}" text-anchor="middle" font-size="10" font-family="Inter, sans-serif" font-weight="700" fill="${status}">${zone?.name || 'Decoration Zone'}</text>
+    <g id="canvas-design" clip-path="url(#${clipId})"></g>
+    <g id="selection-group" opacity="0"></g>`;
+  updateSizeLabel();
+}
+
 // ─── Canvas dispatcher ───
 function buildCanvas() {
   const preservedLayers = layers.filter(layer => layer.el);
@@ -946,7 +1256,8 @@ function buildCanvas() {
     }
   }
   if (labels)   labels.style.display   = (currentProduct === 'bc') ? 'flex' : 'none';
-  if      (currentProduct === 'wa') buildFramedPrintSVG();
+  if      (currentProduct === 'hat') buildHatSVG();
+  else if (currentProduct === 'wa') buildFramedPrintSVG();
   else if (currentProduct === 'bn') buildBannerSVG();
   else if (currentProduct === 'rs') buildRigidSignSVG();
   else if (currentProduct === 'af') buildAFrameSVG();
@@ -999,6 +1310,13 @@ function updateSizeLabel() {
   if (currentProduct === 'fl') {
     const s = FL_SIZES[fl.size];
     el.textContent = `${s.label} (${s.in})  ·  ${fl.base.replace(/-/g,' ')}  ·  ${fl.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}`;
+    return;
+  }
+  if (currentProduct === 'hat') {
+    const product = getHatProduct();
+    const zone = getHatZone(product);
+    const method = decorationMethods[hat.methodId];
+    el.textContent = `${product.name}  ·  ${hat.baseColor}  ·  ${zone.name} (${zone.maxWidthInches}" x ${zone.maxHeightInches}")  ·  ${method?.label || 'Method'}`;
     return;
   }
   const s = SIZES[bc.size];
@@ -1068,6 +1386,26 @@ function setWa(key, val) { wa[key] = val; buildCanvas(); setTool('swap'); }
 function setBn(key, val) { bn[key] = val; buildCanvas(); setTool('swap'); }
 function setRs(key, val) { rs[key] = val; buildCanvas(); setTool('swap'); }
 function setAf(key, val) { af[key] = val; buildCanvas(); setTool('swap'); }
+function setHat(key, val) {
+  if (key === 'productId') {
+    const nextProduct = hatProducts.find(p => p.id === val) || hatProducts[0];
+    hat.productId = nextProduct.id;
+    if (!nextProduct.baseColors.includes(hat.baseColor)) hat.baseColor = nextProduct.baseColors[0];
+    hat.view = nextProduct.views[0];
+    hat.zoneId = nextProduct.zones[0].id;
+    hat.methodId = getAvailableHatMethods(nextProduct, nextProduct.zones[0])[0] || nextProduct.zones[0].allowedMethods[0];
+  } else if (key === 'zoneId') {
+    const product = getHatProduct();
+    const nextZone = product.zones.find(z => z.id === val) || product.zones[0];
+    hat.zoneId = nextZone.id;
+    hat.view = nextZone.view;
+    if (!getAvailableHatMethods(product, nextZone).includes(hat.methodId)) hat.methodId = getAvailableHatMethods(product, nextZone)[0] || nextZone.allowedMethods[0];
+  } else {
+    hat[key] = val;
+  }
+  buildCanvas();
+  setTool('swap');
+}
 function setFl(key, val) {
   const oldArea = key === 'size' ? getFlPrintArea() : null;
   stashFlagSideLayers();
@@ -1099,7 +1437,8 @@ function setFl(key, val) {
 
 // ─── Product picker ───
 function selectProduct(product) {
-  currentProduct = product;
+  currentProduct = isHatProduct(product) ? 'hat' : product;
+  if (isHatProduct(product)) setHat('productId', product);
   buildCanvas();
   setTool('swap');
 }
@@ -1114,6 +1453,7 @@ function showProductPicker() {
 // ─── Panel renders ───
 function renderSwap() {
   if (!currentProduct) return renderProductPicker();
+  if (currentProduct === 'hat') return renderHat();
   if (currentProduct === 'wa') return renderWallArt();
   if (currentProduct === 'bn') return renderBanner();
   if (currentProduct === 'rs') return renderRigidSign();
@@ -1129,6 +1469,17 @@ function renderProductPicker() {
       <div style="font-size:11px;color:#71717a;">Select what you'd like to customize</div>
     </div>
     <div style="padding:10px;display:flex;flex-direction:column;gap:7px;">
+
+      <button onclick="selectProduct('standard-snapback')" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #18181b;border-radius:8px;background:#fafafa;cursor:pointer;text-align:left;width:100%;transition:all .12s;" onmouseover="this.style.borderColor='#2563eb';this.style.background='#f8fbff'" onmouseout="this.style.borderColor='#18181b';this.style.background='#fafafa'">
+        <div style="width:44px;height:34px;flex-shrink:0;">
+          <svg viewBox="0 0 44 34" style="width:44px;height:34px;"><path d="M8,21 C9,8 16,4 22,4 C30,4 36,8 37,21 Z" fill="#18181b"/><path d="M9,21 C16,26 29,26 36,21 L43,27 C34,32 10,32 1,27 Z" fill="#18181b"/><path d="M22,4 V22" stroke="#3f3f46" stroke-width="1"/></svg>
+        </div>
+        <div style="flex:1;text-align:left;">
+          <div style="font-size:12.5px;font-weight:700;color:#18181b;">Hat Designer</div>
+          <div style="font-size:10.5px;color:#71717a;margin-top:2px;">Snapbacks, truckers, beanies, hardhats &amp; more</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
 
       <button onclick="selectProduct('bc')" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #e4e4e7;border-radius:8px;background:white;cursor:pointer;text-align:left;width:100%;transition:all .12s;" onmouseover="this.style.borderColor='#93c5fd';this.style.background='#f8fbff'" onmouseout="this.style.borderColor='#e4e4e7';this.style.background='white'">
         <div style="width:42px;height:28px;background:#18181b;border-radius:3px;flex-shrink:0;"></div>
@@ -1201,6 +1552,66 @@ function renderProductPicker() {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
 
+    </div>`;
+}
+
+function renderHat() {
+  const product = getHatProduct();
+  const zone = getHatZone(product);
+  const methods = getAvailableHatMethods(product, zone);
+  if (!methods.includes(hat.methodId)) hat.methodId = methods[0] || zone.allowedMethods[0];
+  const method = decorationMethods[hat.methodId] || decorationMethods[methods[0]];
+  const rules = evaluateHatRules(product, zone, hat.methodId);
+  const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
+  const methodFamilies = [...new Set(methods.map(id => decorationMethods[id]?.family).filter(Boolean))];
+  const methodButtons = methodFamilies.map(family => `
+    <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin:8px 0 5px;">${family}</div>
+    <div style="display:flex;flex-direction:column;gap:5px;">${methods.filter(id => decorationMethods[id]?.family === family).map(id => {
+      const m = decorationMethods[id];
+      return `<button onclick="setHat('methodId','${id}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 9px;border:1.5px solid ${hat.methodId===id?'#2563eb':'#e4e4e7'};border-radius:7px;background:${hat.methodId===id?'#eff6ff':'white'};cursor:pointer;width:100%;text-align:left;">
+        <span><span style="display:block;font-size:12px;font-weight:600;color:#18181b;">${m.label}</span><span style="display:block;font-size:10px;color:#a1a1aa;margin-top:1px;">${m.priceType} · min ${m.minQty}</span></span>
+        <span style="font-size:11px;font-weight:700;color:#52525b;">$${m.basePrice}</span>
+      </button>`;
+    }).join('')}</div>`).join('');
+  const price = calcHatPrice();
+  const swatch = c => `<button title="${c}" onclick="setHat('baseColor','${c}')" style="width:26px;height:26px;border-radius:6px;background:${getHatBaseColorHex(c)};border:${hat.baseColor===c?'2px solid #2563eb':'1.5px solid rgba(0,0,0,.14)'};box-shadow:${hat.baseColor===c?'0 0 0 2px #eff6ff':''};cursor:pointer;"></button>`;
+  const validationItems = [...rules.errors.map(e => ['#ef4444', e]), ...rules.warnings.map(w => ['#d97706', w])];
+  return `
+    <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button onclick="showProductPicker()" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Products
+      </button>
+      <span style="color:#d4d4d8;">›</span><span style="font-size:11.5px;font-weight:600;color:#18181b;">Hat Designer</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;" class="thin-scroll">
+      ${sec('Hat Type', `<div style="display:flex;flex-direction:column;gap:5px;">${hatProducts.map(p => `<button onclick="setHat('productId','${p.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 9px;border:1.5px solid ${hat.productId===p.id?'#2563eb':'#e4e4e7'};border-radius:7px;background:${hat.productId===p.id?'#eff6ff':'white'};cursor:pointer;width:100%;text-align:left;"><span><span style="display:block;font-size:12px;font-weight:700;color:#18181b;">${p.name}</span><span style="display:block;font-size:10px;color:#a1a1aa;margin-top:1px;">${p.views.join(', ')}</span></span><span style="font-size:11px;color:#71717a;">$${p.basePrice}</span></button>`).join('')}</div>`, true)}
+      ${sec('Base Color', `<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:7px;">${product.baseColors.map(swatch).join('')}</div><div style="font-size:11px;color:#52525b;">${hat.baseColor}</div>`, true)}
+      ${sec('Editable Zone', `<div style="display:flex;flex-direction:column;gap:5px;">${product.zones.map(z => `<button onclick="setHat('zoneId','${z.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 9px;border:1.5px solid ${hat.zoneId===z.id?'#2563eb':'#e4e4e7'};border-radius:7px;background:${hat.zoneId===z.id?'#eff6ff':'white'};cursor:pointer;width:100%;text-align:left;"><span><span style="display:block;font-size:12px;font-weight:600;color:#18181b;">${z.name}</span><span style="display:block;font-size:10px;color:#a1a1aa;margin-top:1px;">${z.view} · ${z.maxWidthInches}" x ${z.maxHeightInches}"</span></span><span style="font-size:10px;color:#71717a;">${z.allowedMethods.length} methods</span></button>`).join('')}</div>`, true)}
+      ${sec('Decoration Method', methodButtons || '<div style="font-size:12px;color:#ef4444;">No compatible methods for this zone.</div>', true)}
+      ${sec('Production Options', `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px;">
+          <label style="font-size:10px;color:#71717a;">Thread
+            <input type="color" value="${hat.threadColor}" oninput="setHat('threadColor',this.value)" style="width:100%;height:30px;margin-top:3px;border:1px solid #e4e4e7;border-radius:5px;background:white;padding:1px;">
+          </label>
+          <label style="font-size:10px;color:#71717a;">Tag Thread
+            <input type="color" value="${hat.tagThreadColor}" oninput="setHat('tagThreadColor',this.value)" style="width:100%;height:30px;margin-top:3px;border:1px solid #e4e4e7;border-radius:5px;background:white;padding:1px;">
+          </label>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+          <select onchange="setHat('patchMaterial',this.value)" style="font-size:12px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px;background:white;"><option value="leather"${hat.patchMaterial==='leather'?' selected':''}>Leather</option><option value="pvc"${hat.patchMaterial==='pvc'?' selected':''}>PVC</option><option value="woven"${hat.patchMaterial==='woven'?' selected':''}>Woven</option><option value="silicone"${hat.patchMaterial==='silicone'?' selected':''}>Silicone</option></select>
+          <select onchange="setHat('patchShape',this.value)" style="font-size:12px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px;background:white;"><option value="rectangle"${hat.patchShape==='rectangle'?' selected':''}>Rectangle</option><option value="circle"${hat.patchShape==='circle'?' selected':''}>Circle</option><option value="shield"${hat.patchShape==='shield'?' selected':''}>Shield</option><option value="custom"${hat.patchShape==='custom'?' selected':''}>Custom</option></select>
+        </div>
+        <label style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:11.5px;color:#52525b;">Rush production <input type="checkbox" ${hat.rush?'checked':''} onchange="setHat('rush',this.checked)"></label>`, false)}
+      ${sec('Artwork Validation', `<div style="font-size:11px;line-height:1.55;color:#52525b;">${hat.artwork ? `<strong>${hat.artwork.name}</strong><br>${hat.artwork.ext.toUpperCase()} · ${(hat.artwork.size/1024).toFixed(0)} KB` : 'Upload artwork from the Add Image tool to validate SVG, PNG, JPG, PDF, AI, or EPS files against this zone.'}</div>${validationItems.length ? `<div style="display:flex;flex-direction:column;gap:5px;margin-top:8px;">${validationItems.map(([c,t]) => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:10.5px;line-height:1.4;color:${c};background:${c==='#ef4444'?'#fef2f2':'#fffbeb'};border:1px solid ${c==='#ef4444'?'#fecaca':'#fde68a'};border-radius:6px;padding:6px 7px;"><span style="font-weight:800;">!</span><span>${t}</span></div>`).join('')}</div>` : `<div style="margin-top:8px;font-size:10.5px;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:6px 7px;">Current product, zone, and method combination is valid.</div>`}`, true)}
+      ${sec('Quantity & Pricing', `<select onchange="setHat('quantity',parseInt(this.value))" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">${[1,12,24,48,72,144,288,500].map(q=>`<option value="${q}"${hat.quantity===q?' selected':''}>${q} hat${q>1?'s':''}</option>`).join('')}</select>
+        <div style="margin-top:10px;">
+          <div class="price-row"><span>Hat blank</span><span>$${product.basePrice} x ${hat.quantity}</span></div>
+          <div class="price-row"><span>${method?.label || 'Decoration'}</span><span>$${method?.basePrice || 0} x ${hat.quantity}</span></div>
+          <div class="price-row"><span>Setup / digitizing</span><span>$${method?.setupFee || 0}</span></div>
+          ${hat.rush?'<div class="price-row"><span>Rush fee</span><span>$35</span></div>':''}
+          <div class="price-row total"><span>Estimated total</span><span>$${price}</span></div>
+        </div>`, true)}
+      <div style="padding:10px 12px 16px;"><button onclick="handleDone()" ${rules.errors.length?'disabled':''} style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:${rules.errors.length?'#a1a1aa':'#18181b'};color:white;border:none;cursor:${rules.errors.length?'not-allowed':'pointer'};">${rules.errors.length?'Resolve Rules':'Add to Cart'} — $${price}</button></div>
     </div>`;
 }
 
@@ -1711,11 +2122,11 @@ function renderImage() {
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px;display:block;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <div style="font-size:10.5px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Click or drop images here</div>
         <div style="display:inline-block;background:#2563eb;color:white;font-size:11.5px;font-weight:700;padding:7px 18px;border-radius:5px;cursor:pointer;margin-bottom:8px;">BROWSE FILE</div>
-        <div style="font-size:10.5px;color:#a1a1aa;margin-top:4px;">PNG, JPG, SVG, WebP  ·  300dpi+</div>
+        <div style="font-size:10.5px;color:#a1a1aa;margin-top:4px;">SVG, PNG, JPG, PDF, AI, EPS  ·  300dpi+</div>
       </div>
       <div style="margin-top:10px;padding:8px 10px;background:#fafafa;border-radius:6px;border:1px solid #f0f0f0;">
         <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Tips for best results</div>
-        <div style="font-size:11px;color:#52525b;line-height:1.6;">• Use CMYK color mode<br>• 300 DPI at final size<br>• Include 0.125" bleed<br>• Keep text in the safe zone</div>
+        <div style="font-size:11px;color:#52525b;line-height:1.6;">• Use vector art when possible<br>• 300 DPI at final size<br>• Keep details bold for embroidery<br>• Stay inside the active zone</div>
       </div>
     </div>`;
 }
@@ -2051,7 +2462,9 @@ const shapeState = { type: 'rect', fillColor: '#3b82f6', strokeColor: 'none', st
 
 function getPrintAreaBounds() {
   let ax, ay, aw, ah;
-  if (currentProduct === 'wa') {
+  if (currentProduct === 'hat') {
+    const p = getHatPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
+  } else if (currentProduct === 'wa') {
     const p = getWaPrintArea();
     ax = p.ox + p.ix; ay = p.oy + p.iy; aw = p.iw; ah = p.ih;
   } else if (currentProduct === 'bn') {
@@ -2105,7 +2518,7 @@ function applyLayerTransform(layer) {
 }
 
 function hideProductPlaceholder() {
-  ['wa', 'bn', 'rs', 'af', 'fl'].forEach(id => {
+  ['wa', 'bn', 'rs', 'af', 'fl', 'hat'].forEach(id => {
     const ph = document.getElementById(`${id}-placeholder`);
     if (ph) ph.setAttribute('display', 'none');
   });
@@ -2919,10 +3332,12 @@ function addTextLayer() {
 function triggerImageUpload() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml';
+  input.accept = '.svg,.png,.jpg,.jpeg,.pdf,.ai,.eps,image/png,image/jpeg,image/webp,image/gif,image/svg+xml,application/pdf';
   input.onchange = e => {
     const file = e.target.files[0];
     if (!file) return;
+    validateArtworkFile(file);
+    if (!canRenderArtworkFile(file)) { setTool('swap'); return; }
     const reader = new FileReader();
     reader.onload = evt => addImageToCanvas(evt.target.result, file.name);
     reader.readAsDataURL(file);
@@ -2932,10 +3347,35 @@ function triggerImageUpload() {
 
 function handleDrop(e) {
   const file = e.dataTransfer.files[0];
-  if (!file || !file.type.startsWith('image/')) return;
+  if (!file) return;
+  validateArtworkFile(file);
+  if (!canRenderArtworkFile(file)) { setTool('swap'); return; }
   const reader = new FileReader();
   reader.onload = evt => addImageToCanvas(evt.target.result, file.name);
   reader.readAsDataURL(file);
+}
+
+function canRenderArtworkFile(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  return ['svg','png','jpg','jpeg','webp','gif'].includes(ext) || file.type.startsWith('image/');
+}
+
+function validateArtworkFile(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const allowed = ['svg','png','jpg','jpeg','pdf','ai','eps','webp','gif'];
+  const product = getHatProduct();
+  const zone = getHatZone(product);
+  const method = decorationMethods[hat.methodId];
+  const lowResolution = file.size < 80 * 1024 && ['png','jpg','jpeg','webp','gif'].includes(ext);
+  const tooLarge = file.size > 25 * 1024 * 1024;
+  if (currentProduct === 'hat') {
+    hat.artwork = { name:file.name, ext, size:file.size, allowed:allowed.includes(ext), lowResolution, tooLarge };
+    const issues = [];
+    if (!allowed.includes(ext)) issues.push('Unsupported file type.');
+    if (method?.prefersVector && !['svg','pdf','ai','eps'].includes(ext)) issues.push('Vector artwork is preferred for this method.');
+    if (zone.maxWidthInches < 2.5 && ['jpg','jpeg','png'].includes(ext)) issues.push('Small zones need simple, high-contrast artwork.');
+    if (issues.length && !canRenderArtworkFile(file)) alert(`Artwork received for review:\n\n${issues.join('\n')}`);
+  }
 }
 
 function addImageToCanvas(dataUrl, name) {
@@ -2947,7 +3387,10 @@ function addImageToCanvas(dataUrl, name) {
   img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   let ix = 0, iy = 0, iw = 100, ih = 100;
 
-  if (currentProduct === 'wa') {
+  if (currentProduct === 'hat') {
+    const p = getHatPrintArea(); ix = p.ox; iy = p.oy; iw = p.iw; ih = p.ih;
+    const ph = document.getElementById('hat-placeholder'); if (ph) ph.setAttribute('display', 'none');
+  } else if (currentProduct === 'wa') {
     const p = getWaPrintArea(); ix = p.ox + p.ix; iy = p.oy + p.iy; iw = p.iw; ih = p.ih;
     const ph = document.getElementById('wa-placeholder'); if (ph) ph.setAttribute('display', 'none');
   } else if (currentProduct === 'bn') {
@@ -3437,6 +3880,14 @@ function drawRulers() {
 
 function showSpecs() {
   if (!currentProduct) return;
+  if (currentProduct === 'hat') {
+    const product = getHatProduct();
+    const zone = getHatZone(product);
+    const method = decorationMethods[hat.methodId];
+    const rules = evaluateHatRules(product, zone, hat.methodId);
+    alert(`Hat Design Specs\n\nProduct: ${product.name}\nColor: ${hat.baseColor}\nZone: ${zone.name} (${zone.maxWidthInches}" x ${zone.maxHeightInches}")\nMethod: ${method?.label || 'None'}\nQuantity: ${hat.quantity}\nArtwork: ${hat.artwork?.name || 'Not uploaded'}\n\nRules: ${rules.valid ? 'Valid' : rules.errors.join('; ')}\nWarnings: ${rules.warnings.join('; ') || 'None'}\n\nEstimated Total: $${calcHatPrice()}`);
+    return;
+  }
   if (currentProduct === 'wa') {
     const s = WA_SIZES[wa.size];
     const mat = wa.frameMaterial === 'pvc-composite' ? 'PVC/Composite' : wa.frameMaterial.charAt(0).toUpperCase() + wa.frameMaterial.slice(1);
@@ -3471,6 +3922,18 @@ function showSpecs() {
 }
 
 function handleDone() {
+  if (currentProduct === 'hat') {
+    const product = getHatProduct();
+    const zone = getHatZone(product);
+    const method = decorationMethods[hat.methodId];
+    const rules = evaluateHatRules(product, zone, hat.methodId);
+    if (!rules.valid) {
+      alert(`Please resolve these rules before adding to cart:\n\n${rules.errors.join('\n')}`);
+      return;
+    }
+    if (confirm(`Add to cart?\n\n${product.name}  ·  ${hat.baseColor}\n${zone.name}  ·  ${method?.label || 'Decoration'}\nQty: ${hat.quantity}\n\nEstimated total: $${calcHatPrice()}`)) window.location.href = 'cart.html';
+    return;
+  }
   if (currentProduct === 'wa') {
     const s = WA_SIZES[wa.size];
     const mat = wa.frameMaterial === 'pvc-composite' ? 'PVC/Composite' : wa.frameMaterial.charAt(0).toUpperCase() + wa.frameMaterial.slice(1);
