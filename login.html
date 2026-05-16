@@ -75,17 +75,17 @@
       <div class="divider mb-5">OR</div>
 
       <!-- Email form -->
-      <div class="space-y-4">
+      <form class="space-y-4" data-auth-form="login">
         <div>
           <label class="label">Email</label>
-          <input type="email" class="input" placeholder="you@company.com"/>
+          <input type="email" class="input" name="email" placeholder="you@company.com" autocomplete="email"/>
         </div>
         <div>
           <div class="flex items-center justify-between mb-1.5">
             <label class="label mb-0">Password</label>
             <a href="forgot-password.html" class="text-[12.5px] font-medium hover:underline">Forgot password?</a>
           </div>
-          <input type="password" class="input" placeholder="Enter password"/>
+          <input type="password" class="input" name="password" placeholder="Enter password" autocomplete="current-password"/>
         </div>
 
         <label class="flex items-center gap-2 text-[13px] text-zinc-600 cursor-pointer py-1">
@@ -93,18 +93,18 @@
           Keep me signed in for 30 days
         </label>
 
-        <button class="btn btn-primary w-full mt-2">
+        <button class="btn btn-primary w-full mt-2" type="submit" data-auth-submit>
           Sign in
           <svg class="icon-sm" viewBox="0 0 24 24"><path d="M4 12L20 12M20 12L15 17M20 12L15 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-      </div>
+      </form>
 
       <div class="relative my-6">
         <div class="absolute inset-0 flex items-center"><div class="w-full border-t" style="border-color: hsl(var(--border));"></div></div>
         <div class="relative flex justify-center text-[11.5px]"><span class="bg-white px-2 text-zinc-500">or</span></div>
       </div>
 
-      <button class="btn btn-outline w-full">
+      <button class="btn btn-outline w-full" type="button" data-auth-magic-link>
         <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
         Email me a magic link
       </button>
@@ -158,6 +158,9 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/supabase-config.js"></script>
+<script src="assets/auth.js"></script>
 <script src="assets/site.js" defer></script>
 </body>
 </html>

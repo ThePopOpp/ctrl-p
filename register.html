@@ -77,28 +77,28 @@
       <div class="divider mb-5">OR</div>
 
       <!-- Form -->
-      <div class="space-y-4">
+      <form class="space-y-4" data-auth-form="register">
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="label">First name</label>
-            <input type="text" class="input" placeholder="Jane"/>
+            <input type="text" class="input" name="first_name" placeholder="Jane" autocomplete="given-name"/>
           </div>
           <div>
             <label class="label">Last name</label>
-            <input type="text" class="input" placeholder="Doe"/>
+            <input type="text" class="input" name="last_name" placeholder="Doe" autocomplete="family-name"/>
           </div>
         </div>
         <div>
           <label class="label">Email</label>
-          <input type="email" class="input" placeholder="you@company.com"/>
+          <input type="email" class="input" name="email" placeholder="you@company.com" autocomplete="email"/>
         </div>
         <div>
           <label class="label">Company <span class="text-zinc-400 font-normal">(optional)</span></label>
-          <input type="text" class="input" placeholder="Your company name"/>
+          <input type="text" class="input" name="company" placeholder="Your company name" autocomplete="organization"/>
         </div>
         <div>
           <label class="label">Password</label>
-          <input type="password" class="input" placeholder="At least 8 characters"/>
+          <input type="password" class="input" name="password" placeholder="At least 8 characters" autocomplete="new-password"/>
           <div class="flex items-center gap-1.5 mt-2">
             <div class="pw-meter flex-1"><div class="pw-meter-fill bg-amber-500" style="width: 60%"></div></div>
             <span class="text-[11px] text-amber-600 font-medium">Medium</span>
@@ -120,11 +120,11 @@
           <span>Send me occasional emails about new products, design tips, and promotions</span>
         </label>
 
-        <button class="btn btn-primary w-full mt-2">
+        <button class="btn btn-primary w-full mt-2" type="submit" data-auth-submit>
           Create account
           <svg class="icon-sm" viewBox="0 0 24 24"><path d="M4 12L20 12M20 12L15 17M20 12L15 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-      </div>
+      </form>
 
       <div class="text-center mt-8 text-[13.5px] text-zinc-500">
         Already have an account? <a href="login.html" class="font-semibold text-zinc-900 hover:underline">Sign in</a>
@@ -190,6 +190,9 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/supabase-config.js"></script>
+<script src="assets/auth.js"></script>
 <script src="assets/site.js" defer></script>
 </body>
 </html>

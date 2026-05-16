@@ -71,7 +71,7 @@
   .tab-btn.active { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
 </style>
 </head>
-<body>
+<body data-admin-page>
 
 <div class="grid grid-cols-[220px_1fr] min-h-screen">
 
@@ -775,5 +775,73 @@
   </main>
 </div>
 
+<div id="admin-order-drawer" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <button type="button" class="absolute inset-0 bg-black/60" data-order-drawer-close aria-label="Close order details"></button>
+  <aside class="absolute right-0 top-0 h-full w-[440px] max-w-full panel border-l p-5 overflow-y-auto" style="border-radius: 0; border-color: var(--border);">
+    <div class="flex items-start justify-between gap-4 mb-5">
+      <div>
+        <div class="text-[10.5px] font-semibold uppercase tracking-wider" style="color: var(--text-dimmer);">Order detail</div>
+        <h2 class="font-display text-[22px] font-bold mt-1" data-order-drawer-number>Order</h2>
+        <div class="text-[12px] mt-1" style="color: var(--text-dim);" data-order-drawer-customer></div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" data-order-drawer-close aria-label="Close order details">Close</button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-5">
+      <div class="panel-2 rounded-md p-3">
+        <div class="text-[10.5px] uppercase font-semibold" style="color: var(--text-dimmer);">Order status</div>
+        <div class="mt-2" data-order-drawer-status></div>
+      </div>
+      <div class="panel-2 rounded-md p-3">
+        <div class="text-[10.5px] uppercase font-semibold" style="color: var(--text-dimmer);">Payment</div>
+        <div class="mt-2" data-order-drawer-payment></div>
+      </div>
+      <div class="panel-2 rounded-md p-3">
+        <div class="text-[10.5px] uppercase font-semibold" style="color: var(--text-dimmer);">Production</div>
+        <div class="mt-2 text-[12.5px] font-semibold" data-order-drawer-production></div>
+      </div>
+      <div class="panel-2 rounded-md p-3">
+        <div class="text-[10.5px] uppercase font-semibold" style="color: var(--text-dimmer);">Total</div>
+        <div class="mt-2 text-[12.5px] font-semibold" data-order-drawer-total></div>
+      </div>
+    </div>
+
+    <div class="space-y-5">
+      <section>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-[13.5px]">Line items</h3>
+          <span class="badge bg-zinc-500/10 text-zinc-300" data-order-drawer-item-count>0</span>
+        </div>
+        <div class="space-y-2" data-order-drawer-items></div>
+      </section>
+
+      <section>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-[13.5px]">Production jobs</h3>
+          <span class="badge bg-amber-500/10 text-amber-400" data-order-drawer-job-count>0</span>
+        </div>
+        <div class="space-y-2" data-order-drawer-jobs></div>
+      </section>
+
+      <section>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-[13.5px]">Payments and messages</h3>
+        </div>
+        <div class="space-y-2" data-order-drawer-activity></div>
+      </section>
+
+      <section>
+        <h3 class="font-semibold text-[13.5px] mb-2">Notes</h3>
+        <div class="panel-2 rounded-md p-3 text-[12px] leading-relaxed" style="color: var(--text-dim);" data-order-drawer-notes>No notes yet.</div>
+      </section>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/supabase-config.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/admin-api.js"></script>
+<script src="assets/admin-dashboard.js"></script>
 </body>
 </html>
