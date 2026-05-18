@@ -567,7 +567,7 @@ function ProductSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-3xl">
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
         <SheetHeader>
           <SheetTitle>{mode === "add" ? "Add product" : product?.name || "Product"}</SheetTitle>
           <SheetDescription>{mode === "add" ? "Define the fields needed for storefront, production, and the online product designer." : `${product?.sku || "SKU"} - ${product?.category || "Catalog"}`}</SheetDescription>
