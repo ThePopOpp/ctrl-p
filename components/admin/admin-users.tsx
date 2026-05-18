@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
   ChevronRight,
+  Trash2,
   Mail,
   Moon,
   Search,
@@ -15,7 +16,7 @@ import {
   UserPlus,
 } from "lucide-react";
 
-import { getCurrentAdminProfile, loadAdminDashboardData, updateAdminUser } from "@/lib/admin/admin-api";
+import { getCurrentAdminProfile, loadAdminDashboardData, removeAdminUser, updateAdminUser } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData, AdminProfile, AdminUser } from "@/lib/admin/types";
 import { ROLES, type AppRole } from "@/lib/rbac/roles";
@@ -394,12 +395,15 @@ function UserSheet({
   const [role, setRole] = useState<AppRole>(ROLES.CUSTOMER);
   const [status, setStatus] = useState("active");
   const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [removeConfirm, setRemoveConfirm] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!user) return;
     setRole(user.role);
     setStatus(user.status);
+    setRemoveConfirm("");
     setMessage("");
   }, [user]);
 
@@ -425,6 +429,22 @@ function UserSheet({
       setMessage(error instanceof Error ? error.message : "Could not update user access.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function removeUser() {
+    if (!user || removeConfirm !== "REMOVE") return;
+    setRemoving(true);
+    setMessage("Removing user...");
+    try {
+      await removeAdminUser(user.id);
+      setMessage("User removed.");
+      await onRefresh();
+      onOpenChange(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not remove user.");
+    } finally {
+      setRemoving(false);
     }
   }
 
@@ -510,6 +530,32 @@ function UserSheet({
               <div>Customer, vendor, designer, referral, and reseller roles should move toward assigned-record policies in later phases.</div>
               <div>Super admin and admin roles currently have broad permission coverage.</div>
             </div>
+          </div>
+
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-300">
+              <Trash2 className="h-4 w-4" />
+              Remove user
+            </h3>
+            <p className="mt-1 text-xs text-red-700/80 dark:text-red-200/80">
+              This suspends the profile, marks it deleted, and removes the Supabase Auth login when possible. Existing orders and records remain for audit history.
+            </p>
+            <Input
+              className="mt-3"
+              placeholder="Type REMOVE to confirm"
+              value={removeConfirm}
+              onChange={(event) => setRemoveConfirm(event.target.value)}
+              disabled={isSelf || removing}
+            />
+            {isSelf && <div className="mt-2 text-xs text-red-700 dark:text-red-300">You cannot remove your own account.</div>}
+            <Button
+              className="mt-3 w-full"
+              variant="destructive"
+              disabled={isSelf || removeConfirm !== "REMOVE" || removing}
+              onClick={removeUser}
+            >
+              {removing ? "Removing..." : "Remove user"}
+            </Button>
           </div>
         </div>
       </SheetContent>

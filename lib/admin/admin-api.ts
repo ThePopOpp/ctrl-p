@@ -71,6 +71,7 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
     db
       .from("users")
       .select("id, email, full_name, phone, company, role, status, created_at, last_login_at, deleted_at")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(200),
     db
@@ -198,6 +199,35 @@ export async function updateAdminUser(userId: string, updates: { role: AppRole; 
   }
 
   return payload.user;
+}
+
+export async function removeAdminUser(userId: string) {
+  const db = requireClient();
+  const currentId = await currentUserId();
+
+  if (currentId === userId) {
+    throw new Error("You cannot remove your own admin account.");
+  }
+
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before removing a user.");
+
+  const response = await fetch("/api/admin/users", {
+    method: "DELETE",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ user_id: userId }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not remove user.");
+  }
+
+  return payload;
 }
 
 export async function createAdminInvoice(input: {
