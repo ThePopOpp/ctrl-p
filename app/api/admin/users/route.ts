@@ -79,6 +79,7 @@ export async function POST(request: Request) {
     company?: string;
     role?: string;
     status?: string;
+    send_invite?: boolean;
   } | null;
 
   const email = body?.email?.trim().toLowerCase();
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
   const company = body?.company?.trim() || null;
   const role = body?.role || ROLES.CUSTOMER;
   const status = body?.status || "active";
+  const sendInvite = Boolean(body?.send_invite);
 
   if (!email || !email.includes("@")) {
     return jsonError("A valid email address is required.");
@@ -107,16 +109,24 @@ export async function POST(request: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const temporaryPassword = `${crypto.randomUUID()}aA1!`;
-  const created = await adminClient.auth.admin.createUser({
-    email,
-    password: temporaryPassword,
-    email_confirm: true,
-    user_metadata: {
-      full_name: fullName,
-      company,
-    },
-  });
+  const appUrl = env("PUBLIC_APP_URL") || "https://my.controlp.io";
+  const created = sendInvite
+    ? await adminClient.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${appUrl.replace(/\/$/, "")}/login`,
+        data: {
+          full_name: fullName,
+          company,
+        },
+      })
+    : await adminClient.auth.admin.createUser({
+        email,
+        password: `${crypto.randomUUID()}aA1!`,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName,
+          company,
+        },
+      });
 
   if (created.error || !created.data.user) {
     return jsonError(created.error?.message || "Could not create auth user.", 400);
@@ -142,13 +152,13 @@ export async function POST(request: Request) {
 
   await adminClient.from("activity_logs").insert({
     actor_id: verified.actorId,
-    action: "user_created",
+    action: sendInvite ? "user_invited" : "user_created",
     entity_type: "user",
     entity_id: userId,
-    details: { email, role, status },
+    details: { email, role, status, send_invite: sendInvite },
   });
 
-  return NextResponse.json({ user: profileResult.data });
+  return NextResponse.json({ user: profileResult.data, invited: sendInvite });
 }
 
 export async function PATCH(request: Request) {

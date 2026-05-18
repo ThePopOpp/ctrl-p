@@ -576,7 +576,7 @@ function AddUserSheet({
         throw new Error("Only a super admin can create another super admin.");
       }
 
-      setMessage("Creating user...");
+      setMessage(mode === "invite" ? "Sending invite..." : "Creating user...");
       const db = getSupabaseBrowserClient();
       const session = db ? (await db.auth.getSession()).data.session : null;
 
@@ -605,7 +605,7 @@ function AddUserSheet({
         throw new Error(payload.error || "Could not create user.");
       }
 
-      setMessage("User created.");
+      setMessage(mode === "invite" ? "Invite sent." : "User created.");
       await onCreated();
       setFullName("");
       setEmail("");
@@ -678,7 +678,7 @@ function AddUserSheet({
 
           <div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground">
             {mode === "invite"
-              ? "Invited users are created as pending profiles for now. The next auth slice can send Supabase invite links or branded email invites."
+              ? "This sends a Supabase Auth invite email and creates a pending profile with the selected role."
               : "This creates the Supabase auth account server-side, then updates the matching public.users profile. The server must have SUPABASE_SERVICE_ROLE_KEY configured."}
           </div>
 
