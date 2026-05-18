@@ -450,7 +450,7 @@ function UserSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-xl">
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
         <SheetHeader>
           <SheetTitle>{user.full_name || user.email || "User account"}</SheetTitle>
           <SheetDescription>{human(user.role)} - {human(user.status)}</SheetDescription>
@@ -668,7 +668,7 @@ function AddUserSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-xl">
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
         <SheetHeader>
           <SheetTitle>{mode === "invite" ? "Invite user" : "Add user"}</SheetTitle>
           <SheetDescription>
@@ -767,7 +767,7 @@ function RoleReviewSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-2xl">
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
         <SheetHeader>
           <SheetTitle>Review roles</SheetTitle>
           <SheetDescription>Audit the current RBAC roles, active users, and intended access groupings.</SheetDescription>

@@ -511,7 +511,7 @@ function NewInvoiceSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-xl">
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
         <SheetHeader>
           <SheetTitle>New invoice</SheetTitle>
           <SheetDescription>Create a pending invoice record for an existing order.</SheetDescription>

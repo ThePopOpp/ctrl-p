@@ -446,7 +446,7 @@ function ComposeMessageSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-xl">
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
         <SheetHeader>
           <SheetTitle>New message</SheetTitle>
           <SheetDescription>Send email, SMS, dashboard, or internal messages to one contact or a role-based audience.</SheetDescription>

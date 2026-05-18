@@ -547,7 +547,7 @@ function OrderSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-2xl">
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
         <SheetHeader>
           <SheetTitle>#{order?.order_number || "Order"}</SheetTitle>
           <SheetDescription>{order?.users?.full_name || order?.company || "Guest customer"} - {order?.customer_email}</SheetDescription>
