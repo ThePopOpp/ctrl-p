@@ -346,7 +346,7 @@ function NewInvoiceSheet({
   const [deliveryMethod, setDeliveryMethod] = useState("none");
   const [deliveryRecipient, setDeliveryRecipient] = useState("");
   const [invoiceMessage, setInvoiceMessage] = useState("Thank you for choosing ControlP.io. You can review and pay this invoice using the secure link.");
-  const [senderLogoUrl, setSenderLogoUrl] = useState("");
+  const [senderLogoUrl, setSenderLogoUrl] = useState("https://my.controlp.io/logos/ctrl-p-logo-dark.svg");
   const [senderName, setSenderName] = useState("ControlP.io");
   const [senderPhone, setSenderPhone] = useState("");
   const [senderEmail, setSenderEmail] = useState("hello@controlp.io");
@@ -388,6 +388,7 @@ function NewInvoiceSheet({
     setDeliveryMethod("none");
     setDeliveryRecipient(first?.customer_email || first?.customer_phone || "");
     setInvoiceMessage("Thank you for choosing ControlP.io. You can review and pay this invoice using the secure link.");
+    setSenderLogoUrl("https://my.controlp.io/logos/ctrl-p-logo-dark.svg");
     setNotes("");
     setMessage("");
     setPreviewOpen(false);

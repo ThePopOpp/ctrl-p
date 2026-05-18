@@ -64,13 +64,13 @@ export function defaultDashboardPathForRole(role: string | null | undefined) {
   switch (role) {
     case ROLES.SUPER_ADMIN:
     case ROLES.ADMIN:
-      return "/dashboard/admin";
+      return "/admin";
     case ROLES.EMPLOYEE:
     case ROLES.STAFF:
     case ROLES.PRODUCTION_MANAGER:
     case ROLES.INSTALLER:
     case ROLES.CUSTOMER_SUPPORT:
-      return "/dashboard/employee";
+      return "/admin";
     case ROLES.VENDOR:
       return "/dashboard/vendor";
     case ROLES.DESIGNER:

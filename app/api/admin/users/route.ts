@@ -22,11 +22,26 @@ function smtpReady() {
   return Boolean(env("SMTP_HOST") && env("SMTP_PORT") && env("SMTP_USER") && env("SMTP_PASSWORD"));
 }
 
+function cleanAppUrl(request: Request) {
+  const configured = env("PUBLIC_APP_URL");
+  const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const requestOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : "";
+  const candidate = configured && !/localhost|127\.0\.0\.1/i.test(configured)
+    ? configured
+    : requestOrigin && !/localhost|127\.0\.0\.1/i.test(requestOrigin)
+      ? requestOrigin
+      : "https://my.controlp.io";
+
+  return candidate.replace(/\/$/, "");
+}
+
 async function sendInviteEmail(input: {
   email: string;
   fullName: string | null;
   actionLink: string;
   role: string;
+  appUrl: string;
 }) {
   if (!smtpReady()) {
     return { error: "SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASSWORD are required to send branded invite emails." };
@@ -45,6 +60,7 @@ async function sendInviteEmail(input: {
 
   const name = input.fullName || input.email;
   const subject = "You're invited to ControlP.io";
+  const logoUrl = `${input.appUrl}/logos/ctrl-p-logo-dark.svg`;
   const text = [
     `Hi ${name},`,
     "",
@@ -57,6 +73,9 @@ async function sendInviteEmail(input: {
 
   const html = `
     <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111827">
+      <div style="margin:0 0 24px">
+        <img src="${logoUrl}" alt="ControlP.io" width="180" style="display:block;max-width:180px;height:auto" />
+      </div>
       <h2 style="margin:0 0 12px">You're invited to ControlP.io</h2>
       <p>Hi ${name},</p>
       <p>You've been invited to ControlP.io as <strong>${input.role.replace(/_/g, " ")}</strong>.</p>
@@ -155,6 +174,7 @@ export async function POST(request: Request) {
   const role = body?.role || ROLES.CUSTOMER;
   const status = body?.status || "active";
   const sendInvite = Boolean(body?.send_invite);
+  const profileStatus = sendInvite ? "active" : status;
 
   if (!email || !email.includes("@")) {
     return jsonError("A valid email address is required.");
@@ -168,7 +188,7 @@ export async function POST(request: Request) {
     return jsonError("Only a super admin can create another super admin.", 403);
   }
 
-  if (!userStatuses.has(status)) {
+  if (!userStatuses.has(profileStatus)) {
     return jsonError("Selected status is not valid.");
   }
 
@@ -176,8 +196,8 @@ export async function POST(request: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const appUrl = env("PUBLIC_APP_URL") || "https://my.controlp.io";
-  const redirectTo = `${appUrl.replace(/\/$/, "")}/login`;
+  const appUrl = cleanAppUrl(request);
+  const redirectTo = `${appUrl}/login`;
   let inviteLinkType: "invite" | "recovery" = "invite";
   let created = sendInvite
     ? await adminClient.auth.admin.generateLink({
@@ -222,7 +242,7 @@ export async function POST(request: Request) {
       return jsonError("Supabase did not return an invite link.", 400);
     }
 
-    const emailResult = await sendInviteEmail({ email, fullName, actionLink, role });
+    const emailResult = await sendInviteEmail({ email, fullName, actionLink, role, appUrl });
     if (emailResult.error) {
       return jsonError(`Invite user was created, but the invite email failed: ${emailResult.error}`, 502);
     }
@@ -236,7 +256,7 @@ export async function POST(request: Request) {
       full_name: fullName,
       company,
       role,
-      status,
+      status: profileStatus,
     })
     .eq("id", userId)
     .select("id, email, full_name, company, role, status, created_at, last_login_at, deleted_at")
@@ -251,7 +271,7 @@ export async function POST(request: Request) {
     action: sendInvite ? "user_invited" : "user_created",
     entity_type: "user",
     entity_id: userId,
-    details: { email, role, status, send_invite: sendInvite, invite_link_type: sendInvite ? inviteLinkType : null },
+    details: { email, role, status: profileStatus, send_invite: sendInvite, invite_link_type: sendInvite ? inviteLinkType : null },
   });
 
   return NextResponse.json({ user: profileResult.data, invited: sendInvite, delivery: sendInvite ? "smtp" : "created", invite_link_type: sendInvite ? inviteLinkType : null });
