@@ -44,7 +44,7 @@ function human(value: string | null | undefined) {
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "Not available";
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)).replace(",", "");
 }
 
 export function AdminMessages() {
@@ -237,7 +237,7 @@ export function AdminMessages() {
                           <TableHead>Channel</TableHead>
                           <TableHead>Direction</TableHead>
                           <TableHead>Order</TableHead>
-                          <TableHead>Created</TableHead>
+                          <TableHead className="w-[150px] min-w-[150px] whitespace-nowrap">Created</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -250,7 +250,7 @@ export function AdminMessages() {
                             <TableCell><ChannelBadge channel={message.channel} /></TableCell>
                             <TableCell>{human(message.direction)}</TableCell>
                             <TableCell className="font-mono text-xs">{message.order_id ? message.order_id.slice(0, 8) : "None"}</TableCell>
-                            <TableCell>{formatDate(message.created_at)}</TableCell>
+                            <TableCell className="w-[150px] min-w-[150px] whitespace-nowrap text-sm">{formatDate(message.created_at)}</TableCell>
                           </TableRow>
                         ))}
                         {!visibleMessages.length && (

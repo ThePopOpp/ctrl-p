@@ -77,6 +77,10 @@ export async function POST(request: Request) {
     invoice_due_at?: string;
     invoice_terms?: string;
     billing_contact?: unknown;
+    sender_profile?: unknown;
+    delivery_method?: string;
+    delivery_recipient?: string;
+    invoice_message?: string;
     line_items?: unknown;
     subtotal?: number | string;
     tax_amount?: number | string;
@@ -96,6 +100,9 @@ export async function POST(request: Request) {
   const invoiceTerms = body?.invoice_terms?.trim() || "Due on receipt";
   const processor = body?.processor?.trim() || "manual";
   const deliveryStatus = body?.delivery_status?.trim() || "draft";
+  const deliveryMethod = body?.delivery_method?.trim() || "none";
+  const deliveryRecipient = body?.delivery_recipient?.trim() || "";
+  const invoiceMessage = body?.invoice_message?.trim() || "";
 
   if (!orderId) {
     return jsonError("Order is required.");
@@ -138,7 +145,15 @@ export async function POST(request: Request) {
       invoice_number: invoiceNumber,
       invoice_due_at: invoiceDueAt,
       invoice_terms: invoiceTerms,
-      billing_contact: body?.billing_contact || {},
+      billing_contact: {
+        customer: body?.billing_contact || {},
+        sender: body?.sender_profile || {},
+        delivery: {
+          method: deliveryMethod,
+          recipient: deliveryRecipient,
+          message: invoiceMessage,
+        },
+      },
       line_items: body?.line_items || [],
       subtotal,
       tax_amount: taxAmount,
@@ -171,6 +186,8 @@ export async function POST(request: Request) {
       amount,
       invoice_number: invoiceNumber,
       invoice_due_at: invoiceDueAt,
+      delivery_method: deliveryMethod,
+      delivery_recipient: deliveryRecipient,
     },
   });
 

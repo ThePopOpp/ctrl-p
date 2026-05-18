@@ -208,6 +208,10 @@ export async function createAdminInvoice(input: {
   dueAt: string;
   terms: string;
   billingContact: unknown;
+  senderProfile: unknown;
+  deliveryMethod: string;
+  deliveryRecipient: string;
+  invoiceMessage: string;
   lineItems: unknown;
   subtotal: number;
   taxAmount: number;
@@ -234,6 +238,10 @@ export async function createAdminInvoice(input: {
       invoice_due_at: input.dueAt,
       invoice_terms: input.terms,
       billing_contact: input.billingContact,
+      sender_profile: input.senderProfile,
+      delivery_method: input.deliveryMethod,
+      delivery_recipient: input.deliveryRecipient,
+      invoice_message: input.invoiceMessage,
       line_items: input.lineItems,
       subtotal: input.subtotal,
       tax_amount: input.taxAmount,

@@ -69,6 +69,8 @@ export function AdminUsers() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [addUserOpen, setAddUserOpen] = useState(false);
+  const [inviteUserOpen, setInviteUserOpen] = useState(false);
+  const [roleReviewOpen, setRoleReviewOpen] = useState(false);
 
   useEffect(() => {
     async function boot() {
@@ -202,8 +204,8 @@ export function AdminUsers() {
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setAddUserOpen(true)}><UserRoundPlus className="h-4 w-4" /> Add user</Button>
-                  <Button><UserPlus className="h-4 w-4" /> Invite user</Button>
-                  <Button variant="outline"><ShieldCheck className="h-4 w-4" /> Review roles</Button>
+                  <Button onClick={() => setInviteUserOpen(true)}><UserPlus className="h-4 w-4" /> Invite user</Button>
+                  <Button variant="outline" onClick={() => setRoleReviewOpen(true)}><ShieldCheck className="h-4 w-4" /> Review roles</Button>
                 </div>
               </div>
 
@@ -323,7 +325,9 @@ export function AdminUsers() {
           activityLogs={activityLogs}
           assignableRoles={assignableRoles}
         />
-        <AddUserSheet currentProfile={profile} open={addUserOpen} onOpenChange={setAddUserOpen} onCreated={refreshUsers} assignableRoles={assignableRoles} />
+        <AddUserSheet currentProfile={profile} open={addUserOpen} onOpenChange={setAddUserOpen} onCreated={refreshUsers} assignableRoles={assignableRoles} mode="add" />
+        <AddUserSheet currentProfile={profile} open={inviteUserOpen} onOpenChange={setInviteUserOpen} onCreated={refreshUsers} assignableRoles={assignableRoles} mode="invite" />
+        <RoleReviewSheet open={roleReviewOpen} onOpenChange={setRoleReviewOpen} users={users} assignableRoles={assignableRoles} />
       </div>
     </div>
   );
@@ -538,18 +542,20 @@ function AddUserSheet({
   onOpenChange,
   onCreated,
   assignableRoles,
+  mode,
 }: {
   currentProfile: AdminProfile | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: () => Promise<void>;
   assignableRoles: AppRole[];
+  mode: "add" | "invite";
 }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState<AppRole>(ROLES.CUSTOMER);
-  const [status, setStatus] = useState("active");
+  const [status, setStatus] = useState(mode === "invite" ? "pending" : "active");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const canSubmit = email.trim().includes("@") && fullName.trim().length >= 2 && !saving;
@@ -589,7 +595,8 @@ function AddUserSheet({
           email,
           company,
           role,
-          status,
+          status: mode === "invite" ? "pending" : status,
+          send_invite: mode === "invite",
         }),
       });
 
@@ -604,7 +611,7 @@ function AddUserSheet({
       setEmail("");
       setCompany("");
       setRole(ROLES.CUSTOMER);
-      setStatus("active");
+      setStatus(mode === "invite" ? "pending" : "active");
       onOpenChange(false);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not create user.");
@@ -617,8 +624,12 @@ function AddUserSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-xl">
         <SheetHeader>
-          <SheetTitle>Add user</SheetTitle>
-          <SheetDescription>Create an admin-managed user profile. Auth account creation will be wired in the next server-side slice.</SheetDescription>
+          <SheetTitle>{mode === "invite" ? "Invite user" : "Add user"}</SheetTitle>
+          <SheetDescription>
+            {mode === "invite"
+              ? "Create a pending account and send the invite flow through the configured auth/email provider."
+              : "Create an admin-managed user profile with a role and status."}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-4">
@@ -650,6 +661,7 @@ function AddUserSheet({
                 </SelectContent>
               </Select>
             </div>
+            {mode === "add" && (
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Status</div>
               <Select value={status} onValueChange={setStatus}>
@@ -661,19 +673,90 @@ function AddUserSheet({
                 </SelectContent>
               </Select>
             </div>
+            )}
           </div>
 
           <div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground">
-            This creates the Supabase auth account server-side, then updates the matching public.users profile. The server must have SUPABASE_SERVICE_ROLE_KEY configured.
+            {mode === "invite"
+              ? "Invited users are created as pending profiles for now. The next auth slice can send Supabase invite links or branded email invites."
+              : "This creates the Supabase auth account server-side, then updates the matching public.users profile. The server must have SUPABASE_SERVICE_ROLE_KEY configured."}
           </div>
 
           {message && <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{message}</div>}
 
           <div className="flex gap-2">
             <Button className="flex-1" disabled={!canSubmit} onClick={createUser}>
-              {saving ? "Creating..." : "Create user"}
+              {saving ? "Creating..." : mode === "invite" ? "Create invite" : "Create user"}
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function RoleReviewSheet({
+  open,
+  onOpenChange,
+  users,
+  assignableRoles,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  users: AdminUser[];
+  assignableRoles: AppRole[];
+}) {
+  const roleRows = assignableRoles.map((role) => {
+    const count = users.filter((user) => user.role === role).length;
+    const active = users.filter((user) => user.role === role && user.status === "active").length;
+    const group = ["super_admin", "admin", "employee", "staff", "production_manager", "installer", "customer_support"].includes(role)
+      ? "Internal"
+      : ["vendor", "designer", "referral", "reseller"].includes(role)
+        ? "Partner"
+        : "Customer";
+
+    return { role, count, active, group };
+  });
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle>Review roles</SheetTitle>
+          <SheetDescription>Audit the current RBAC roles, active users, and intended access groupings.</SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <SummaryTile label="Role types">{assignableRoles.length}</SummaryTile>
+            <SummaryTile label="Active users">{users.filter((user) => user.status === "active").length}</SummaryTile>
+            <SummaryTile label="Pending review">{users.filter((user) => user.status !== "active").length}</SummaryTile>
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Role</TableHead>
+                <TableHead>Group</TableHead>
+                <TableHead className="text-right">Active</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {roleRows.map((row) => (
+                <TableRow key={row.role}>
+                  <TableCell className="font-medium">{human(row.role)}</TableCell>
+                  <TableCell><Badge variant="outline">{row.group}</Badge></TableCell>
+                  <TableCell className="text-right">{row.active}</TableCell>
+                  <TableCell className="text-right">{row.count}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          <div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground">
+            Internal roles can access the admin console when active. Customer, vendor, designer, referral, and reseller roles should continue moving toward assigned-record access as RBAC phases continue.
           </div>
         </div>
       </SheetContent>

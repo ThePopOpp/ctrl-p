@@ -18,7 +18,7 @@ import {
 
 import { createAdminInvoice, getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
-import type { AdminDashboardData, Order, Payment } from "@/lib/admin/types";
+import type { AdminDashboardData, Order, Payment, Product } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -243,6 +243,7 @@ export function AdminPayments() {
           open={invoiceOpen}
           onOpenChange={setInvoiceOpen}
           orders={orders}
+          products={data?.products ?? []}
           onCreated={refreshPayments}
         />
       </div>
@@ -313,15 +314,26 @@ function orderLabel(order: Order) {
   return `#${order.order_number || order.id.slice(0, 8)} - ${customer}`;
 }
 
+function safeJsonArray(value: string) {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed) ? parsed as Array<Record<string, unknown>> : [];
+  } catch {
+    return [];
+  }
+}
+
 function NewInvoiceSheet({
   open,
   onOpenChange,
   orders,
+  products,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orders: Order[];
+  products: Product[];
   onCreated: () => Promise<void>;
 }) {
   const invoiceableOrders = useMemo(() => orders.filter((order) => order.id), [orders]);
@@ -331,6 +343,20 @@ function NewInvoiceSheet({
   const [terms, setTerms] = useState("Due on receipt");
   const [processor, setProcessor] = useState("manual");
   const [deliveryStatus, setDeliveryStatus] = useState("draft");
+  const [deliveryMethod, setDeliveryMethod] = useState("none");
+  const [deliveryRecipient, setDeliveryRecipient] = useState("");
+  const [invoiceMessage, setInvoiceMessage] = useState("Thank you for choosing ControlP.io. You can review and pay this invoice using the secure link.");
+  const [senderLogoUrl, setSenderLogoUrl] = useState("");
+  const [senderName, setSenderName] = useState("ControlP.io");
+  const [senderPhone, setSenderPhone] = useState("");
+  const [senderEmail, setSenderEmail] = useState("hello@controlp.io");
+  const [senderWebsite, setSenderWebsite] = useState("https://www.controlp.io");
+  const [senderAddress, setSenderAddress] = useState("");
+  const [lineItemSource, setLineItemSource] = useState("manual");
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [serviceName, setServiceName] = useState("");
+  const [lineQuantity, setLineQuantity] = useState("1");
+  const [lineUnitPrice, setLineUnitPrice] = useState("");
   const [subtotal, setSubtotal] = useState("");
   const [taxAmount, setTaxAmount] = useState("0");
   const [discountAmount, setDiscountAmount] = useState("0");
@@ -340,6 +366,7 @@ function NewInvoiceSheet({
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const selectedOrder = invoiceableOrders.find((order) => order.id === orderId) ?? null;
   const parsedAmount = Number(amount || 0);
@@ -358,8 +385,12 @@ function NewInvoiceSheet({
     setTerms("Due on receipt");
     setProcessor("manual");
     setDeliveryStatus("draft");
+    setDeliveryMethod("none");
+    setDeliveryRecipient(first?.customer_email || first?.customer_phone || "");
+    setInvoiceMessage("Thank you for choosing ControlP.io. You can review and pay this invoice using the secure link.");
     setNotes("");
     setMessage("");
+    setPreviewOpen(false);
   }, [open, invoiceableOrders]);
 
   function hydrateOrderDefaults(order: Order | null) {
@@ -374,6 +405,7 @@ function NewInvoiceSheet({
       email: order?.customer_email || "",
       phone: order?.customer_phone || "",
     }, null, 2));
+    setDeliveryRecipient(order?.customer_email || order?.customer_phone || "");
     setLineItems(JSON.stringify([
       {
         description: order?.order_number ? `Order #${order.order_number}` : "Order",
@@ -393,6 +425,39 @@ function NewInvoiceSheet({
   function recomputeAmount(nextSubtotal = subtotal, nextTax = taxAmount, nextDiscount = discountAmount) {
     const total = Number(nextSubtotal || 0) + Number(nextTax || 0) - Number(nextDiscount || 0);
     setAmount(Number.isFinite(total) ? Math.max(0, total).toFixed(2) : "");
+  }
+
+  function addLineItem() {
+    try {
+      const current = parseJson("Line items", lineItems);
+      const list = Array.isArray(current) ? current : [];
+      const product = products.find((item) => item.id === selectedProductId);
+      const description = lineItemSource === "product"
+        ? product?.name || "Product"
+        : serviceName || "Service";
+      const unitPrice = lineItemSource === "product"
+        ? Number(product?.sale_price || product?.base_price || product?.base_cost || 0)
+        : Number(lineUnitPrice || 0);
+      const quantity = Number(lineQuantity || 1);
+      const next = [
+        ...list,
+        {
+          sku: lineItemSource === "product" ? product?.sku || "" : "",
+          description,
+          quantity,
+          unit_price: unitPrice,
+          line_total: quantity * unitPrice,
+        },
+      ];
+      const nextSubtotal = next.reduce((sum, item) => sum + Number(item.line_total || 0), 0).toFixed(2);
+      setLineItems(JSON.stringify(next, null, 2));
+      setSubtotal(nextSubtotal);
+      recomputeAmount(nextSubtotal);
+      setServiceName("");
+      setLineUnitPrice("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not add line item.");
+    }
   }
 
   function parseJson(label: string, value: string) {
@@ -415,6 +480,17 @@ function NewInvoiceSheet({
         dueAt: dueAt ? new Date(`${dueAt}T12:00:00`).toISOString() : "",
         terms,
         billingContact: parseJson("Billing contact", billingContact),
+        senderProfile: {
+          logo_url: senderLogoUrl,
+          name: senderName,
+          phone: senderPhone,
+          email: senderEmail,
+          website: senderWebsite,
+          address: senderAddress,
+        },
+        deliveryMethod,
+        deliveryRecipient,
+        invoiceMessage,
         lineItems: parseJson("Line items", lineItems),
         subtotal: parsedSubtotal,
         taxAmount: parsedTax,
@@ -466,6 +542,22 @@ function NewInvoiceSheet({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Delivery method</div>
+              <Select value={deliveryMethod} onValueChange={setDeliveryMethod}>
+                <SelectTrigger><SelectValue placeholder="Delivery method" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Do not send yet</SelectItem>
+                  <SelectItem value="email">Email digital file</SelectItem>
+                  <SelectItem value="sms">SMS invoice link</SelectItem>
+                  <SelectItem value="both">Email and SMS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Delivery recipient</div>
+              <Input placeholder="email or phone" value={deliveryRecipient} onChange={(event) => setDeliveryRecipient(event.target.value)} />
+            </div>
+            <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Invoice number</div>
               <Input placeholder="INV-1001" value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} />
             </div>
@@ -516,6 +608,79 @@ function NewInvoiceSheet({
             </div>
           </div>
 
+          <div className="rounded-lg border bg-background/35 p-3">
+            <h3 className="text-sm font-semibold">Invoice sender</h3>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Logo URL</div>
+                <Input placeholder="https://..." value={senderLogoUrl} onChange={(event) => setSenderLogoUrl(event.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Business name</div>
+                <Input value={senderName} onChange={(event) => setSenderName(event.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Phone</div>
+                <Input value={senderPhone} onChange={(event) => setSenderPhone(event.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Email</div>
+                <Input value={senderEmail} onChange={(event) => setSenderEmail(event.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Website</div>
+                <Input value={senderWebsite} onChange={(event) => setSenderWebsite(event.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Address</div>
+                <Input value={senderAddress} onChange={(event) => setSenderAddress(event.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-background/35 p-3">
+            <h3 className="text-sm font-semibold">Add product or service</h3>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Line item type</div>
+                <Select value={lineItemSource} onValueChange={setLineItemSource}>
+                  <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual service</SelectItem>
+                    <SelectItem value="product">Catalog product</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {lineItemSource === "product" ? (
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Product</div>
+                  <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                    <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
+                    <SelectContent>
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>{product.name} - {money.format(numberValue(product.sale_price || product.base_price || product.base_cost))}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Service</div>
+                  <Input placeholder="Design setup, install, rush fee..." value={serviceName} onChange={(event) => setServiceName(event.target.value)} />
+                </div>
+              )}
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Quantity</div>
+                <Input inputMode="decimal" value={lineQuantity} onChange={(event) => setLineQuantity(event.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Manual unit price</div>
+                <Input inputMode="decimal" value={lineUnitPrice} onChange={(event) => setLineUnitPrice(event.target.value)} disabled={lineItemSource === "product"} />
+              </div>
+            </div>
+            <Button className="mt-3 w-full" variant="outline" onClick={addLineItem}>Add line item</Button>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Subtotal</div>
@@ -536,6 +701,11 @@ function NewInvoiceSheet({
             <Input placeholder="Invoice note or payment instructions" value={notes} onChange={(event) => setNotes(event.target.value)} />
           </div>
 
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Invoice message</div>
+            <Input value={invoiceMessage} onChange={(event) => setInvoiceMessage(event.target.value)} />
+          </div>
+
           <div className="grid gap-3 xl:grid-cols-2">
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Billing contact JSON</div>
@@ -548,12 +718,67 @@ function NewInvoiceSheet({
           </div>
 
           <div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground">
-            This creates a pending billing record with invoice details. PDFX documents and live processor payment links can attach to this record in the next slice.
+            Preview: {senderName} will invoice {selectedOrder?.users?.full_name || selectedOrder?.company || selectedOrder?.customer_email || "the selected customer"} for {money.format(parsedAmount)}. Delivery is set to {human(deliveryMethod)}.
           </div>
+
+          {previewOpen && (
+            <div className="rounded-lg border bg-white p-5 text-slate-950 shadow-sm">
+              <div className="flex items-start justify-between gap-4 border-b pb-4">
+                <div>
+                  {senderLogoUrl && <img src={senderLogoUrl} alt="" className="mb-3 max-h-12 max-w-40 object-contain" />}
+                  <div className="text-lg font-semibold">{senderName || "ControlP.io"}</div>
+                  <div className="mt-1 text-xs text-slate-600">{senderAddress || "Business address"}</div>
+                  <div className="text-xs text-slate-600">{senderPhone || "Phone"} · {senderEmail || "Email"} · {senderWebsite || "Website"}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-semibold">Invoice</div>
+                  <div className="mt-1 text-xs text-slate-600">{invoiceNumber || "INV-000000"}</div>
+                  <div className="text-xs text-slate-600">Due {dueAt || "Not set"}</div>
+                </div>
+              </div>
+              <div className="grid gap-4 border-b py-4 sm:grid-cols-2">
+                <div>
+                  <div className="text-[10px] font-semibold uppercase text-slate-500">Bill to</div>
+                  <div className="mt-1 text-sm">{selectedOrder?.users?.full_name || selectedOrder?.company || "Customer"}</div>
+                  <div className="text-xs text-slate-600">{selectedOrder?.customer_email || "customer@example.com"}</div>
+                  <div className="text-xs text-slate-600">{selectedOrder?.customer_phone || "Customer phone"}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-semibold uppercase text-slate-500">Message</div>
+                  <div className="mt-1 text-sm text-slate-700">{invoiceMessage}</div>
+                </div>
+              </div>
+              <div className="py-4">
+                <div className="grid grid-cols-[1fr_70px_90px_90px] border-b pb-2 text-xs font-semibold uppercase text-slate-500">
+                  <div>Description</div>
+                  <div className="text-right">Qty</div>
+                  <div className="text-right">Rate</div>
+                  <div className="text-right">Total</div>
+                </div>
+                {(safeJsonArray(lineItems)).map((item, index) => (
+                  <div key={`${item.description || "line"}-${index}`} className="grid grid-cols-[1fr_70px_90px_90px] border-b py-2 text-sm">
+                    <div>{String(item.description || "Line item")}</div>
+                    <div className="text-right">{String(item.quantity || 1)}</div>
+                    <div className="text-right">{money.format(numberValue(String(item.unit_price || 0)))}</div>
+                    <div className="text-right">{money.format(numberValue(String(item.line_total || 0)))}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="ml-auto w-full max-w-xs space-y-1 text-sm">
+                <div className="flex justify-between"><span>Subtotal</span><span>{money.format(parsedSubtotal)}</span></div>
+                <div className="flex justify-between"><span>Tax</span><span>{money.format(parsedTax)}</span></div>
+                <div className="flex justify-between"><span>Discount</span><span>-{money.format(parsedDiscount)}</span></div>
+                <div className="flex justify-between border-t pt-2 text-lg font-semibold"><span>Total</span><span>{money.format(parsedAmount)}</span></div>
+              </div>
+            </div>
+          )}
 
           {message && <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{message}</div>}
 
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setPreviewOpen((value) => !value)}>
+              {previewOpen ? "Hide preview" : "Review invoice"}
+            </Button>
             <Button className="flex-1" disabled={!canCreate} onClick={createInvoice}>
               {saving ? "Creating..." : "Create invoice"}
             </Button>
