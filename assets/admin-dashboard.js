@@ -10,6 +10,7 @@
     timeZone: 'America/Phoenix'
   });
   var dashboardData = null;
+  var openOrderId = null;
 
   function textIncludes(el, value) {
     return el && el.textContent && el.textContent.toLowerCase().indexOf(value.toLowerCase()) !== -1;
@@ -231,6 +232,15 @@
     if (el) el.innerHTML = value;
   }
 
+  function setActionMessage(selector, message, tone) {
+    var el = document.querySelector(selector);
+    if (!el) return;
+    el.textContent = message || '';
+    el.className = 'text-[11px] ' + (tone === 'error' ? 'text-red-400' : tone === 'success' ? 'text-emerald-400' : '');
+    if (!tone) el.setAttribute('style', 'color: var(--text-dim);');
+    else el.removeAttribute('style');
+  }
+
   function rowsForOrder(key) {
     return function (row) { return row.order_id === key; };
   }
@@ -240,6 +250,7 @@
     var order = (dashboardData.orders || []).find(function (item) { return item.id === orderId; });
     var drawer = document.getElementById('admin-order-drawer');
     if (!order || !drawer) return;
+    openOrderId = orderId;
 
     var customer = (order.users && order.users.full_name) || order.company || order.customer_email || 'Guest customer';
     var items = (dashboardData.orderItems || []).filter(rowsForOrder(order.id));
@@ -269,12 +280,33 @@
         '<div class="flex items-center justify-between gap-3"><div class="text-[12.5px] font-semibold">' + escapeHtml(human(job.status)) + '</div>' + statusBadge(job.status) + '</div>' +
         '<div class="text-[10.5px] mt-1" style="color: var(--text-dim);">' + escapeHtml(job.station || 'No station assigned') + ' - Due ' + escapeHtml(formatDate(job.due_at)) + '</div></div>';
     }).join('') : emptyBlock('No production jobs found for this order.'));
+    renderProductionStatusForm(jobs);
 
     setDrawerHtml('activity', renderOrderActivity(payments, messages));
     setDrawerHtml('notes', escapeHtml(order.internal_notes || order.customer_notes || 'No notes yet.'));
 
     drawer.classList.remove('hidden');
     drawer.setAttribute('aria-hidden', 'false');
+  }
+
+  function renderProductionStatusForm(jobs) {
+    var form = document.querySelector('[data-production-status-form]');
+    var jobSelect = document.querySelector('[data-production-job-select]');
+    var statusSelect = document.querySelector('[data-production-status-select]');
+    if (!form || !jobSelect || !statusSelect) return;
+
+    form.toggleAttribute('hidden', !jobs.length);
+    setActionMessage('[data-production-status-message]', jobs.length ? 'Choose a job and status to update production.' : '', null);
+    if (!jobs.length) {
+      jobSelect.innerHTML = '';
+      return;
+    }
+
+    jobSelect.innerHTML = jobs.map(function (job, index) {
+      var label = (job.orders && job.orders.order_number ? '#' + job.orders.order_number : 'Job ' + (index + 1)) + ' - ' + human(job.status);
+      return '<option value="' + escapeHtml(job.id) + '" data-order-id="' + escapeHtml(job.order_id) + '" data-status="' + escapeHtml(job.status) + '">' + escapeHtml(label) + '</option>';
+    }).join('');
+    statusSelect.value = jobs[0].status || 'new';
   }
 
   function renderOrderActivity(payments, messages) {
@@ -290,7 +322,8 @@
       rows.push({
         date: message.created_at,
         html: '<div class="text-[12.5px] font-semibold">' + escapeHtml(message.subject || 'Unread message') + '</div>' +
-          '<div class="text-[10.5px]" style="color: var(--text-dim);">' + escapeHtml(human(message.channel)) + ' - ' + escapeHtml(human(message.direction)) + '</div>'
+          '<div class="text-[10.5px]" style="color: var(--text-dim);">' + escapeHtml(human(message.channel)) + ' - ' + escapeHtml(human(message.direction)) + '</div>' +
+          '<button class="btn btn-ghost btn-sm mt-2" type="button" data-message-read="' + escapeHtml(message.id) + '" data-order-id="' + escapeHtml(message.order_id || '') + '">Mark read</button>'
       });
     });
     rows.sort(function (a, b) { return new Date(b.date || 0) - new Date(a.date || 0); });
@@ -305,6 +338,53 @@
     if (!drawer) return;
     drawer.classList.add('hidden');
     drawer.setAttribute('aria-hidden', 'true');
+    openOrderId = null;
+  }
+
+  async function reloadDashboard(openAfterLoad) {
+    if (!window.ControlP || !window.ControlP.adminApi) return;
+    var data = await window.ControlP.adminApi.loadDashboardData();
+    render(data);
+    if (openAfterLoad) openOrderDrawer(openAfterLoad);
+  }
+
+  async function handleProductionStatusSubmit(event) {
+    event.preventDefault();
+    if (!window.ControlP || !window.ControlP.adminApi) return;
+    var form = event.target;
+    var jobSelect = form.querySelector('[data-production-job-select]');
+    var statusSelect = form.querySelector('[data-production-status-select]');
+    var selected = jobSelect && jobSelect.selectedOptions[0];
+    if (!selected || !statusSelect) return;
+
+    var button = form.querySelector('button[type="submit"]');
+    if (button) button.disabled = true;
+    setActionMessage('[data-production-status-message]', 'Saving production status...', null);
+
+    try {
+      await window.ControlP.adminApi.updateProductionJobStatus(selected.value, statusSelect.value, selected.getAttribute('data-order-id'));
+      setActionMessage('[data-production-status-message]', 'Production status saved.', 'success');
+      await reloadDashboard(openOrderId);
+    } catch (error) {
+      setActionMessage('[data-production-status-message]', error.message || 'Could not update production status.', 'error');
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function handleMarkMessageRead(button) {
+    if (!window.ControlP || !window.ControlP.adminApi) return;
+    button.disabled = true;
+    var previous = button.textContent;
+    button.textContent = 'Saving...';
+    try {
+      await window.ControlP.adminApi.markMessageRead(button.getAttribute('data-message-read'), button.getAttribute('data-order-id'));
+      await reloadDashboard(openOrderId);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = error.message || 'Failed';
+      setTimeout(function () { button.textContent = previous; }, 1800);
+    }
   }
 
   function renderPipeline(orders) {
@@ -434,7 +514,24 @@
 
     if (event.target.closest('[data-order-drawer-close]')) {
       closeOrderDrawer();
+      return;
     }
+
+    var readButton = event.target.closest('[data-message-read]');
+    if (readButton) {
+      handleMarkMessageRead(readButton);
+    }
+  });
+
+  document.addEventListener('change', function (event) {
+    if (!event.target.matches('[data-production-job-select]')) return;
+    var selected = event.target.selectedOptions[0];
+    var statusSelect = document.querySelector('[data-production-status-select]');
+    if (selected && statusSelect) statusSelect.value = selected.getAttribute('data-status') || 'new';
+  });
+
+  document.addEventListener('submit', function (event) {
+    if (event.target.matches('[data-production-status-form]')) handleProductionStatusSubmit(event);
   });
 
   document.addEventListener('keydown', function (event) {

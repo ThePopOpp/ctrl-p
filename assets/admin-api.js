@@ -22,6 +22,30 @@
     }
   }
 
+  function requireClient() {
+    var db = getClient();
+    if (!db) throw new Error('Supabase client is not configured.');
+    return db;
+  }
+
+  async function currentUserId(db) {
+    var sessionResult = await db.auth.getSession();
+    var session = sessionResult.data && sessionResult.data.session;
+    return session && session.user ? session.user.id : null;
+  }
+
+  async function logActivity(db, action, entityType, entityId, details) {
+    var actorId = await currentUserId(db);
+    var result = await db.from('activity_logs').insert({
+      actor_id: actorId,
+      action: action,
+      entity_type: entityType,
+      entity_id: entityId,
+      details: details || {}
+    });
+    if (result.error) throw result.error;
+  }
+
   async function loadDashboardData() {
     var db = getClient();
     if (!db) {
@@ -107,7 +131,52 @@
     return data;
   }
 
+  async function updateProductionJobStatus(jobId, status, orderId) {
+    var db = requireClient();
+    var result = await db
+      .from('production_jobs')
+      .update({ status: status })
+      .eq('id', jobId)
+      .select('id, order_id, status')
+      .single();
+    if (result.error) throw result.error;
+
+    if (orderId) {
+      var orderResult = await db
+        .from('orders')
+        .update({ production_status: status })
+        .eq('id', orderId);
+      if (orderResult.error) throw orderResult.error;
+    }
+
+    await logActivity(db, 'production_status_updated', 'production_job', jobId, {
+      order_id: orderId || result.data.order_id,
+      status: status
+    });
+
+    return result.data;
+  }
+
+  async function markMessageRead(messageId, orderId) {
+    var db = requireClient();
+    var result = await db
+      .from('messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', messageId)
+      .select('id, order_id, read_at')
+      .single();
+    if (result.error) throw result.error;
+
+    await logActivity(db, 'message_marked_read', 'message', messageId, {
+      order_id: orderId || result.data.order_id
+    });
+
+    return result.data;
+  }
+
   window.ControlP.adminApi = {
-    loadDashboardData: loadDashboardData
+    loadDashboardData: loadDashboardData,
+    updateProductionJobStatus: updateProductionJobStatus,
+    markMessageRead: markMessageRead
   };
 })();

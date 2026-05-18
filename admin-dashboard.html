@@ -824,6 +824,31 @@
       </section>
 
       <section>
+        <h3 class="font-semibold text-[13.5px] mb-2">Update production</h3>
+        <form class="panel-2 rounded-md p-3 space-y-3" data-production-status-form>
+          <div class="grid grid-cols-[1fr_1fr_auto] gap-2">
+            <select class="bg-transparent border rounded-md px-2 py-2 text-[12px]" style="border-color: var(--border); color: var(--text);" data-production-job-select aria-label="Production job"></select>
+            <select class="bg-transparent border rounded-md px-2 py-2 text-[12px]" style="border-color: var(--border); color: var(--text);" data-production-status-select aria-label="Production status">
+              <option value="new">New</option>
+              <option value="file_check">File check</option>
+              <option value="design_needed">Design needed</option>
+              <option value="proof_pending">Proof pending</option>
+              <option value="proof_approved">Proof approved</option>
+              <option value="print_ready">Print ready</option>
+              <option value="printing">Printing</option>
+              <option value="finishing">Finishing</option>
+              <option value="install_scheduled">Install scheduled</option>
+              <option value="ready">Ready</option>
+              <option value="completed">Completed</option>
+              <option value="on_hold">On hold</option>
+            </select>
+            <button class="btn btn-primary" type="submit">Save</button>
+          </div>
+          <div class="text-[11px]" style="color: var(--text-dim);" data-production-status-message></div>
+        </form>
+      </section>
+
+      <section>
         <div class="flex items-center justify-between mb-2">
           <h3 class="font-semibold text-[13.5px]">Payments and messages</h3>
         </div>
@@ -840,6 +865,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/supabase-config.js"></script>
+<script src="assets/rbac.js"></script>
 <script src="assets/auth.js"></script>
 <script src="assets/admin-api.js"></script>
 <script src="assets/admin-dashboard.js"></script>

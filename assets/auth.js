@@ -1,12 +1,12 @@
 (function () {
   'use strict';
 
-  var ADMIN_ROLES = [
+  var FALLBACK_ADMIN_ROLES = [
     'super_admin',
     'admin',
+    'employee',
     'staff',
     'production_manager',
-    'designer',
     'installer',
     'customer_support'
   ];
@@ -32,13 +32,19 @@
   }
 
   function nextUrlForRole(role) {
-    return ADMIN_ROLES.indexOf(role) !== -1 ? 'admin-dashboard.html' : 'dashboard.html';
+    if (window.ControlP && window.ControlP.rbac) return window.ControlP.rbac.nextUrlForRole(role);
+    return FALLBACK_ADMIN_ROLES.indexOf(role) !== -1 ? 'admin-dashboard.html' : 'dashboard.html';
   }
 
   async function profileForUser(db, userId) {
-    var result = await db.from('users').select('id, email, full_name, role, status').eq('id', userId).maybeSingle();
+    var result = await db.from('users').select('id, email, full_name, role, status, deleted_at').eq('id', userId).maybeSingle();
     if (result.error) throw result.error;
     return result.data;
+  }
+
+  function canAccessAdmin(profile) {
+    if (window.ControlP && window.ControlP.rbac) return window.ControlP.rbac.canAccessAdminConsole(profile);
+    return Boolean(profile && profile.status === 'active' && !profile.deleted_at && FALLBACK_ADMIN_ROLES.indexOf(profile.role) !== -1);
   }
 
   async function protectAdminPage() {
@@ -54,7 +60,7 @@
     }
 
     var profile = await profileForUser(db, session.user.id);
-    if (!profile || profile.status !== 'active' || ADMIN_ROLES.indexOf(profile.role) === -1) {
+    if (!canAccessAdmin(profile)) {
       window.location.href = 'dashboard.html';
       return;
     }
