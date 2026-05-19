@@ -438,12 +438,7 @@ function ProcessPaymentSheet({
         const square = (window as any).Square;
         if (!square) throw new Error("Square Web Payments SDK did not load.");
         const payments = square.payments(config.applicationId, config.locationId);
-        const card = await payments.card({
-          style: {
-            input: { fontSize: "16px", color: "var(--foreground)" },
-            ".input-container": { borderRadius: "8px" },
-          },
-        });
+        const card = await payments.card();
         if (!cardContainerRef.current || cancelled) return;
         cardContainerRef.current.innerHTML = "";
         await card.attach(cardContainerRef.current);
