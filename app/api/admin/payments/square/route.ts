@@ -50,23 +50,44 @@ export async function POST(request: Request) {
     delivery_method?: string;
   } | null;
 
-  const orderId = body?.order_id;
+  const providedOrderId = body?.order_id;
+  const isManualPayment = !providedOrderId || providedOrderId === "__manual__";
   const amount = Number(body?.amount || 0);
   const description = body?.description?.trim() || "ControlP.io payment";
   const deliveryMethod = body?.delivery_method?.trim() || "link_only";
 
-  if (!orderId) return jsonError("Order is required.");
   if (!Number.isFinite(amount) || amount <= 0) return jsonError("Payment amount must be greater than zero.");
+  if (isManualPayment && !body?.customer_email && !body?.customer_phone) {
+    return jsonError("Customer email or phone is required for a manual payment.");
+  }
 
-  const orderResult = await verified.adminClient
-    .from("orders")
-    .select("id, user_id, order_number, total, company, customer_email, customer_phone, payment_status")
-    .eq("id", orderId)
-    .single();
+  const orderResult = isManualPayment
+    ? await verified.adminClient
+      .from("orders")
+      .insert({
+        status: "awaiting_payment",
+        payment_status: "pending",
+        production_status: "new",
+        subtotal: amount,
+        total: amount,
+        customer_email: body?.customer_email || null,
+        customer_phone: body?.customer_phone || null,
+        company: body?.customer_email || body?.customer_phone || "Manual customer payment",
+        internal_notes: body?.notes?.trim() || "Created from admin Square payment link.",
+      })
+      .select("id, user_id, order_number, total, company, customer_email, customer_phone, payment_status")
+      .single()
+    : await verified.adminClient
+      .from("orders")
+      .select("id, user_id, order_number, total, company, customer_email, customer_phone, payment_status")
+      .eq("id", providedOrderId)
+      .single();
 
   if (orderResult.error || !orderResult.data) {
     return jsonError(orderResult.error?.message || "Order not found.", 404);
   }
+
+  const orderId = orderResult.data.id;
 
   const appUrl = serverEnv("PUBLIC_APP_URL") || "https://my.controlp.io";
   const squareResponse = await fetch(`${config.baseUrl}/v2/online-checkout/payment-links`, {

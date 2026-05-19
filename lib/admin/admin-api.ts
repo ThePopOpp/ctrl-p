@@ -327,7 +327,7 @@ export async function createAdminInvoice(input: {
 }
 
 export async function createSquarePaymentLink(input: {
-  orderId: string;
+  orderId?: string;
   amount: number;
   description: string;
   customerEmail: string;

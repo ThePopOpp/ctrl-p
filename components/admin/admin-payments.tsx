@@ -375,8 +375,9 @@ function ProcessPaymentSheet({
   orders: Order[];
   onCreated: () => Promise<void>;
 }) {
+  const manualOrderId = "__manual__";
   const payableOrders = useMemo(() => orders.filter((order) => order.id), [orders]);
-  const [orderId, setOrderId] = useState("");
+  const [orderId, setOrderId] = useState(manualOrderId);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("ControlP.io order payment");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -387,22 +388,22 @@ function ProcessPaymentSheet({
   const [message, setMessage] = useState("");
   const [paymentLink, setPaymentLink] = useState("");
 
-  const selectedOrder = payableOrders.find((order) => order.id === orderId) ?? null;
+  const selectedOrder = orderId === manualOrderId ? null : payableOrders.find((order) => order.id === orderId) ?? null;
   const parsedAmount = Number(amount || 0);
-  const canCreate = Boolean(orderId) && Number.isFinite(parsedAmount) && parsedAmount > 0 && !saving;
+  const canCreate = Boolean(orderId) && Number.isFinite(parsedAmount) && parsedAmount > 0 && !saving && (orderId !== manualOrderId || Boolean(customerEmail || customerPhone));
 
   useEffect(() => {
     if (!open) return;
     const first = payableOrders[0] ?? null;
-    hydrateOrder(first);
+    hydrateOrder(first, { fallbackToManual: true });
     setDeliveryMethod("link_only");
     setNotes("");
     setMessage("");
     setPaymentLink("");
   }, [open, payableOrders]);
 
-  function hydrateOrder(order: Order | null) {
-    setOrderId(order?.id ?? "");
+  function hydrateOrder(order: Order | null, options?: { fallbackToManual?: boolean }) {
+    setOrderId(order?.id ?? (options?.fallbackToManual ? manualOrderId : ""));
     setAmount(order?.total ? Number(order.total).toFixed(2) : "");
     setDescription(order?.order_number ? `ControlP.io order ${order.order_number}` : "ControlP.io order payment");
     setCustomerEmail(order?.customer_email || "");
@@ -410,6 +411,11 @@ function ProcessPaymentSheet({
   }
 
   function handleOrderChange(nextOrderId: string) {
+    if (nextOrderId === manualOrderId) {
+      setOrderId(manualOrderId);
+      setDescription("ControlP.io customer payment");
+      return;
+    }
     hydrateOrder(payableOrders.find((order) => order.id === nextOrderId) ?? null);
   }
 
@@ -425,7 +431,7 @@ function ProcessPaymentSheet({
     setPaymentLink("");
     try {
       const result = await createSquarePaymentLink({
-        orderId,
+        orderId: orderId === manualOrderId ? undefined : orderId,
         amount: parsedAmount,
         description,
         customerEmail,
@@ -473,12 +479,16 @@ function ProcessPaymentSheet({
               <SelectTrigger>
                 <SelectValue placeholder="Select order" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                <SelectItem value={manualOrderId}>Manual customer payment</SelectItem>
                 {payableOrders.map((order) => (
                   <SelectItem key={order.id} value={order.id}>{orderLabel(order)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {!payableOrders.length && (
+              <div className="mt-2 text-xs text-muted-foreground">No live orders are loaded yet. Use a manual customer payment to create a payment-linked order.</div>
+            )}
           </div>
 
           {selectedOrder && (
@@ -541,6 +551,11 @@ function ProcessPaymentSheet({
           )}
 
           {message && <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{message}</div>}
+          {orderId === manualOrderId && !customerEmail && !customerPhone && (
+            <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">
+              Add a customer email or phone before creating a manual Square payment link.
+            </div>
+          )}
 
           <div className="flex gap-2">
             <Button className="flex-1" disabled={!canCreate} onClick={processPayment}>
