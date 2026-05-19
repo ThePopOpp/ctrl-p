@@ -1,6 +1,6 @@
 "use client";
 
-import type { AdminDashboardData, AdminProfile } from "@/lib/admin/types";
+import type { AdminDashboardData, AdminProfile, ArtworkFile, Proof } from "@/lib/admin/types";
 import type { Product } from "@/lib/admin/types";
 import type { AppRole } from "@/lib/rbac/roles";
 import { mockAdminData } from "@/lib/admin/mock-data";
@@ -41,7 +41,7 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
   if (!db) return mockAdminData;
 
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const [orders, orderItems, productionJobs, payments, messages, users, activityLogs, products] = await Promise.all([
+  const [orders, orderItems, productionJobs, artworkFiles, proofs, designDrafts, payments, messages, users, activityLogs, products] = await Promise.all([
     db
       .from("orders")
       .select("id, order_number, user_id, status, production_status, payment_status, total, company, customer_email, customer_phone, customer_notes, internal_notes, due_at, users!orders_user_id_fkey(full_name, company)")
@@ -56,6 +56,21 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
       .from("production_jobs")
       .select("id, order_id, order_item_id, status, priority, assigned_staff_id, station, due_at, started_at, completed_at, notes, created_at, updated_at, orders!production_jobs_order_id_fkey(order_number), order_items!production_jobs_order_item_id_fkey(quantity, products!order_items_product_id_fkey(id, name, category))")
       .order("priority", { ascending: true })
+      .limit(100),
+    db
+      .from("artwork_files")
+      .select("id, user_id, order_id, order_item_id, storage_path, bucket, filename, mime_type, file_size_bytes, thumbnail_url, width_px, height_px, dpi, color_mode, review_status, proof_version, uploaded_by, admin_comments, customer_comments, final_approved_file_id, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200),
+    db
+      .from("proofs")
+      .select("id, order_item_id, storage_path, proof_url, revision_number, status, uploaded_by, customer_comments, admin_comments, sent_at, customer_approved_at, rejected_at, revisions, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200),
+    db
+      .from("design_drafts")
+      .select("id, user_id, product_id, title, state, artwork_file_id, last_saved_at, created_at")
+      .order("last_saved_at", { ascending: false })
       .limit(100),
     db
       .from("payments")
@@ -87,19 +102,102 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
       .limit(200),
   ]);
 
-  const hasError = [orders, orderItems, productionJobs, payments, messages, users, activityLogs, products].some((result) => result.error);
+  const hasError = [orders, orderItems, productionJobs, artworkFiles, proofs, designDrafts, payments, messages, users, activityLogs, products].some((result) => result.error);
   if (hasError) return mockAdminData;
 
   return {
     orders: orders.data ?? [],
     orderItems: orderItems.data ?? [],
     productionJobs: productionJobs.data ?? [],
+    artworkFiles: artworkFiles.data ?? [],
+    proofs: proofs.data ?? [],
+    designDrafts: designDrafts.data ?? [],
     payments: payments.data ?? [],
     messages: messages.data ?? [],
     users: users.data ?? [],
     activityLogs: activityLogs.data ?? [],
     products: products.data ?? [],
   } as AdminDashboardData;
+}
+
+export async function uploadAdminArtwork(input: {
+  mode: "artwork" | "proof";
+  file: File;
+  orderId: string;
+  orderItemId: string;
+  userId?: string;
+  status: string;
+  proofUrl?: string;
+  adminComments: string;
+  customerComments: string;
+  dpi?: string;
+  colorMode?: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before uploading artwork.");
+
+  const form = new FormData();
+  form.append("mode", input.mode);
+  form.append("file", input.file);
+  form.append("order_id", input.orderId);
+  form.append("order_item_id", input.orderItemId);
+  form.append("user_id", input.userId || "");
+  form.append("status", input.status);
+  form.append("proof_url", input.proofUrl || "");
+  form.append("admin_comments", input.adminComments);
+  form.append("customer_comments", input.customerComments);
+  form.append("dpi", input.dpi || "");
+  form.append("color_mode", input.colorMode || "");
+
+  const response = await fetch("/api/admin/artwork", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+    body: form,
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not upload artwork.");
+  }
+
+  return payload as { artwork?: ArtworkFile; proof?: Proof };
+}
+
+export async function updateAdminArtworkReview(input: {
+  type: "artwork" | "proof";
+  id: string;
+  status: string;
+  adminComments: string;
+  customerComments: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before updating artwork.");
+
+  const response = await fetch("/api/admin/artwork", {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      type: input.type,
+      id: input.id,
+      status: input.status,
+      admin_comments: input.adminComments,
+      customer_comments: input.customerComments,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not update artwork review.");
+  }
+
+  return payload as { artwork?: ArtworkFile; proof?: Proof };
 }
 
 async function currentUserId() {

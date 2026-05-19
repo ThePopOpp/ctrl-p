@@ -55,6 +55,58 @@ export type ProductionJob = {
   } | null;
 };
 
+export type ArtworkFile = {
+  id: string;
+  user_id: string | null;
+  order_id?: string | null;
+  order_item_id: string | null;
+  storage_path: string;
+  bucket: string;
+  filename: string;
+  mime_type: string;
+  file_size_bytes: number | string | null;
+  thumbnail_url: string | null;
+  width_px: number | null;
+  height_px: number | null;
+  dpi: number | null;
+  color_mode: string | null;
+  review_status?: string | null;
+  proof_version?: number | null;
+  uploaded_by?: string | null;
+  admin_comments?: string | null;
+  customer_comments?: string | null;
+  final_approved_file_id?: string | null;
+  created_at: string | null;
+};
+
+export type Proof = {
+  id: string;
+  order_item_id: string;
+  storage_path: string;
+  proof_url: string;
+  revision_number: number | null;
+  status?: string | null;
+  uploaded_by?: string | null;
+  customer_comments?: string | null;
+  admin_comments?: string | null;
+  sent_at: string | null;
+  customer_approved_at: string | null;
+  rejected_at?: string | null;
+  revisions?: unknown;
+  created_at: string | null;
+};
+
+export type DesignDraft = {
+  id: string;
+  user_id: string | null;
+  product_id: string | null;
+  title: string | null;
+  state?: unknown;
+  artwork_file_id?: string | null;
+  last_saved_at: string | null;
+  created_at: string | null;
+};
+
 export type Payment = {
   id: string;
   order_id: string;
@@ -198,6 +250,9 @@ export type AdminDashboardData = {
   orders: Order[];
   orderItems: OrderItem[];
   productionJobs: ProductionJob[];
+  artworkFiles: ArtworkFile[];
+  proofs: Proof[];
+  designDrafts: DesignDraft[];
   payments: Payment[];
   messages: Message[];
   users: AdminUser[];

@@ -1,5 +1,5 @@
-import { AdminSectionPage } from "@/components/admin/admin-section-page";
+import { AdminArtwork } from "@/components/admin/admin-artwork";
 
 export default function ArtworkPage() {
-  return <AdminSectionPage section="artwork" />;
+  return <AdminArtwork />;
 }
