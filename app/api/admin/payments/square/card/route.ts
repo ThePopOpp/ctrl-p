@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 
 import { jsonError, serverEnv, verifyAdminRequest } from "@/lib/admin/server-auth";
 
-type SquarePaymentLinkResponse = {
-  payment_link?: {
+type SquarePaymentResponse = {
+  payment?: {
     id?: string;
-    url?: string;
     order_id?: string;
+    status?: string;
+    receipt_url?: string;
+    amount_money?: { amount?: number; currency?: string };
   };
   errors?: Array<{ detail?: string; code?: string }>;
 };
@@ -33,6 +35,14 @@ function toCents(amount: number) {
   return Math.round(amount * 100);
 }
 
+function mapSquarePaymentStatus(status: string | undefined) {
+  const normalized = String(status || "").toUpperCase();
+  if (normalized === "COMPLETED") return "paid";
+  if (normalized === "APPROVED" || normalized === "PENDING") return "pending";
+  if (normalized === "FAILED" || normalized === "CANCELED") return "failed";
+  return "pending";
+}
+
 export async function POST(request: Request) {
   const verified = await verifyAdminRequest(request);
   if (verified.error) return verified.error;
@@ -43,27 +53,36 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null) as {
+    source_id?: string;
+    verification_token?: string;
     order_id?: string;
     amount?: number | string;
     description?: string;
     customer_email?: string;
     customer_phone?: string;
+    cardholder_name?: string;
+    address_line_1?: string;
+    address_line_2?: string;
+    locality?: string;
+    administrative_district_level_1?: string;
+    postal_code?: string;
+    country?: string;
     notes?: string;
-    delivery_method?: string;
     product_id?: string;
     product_name?: string;
     quantity?: number | string;
     unit_price?: number | string;
   } | null;
 
+  const sourceId = body?.source_id?.trim();
   const providedOrderId = body?.order_id;
   const isManualPayment = !providedOrderId || providedOrderId === "__manual__";
   const amount = Number(body?.amount || 0);
-  const description = body?.description?.trim() || "ControlP.io payment";
-  const deliveryMethod = body?.delivery_method?.trim() || "link_only";
   const quantity = Math.max(1, Number(body?.quantity || 1));
   const unitPrice = Number(body?.unit_price || amount);
+  const description = body?.description?.trim() || "ControlP.io card payment";
 
+  if (!sourceId) return jsonError("Square payment token is required.");
   if (!Number.isFinite(amount) || amount <= 0) return jsonError("Payment amount must be greater than zero.");
   if (isManualPayment && !body?.customer_email && !body?.customer_phone) {
     return jsonError("Customer email or phone is required for a manual payment.");
@@ -80,8 +99,8 @@ export async function POST(request: Request) {
         total: amount,
         customer_email: body?.customer_email || null,
         customer_phone: body?.customer_phone || null,
-        company: body?.customer_email || body?.customer_phone || "Manual customer payment",
-        internal_notes: body?.notes?.trim() || "Created from admin Square payment link.",
+        company: body?.customer_email || body?.customer_phone || "Manual card payment",
+        internal_notes: body?.notes?.trim() || "Created from admin Square card payment.",
       })
       .select("id, user_id, order_number, total, company, customer_email, customer_phone, payment_status")
       .single()
@@ -139,8 +158,7 @@ export async function POST(request: Request) {
     };
   }
 
-  const appUrl = serverEnv("PUBLIC_APP_URL") || "https://my.controlp.io";
-  const squareResponse = await fetch(`${config.baseUrl}/v2/online-checkout/payment-links`, {
+  const squareResponse = await fetch(`${config.baseUrl}/v2/payments`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${config.accessToken}`,
@@ -149,78 +167,75 @@ export async function POST(request: Request) {
     },
     body: JSON.stringify({
       idempotency_key: crypto.randomUUID(),
-      order: {
-        location_id: config.locationId,
-      line_items: [
-        {
-            name: productLine?.description || description,
-            quantity: String(productLine?.quantity || 1),
-            base_price_money: {
-              amount: toCents(productLine?.unit_price || amount),
-              currency: config.currency,
-            },
-          },
-        ],
+      source_id: sourceId,
+      verification_token: body?.verification_token || undefined,
+      location_id: config.locationId,
+      amount_money: {
+        amount: toCents(amount),
+        currency: config.currency,
       },
-      checkout_options: {
-        redirect_url: `${appUrl.replace(/\/$/, "")}/dashboard`,
-        accepted_payment_methods: {
-          card: true,
-          apple_pay: true,
-          google_pay: true,
-          cash_app_pay: true,
-        },
-      },
-      pre_populated_data: {
-        buyer_email: body?.customer_email || orderResult.data.customer_email || undefined,
-        buyer_phone_number: body?.customer_phone || orderResult.data.customer_phone || undefined,
+      note: description,
+      buyer_email_address: body?.customer_email || orderResult.data.customer_email || undefined,
+      billing_address: {
+        address_line_1: body?.address_line_1 || undefined,
+        address_line_2: body?.address_line_2 || undefined,
+        locality: body?.locality || undefined,
+        administrative_district_level_1: body?.administrative_district_level_1 || undefined,
+        postal_code: body?.postal_code || undefined,
+        country: body?.country || "US",
       },
     }),
   });
 
-  const squarePayload = await squareResponse.json().catch(() => ({})) as SquarePaymentLinkResponse;
-  if (!squareResponse.ok || !squarePayload.payment_link?.url) {
-    const errorMessage = squarePayload.errors?.[0]?.detail || squarePayload.errors?.[0]?.code || "Square could not create a payment link.";
+  const squarePayload = await squareResponse.json().catch(() => ({})) as SquarePaymentResponse;
+  if (!squareResponse.ok || !squarePayload.payment?.id) {
+    const errorMessage = squarePayload.errors?.[0]?.detail || squarePayload.errors?.[0]?.code || "Square could not process the card payment.";
     return jsonError(errorMessage, squareResponse.status || 400);
   }
 
-  const squareLink = squarePayload.payment_link;
+  const squarePayment = squarePayload.payment;
+  const status = mapSquarePaymentStatus(squarePayment.status);
   const paymentResult = await verified.adminClient
     .from("payments")
     .insert({
       order_id: orderId,
       user_id: orderResult.data.user_id,
       provider: "square",
-      provider_payment_id: squareLink.id || squareLink.order_id || null,
-      method: "payment_link",
-      status: "pending",
+      provider_payment_id: squarePayment.id,
+      method: "card",
+      status,
       amount,
       currency: config.currency.toLowerCase(),
-      notes: body?.notes?.trim() || `Square payment link for ${orderResult.data.order_number || orderId}`,
-      payment_link_url: squareLink.url,
+      notes: body?.notes?.trim() || `Square card payment for ${orderResult.data.order_number || orderId}`,
       billing_contact: {
         customer: {
+          name: body?.cardholder_name || "",
           email: body?.customer_email || orderResult.data.customer_email || "",
           phone: body?.customer_phone || orderResult.data.customer_phone || "",
           company: orderResult.data.company || "",
+          address_line_1: body?.address_line_1 || "",
+          address_line_2: body?.address_line_2 || "",
+          locality: body?.locality || "",
+          administrative_district_level_1: body?.administrative_district_level_1 || "",
+          postal_code: body?.postal_code || "",
+          country: body?.country || "US",
         },
         square: {
           environment: config.environment,
           application_id: config.applicationId || null,
-          payment_link_id: squareLink.id || null,
-          square_order_id: squareLink.order_id || null,
-        },
-        delivery: {
-          method: deliveryMethod,
+          square_payment_id: squarePayment.id || null,
+          square_order_id: squarePayment.order_id || null,
+          receipt_url: squarePayment.receipt_url || null,
         },
       },
       line_items: productLine ? [productLine] : [],
       subtotal: amount,
       tax_amount: 0,
       discount_amount: 0,
-      balance_due: amount,
-      document_status: "not_generated",
-      delivery_status: deliveryMethod === "link_only" ? "created" : "ready_to_send",
+      balance_due: status === "paid" ? 0 : amount,
+      document_status: status === "paid" ? "generated" : "not_generated",
+      delivery_status: status === "paid" ? "paid" : "created",
+      received_at: status === "paid" ? new Date().toISOString() : null,
       created_by: verified.actorId,
     })
     .select("id, order_id, user_id, amount, status, provider, method, currency, notes, invoice_number, invoice_due_at, invoice_terms, billing_contact, line_items, subtotal, tax_amount, discount_amount, balance_due, payment_link_url, document_status, delivery_status, received_at, created_at")
@@ -230,21 +245,21 @@ export async function POST(request: Request) {
 
   await verified.adminClient
     .from("orders")
-    .update({ payment_status: "pending" })
+    .update({ payment_status: status, status: status === "paid" ? "paid" : "awaiting_payment" })
     .eq("id", orderId);
 
   await verified.adminClient.from("activity_logs").insert({
     actor_id: verified.actorId,
-    action: "square_payment_link_created",
+    action: "square_card_payment_processed",
     entity_type: "payment",
     entity_id: paymentResult.data.id,
     details: {
       order_id: orderId,
       order_number: orderResult.data.order_number,
       amount,
-      payment_link_url: squareLink.url,
-      square_payment_link_id: squareLink.id,
-      square_order_id: squareLink.order_id,
+      square_payment_id: squarePayment.id,
+      square_order_id: squarePayment.order_id,
+      square_status: squarePayment.status,
       square_environment: config.environment,
     },
   });
@@ -253,9 +268,10 @@ export async function POST(request: Request) {
     payment: paymentResult.data,
     square: {
       environment: config.environment,
-      payment_link_id: squareLink.id || null,
-      order_id: squareLink.order_id || null,
-      url: squareLink.url,
+      payment_id: squarePayment.id || null,
+      order_id: squarePayment.order_id || null,
+      status: squarePayment.status || null,
+      receipt_url: squarePayment.receipt_url || null,
     },
   });
 }

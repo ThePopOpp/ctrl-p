@@ -334,6 +334,10 @@ export async function createSquarePaymentLink(input: {
   customerPhone: string;
   notes: string;
   deliveryMethod: string;
+  productId?: string;
+  productName?: string;
+  quantity?: number;
+  unitPrice?: number;
 }) {
   const db = requireClient();
   const sessionResult = await db.auth.getSession();
@@ -354,6 +358,10 @@ export async function createSquarePaymentLink(input: {
       customer_phone: input.customerPhone,
       notes: input.notes,
       delivery_method: input.deliveryMethod,
+      product_id: input.productId,
+      product_name: input.productName,
+      quantity: input.quantity,
+      unit_price: input.unitPrice,
     }),
   });
 
@@ -369,6 +377,102 @@ export async function createSquarePaymentLink(input: {
       payment_link_id: string | null;
       order_id: string | null;
       url: string;
+    };
+  };
+}
+
+export async function loadSquarePaymentConfig() {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before loading Square payment settings.");
+
+  const response = await fetch("/api/admin/payments/square/config", {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not load Square payment settings.");
+  }
+
+  return payload as {
+    applicationId: string;
+    currency: string;
+    environment: "sandbox" | "production";
+    locationId: string;
+    scriptUrl: string;
+  };
+}
+
+export async function createSquareCardPayment(input: {
+  sourceId: string;
+  verificationToken?: string;
+  orderId?: string;
+  amount: number;
+  description: string;
+  customerEmail: string;
+  customerPhone: string;
+  cardholderName: string;
+  addressLine1: string;
+  addressLine2: string;
+  locality: string;
+  administrativeDistrictLevel1: string;
+  postalCode: string;
+  country: string;
+  notes: string;
+  productId?: string;
+  productName?: string;
+  quantity?: number;
+  unitPrice?: number;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before processing a card payment.");
+
+  const response = await fetch("/api/admin/payments/square/card", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      source_id: input.sourceId,
+      verification_token: input.verificationToken,
+      order_id: input.orderId,
+      amount: input.amount,
+      description: input.description,
+      customer_email: input.customerEmail,
+      customer_phone: input.customerPhone,
+      cardholder_name: input.cardholderName,
+      address_line_1: input.addressLine1,
+      address_line_2: input.addressLine2,
+      locality: input.locality,
+      administrative_district_level_1: input.administrativeDistrictLevel1,
+      postal_code: input.postalCode,
+      country: input.country,
+      notes: input.notes,
+      product_id: input.productId,
+      product_name: input.productName,
+      quantity: input.quantity,
+      unit_price: input.unitPrice,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not process Square card payment.");
+  }
+
+  return payload as {
+    payment: import("@/lib/admin/types").Payment;
+    square: {
+      environment: string;
+      payment_id: string | null;
+      order_id: string | null;
+      status: string | null;
+      receipt_url: string | null;
     };
   };
 }

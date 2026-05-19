@@ -144,9 +144,11 @@ export function renderPaymentDocumentHtml(payment: PaymentRecord, kind: PaymentD
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${html(title)} ${html(invoiceNumber)}</title>
   <style>
+    @page { size: Letter; margin: 0; }
     :root { color-scheme: light; }
+    * { box-sizing: border-box; }
     body { margin: 0; background: #f5f7f2; color: #111827; font-family: Arial, Helvetica, sans-serif; }
-    .page { max-width: 860px; margin: 32px auto; background: #fff; border: 1px solid #dfe5d8; border-radius: 12px; padding: 42px; }
+    .page { width: 8.5in; min-height: 11in; margin: 32px auto; background: #fff; border: 1px solid #dfe5d8; border-radius: 12px; padding: 0.45in; page-break-after: always; }
     .top { display: flex; justify-content: space-between; gap: 32px; border-bottom: 1px solid #e5e7eb; padding-bottom: 28px; }
     img { max-height: 54px; max-width: 190px; object-fit: contain; }
     h1 { margin: 0; font-size: 36px; letter-spacing: -0.02em; }
@@ -163,7 +165,8 @@ export function renderPaymentDocumentHtml(payment: PaymentRecord, kind: PaymentD
     .badge { display: inline-block; border-radius: 999px; background: #e5ff5f; color: #183300; padding: 5px 10px; font-weight: 700; font-size: 12px; }
     .actions { margin-top: 28px; display: flex; gap: 10px; }
     .button { background: #111827; color: white; border-radius: 8px; padding: 11px 14px; text-decoration: none; font-size: 14px; font-weight: 700; }
-    @media print { body { background: #fff; } .page { margin: 0; border: 0; border-radius: 0; } .actions { display: none; } }
+    @media screen and (max-width: 900px) { .page { width: calc(100vw - 24px); min-height: auto; padding: 24px; } .top, .grid { grid-template-columns: 1fr; display: grid; } }
+    @media print { body { background: #fff; } .page { width: 8.5in; min-height: 11in; margin: 0; border: 0; border-radius: 0; } .actions { display: none; } }
   </style>
 </head>
 <body>

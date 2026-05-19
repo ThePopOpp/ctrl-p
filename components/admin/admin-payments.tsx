@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   ChevronRight,
@@ -16,7 +16,7 @@ import {
   WalletCards,
 } from "lucide-react";
 
-import { createAdminInvoice, createSquarePaymentLink, deliverPaymentDocument, getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
+import { createAdminInvoice, createSquareCardPayment, createSquarePaymentLink, deliverPaymentDocument, getCurrentAdminProfile, loadAdminDashboardData, loadSquarePaymentConfig } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData, Order, Payment, Product } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
@@ -285,6 +285,7 @@ export function AdminPayments() {
           open={paymentOpen}
           onOpenChange={setPaymentOpen}
           orders={orders}
+          products={data?.products ?? []}
           onCreated={refreshPayments}
         />
       </div>
@@ -368,23 +369,42 @@ function ProcessPaymentSheet({
   open,
   onOpenChange,
   orders,
+  products,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orders: Order[];
+  products: Product[];
   onCreated: () => Promise<void>;
 }) {
   const manualOrderId = "__manual__";
   const payableOrders = useMemo(() => orders.filter((order) => order.id), [orders]);
+  const cardContainerRef = useRef<HTMLDivElement | null>(null);
+  const squareCardRef = useRef<any>(null);
   const [orderId, setOrderId] = useState(manualOrderId);
+  const [mode, setMode] = useState<"link" | "card">("link");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("ControlP.io order payment");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [cardholderName, setCardholderName] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [locality, setLocality] = useState("");
+  const [stateCode, setStateCode] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("US");
+  const [lineItemSource, setLineItemSource] = useState("manual");
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [lineQuantity, setLineQuantity] = useState("1");
+  const [lineUnitPrice, setLineUnitPrice] = useState("");
+  const [serviceName, setServiceName] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState("link_only");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [cardReady, setCardReady] = useState(false);
+  const [cardLoading, setCardLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [paymentLink, setPaymentLink] = useState("");
 
@@ -396,11 +416,54 @@ function ProcessPaymentSheet({
     if (!open) return;
     const first = payableOrders[0] ?? null;
     hydrateOrder(first, { fallbackToManual: true });
+    setMode("link");
     setDeliveryMethod("link_only");
     setNotes("");
     setMessage("");
     setPaymentLink("");
+    setCardReady(false);
   }, [open, payableOrders]);
+
+  useEffect(() => {
+    if (!open || mode !== "card") return;
+    let cancelled = false;
+
+    async function mountCard() {
+      setCardLoading(true);
+      setMessage("");
+      try {
+        const config = await loadSquarePaymentConfig();
+        await loadSquareScript(config.scriptUrl);
+        if (cancelled) return;
+        const square = (window as any).Square;
+        if (!square) throw new Error("Square Web Payments SDK did not load.");
+        const payments = square.payments(config.applicationId, config.locationId);
+        const card = await payments.card({
+          style: {
+            input: { fontSize: "16px", color: "var(--foreground)" },
+            ".input-container": { borderRadius: "8px" },
+          },
+        });
+        if (!cardContainerRef.current || cancelled) return;
+        cardContainerRef.current.innerHTML = "";
+        await card.attach(cardContainerRef.current);
+        squareCardRef.current = { card, config, payments };
+        setCardReady(true);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Could not load Square card form.");
+      } finally {
+        if (!cancelled) setCardLoading(false);
+      }
+    }
+
+    mountCard();
+    return () => {
+      cancelled = true;
+      squareCardRef.current?.card?.destroy?.();
+      squareCardRef.current = null;
+      setCardReady(false);
+    };
+  }, [open, mode]);
 
   function hydrateOrder(order: Order | null, options?: { fallbackToManual?: boolean }) {
     setOrderId(order?.id ?? (options?.fallbackToManual ? manualOrderId : ""));
@@ -417,6 +480,37 @@ function ProcessPaymentSheet({
       return;
     }
     hydrateOrder(payableOrders.find((order) => order.id === nextOrderId) ?? null);
+  }
+
+  function handleProductChange(nextProductId: string) {
+    setSelectedProductId(nextProductId);
+    const product = products.find((item) => item.id === nextProductId);
+    if (!product) return;
+    const price = Number(product.sale_price || product.base_price || product.base_cost || 0);
+    setLineUnitPrice(price ? price.toFixed(2) : "");
+    const quantity = Number(lineQuantity || 1);
+    setAmount((price * quantity).toFixed(2));
+    setDescription(`${product.name} payment`);
+  }
+
+  function recomputeProductAmount(nextQuantity = lineQuantity, nextUnitPrice = lineUnitPrice) {
+    const quantity = Math.max(1, Number(nextQuantity || 1));
+    const unit = Number(nextUnitPrice || 0);
+    if (Number.isFinite(quantity) && Number.isFinite(unit) && unit > 0) {
+      setAmount((quantity * unit).toFixed(2));
+    }
+  }
+
+  function selectedProductPayload() {
+    const product = products.find((item) => item.id === selectedProductId);
+    const quantity = Math.max(1, Number(lineQuantity || 1));
+    const unitPrice = Number(lineUnitPrice || amount || 0);
+    return {
+      productId: lineItemSource === "product" ? selectedProductId || undefined : undefined,
+      productName: lineItemSource === "product" ? product?.name : serviceName || description,
+      quantity,
+      unitPrice,
+    };
   }
 
   async function copyPaymentLink() {
@@ -438,6 +532,7 @@ function ProcessPaymentSheet({
         customerPhone,
         notes,
         deliveryMethod,
+        ...selectedProductPayload(),
       });
       if (deliveryMethod !== "link_only") {
         await deliverPaymentDocument({
@@ -460,6 +555,43 @@ function ProcessPaymentSheet({
     }
   }
 
+  async function processCardPayment() {
+    setSaving(true);
+    setMessage("Tokenizing card with Square...");
+    setPaymentLink("");
+    try {
+      if (!squareCardRef.current?.card) throw new Error("Square card form is not ready.");
+      const tokenResult = await squareCardRef.current.card.tokenize();
+      if (tokenResult.status !== "OK" || !tokenResult.token) {
+        throw new Error(tokenResult.errors?.[0]?.message || "Square could not tokenize the card.");
+      }
+      setMessage("Processing card payment...");
+      const result = await createSquareCardPayment({
+        sourceId: tokenResult.token,
+        orderId: orderId === manualOrderId ? undefined : orderId,
+        amount: parsedAmount,
+        description,
+        customerEmail,
+        customerPhone,
+        cardholderName,
+        addressLine1,
+        addressLine2,
+        locality,
+        administrativeDistrictLevel1: stateCode,
+        postalCode,
+        country,
+        notes,
+        ...selectedProductPayload(),
+      });
+      setMessage(`Square card payment ${human(result.payment.status)}.`);
+      await onCreated();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not process Square card payment.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
@@ -470,7 +602,12 @@ function ProcessPaymentSheet({
 
         <div className="mt-6 space-y-4">
           <div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground">
-            Square checkout keeps card entry on Square's secure page. This first pass creates a payable link and tracks it in ControlP.io.
+            Use a Square hosted checkout link or process a card now with Square secure fields. Raw card details never touch ControlP.io servers.
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 rounded-lg border bg-background/35 p-1">
+            <Button type="button" variant={mode === "link" ? "default" : "ghost"} onClick={() => setMode("link")}>Create payment link</Button>
+            <Button type="button" variant={mode === "card" ? "default" : "ghost"} onClick={() => setMode("card")}>Process card now</Button>
           </div>
 
           <div>
@@ -527,6 +664,48 @@ function ProcessPaymentSheet({
             </div>
           </div>
 
+          <div className="rounded-lg border bg-background/35 p-3">
+            <h3 className="text-sm font-semibold">Product or service</h3>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Line item type</div>
+                <Select value={lineItemSource} onValueChange={setLineItemSource}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual service</SelectItem>
+                    <SelectItem value="product">Catalog product</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {lineItemSource === "product" ? (
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Product</div>
+                  <Select value={selectedProductId} onValueChange={handleProductChange}>
+                    <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>{product.name} - {money.format(numberValue(product.sale_price || product.base_price || product.base_cost))}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Service</div>
+                  <Input placeholder="Design setup, deposit, balance..." value={serviceName} onChange={(event) => setServiceName(event.target.value)} />
+                </div>
+              )}
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Quantity</div>
+                <Input inputMode="decimal" value={lineQuantity} onChange={(event) => { setLineQuantity(event.target.value); recomputeProductAmount(event.target.value); }} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Unit price</div>
+                <Input inputMode="decimal" value={lineUnitPrice} onChange={(event) => { setLineUnitPrice(event.target.value); recomputeProductAmount(lineQuantity, event.target.value); }} />
+              </div>
+            </div>
+          </div>
+
           <div>
             <div className="mb-1.5 text-xs font-medium text-muted-foreground">Checkout description</div>
             <Input value={description} onChange={(event) => setDescription(event.target.value)} />
@@ -536,6 +715,47 @@ function ProcessPaymentSheet({
             <div className="mb-1.5 text-xs font-medium text-muted-foreground">Internal notes</div>
             <Input placeholder="Square checkout link for deposit, balance, or full order payment" value={notes} onChange={(event) => setNotes(event.target.value)} />
           </div>
+
+          {mode === "card" && (
+            <div className="rounded-lg border bg-background/35 p-3">
+              <h3 className="text-sm font-semibold">Card details</h3>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Cardholder name</div>
+                  <Input value={cardholderName} onChange={(event) => setCardholderName(event.target.value)} placeholder="Name on card" />
+                </div>
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Country</div>
+                  <Input value={country} onChange={(event) => setCountry(event.target.value.toUpperCase())} placeholder="US" />
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Secure card form</div>
+                  <div ref={cardContainerRef} className="min-h-[48px] rounded-md border bg-background px-3 py-3" />
+                  <div className="mt-1 text-xs text-muted-foreground">{cardLoading ? "Loading Square card fields..." : cardReady ? "Square secure card fields are ready." : "Switch to Process card now to load secure fields."}</div>
+                </div>
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Address line 1</div>
+                  <Input value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} />
+                </div>
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Address line 2</div>
+                  <Input value={addressLine2} onChange={(event) => setAddressLine2(event.target.value)} />
+                </div>
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">City</div>
+                  <Input value={locality} onChange={(event) => setLocality(event.target.value)} />
+                </div>
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">State</div>
+                  <Input value={stateCode} onChange={(event) => setStateCode(event.target.value.toUpperCase())} />
+                </div>
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Postal code</div>
+                  <Input value={postalCode} onChange={(event) => setPostalCode(event.target.value)} />
+                </div>
+              </div>
+            </div>
+          )}
 
           {paymentLink && (
             <div className="rounded-lg border bg-background/35 p-3">
@@ -558,15 +778,38 @@ function ProcessPaymentSheet({
           )}
 
           <div className="flex gap-2">
-            <Button className="flex-1" disabled={!canCreate} onClick={processPayment}>
-              {saving ? "Creating..." : "Create Square payment link"}
-            </Button>
+            {mode === "link" ? (
+              <Button className="flex-1" disabled={!canCreate} onClick={processPayment}>
+                {saving ? "Creating..." : "Create Square payment link"}
+              </Button>
+            ) : (
+              <Button className="flex-1" disabled={!canCreate || !cardReady} onClick={processCardPayment}>
+                {saving ? "Processing..." : "Process card payment"}
+              </Button>
+            )}
             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
           </div>
         </div>
       </SheetContent>
     </Sheet>
   );
+}
+
+function loadSquareScript(src: string) {
+  return new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
+    if (existing) {
+      if ((window as any).Square) resolve();
+      else existing.addEventListener("load", () => resolve(), { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Could not load Square Web Payments SDK."));
+    document.head.appendChild(script);
+  });
 }
 
 function NewInvoiceSheet({
