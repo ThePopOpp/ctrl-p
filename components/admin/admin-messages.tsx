@@ -17,7 +17,7 @@ import {
   Sun,
 } from "lucide-react";
 
-import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
+import { getCurrentAdminProfile, loadAdminDashboardData, markMessageRead } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData } from "@/lib/admin/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -55,6 +55,7 @@ export function AdminMessages() {
   const [config, setConfig] = useState<MessagingConfig | null>(null);
   const [query, setQuery] = useState("");
   const [composeOpen, setComposeOpen] = useState(false);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [notice, setNotice] = useState("");
 
@@ -118,7 +119,28 @@ export function AdminMessages() {
 
   const inbound = messages.filter((message) => message.direction === "inbound");
   const outbound = messages.filter((message) => message.direction === "outbound");
+  const unread = messages.filter((message) => !message.read_at);
   const configuredChannels = [config?.twilio?.configured, config?.smtp?.configured, config?.imap?.configured].filter(Boolean).length;
+  const selectedMessage = useMemo(
+    () => messages.find((message) => message.id === selectedMessageId) ?? null,
+    [messages, selectedMessageId],
+  );
+
+  async function openMessage(message: AdminDashboardData["messages"][number]) {
+    setSelectedMessageId(message.id);
+    if (message.read_at) return;
+
+    setData((current) => current ? {
+      ...current,
+      messages: current.messages.map((item) => item.id === message.id ? { ...item, read_at: new Date().toISOString() } : item),
+    } : current);
+
+    try {
+      await markMessageRead(message.id, message.order_id);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not mark message as read.");
+    }
+  }
 
   return (
     <div className={cn(theme === "dark" && "dark")}>
@@ -216,7 +238,7 @@ export function AdminMessages() {
               )}
 
               <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                <MessageStat label="Unread" value={String(messages.length)} hint="Visible unread records" />
+                <MessageStat label="Unread" value={String(unread.length)} hint="Visible unread records" />
                 <MessageStat label="Inbound" value={String(inbound.length)} hint="Customer replies" />
                 <MessageStat label="Outbound" value={String(outbound.length)} hint="Admin/system sent" />
                 <MessageStat label="Channels" value={`${configuredChannels}/3`} hint="SMS, SMTP, IMAP ready" />
@@ -242,9 +264,23 @@ export function AdminMessages() {
                       </TableHeader>
                       <TableBody>
                         {visibleMessages.map((message) => (
-                          <TableRow key={message.id}>
+                          <TableRow
+                            key={message.id}
+                            className="cursor-pointer hover:bg-accent/45"
+                            tabIndex={0}
+                            onClick={() => openMessage(message)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                openMessage(message);
+                              }
+                            }}
+                          >
                             <TableCell className="pl-4">
-                              <div className="font-medium">{message.subject || "Untitled message"}</div>
+                              <div className="flex items-center gap-2 font-medium">
+                                {!message.read_at && <span className="h-2 w-2 rounded-full bg-primary" aria-label="Unread" />}
+                                <span>{message.subject || "Untitled message"}</span>
+                              </div>
                               <div className="line-clamp-1 text-xs text-muted-foreground">{message.body || "No body preview"}</div>
                             </TableCell>
                             <TableCell><ChannelBadge channel={message.channel} /></TableCell>
@@ -292,6 +328,19 @@ export function AdminMessages() {
         </main>
 
         <ComposeMessageSheet open={composeOpen} onOpenChange={setComposeOpen} orders={orders} users={users} config={config} onMessageSent={refreshData} />
+        <MessageDetailSheet
+          message={selectedMessage}
+          open={Boolean(selectedMessage)}
+          onOpenChange={(open) => {
+            if (!open) setSelectedMessageId(null);
+          }}
+          order={orders.find((order) => order.id === selectedMessage?.order_id) ?? null}
+          user={users.find((user) => user.id === selectedMessage?.user_id) ?? null}
+          onCompose={() => {
+            setSelectedMessageId(null);
+            setComposeOpen(true);
+          }}
+        />
       </div>
     </div>
   );
@@ -369,6 +418,85 @@ function TemplateCard({ title, items }: { title: string; items: string[] }) {
         {items.map((item) => <div key={item} className="rounded-lg border bg-background/35 px-3 py-2 text-sm">{item}</div>)}
       </CardContent>
     </Card>
+  );
+}
+
+function MessageDetailSheet({
+  message,
+  open,
+  onOpenChange,
+  order,
+  user,
+  onCompose,
+}: {
+  message: AdminDashboardData["messages"][number] | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  order: AdminDashboardData["orders"][number] | null;
+  user: AdminDashboardData["users"][number] | null;
+  onCompose: () => void;
+}) {
+  if (!message) return null;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
+        <SheetHeader>
+          <SheetTitle>{message.subject || "Untitled message"}</SheetTitle>
+          <SheetDescription>
+            {human(message.direction)} {human(message.channel)} message created {formatDate(message.created_at)}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <MessageMeta label="Channel" value={human(message.channel)} />
+            <MessageMeta label="Direction" value={human(message.direction)} />
+            <MessageMeta label="Read" value={message.read_at ? formatDate(message.read_at) : "Unread"} />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MessageMeta
+              label="Customer"
+              value={user?.full_name || user?.email || order?.customer_email || "Not linked"}
+              subvalue={user?.company || order?.company || user?.phone || order?.customer_phone || undefined}
+            />
+            <MessageMeta
+              label="Order"
+              value={order?.order_number ? `#${order.order_number}` : message.order_id ? message.order_id : "Not linked"}
+              subvalue={order ? `${human(order.status)} / ${human(order.payment_status)}` : undefined}
+            />
+          </div>
+
+          <div className="rounded-xl border bg-background/40 p-4">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Full message</div>
+            <div className="whitespace-pre-wrap break-words text-sm leading-6">
+              {message.body || "No message body was saved for this record."}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={onCompose}><Send className="h-4 w-4" /> Reply or forward</Button>
+            {order && (
+              <Button variant="outline" asChild>
+                <Link href="/admin/orders">Open orders</Link>
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function MessageMeta({ label, value, subvalue }: { label: string; value: string; subvalue?: string }) {
+  return (
+    <div className="rounded-lg border bg-secondary/25 px-3 py-2">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-1 break-words text-sm font-medium">{value}</div>
+      {subvalue && <div className="mt-1 break-words text-xs text-muted-foreground">{subvalue}</div>}
+    </div>
   );
 }
 

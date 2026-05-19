@@ -37,14 +37,21 @@ export type OrderItem = {
 export type ProductionJob = {
   id: string;
   order_id: string;
+  order_item_id?: string | null;
   status: string;
   priority: number | null;
+  assigned_staff_id?: string | null;
   station: string | null;
   due_at: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  notes?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   orders?: { order_number: string | null } | null;
   order_items?: {
     quantity: number | null;
-    products?: { name: string | null } | null;
+    products?: { id?: string | null; name: string | null; category?: string | null } | null;
   } | null;
 };
 

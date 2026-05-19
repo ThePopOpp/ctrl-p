@@ -1,5 +1,5 @@
-import { AdminSectionPage } from "@/components/admin/admin-section-page";
+import { AdminProduction } from "@/components/admin/admin-production";
 
 export default function ProductionPage() {
-  return <AdminSectionPage section="production" />;
+  return <AdminProduction />;
 }

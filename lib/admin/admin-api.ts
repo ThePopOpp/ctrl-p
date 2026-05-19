@@ -54,9 +54,9 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
       .limit(200),
     db
       .from("production_jobs")
-      .select("id, order_id, status, priority, station, due_at, orders!production_jobs_order_id_fkey(order_number), order_items!production_jobs_order_item_id_fkey(quantity, products!order_items_product_id_fkey(name))")
+      .select("id, order_id, order_item_id, status, priority, assigned_staff_id, station, due_at, started_at, completed_at, notes, created_at, updated_at, orders!production_jobs_order_id_fkey(order_number), order_items!production_jobs_order_item_id_fkey(quantity, products!order_items_product_id_fkey(id, name, category))")
       .order("priority", { ascending: true })
-      .limit(25),
+      .limit(100),
     db
       .from("payments")
       .select("id, order_id, user_id, amount, status, provider, method, currency, notes, invoice_number, invoice_due_at, invoice_terms, billing_contact, line_items, subtotal, tax_amount, discount_amount, balance_due, payment_link_url, document_status, delivery_status, received_at, created_at")
@@ -144,6 +144,88 @@ export async function updateProductionJobStatus(jobId: string, status: string, o
   });
 
   return jobResult.data;
+}
+
+export async function createProductionJob(input: {
+  orderId: string;
+  orderItemId?: string;
+  status: string;
+  priority: number;
+  station: string;
+  dueAt: string;
+  assignedStaffId?: string;
+  notes: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before creating a production job.");
+
+  const response = await fetch("/api/admin/production", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      order_id: input.orderId,
+      order_item_id: input.orderItemId || null,
+      status: input.status,
+      priority: input.priority,
+      station: input.station,
+      due_at: input.dueAt ? new Date(`${input.dueAt}T12:00:00`).toISOString() : null,
+      assigned_staff_id: input.assignedStaffId || null,
+      notes: input.notes,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not create production job.");
+  }
+
+  return payload.job;
+}
+
+export async function updateProductionJob(input: {
+  jobId: string;
+  orderId: string;
+  status: string;
+  priority: number;
+  station: string;
+  dueAt: string;
+  assignedStaffId?: string;
+  notes: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before updating a production job.");
+
+  const response = await fetch("/api/admin/production", {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      job_id: input.jobId,
+      order_id: input.orderId,
+      status: input.status,
+      priority: input.priority,
+      station: input.station,
+      due_at: input.dueAt ? new Date(`${input.dueAt}T12:00:00`).toISOString() : null,
+      assigned_staff_id: input.assignedStaffId || null,
+      notes: input.notes,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not update production job.");
+  }
+
+  return payload.job;
 }
 
 export async function updateAdminOrder(input: {
