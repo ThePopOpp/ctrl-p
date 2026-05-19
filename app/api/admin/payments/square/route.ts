@@ -19,7 +19,9 @@ function squareConfig() {
   const applicationId = environment === "production"
     ? serverEnv("SQUARE_PRODUCTION_APPLICATION_ID")
     : serverEnv("SQUARE_SANDBOX_APPLICATION_ID");
-  const locationId = serverEnv("SQUARE_LOCATION_ID");
+  const locationId = environment === "production"
+    ? serverEnv("SQUARE_PRODUCTION_LOCATION_ID") || serverEnv("SQUARE_LOCATION_ID")
+    : serverEnv("SQUARE_SANDBOX_LOCATION_ID") || serverEnv("SQUARE_LOCATION_ID");
   const currency = (serverEnv("SQUARE_CURRENCY") || "USD").toUpperCase();
   const apiVersion = serverEnv("SQUARE_API_VERSION") || "2026-01-22";
   const baseUrl = environment === "production" ? "https://connect.squareup.com" : "https://connect.squareupsandbox.com";
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
 
   const config = squareConfig();
   if (!config.accessToken || !config.locationId) {
-    return jsonError("Square is not configured. Add SQUARE_LOCATION_ID and the matching Square access token for the selected environment.", 501);
+    return jsonError("Square is not configured. Add the matching Square access token and location ID for the selected environment.", 501);
   }
 
   const body = await request.json().catch(() => null) as {
