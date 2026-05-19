@@ -363,6 +363,59 @@ export async function updateAdminOrder(input: {
   return payload.order;
 }
 
+export async function createAdminOrder(input: {
+  userId?: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  status: string;
+  paymentStatus: string;
+  productionStatus: string;
+  company: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerNotes: string;
+  internalNotes: string;
+  dueAt: string;
+  shippingMethod: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before creating an order.");
+
+  const response = await fetch("/api/admin/orders", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      user_id: input.userId || null,
+      product_id: input.productId,
+      quantity: input.quantity,
+      unit_price: input.unitPrice,
+      status: input.status,
+      payment_status: input.paymentStatus,
+      production_status: input.productionStatus,
+      company: input.company,
+      customer_email: input.customerEmail,
+      customer_phone: input.customerPhone,
+      customer_notes: input.customerNotes,
+      internal_notes: input.internalNotes,
+      due_at: input.dueAt ? new Date(`${input.dueAt}T12:00:00`).toISOString() : null,
+      shipping_method: input.shippingMethod,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not create order.");
+  }
+
+  return payload.order;
+}
+
 export async function markMessageRead(messageId: string, orderId: string | null) {
   const db = requireClient();
   const result = await db
