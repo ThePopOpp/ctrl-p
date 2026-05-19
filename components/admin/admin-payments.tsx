@@ -16,7 +16,7 @@ import {
   WalletCards,
 } from "lucide-react";
 
-import { createAdminInvoice, createSquarePaymentLink, getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
+import { createAdminInvoice, createSquarePaymentLink, deliverPaymentDocument, getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData, Order, Payment, Product } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
@@ -52,6 +52,7 @@ export function AdminPayments() {
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     async function boot() {
@@ -77,6 +78,25 @@ export function AdminPayments() {
 
   async function refreshPayments() {
     setData(await loadAdminDashboardData());
+  }
+
+  function openPaymentDocument(paymentId: string, kind: "invoice" | "receipt") {
+    window.open(`/api/payments/${paymentId}/document?kind=${kind}`, "_blank", "noopener,noreferrer");
+  }
+
+  async function sendPaymentDocument(payment: Payment, kind: "invoice" | "receipt") {
+    setNotice(`Sending ${kind}...`);
+    try {
+      await deliverPaymentDocument({
+        paymentId: payment.id,
+        kind,
+        channel: "email",
+      });
+      setNotice(`${human(kind)} sent.`);
+      await refreshPayments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : `Could not send ${kind}.`);
+    }
   }
 
   return (
@@ -179,6 +199,7 @@ export function AdminPayments() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Payment activity</CardTitle>
                     <CardDescription>Recent charges, invoices, manual payments, refunds, and processor status</CardDescription>
+                    {notice && <div className="rounded-md border bg-background/50 px-3 py-2 text-xs text-muted-foreground">{notice}</div>}
                   </CardHeader>
                   <CardContent className="p-0">
                     <Table>
@@ -189,6 +210,7 @@ export function AdminPayments() {
                           <TableHead>Method</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
+                          <TableHead className="text-right pr-4">Documents</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -199,11 +221,23 @@ export function AdminPayments() {
                             <TableCell>{human(payment.method)}</TableCell>
                             <TableCell><Badge className={cn("border", statusTone(payment.status))}>{human(payment.status)}</Badge></TableCell>
                             <TableCell className="text-right font-semibold">{money.format(numberValue(payment.amount))}</TableCell>
+                            <TableCell className="pr-4">
+                              <div className="flex justify-end gap-1">
+                                <Button size="sm" variant="outline" onClick={() => openPaymentDocument(payment.id, "invoice")}>View</Button>
+                                <Button size="sm" variant="outline" onClick={() => sendPaymentDocument(payment, "invoice")}>Send</Button>
+                                {payment.status === "paid" && (
+                                  <>
+                                    <Button size="sm" variant="outline" onClick={() => openPaymentDocument(payment.id, "receipt")}>Receipt</Button>
+                                    <Button size="sm" variant="outline" onClick={() => sendPaymentDocument(payment, "receipt")}>Send receipt</Button>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))}
                         {!payments.length && (
                           <TableRow>
-                            <TableCell className="p-6 text-center text-muted-foreground" colSpan={5}>No live payment records yet.</TableCell>
+                            <TableCell className="p-6 text-center text-muted-foreground" colSpan={6}>No live payment records yet.</TableCell>
                           </TableRow>
                         )}
                       </TableBody>
@@ -399,8 +433,19 @@ function ProcessPaymentSheet({
         notes,
         deliveryMethod,
       });
+      if (deliveryMethod !== "link_only") {
+        await deliverPaymentDocument({
+          paymentId: result.payment.id,
+          kind: "invoice",
+          channel: deliveryMethod === "both" ? "both" : deliveryMethod === "sms" ? "sms" : "email",
+          recipientEmail: customerEmail,
+          recipientPhone: customerPhone,
+        });
+      }
       setPaymentLink(result.square.url);
-      setMessage(`Square ${human(result.square.environment)} payment link created.`);
+      setMessage(deliveryMethod === "link_only"
+        ? `Square ${human(result.square.environment)} payment link created.`
+        : `Square ${human(result.square.environment)} payment link created and sent.`);
       await onCreated();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not create Square payment link.");
@@ -659,7 +704,7 @@ function NewInvoiceSheet({
     setSaving(true);
     setMessage("Creating invoice...");
     try {
-      await createAdminInvoice({
+      const payment = await createAdminInvoice({
         orderId,
         amount: parsedAmount,
         notes: notes || `Invoice for ${selectedOrder?.order_number || "order"}`,
@@ -685,7 +730,16 @@ function NewInvoiceSheet({
         processor,
         deliveryStatus,
       });
-      setMessage("Invoice created.");
+      if (deliveryMethod !== "none" && deliveryStatus !== "draft") {
+        await deliverPaymentDocument({
+          paymentId: payment.id,
+          kind: "invoice",
+          channel: deliveryMethod === "both" ? "both" : deliveryMethod === "sms" ? "sms" : "email",
+          recipientEmail: deliveryMethod === "sms" ? undefined : deliveryRecipient,
+          recipientPhone: deliveryMethod === "email" ? undefined : deliveryRecipient,
+        });
+      }
+      setMessage(deliveryMethod !== "none" && deliveryStatus !== "draft" ? "Invoice created and sent." : "Invoice created.");
       await onCreated();
       onOpenChange(false);
     } catch (error) {

@@ -146,6 +146,43 @@ export async function updateProductionJobStatus(jobId: string, status: string, o
   return jobResult.data;
 }
 
+export async function updateAdminOrder(input: {
+  orderId: string;
+  status: string;
+  paymentStatus: string;
+  productionStatus: string;
+  internalNotes: string;
+  dueAt: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before updating an order.");
+
+  const response = await fetch("/api/admin/orders", {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      order_id: input.orderId,
+      status: input.status,
+      payment_status: input.paymentStatus,
+      production_status: input.productionStatus,
+      internal_notes: input.internalNotes,
+      due_at: input.dueAt ? new Date(`${input.dueAt}T12:00:00`).toISOString() : null,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not update order.");
+  }
+
+  return payload.order;
+}
+
 export async function markMessageRead(messageId: string, orderId: string | null) {
   const db = requireClient();
   const result = await db
@@ -334,6 +371,40 @@ export async function createSquarePaymentLink(input: {
       url: string;
     };
   };
+}
+
+export async function deliverPaymentDocument(input: {
+  paymentId: string;
+  kind: "invoice" | "receipt";
+  channel: "email" | "sms" | "both";
+  recipientEmail?: string;
+  recipientPhone?: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before sending a payment document.");
+
+  const response = await fetch(`/api/admin/payments/${input.paymentId}/deliver`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      kind: input.kind,
+      channel: input.channel,
+      recipient_email: input.recipientEmail,
+      recipient_phone: input.recipientPhone,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not send payment document.");
+  }
+
+  return payload as { sent: string[]; documentUrl: string };
 }
 
 export type ProductPayload = {
