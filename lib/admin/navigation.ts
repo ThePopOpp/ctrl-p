@@ -39,7 +39,7 @@ export const adminNavGroups: readonly {
     items: [
       ["Products", PackageCheck, "/admin/products"],
       ["Artwork", FileText, "/admin/artwork"],
-      ["Shipments", Truck, "/admin/shipments"],
+      ["Shipping", Truck, "/admin/shipments"],
       ["Marketing", Megaphone, "/admin/marketing"],
     ],
   },

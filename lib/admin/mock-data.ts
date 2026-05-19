@@ -157,6 +157,21 @@ export const mockAdminData: AdminDashboardData = {
       created_at: new Date(Date.now() - 4 * 3600000).toISOString(),
     },
   ],
+  shipments: [
+    {
+      id: "90000000-0000-4000-8000-000000000001",
+      order_id: "30000000-0000-4000-8000-000000000003",
+      carrier: "ups",
+      tracking_number: "1Z999AA10123456784",
+      tracking_url: "https://www.ups.com/track?tracknum=1Z999AA10123456784",
+      status: "in_transit",
+      shipped_at: new Date(Date.now() - 86400000).toISOString(),
+      estimated_delivery_at: new Date(Date.now() + 2 * 86400000).toISOString(),
+      delivered_at: null,
+      created_at: new Date(Date.now() - 86400000).toISOString(),
+      updated_at: new Date(Date.now() - 86400000).toISOString(),
+    },
+  ],
   payments: [
     { id: "pay1", order_id: "30000000-0000-4000-8000-000000000001", user_id: "10000000-0000-4000-8000-000000000002", amount: 416.64, status: "paid", provider: "manual", method: "card_terminal", currency: "usd", notes: "Paid in shop.", received_at: new Date().toISOString(), created_at: new Date().toISOString() },
     { id: "pay2", order_id: "30000000-0000-4000-8000-000000000002", user_id: "10000000-0000-4000-8000-000000000002", amount: 180.11, status: "pending", provider: "invoice", method: "manual", currency: "usd", notes: "Open invoice.", received_at: null, created_at: new Date().toISOString() },

@@ -41,7 +41,7 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
   if (!db) return mockAdminData;
 
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const [orders, orderItems, productionJobs, artworkFiles, proofs, designDrafts, payments, messages, users, activityLogs, products] = await Promise.all([
+  const [orders, orderItems, productionJobs, artworkFiles, proofs, designDrafts, shipments, payments, messages, users, activityLogs, products] = await Promise.all([
     db
       .from("orders")
       .select("id, order_number, user_id, status, production_status, payment_status, total, company, customer_email, customer_phone, customer_notes, internal_notes, due_at, users!orders_user_id_fkey(full_name, company)")
@@ -73,6 +73,11 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
       .order("last_saved_at", { ascending: false })
       .limit(100),
     db
+      .from("shipments")
+      .select("id, order_id, carrier, tracking_number, tracking_url, status, shipped_at, estimated_delivery_at, delivered_at, created_at, updated_at")
+      .order("created_at", { ascending: false })
+      .limit(200),
+    db
       .from("payments")
       .select("id, order_id, user_id, amount, status, provider, method, currency, notes, invoice_number, invoice_due_at, invoice_terms, billing_contact, line_items, subtotal, tax_amount, discount_amount, balance_due, payment_link_url, document_status, delivery_status, received_at, created_at")
       .gte("created_at", weekAgo)
@@ -102,7 +107,7 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
       .limit(200),
   ]);
 
-  const hasError = [orders, orderItems, productionJobs, artworkFiles, proofs, designDrafts, payments, messages, users, activityLogs, products].some((result) => result.error);
+  const hasError = [orders, orderItems, productionJobs, artworkFiles, proofs, designDrafts, shipments, payments, messages, users, activityLogs, products].some((result) => result.error);
   if (hasError) return mockAdminData;
 
   return {
@@ -112,12 +117,92 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
     artworkFiles: artworkFiles.data ?? [],
     proofs: proofs.data ?? [],
     designDrafts: designDrafts.data ?? [],
+    shipments: shipments.data ?? [],
     payments: payments.data ?? [],
     messages: messages.data ?? [],
     users: users.data ?? [],
     activityLogs: activityLogs.data ?? [],
     products: products.data ?? [],
   } as AdminDashboardData;
+}
+
+export async function saveAdminShipment(input: {
+  shipmentId?: string;
+  orderId: string;
+  carrier: string;
+  trackingNumber: string;
+  trackingUrl: string;
+  status: string;
+  shippedAt: string;
+  estimatedDeliveryAt: string;
+  deliveredAt: string;
+  notifyEmail: boolean;
+  notifySms: boolean;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before saving shipping.");
+
+  const response = await fetch("/api/admin/shipping", {
+    method: input.shipmentId ? "PATCH" : "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      shipment_id: input.shipmentId,
+      order_id: input.orderId,
+      carrier: input.carrier,
+      tracking_number: input.trackingNumber,
+      tracking_url: input.trackingUrl,
+      status: input.status,
+      shipped_at: input.shippedAt ? new Date(`${input.shippedAt}T12:00:00`).toISOString() : null,
+      estimated_delivery_at: input.estimatedDeliveryAt ? new Date(`${input.estimatedDeliveryAt}T12:00:00`).toISOString() : null,
+      delivered_at: input.deliveredAt ? new Date(`${input.deliveredAt}T12:00:00`).toISOString() : null,
+      notify_email: input.notifyEmail,
+      notify_sms: input.notifySms,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not save shipment.");
+  }
+
+  return payload.shipment;
+}
+
+export async function previewShippingRate(input: {
+  carrier: string;
+  service: string;
+  weightLbs: number;
+  lengthIn: number;
+  widthIn: number;
+  heightIn: number;
+  postalCodeFrom: string;
+  postalCodeTo: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before quoting shipping.");
+
+  const response = await fetch("/api/admin/shipping/rates", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(input),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not quote shipping.");
+  }
+
+  return payload as { rate: { carrier: string; service: string; amount: number; currency: string; estimatedDays: number; configured: boolean; note: string } };
 }
 
 export async function uploadAdminArtwork(input: {

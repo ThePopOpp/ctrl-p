@@ -107,6 +107,20 @@ export type DesignDraft = {
   created_at: string | null;
 };
 
+export type Shipment = {
+  id: string;
+  order_id: string;
+  carrier: string | null;
+  tracking_number: string | null;
+  tracking_url: string | null;
+  status: string | null;
+  shipped_at: string | null;
+  estimated_delivery_at: string | null;
+  delivered_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export type Payment = {
   id: string;
   order_id: string;
@@ -253,6 +267,7 @@ export type AdminDashboardData = {
   artworkFiles: ArtworkFile[];
   proofs: Proof[];
   designDrafts: DesignDraft[];
+  shipments: Shipment[];
   payments: Payment[];
   messages: Message[];
   users: AdminUser[];

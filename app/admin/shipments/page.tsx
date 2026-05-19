@@ -1,5 +1,5 @@
-import { AdminSectionPage } from "@/components/admin/admin-section-page";
+import { AdminShipping } from "@/components/admin/admin-shipping";
 
 export default function ShipmentsPage() {
-  return <AdminSectionPage section="shipments" />;
+  return <AdminShipping />;
 }
