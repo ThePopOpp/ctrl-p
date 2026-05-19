@@ -16,7 +16,7 @@ import {
   WalletCards,
 } from "lucide-react";
 
-import { createAdminInvoice, getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
+import { createAdminInvoice, createSquarePaymentLink, getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData, Order, Payment, Product } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,7 @@ export function AdminPayments() {
   const [authState, setAuthState] = useState<"checking" | "allowed" | "denied">("checking");
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   useEffect(() => {
     async function boot() {
@@ -161,7 +162,7 @@ export function AdminPayments() {
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => setInvoiceOpen(true)}><ReceiptText className="h-4 w-4" /> New invoice</Button>
-                  <Button variant="outline"><CreditCard className="h-4 w-4" /> Process payment</Button>
+                  <Button variant="outline" onClick={() => setPaymentOpen(true)}><CreditCard className="h-4 w-4" /> Process payment</Button>
                 </div>
               </div>
 
@@ -246,6 +247,12 @@ export function AdminPayments() {
           products={data?.products ?? []}
           onCreated={refreshPayments}
         />
+        <ProcessPaymentSheet
+          open={paymentOpen}
+          onOpenChange={setPaymentOpen}
+          orders={orders}
+          onCreated={refreshPayments}
+        />
       </div>
     </div>
   );
@@ -321,6 +328,185 @@ function safeJsonArray(value: string) {
   } catch {
     return [];
   }
+}
+
+function ProcessPaymentSheet({
+  open,
+  onOpenChange,
+  orders,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  orders: Order[];
+  onCreated: () => Promise<void>;
+}) {
+  const payableOrders = useMemo(() => orders.filter((order) => order.id), [orders]);
+  const [orderId, setOrderId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("ControlP.io order payment");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [deliveryMethod, setDeliveryMethod] = useState("link_only");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [paymentLink, setPaymentLink] = useState("");
+
+  const selectedOrder = payableOrders.find((order) => order.id === orderId) ?? null;
+  const parsedAmount = Number(amount || 0);
+  const canCreate = Boolean(orderId) && Number.isFinite(parsedAmount) && parsedAmount > 0 && !saving;
+
+  useEffect(() => {
+    if (!open) return;
+    const first = payableOrders[0] ?? null;
+    hydrateOrder(first);
+    setDeliveryMethod("link_only");
+    setNotes("");
+    setMessage("");
+    setPaymentLink("");
+  }, [open, payableOrders]);
+
+  function hydrateOrder(order: Order | null) {
+    setOrderId(order?.id ?? "");
+    setAmount(order?.total ? Number(order.total).toFixed(2) : "");
+    setDescription(order?.order_number ? `ControlP.io order ${order.order_number}` : "ControlP.io order payment");
+    setCustomerEmail(order?.customer_email || "");
+    setCustomerPhone(order?.customer_phone || "");
+  }
+
+  function handleOrderChange(nextOrderId: string) {
+    hydrateOrder(payableOrders.find((order) => order.id === nextOrderId) ?? null);
+  }
+
+  async function copyPaymentLink() {
+    if (!paymentLink || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(paymentLink);
+    setMessage("Payment link copied.");
+  }
+
+  async function processPayment() {
+    setSaving(true);
+    setMessage("Creating Square payment link...");
+    setPaymentLink("");
+    try {
+      const result = await createSquarePaymentLink({
+        orderId,
+        amount: parsedAmount,
+        description,
+        customerEmail,
+        customerPhone,
+        notes,
+        deliveryMethod,
+      });
+      setPaymentLink(result.square.url);
+      setMessage(`Square ${human(result.square.environment)} payment link created.`);
+      await onCreated();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not create Square payment link.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
+        <SheetHeader>
+          <SheetTitle>Process payment</SheetTitle>
+          <SheetDescription>Create a Square hosted checkout link for a customer payment.</SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-4">
+          <div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground">
+            Square checkout keeps card entry on Square's secure page. This first pass creates a payable link and tracks it in ControlP.io.
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Order</div>
+            <Select value={orderId} onValueChange={handleOrderChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select order" />
+              </SelectTrigger>
+              <SelectContent>
+                {payableOrders.map((order) => (
+                  <SelectItem key={order.id} value={order.id}>{orderLabel(order)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedOrder && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SummaryTile label="Customer">{selectedOrder.users?.full_name || selectedOrder.company || selectedOrder.customer_email || "Guest customer"}</SummaryTile>
+              <SummaryTile label="Order total">{money.format(numberValue(selectedOrder.total))}</SummaryTile>
+              <SummaryTile label="Payment status">{human(selectedOrder.payment_status)}</SummaryTile>
+              <SummaryTile label="Order number">#{selectedOrder.order_number || selectedOrder.id.slice(0, 8)}</SummaryTile>
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Payment amount</div>
+              <Input inputMode="decimal" placeholder="0.00" value={amount} onChange={(event) => setAmount(event.target.value)} />
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Delivery method</div>
+              <Select value={deliveryMethod} onValueChange={setDeliveryMethod}>
+                <SelectTrigger><SelectValue placeholder="Delivery method" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="link_only">Create link only</SelectItem>
+                  <SelectItem value="email">Prepare email link</SelectItem>
+                  <SelectItem value="sms">Prepare SMS link</SelectItem>
+                  <SelectItem value="both">Prepare email and SMS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Customer email</div>
+              <Input type="email" placeholder="customer@example.com" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)} />
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Customer phone</div>
+              <Input placeholder="+16025550123" value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Checkout description</div>
+            <Input value={description} onChange={(event) => setDescription(event.target.value)} />
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Internal notes</div>
+            <Input placeholder="Square checkout link for deposit, balance, or full order payment" value={notes} onChange={(event) => setNotes(event.target.value)} />
+          </div>
+
+          {paymentLink && (
+            <div className="rounded-lg border bg-background/35 p-3">
+              <div className="text-xs font-semibold uppercase text-muted-foreground">Square checkout link</div>
+              <a className="mt-2 block break-all text-sm font-medium text-primary underline-offset-4 hover:underline" href={paymentLink} target="_blank" rel="noreferrer">
+                {paymentLink}
+              </a>
+              <div className="mt-3 flex gap-2">
+                <Button variant="outline" onClick={copyPaymentLink}>Copy link</Button>
+                <Button variant="outline" asChild><a href={paymentLink} target="_blank" rel="noreferrer">Open checkout</a></Button>
+              </div>
+            </div>
+          )}
+
+          {message && <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{message}</div>}
+
+          <div className="flex gap-2">
+            <Button className="flex-1" disabled={!canCreate} onClick={processPayment}>
+              {saving ? "Creating..." : "Create Square payment link"}
+            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
 }
 
 function NewInvoiceSheet({

@@ -289,6 +289,53 @@ export async function createAdminInvoice(input: {
   return payload.payment;
 }
 
+export async function createSquarePaymentLink(input: {
+  orderId: string;
+  amount: number;
+  description: string;
+  customerEmail: string;
+  customerPhone: string;
+  notes: string;
+  deliveryMethod: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before processing a payment.");
+
+  const response = await fetch("/api/admin/payments/square", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      order_id: input.orderId,
+      amount: input.amount,
+      description: input.description,
+      customer_email: input.customerEmail,
+      customer_phone: input.customerPhone,
+      notes: input.notes,
+      delivery_method: input.deliveryMethod,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not create Square payment link.");
+  }
+
+  return payload as {
+    payment: import("@/lib/admin/types").Payment;
+    square: {
+      environment: string;
+      payment_link_id: string | null;
+      order_id: string | null;
+      url: string;
+    };
+  };
+}
+
 export type ProductPayload = {
   id?: string;
   sku: string;
