@@ -114,7 +114,7 @@ function CampaignSheet({ open, onOpenChange, users, onSent }: { open: boolean; o
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
   const roles = Array.from(new Set(users.map((user) => user.role))).sort();
-  const audienceUsers = useMemo(() => role === "all" ? users : users.filter((user) => user.role === role), [role, users]);
+  const audienceUsers = useMemo(() => (role === "all" ? users : users.filter((user) => user.role === role)).filter((user) => user.status === "active"), [role, users]);
   const emailReachable = audienceUsers.filter((user) => user.email);
   const smsReachable = audienceUsers.filter((user) => user.phone);
   const combinedReachable = audienceUsers.filter((user) => user.email || user.phone);
@@ -130,7 +130,8 @@ function CampaignSheet({ open, onOpenChange, users, onSent }: { open: boolean; o
     setMessage("Sending campaign...");
     try {
       const token = await adminToken();
-      const response = await fetch("/api/admin/messaging/send", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ channel, mode: "bulk", role, subject, body }) });
+      const targetUsers = channel === "sms" ? smsReachable : channel === "email" ? emailReachable : channel === "email_sms" ? combinedReachable : audienceUsers;
+      const response = await fetch("/api/admin/messaging/send", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ channel, mode: "bulk", role, userIds: targetUsers.map((user) => user.id), subject, body }) });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not send campaign.");
       setMessage(`Sent ${payload.sent || 0} message${payload.sent === 1 ? "" : "s"}.`);

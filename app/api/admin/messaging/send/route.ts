@@ -82,12 +82,15 @@ async function resolveRecipients(
   let query = adminClient
     .from("users")
     .select("id, email, phone, full_name, role")
-    .eq("status", "active")
     .is("deleted_at", null);
 
   if (payload.userIds?.length) {
     query = query.in("id", payload.userIds);
-  } else if (payload.role && payload.role !== "all") {
+  } else {
+    query = query.eq("status", "active");
+  }
+
+  if (!payload.userIds?.length && payload.role && payload.role !== "all") {
     query = query.eq("role", payload.role);
   }
 
