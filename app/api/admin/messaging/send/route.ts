@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { jsonError, serverEnv, verifyAdminRequest } from "@/lib/admin/server-auth";
 
-type SendChannel = "email" | "sms" | "dashboard" | "internal";
+type SendChannel = "email" | "sms" | "email_sms" | "dashboard" | "internal";
 type SendMode = "single" | "bulk";
 
 type SendMessagePayload = {
@@ -27,7 +27,7 @@ type Recipient = {
   role: string | null;
 };
 
-const VALID_CHANNELS = new Set(["email", "sms", "dashboard", "internal"]);
+const VALID_CHANNELS = new Set(["email", "sms", "email_sms", "dashboard", "internal"]);
 const VALID_MODES = new Set(["single", "bulk"]);
 
 function asBoolean(value: string) {
@@ -184,7 +184,7 @@ export async function POST(request: Request) {
   if (!VALID_CHANNELS.has(channel)) return jsonError("Unsupported message channel.");
   if (!VALID_MODES.has(mode)) return jsonError("Unsupported send mode.");
   if (!body) return jsonError("Message body is required.");
-  if (channel === "email" && !subject) return jsonError("Email subject is required.");
+  if ((channel === "email" || channel === "email_sms") && !subject) return jsonError("Email subject is required.");
 
   const resolved = await resolveRecipients(verified.adminClient, { ...payload, channel, mode });
   if (resolved.error) return resolved.error;
@@ -192,24 +192,72 @@ export async function POST(request: Request) {
   const recipients = resolved.recipients.filter((recipient) => {
     if (channel === "sms") return Boolean(normalizePhone(recipient.phone));
     if (channel === "email") return Boolean(cleanRecipient(recipient.email));
+    if (channel === "email_sms") return Boolean(cleanRecipient(recipient.email) || normalizePhone(recipient.phone));
     return Boolean(recipient.user_id || cleanRecipient(recipient.email) || cleanRecipient(recipient.phone));
   });
 
   if (!recipients.length) return jsonError("No reachable recipients were found.");
 
   let delivery: { sent?: string[]; failed?: { recipient: string; error: string }[]; error?: NextResponse } = {};
+  let messageRows: {
+    user_id: string | null;
+    order_id: string | null;
+    channel: string;
+    direction: string;
+    subject: string | null;
+    body: string;
+    internal_only: boolean;
+    sent_at: string;
+    created_by: string;
+  }[] = [];
+  const now = new Date().toISOString();
+
   if (channel === "email") {
     delivery = await sendEmail(recipients, subject, body);
   } else if (channel === "sms") {
     delivery = await sendSms(recipients, body);
+  } else if (channel === "email_sms") {
+    const emailRecipients = recipients.filter((recipient) => cleanRecipient(recipient.email));
+    const smsRecipients = recipients.filter((recipient) => normalizePhone(recipient.phone));
+    const emailDelivery = emailRecipients.length ? await sendEmail(emailRecipients, subject, body) : { sent: [], failed: [] };
+    if (emailDelivery.error) return emailDelivery.error;
+    const smsDelivery = smsRecipients.length ? await sendSms(smsRecipients, body) : { sent: [], failed: [] };
+    if (smsDelivery.error) return smsDelivery.error;
+    delivery = {
+      sent: [...(emailDelivery.sent ?? []), ...(smsDelivery.sent ?? [])],
+      failed: [...(emailDelivery.failed ?? []), ...(smsDelivery.failed ?? [])],
+    };
+    messageRows = [
+      ...emailRecipients.map((recipient) => ({
+        user_id: recipient.user_id,
+        order_id: payload.orderId && payload.orderId !== "none" ? payload.orderId : null,
+        channel: "email",
+        direction: "outbound",
+        subject: subject || null,
+        body,
+        internal_only: false,
+        sent_at: now,
+        created_by: verified.actorId,
+      })),
+      ...smsRecipients.map((recipient) => ({
+        user_id: recipient.user_id,
+        order_id: payload.orderId && payload.orderId !== "none" ? payload.orderId : null,
+        channel: "sms",
+        direction: "outbound",
+        subject: subject || null,
+        body,
+        internal_only: false,
+        sent_at: now,
+        created_by: verified.actorId,
+      })),
+    ];
   } else {
     delivery = { sent: recipients.map((recipient) => recipient.user_id || recipient.email || recipient.phone || "recipient"), failed: [] };
   }
 
   if (delivery.error) return delivery.error;
 
-  const now = new Date().toISOString();
-  const rows = recipients.map((recipient) => ({
+  const rows = messageRows.length ? messageRows : recipients.map((recipient) => ({
     user_id: recipient.user_id,
     order_id: payload.orderId && payload.orderId !== "none" ? payload.orderId : null,
     channel,

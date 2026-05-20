@@ -24,6 +24,11 @@ function human(value: string | null | undefined) {
   return String(value || "unknown").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function channelLabel(value: string) {
+  if (value === "email_sms") return "Email + SMS";
+  return human(value);
+}
+
 function numberValue(value: number | string | null | undefined) {
   return Number(value || 0);
 }
@@ -102,8 +107,8 @@ function orderItemsForOrder(data: AdminDashboardData | null, orderId: string) {
 }
 
 function CampaignSheet({ open, onOpenChange, users, onSent }: { open: boolean; onOpenChange: (open: boolean) => void; users: AdminDashboardData["users"]; onSent: () => Promise<void> }) {
-  const [channel, setChannel] = useState("email");
-  const [role, setRole] = useState("customer");
+  const [channel, setChannel] = useState("email_sms");
+  const [role, setRole] = useState("all");
   const [subject, setSubject] = useState("ControlP.io update");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -112,8 +117,13 @@ function CampaignSheet({ open, onOpenChange, users, onSent }: { open: boolean; o
   const audienceUsers = useMemo(() => role === "all" ? users : users.filter((user) => user.role === role), [role, users]);
   const emailReachable = audienceUsers.filter((user) => user.email);
   const smsReachable = audienceUsers.filter((user) => user.phone);
-  const reachableCount = channel === "sms" ? smsReachable.length : channel === "email" ? emailReachable.length : audienceUsers.length;
+  const combinedReachable = audienceUsers.filter((user) => user.email || user.phone);
+  const reachableCount = channel === "sms" ? smsReachable.length : channel === "email" ? emailReachable.length : channel === "email_sms" ? combinedReachable.length : audienceUsers.length;
   const canSend = body.trim().length > 0 && reachableCount > 0 && !sending;
+
+  useEffect(() => {
+    setMessage("");
+  }, [channel, role]);
 
   async function send() {
     setSending(true);
@@ -132,7 +142,7 @@ function CampaignSheet({ open, onOpenChange, users, onSent }: { open: boolean; o
     }
   }
 
-  return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent className="overflow-y-auto sm:max-w-[60rem]"><SheetHeader><SheetTitle>New campaign</SheetTitle><SheetDescription>Send a bulk email, SMS, dashboard, or internal campaign to a role-based audience.</SheetDescription></SheetHeader><div className="mt-6 space-y-4"><div className="grid gap-3 sm:grid-cols-2"><FieldSelect label="Channel" value={channel} onChange={setChannel} items={["email", "sms", "dashboard", "internal"].map((item) => ({ value: item, label: human(item) }))} /><FieldSelect label="Audience" value={role} onChange={setRole} items={[{ value: "all", label: "All active users" }, ...roles.map((item) => ({ value: item, label: human(item) }))]} /></div><div><div className="mb-1.5 text-xs font-medium text-muted-foreground">Subject</div><Input value={subject} onChange={(event) => setSubject(event.target.value)} disabled={channel === "sms"} /></div><div><div className="mb-1.5 text-xs font-medium text-muted-foreground">Message</div><Textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Campaign copy, offer details, reminder, or announcement..." /></div><div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground"><Users className="mr-2 inline h-4 w-4" />Audience preview: {reachableCount}/{audienceUsers.length} reachable by {human(channel)}. {channel === "sms" ? "SMS uses the phone number saved on Users and Customers." : channel === "email" ? "Email uses the email address saved on Users and Customers." : "Dashboard/internal messages use active user records."}</div>{channel === "sms" && <div className={cn("rounded-lg border p-3 text-sm", smsReachable.length ? "bg-background/35 text-muted-foreground" : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300")}><div className="font-medium">{smsReachable.length ? "SMS recipients ready" : "No SMS recipients for this audience"}</div><div className="mt-1 text-xs">{smsReachable.length ? smsReachable.slice(0, 6).map((user) => `${user.full_name || user.email || "Unnamed"} ${user.phone}`).join(" | ") : "Add phone numbers from Users or Customers before sending this SMS campaign."}</div></div>}{message && <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{message}</div>}<div className="flex gap-2"><Button className="flex-1" disabled={!canSend} onClick={send}><Send className="h-4 w-4" /> {sending ? "Sending..." : "Send campaign"}</Button><Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button></div></div></SheetContent></Sheet>;
+  return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent className="overflow-y-auto sm:max-w-[60rem]"><SheetHeader><SheetTitle>New campaign</SheetTitle><SheetDescription>Send a bulk email, SMS, dashboard, or internal campaign to a role-based audience.</SheetDescription></SheetHeader><div className="mt-6 space-y-4"><div className="grid gap-3 sm:grid-cols-2"><FieldSelect label="Channel" value={channel} onChange={setChannel} items={["email_sms", "email", "sms", "dashboard", "internal"].map((item) => ({ value: item, label: channelLabel(item) }))} /><FieldSelect label="Audience" value={role} onChange={setRole} items={[{ value: "all", label: "All active users" }, ...roles.map((item) => ({ value: item, label: human(item) }))]} /></div><div><div className="mb-1.5 text-xs font-medium text-muted-foreground">Subject</div><Input value={subject} onChange={(event) => setSubject(event.target.value)} disabled={channel === "sms"} /></div><div><div className="mb-1.5 text-xs font-medium text-muted-foreground">Message</div><Textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Campaign copy, offer details, reminder, or announcement..." /></div><div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground"><Users className="mr-2 inline h-4 w-4" />Audience preview: {reachableCount}/{audienceUsers.length} reachable by {channelLabel(channel)}. {channel === "sms" ? "SMS uses phone numbers saved on any user or customer." : channel === "email" ? "Email uses addresses saved on any user or customer." : channel === "email_sms" ? `${emailReachable.length} email-ready and ${smsReachable.length} SMS-ready contacts. Users with both receive both.` : "Dashboard/internal messages use active user records."}</div>{(channel === "sms" || channel === "email_sms") && <div className={cn("rounded-lg border p-3 text-sm", smsReachable.length ? "bg-background/35 text-muted-foreground" : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300")}><div className="font-medium">{smsReachable.length ? "SMS recipients ready" : "No SMS recipients for this audience"}</div><div className="mt-1 text-xs">{smsReachable.length ? smsReachable.slice(0, 6).map((user) => `${user.full_name || user.email || "Unnamed"} ${user.phone}`).join(" | ") : "Add phone numbers from Users or Customers before sending SMS."}</div></div>}{(channel === "email" || channel === "email_sms") && <div className={cn("rounded-lg border p-3 text-sm", emailReachable.length ? "bg-background/35 text-muted-foreground" : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300")}><div className="font-medium">{emailReachable.length ? "Email recipients ready" : "No email recipients for this audience"}</div><div className="mt-1 text-xs">{emailReachable.length ? emailReachable.slice(0, 6).map((user) => `${user.full_name || user.email || "Unnamed"} ${user.email}`).join(" | ") : "Add email addresses from Users or Customers before sending email."}</div></div>}{message && <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{message}</div>}<div className="flex gap-2"><Button className="flex-1" disabled={!canSend} onClick={send}><Send className="h-4 w-4" /> {sending ? "Sending..." : "Send campaign"}</Button><Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button></div></div></SheetContent></Sheet>;
 }
 
 function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
