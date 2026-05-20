@@ -165,8 +165,8 @@ export const adminSectionConfigs = {
     ],
   },
   shipments: {
-    title: "Shipments",
-    eyebrow: "Shipments",
+    title: "Shipping",
+    eyebrow: "Shipping",
     description: "Coordinate shipping, pickup, delivery, install logistics, tracking, and fulfillment handoff.",
     searchPlaceholder: "Search shipments, orders, tracking...",
     primaryAction: "Create shipment",

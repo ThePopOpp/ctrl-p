@@ -1,5 +1,5 @@
-import { AdminSectionPage } from "@/components/admin/admin-section-page";
+import { AdminSettings } from "@/components/admin/admin-settings";
 
 export default function SettingsPage() {
-  return <AdminSectionPage section="settings" />;
+  return <AdminSettings />;
 }
