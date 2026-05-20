@@ -1,4 +1,5 @@
 import {
+  Bot,
   Boxes,
   CircleDollarSign,
   FileText,
@@ -45,7 +46,10 @@ export const adminNavGroups: readonly {
   },
   {
     label: "System",
-    items: [["Settings", Settings, "/admin/settings"]],
+    items: [
+      ["Agent", Bot, "/admin/agent"],
+      ["Settings", Settings, "/admin/settings"],
+    ],
   },
 ];
 
