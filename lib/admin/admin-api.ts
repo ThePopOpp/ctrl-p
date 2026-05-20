@@ -519,7 +519,14 @@ export async function markMessageRead(messageId: string, orderId: string | null)
   return result.data;
 }
 
-export async function updateAdminUser(userId: string, updates: { role: AppRole; status: string }) {
+export async function updateAdminUser(userId: string, updates: {
+  role: AppRole;
+  status: string;
+  full_name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+}) {
   const db = requireClient();
   const currentId = await currentUserId();
 
@@ -545,6 +552,10 @@ export async function updateAdminUser(userId: string, updates: { role: AppRole; 
       user_id: userId,
       role: updates.role,
       status: updates.status,
+      full_name: updates.full_name,
+      email: updates.email,
+      phone: updates.phone,
+      company: updates.company,
     }),
   });
 

@@ -14,6 +14,12 @@ function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
+function normalizePhone(value: string | null | undefined) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  return trimmed.replace(/[^\d+]/g, "");
+}
+
 function boolEnv(name: string) {
   return ["true", "1"].includes(env(name).toLowerCase());
 }
@@ -162,6 +168,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as {
     email?: string;
     full_name?: string;
+    phone?: string;
     company?: string;
     role?: string;
     status?: string;
@@ -170,6 +177,7 @@ export async function POST(request: Request) {
 
   const email = body?.email?.trim().toLowerCase();
   const fullName = body?.full_name?.trim() || null;
+  const phone = normalizePhone(body?.phone);
   const company = body?.company?.trim() || null;
   const role = body?.role || ROLES.CUSTOMER;
   const status = body?.status || "active";
@@ -178,6 +186,10 @@ export async function POST(request: Request) {
 
   if (!email || !email.includes("@")) {
     return jsonError("A valid email address is required.");
+  }
+
+  if (!phone) {
+    return jsonError("A phone number is required for SMS and account communication.");
   }
 
   if (!isAppRole(role)) {
@@ -207,6 +219,7 @@ export async function POST(request: Request) {
           redirectTo,
           data: {
             full_name: fullName,
+            phone,
             company,
           },
         },
@@ -217,6 +230,7 @@ export async function POST(request: Request) {
         email_confirm: true,
         user_metadata: {
           full_name: fullName,
+          phone,
           company,
         },
       });
@@ -254,12 +268,13 @@ export async function POST(request: Request) {
     .update({
       email,
       full_name: fullName,
+      phone,
       company,
       role,
       status: profileStatus,
     })
     .eq("id", userId)
-    .select("id, email, full_name, company, role, status, created_at, last_login_at, deleted_at")
+    .select("id, email, full_name, phone, company, role, status, created_at, last_login_at, deleted_at")
     .single();
 
   if (profileResult.error) {
@@ -286,6 +301,10 @@ export async function PATCH(request: Request) {
 
   const body = await request.json().catch(() => null) as {
     user_id?: string;
+    email?: string;
+    full_name?: string;
+    phone?: string;
+    company?: string;
     role?: string;
     status?: string;
   } | null;
@@ -293,9 +312,21 @@ export async function PATCH(request: Request) {
   const userId = body?.user_id;
   const role = body?.role;
   const status = body?.status;
+  const email = body?.email?.trim().toLowerCase();
+  const fullName = typeof body?.full_name === "string" ? body.full_name.trim() || null : undefined;
+  const phone = typeof body?.phone === "string" ? normalizePhone(body.phone) : undefined;
+  const company = typeof body?.company === "string" ? body.company.trim() || null : undefined;
 
   if (!userId) {
     return jsonError("User id is required.");
+  }
+
+  if (email !== undefined && (!email || !email.includes("@"))) {
+    return jsonError("A valid email address is required.");
+  }
+
+  if (body?.phone !== undefined && !phone) {
+    return jsonError("A phone number is required for SMS and account communication.");
   }
 
   if (!isAppRole(role)) {
@@ -318,11 +349,17 @@ export async function PATCH(request: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  const updates: Record<string, unknown> = { role, status };
+  if (email !== undefined) updates.email = email;
+  if (fullName !== undefined) updates.full_name = fullName;
+  if (phone !== undefined) updates.phone = phone;
+  if (company !== undefined) updates.company = company;
+
   const result = await adminClient
     .from("users")
-    .update({ role, status })
+    .update(updates)
     .eq("id", userId)
-    .select("id, email, full_name, company, role, status, created_at, last_login_at, deleted_at")
+    .select("id, email, full_name, phone, company, role, status, created_at, last_login_at, deleted_at")
     .single();
 
   if (result.error) {
@@ -334,7 +371,7 @@ export async function PATCH(request: Request) {
     action: "user_access_updated",
     entity_type: "user",
     entity_id: userId,
-    details: { role, status },
+    details: updates,
   });
 
   return NextResponse.json({ user: result.data });
@@ -387,7 +424,7 @@ export async function DELETE(request: Request) {
       deleted_at: removedAt,
     })
     .eq("id", userId)
-    .select("id, email, full_name, company, role, status, created_at, last_login_at, deleted_at")
+    .select("id, email, full_name, phone, company, role, status, created_at, last_login_at, deleted_at")
     .single();
 
   if (result.error) {

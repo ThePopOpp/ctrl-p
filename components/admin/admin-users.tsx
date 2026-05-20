@@ -9,6 +9,7 @@ import {
   Trash2,
   Mail,
   Moon,
+  Phone,
   Search,
   ShieldCheck,
   Sun,
@@ -100,6 +101,7 @@ export function AdminUsers() {
       const matchesQuery = !needle || [
         user.full_name,
         user.email,
+        user.phone,
         user.company,
         user.role,
         user.status,
@@ -113,6 +115,7 @@ export function AdminUsers() {
   const activeUsers = users.filter((user) => user.status === "active");
   const internalUsers = users.filter((user) => roleGroup(user) === "Internal");
   const partnerUsers = users.filter((user) => roleGroup(user) === "Partner");
+  const smsReadyUsers = users.filter((user) => user.phone);
 
   async function refreshUsers(openUserId?: string) {
     const nextData = await loadAdminDashboardData();
@@ -215,7 +218,7 @@ export function AdminUsers() {
                 <UserStat label="Internal" value={String(internalUsers.length)} hint="Admin, staff, employee roles" />
                 <UserStat label="Partners" value={String(partnerUsers.length)} hint="Vendor, designer, referral, reseller" />
                 <UserStat label="Customers" value={String(users.filter((user) => roleGroup(user) === "Customer").length)} hint="Self-service accounts" />
-                <UserStat label="Suspended" value={String(users.filter((user) => user.status !== "active").length)} hint="Needs review or inactive" />
+                <UserStat label="SMS ready" value={String(smsReadyUsers.length)} hint="Users with phone numbers" />
               </section>
 
               <section className="mb-4 grid gap-4 xl:grid-cols-[1fr_360px]">
@@ -254,6 +257,7 @@ export function AdminUsers() {
                         <TableRow>
                           <TableHead className="pl-4">User</TableHead>
                           <TableHead>Company</TableHead>
+                          <TableHead>Phone</TableHead>
                           <TableHead>Role</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Group</TableHead>
@@ -272,6 +276,7 @@ export function AdminUsers() {
                               </div>
                             </TableCell>
                             <TableCell>{user.company || "Not set"}</TableCell>
+                            <TableCell>{user.phone || "Missing"}</TableCell>
                             <TableCell><Badge variant="outline">{human(user.role)}</Badge></TableCell>
                             <TableCell><Badge className={cn("border", statusTone(user.status))}>{human(user.status)}</Badge></TableCell>
                             <TableCell>{roleGroup(user)}</TableCell>
@@ -279,7 +284,7 @@ export function AdminUsers() {
                         ))}
                         {!visibleUsers.length && (
                           <TableRow>
-                            <TableCell className="p-6 text-center text-muted-foreground" colSpan={5}>No matching users.</TableCell>
+                            <TableCell className="p-6 text-center text-muted-foreground" colSpan={6}>No matching users.</TableCell>
                           </TableRow>
                         )}
                       </TableBody>
@@ -392,6 +397,10 @@ function UserSheet({
   activityLogs: AdminDashboardData["activityLogs"];
   assignableRoles: AppRole[];
 }) {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [company, setCompany] = useState("");
   const [role, setRole] = useState<AppRole>(ROLES.CUSTOMER);
   const [status, setStatus] = useState("active");
   const [saving, setSaving] = useState(false);
@@ -401,6 +410,10 @@ function UserSheet({
 
   useEffect(() => {
     if (!user) return;
+    setFullName(user.full_name || "");
+    setEmail(user.email || "");
+    setPhone(user.phone || "");
+    setCompany(user.company || "");
     setRole(user.role);
     setStatus(user.status);
     setRemoveConfirm("");
@@ -414,19 +427,20 @@ function UserSheet({
   const isSelf = currentProfile?.id === user.id;
   const cannotEditSelfStatus = isSelf && status !== "active";
   const cannotAssignSuperAdmin = role === ROLES.SUPER_ADMIN && currentProfile?.role !== ROLES.SUPER_ADMIN;
-  const hasChanges = role !== user.role || status !== user.status;
+  const hasChanges = role !== user.role || status !== user.status || fullName !== (user.full_name || "") || email !== (user.email || "") || phone !== (user.phone || "") || company !== (user.company || "");
+  const canSave = hasChanges && fullName.trim().length >= 2 && email.trim().includes("@") && phone.trim().length >= 7 && !cannotEditSelfStatus && !cannotAssignSuperAdmin && !saving;
   const userActivity = activityLogs.filter((log) => log.entity_type === "user" && log.entity_id === user.id).slice(0, 5);
 
-  async function saveAccess() {
+  async function saveUser() {
     if (!user || !hasChanges) return;
     setSaving(true);
-    setMessage("Saving user access...");
+    setMessage("Saving user...");
     try {
-      await updateAdminUser(user.id, { role, status });
-      setMessage("User access updated.");
+      await updateAdminUser(user.id, { role, status, full_name: fullName, email, phone, company });
+      setMessage("User saved.");
       await onRefresh(user.id);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not update user access.");
+      setMessage(error instanceof Error ? error.message : "Could not update user.");
     } finally {
       setSaving(false);
     }
@@ -465,10 +479,16 @@ function UserSheet({
                 <Mail className="h-3.5 w-3.5" />
                 <span className="truncate">{user.email || "No email"}</span>
               </div>
+              <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                <Phone className="h-3.5 w-3.5" />
+                <span className="truncate">{user.phone || "No phone number"}</span>
+              </div>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
+            <SummaryTile label="Email">{user.email || "Missing"}</SummaryTile>
+            <SummaryTile label="Phone">{user.phone || "Missing"}</SummaryTile>
             <SummaryTile label="Company">{user.company || "Not set"}</SummaryTile>
             <SummaryTile label="Group">{roleGroup(user)}</SummaryTile>
             <SummaryTile label="Created">{formatDate(user.created_at)}</SummaryTile>
@@ -476,8 +496,26 @@ function UserSheet({
           </div>
 
           <div className="rounded-lg border bg-background/35 p-3">
-            <h3 className="text-sm font-semibold">Access controls</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Update the application role and account status used by RBAC and admin policies.</p>
+            <h3 className="text-sm font-semibold">Contact and access</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Phone numbers are required for SMS campaigns, order updates, payment links, shipping alerts, and customer communication.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Full name</div>
+                <Input value={fullName} onChange={(event) => setFullName(event.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Email</div>
+                <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Phone number</div>
+                <Input type="tel" placeholder="+14805550123" value={phone} onChange={(event) => setPhone(event.target.value)} />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Company</div>
+                <Input value={company} onChange={(event) => setCompany(event.target.value)} />
+              </div>
+            </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div>
                 <div className="mb-1.5 text-xs font-medium text-muted-foreground">Role</div>
@@ -505,8 +543,8 @@ function UserSheet({
             {cannotEditSelfStatus && <div className="mt-3 rounded-md border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-700 dark:text-red-300">You cannot deactivate your own account.</div>}
             {cannotAssignSuperAdmin && <div className="mt-3 rounded-md border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-700 dark:text-red-300">Only a super admin can assign the super admin role.</div>}
             {message && <div className="mt-3 text-xs text-muted-foreground">{message}</div>}
-            <Button className="mt-3 w-full" disabled={!hasChanges || cannotEditSelfStatus || cannotAssignSuperAdmin || saving} onClick={saveAccess}>
-              {saving ? "Saving..." : "Save access changes"}
+            <Button className="mt-3 w-full" disabled={!canSave} onClick={saveUser}>
+              {saving ? "Saving..." : "Save user"}
             </Button>
           </div>
 
@@ -599,12 +637,13 @@ function AddUserSheet({
 }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState<AppRole>(ROLES.CUSTOMER);
   const [status, setStatus] = useState(mode === "invite" ? "pending" : "active");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const canSubmit = email.trim().includes("@") && fullName.trim().length >= 2 && !saving;
+  const canSubmit = email.trim().includes("@") && fullName.trim().length >= 2 && phone.trim().length >= 7 && !saving;
 
   async function createUser() {
     setSaving(true);
@@ -616,6 +655,10 @@ function AddUserSheet({
 
       if (!email.trim().includes("@")) {
         throw new Error("A valid email address is required.");
+      }
+
+      if (phone.trim().length < 7) {
+        throw new Error("A phone number is required for SMS and account communication.");
       }
 
       if (role === ROLES.SUPER_ADMIN && currentProfile?.role !== ROLES.SUPER_ADMIN) {
@@ -639,6 +682,7 @@ function AddUserSheet({
         body: JSON.stringify({
           full_name: fullName,
           email,
+          phone,
           company,
           role,
           status: mode === "invite" ? "pending" : status,
@@ -655,6 +699,7 @@ function AddUserSheet({
       await onCreated();
       setFullName("");
       setEmail("");
+      setPhone("");
       setCompany("");
       setRole(ROLES.CUSTOMER);
       setStatus(mode === "invite" ? "pending" : "active");
@@ -690,9 +735,15 @@ function AddUserSheet({
             </div>
           </div>
 
-          <div>
-            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Company</div>
-            <Input placeholder="Company or organization" value={company} onChange={(event) => setCompany(event.target.value)} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Phone number</div>
+              <Input placeholder="+14805550123" type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} />
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Company</div>
+              <Input placeholder="Company or organization" value={company} onChange={(event) => setCompany(event.target.value)} />
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -724,8 +775,8 @@ function AddUserSheet({
 
           <div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground">
             {mode === "invite"
-              ? "This sends a Supabase Auth invite email and creates a pending profile with the selected role."
-              : "This creates the Supabase auth account server-side, then updates the matching public.users profile. The server must have SUPABASE_SERVICE_ROLE_KEY configured."}
+              ? "This sends a Supabase Auth invite email and creates a profile with the selected role. Phone is required so SMS messages and payment links can be delivered."
+              : "This creates the Supabase auth account server-side, then updates the matching public.users profile. Phone is required for SMS, payment, shipping, and order alerts."}
           </div>
 
           {message && <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{message}</div>}
