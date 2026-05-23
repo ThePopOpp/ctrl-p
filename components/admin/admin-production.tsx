@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Bell, ChevronRight, Moon, Plus, Search, Sun } from "lucide-react";
+import { Bell, CalendarRange, ChevronRight, Moon, Plus, Search, Sun } from "lucide-react";
 
 import { createProductionJob, getCurrentAdminProfile, loadAdminDashboardData, updateProductionJob } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
@@ -174,7 +174,12 @@ export function AdminProduction() {
                     Create jobs from orders, connect products and line items, assign staff, track proofing, print, finishing, install, and shipping handoff.
                   </p>
                 </div>
-                <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> Create job</Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline">
+                    <Link href="/admin/production-schedule"><CalendarRange className="h-4 w-4" /> Manage Projects</Link>
+                  </Button>
+                  <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> Create job</Button>
+                </div>
               </div>
 
               <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
