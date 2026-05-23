@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Copy, CreditCard, Download, Eye, Home, LogOut, Moon, Plus, QrCode, Save, Trash2 } from "lucide-react";
+import { Bell, Copy, CreditCard, Download, Eye, Home, LogOut, Monitor, Moon, Plus, QrCode, Save, Smartphone, Tablet, Trash2 } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -81,6 +81,13 @@ type CardData = {
 };
 
 const linkTypes = ["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"];
+const previewModes = [
+  { value: "mobile", label: "Mobile", width: 280, icon: Smartphone },
+  { value: "tablet", label: "Tablet", width: 340, icon: Tablet },
+  { value: "desktop", label: "Desktop", width: 440, icon: Monitor },
+] as const;
+
+type PreviewMode = typeof previewModes[number]["value"];
 
 function human(value: string | null | undefined) {
   return String(value || "none").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -369,60 +376,66 @@ function EditorSheet({
   save: () => void;
   copy: (value: string) => Promise<void>;
 }) {
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile");
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
         <SheetHeader><SheetTitle>{form.id ? "Edit digital card" : "Create digital card"}</SheetTitle><SheetDescription>Build a QR and NFC-ready public business card.</SheetDescription></SheetHeader>
-        <div className="mt-6 space-y-5">
-          <div className="grid gap-3 md:grid-cols-3">
-            <Field label="Card name" value={form.card_name} onChange={(value) => update("card_name", value)} />
-            <Field label="Slug" value={form.slug} onChange={(value) => update("slug", slugify(value))} />
-            <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">Status</div><Select value={form.status} onValueChange={(value) => { update("status", value); update("is_public", value === "published"); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem><SelectItem value="unpublished">Unpublished</SelectItem></SelectContent></Select></div>
-          </div>
+        <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+          <div className="space-y-5">
+            <div className="grid gap-3 md:grid-cols-3">
+              <Field label="Card name" value={form.card_name} onChange={(value) => update("card_name", value)} />
+              <Field label="Slug" value={form.slug} onChange={(value) => update("slug", slugify(value))} />
+              <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">Status</div><Select value={form.status} onValueChange={(value) => { update("status", value); update("is_public", value === "published"); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem><SelectItem value="unpublished">Unpublished</SelectItem></SelectContent></Select></div>
+            </div>
 
-          <div className="rounded-lg border bg-background/35 p-3">
-            <div className="text-xs font-medium text-muted-foreground">Public URL</div>
-            <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center">
-              <code className="flex-1 rounded-md bg-secondary px-2 py-2 text-xs">{publicUrl}</code>
-              <Button variant="outline" onClick={() => copy(publicUrl)}><Copy className="h-4 w-4" /> Copy</Button>
-              <Button variant="outline" asChild><a href={`/c/${form.slug}`} target="_blank"><Eye className="h-4 w-4" /> Preview</a></Button>
+            <div className="rounded-lg border bg-background/35 p-3">
+              <div className="text-xs font-medium text-muted-foreground">Public URL</div>
+              <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center">
+                <code className="flex-1 rounded-md bg-secondary px-2 py-2 text-xs">{publicUrl}</code>
+                <Button variant="outline" onClick={() => copy(publicUrl)}><Copy className="h-4 w-4" /> Copy</Button>
+                <Button variant="outline" asChild><a href={`/c/${form.slug}`} target="_blank"><Eye className="h-4 w-4" /> Preview</a></Button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field label="Display name" value={form.display_name || ""} onChange={(value) => update("display_name", value)} />
+              <Field label="Company" value={form.company_name || ""} onChange={(value) => update("company_name", value)} />
+              <Field label="Job title" value={form.job_title || ""} onChange={(value) => update("job_title", value)} />
+              <Field label="Department" value={form.department || ""} onChange={(value) => update("department", value)} />
+            </div>
+            <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">Bio</div><Textarea value={form.bio || ""} onChange={(event) => update("bio", event.target.value)} placeholder="Short customer-facing intro" /></div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <Field label="Primary phone" value={form.primary_phone || ""} onChange={(value) => update("primary_phone", value)} />
+              <Field label="SMS phone" value={form.sms_phone || ""} onChange={(value) => update("sms_phone", value)} />
+              <Field label="Primary email" value={form.primary_email || ""} onChange={(value) => update("primary_email", value)} />
+              <Field label="Website" value={form.website_url || ""} onChange={(value) => update("website_url", value)} />
+              <Field label="Maps URL" value={form.maps_url || ""} onChange={(value) => update("maps_url", value)} />
+              <Field label="Intro video URL" value={form.intro_video_url || ""} onChange={(value) => update("intro_video_url", value)} />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
+              <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
+              <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />
+              <Field label="Background color" value={form.background_color} onChange={(value) => update("background_color", value)} />
+              <Field label="Accent color" value={form.accent_color} onChange={(value) => update("accent_color", value)} />
+              <Field label="Text color" value={form.text_color} onChange={(value) => update("text_color", value)} />
+            </div>
+
+            <Card><CardHeader className="pb-3"><CardTitle className="text-base">Custom links</CardTitle><CardDescription>Add unlimited buttons for social, booking, payments, files, maps, videos, reviews, and more.</CardDescription></CardHeader><CardContent className="space-y-3">{(form.digital_card_links || []).map((link, index) => <div key={index} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-[1fr_1fr_160px_auto]"><Field label="Label" value={link.label} onChange={(value) => updateLink(index, { label: value })} /><Field label="URL" value={link.url} onChange={(value) => updateLink(index, { url: value })} /><div><div className="mb-1.5 text-xs font-medium text-muted-foreground">Type</div><Select value={link.link_type} onValueChange={(value) => updateLink(index, { link_type: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{linkTypes.map((type) => <SelectItem key={type} value={type}>{human(type)}</SelectItem>)}</SelectContent></Select></div><Button className="self-end" variant="outline" size="icon" onClick={() => removeLink(index)}><Trash2 className="h-4 w-4" /></Button></div>)}<Button variant="outline" onClick={addLink}><Plus className="h-4 w-4" /> Add link</Button></CardContent></Card>
+
+            <Card><CardHeader className="pb-3"><CardTitle className="text-base">QR Code Designer</CardTitle><CardDescription>Simple Phase 1 QR options. Advanced designer controls come later.</CardDescription></CardHeader><CardContent className="grid gap-4 md:grid-cols-[180px_1fr]"><img className="h-[180px] w-[180px] rounded-lg border bg-white p-2" src={qrUrl(publicUrl, form)} alt="QR code preview" /><div className="grid gap-3 md:grid-cols-2"><Field label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} /><Field label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} /><Button variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download PNG</a></Button></div></CardContent></Card>
+
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={save} disabled={saving}><Save className="h-4 w-4" /> {saving ? "Saving..." : "Save digital card"}</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <Field label="Display name" value={form.display_name || ""} onChange={(value) => update("display_name", value)} />
-            <Field label="Company" value={form.company_name || ""} onChange={(value) => update("company_name", value)} />
-            <Field label="Job title" value={form.job_title || ""} onChange={(value) => update("job_title", value)} />
-            <Field label="Department" value={form.department || ""} onChange={(value) => update("department", value)} />
-          </div>
-          <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">Bio</div><Textarea value={form.bio || ""} onChange={(event) => update("bio", event.target.value)} placeholder="Short customer-facing intro" /></div>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            <Field label="Primary phone" value={form.primary_phone || ""} onChange={(value) => update("primary_phone", value)} />
-            <Field label="SMS phone" value={form.sms_phone || ""} onChange={(value) => update("sms_phone", value)} />
-            <Field label="Primary email" value={form.primary_email || ""} onChange={(value) => update("primary_email", value)} />
-            <Field label="Website" value={form.website_url || ""} onChange={(value) => update("website_url", value)} />
-            <Field label="Maps URL" value={form.maps_url || ""} onChange={(value) => update("maps_url", value)} />
-            <Field label="Intro video URL" value={form.intro_video_url || ""} onChange={(value) => update("intro_video_url", value)} />
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
-            <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
-            <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />
-            <Field label="Background color" value={form.background_color} onChange={(value) => update("background_color", value)} />
-            <Field label="Accent color" value={form.accent_color} onChange={(value) => update("accent_color", value)} />
-            <Field label="Text color" value={form.text_color} onChange={(value) => update("text_color", value)} />
-          </div>
-
-          <Card><CardHeader className="pb-3"><CardTitle className="text-base">Custom links</CardTitle><CardDescription>Add unlimited buttons for social, booking, payments, files, maps, videos, reviews, and more.</CardDescription></CardHeader><CardContent className="space-y-3">{(form.digital_card_links || []).map((link, index) => <div key={index} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-[1fr_1fr_160px_auto]"><Field label="Label" value={link.label} onChange={(value) => updateLink(index, { label: value })} /><Field label="URL" value={link.url} onChange={(value) => updateLink(index, { url: value })} /><div><div className="mb-1.5 text-xs font-medium text-muted-foreground">Type</div><Select value={link.link_type} onValueChange={(value) => updateLink(index, { link_type: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{linkTypes.map((type) => <SelectItem key={type} value={type}>{human(type)}</SelectItem>)}</SelectContent></Select></div><Button className="self-end" variant="outline" size="icon" onClick={() => removeLink(index)}><Trash2 className="h-4 w-4" /></Button></div>)}<Button variant="outline" onClick={addLink}><Plus className="h-4 w-4" /> Add link</Button></CardContent></Card>
-
-          <Card><CardHeader className="pb-3"><CardTitle className="text-base">QR Code Designer</CardTitle><CardDescription>Simple Phase 1 QR options. Advanced designer controls come later.</CardDescription></CardHeader><CardContent className="grid gap-4 md:grid-cols-[180px_1fr]"><img className="h-[180px] w-[180px] rounded-lg border bg-white p-2" src={qrUrl(publicUrl, form)} alt="QR code preview" /><div className="grid gap-3 md:grid-cols-2"><Field label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} /><Field label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} /><Button variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download PNG</a></Button></div></CardContent></Card>
-
-          <div className="flex gap-2">
-            <Button className="flex-1" onClick={save} disabled={saving}><Save className="h-4 w-4" /> {saving ? "Saving..." : "Save digital card"}</Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-          </div>
+          <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} />
         </div>
       </SheetContent>
     </Sheet>
@@ -439,6 +452,113 @@ function PreviewMini({ card }: { card: DigitalCard }) {
       <div className="mt-3 flex flex-wrap gap-2">{(card.digital_card_links || []).slice(0, 3).map((link, index) => <span key={index} className="rounded-full bg-white/10 px-2 py-1 text-[11px]">{link.label}</span>)}</div>
     </div>
   );
+}
+
+function LivePreview({
+  card,
+  publicUrl,
+  mode,
+  onModeChange,
+}: {
+  card: DigitalCard;
+  publicUrl: string;
+  mode: PreviewMode;
+  onModeChange: (mode: PreviewMode) => void;
+}) {
+  const modeInfo = previewModes.find((item) => item.value === mode) || previewModes[0];
+  const visibleLinks = (card.digital_card_links || []).filter((link) => link.is_visible !== false && link.label && link.url);
+  const backgroundImage = card.background_image_url ? `linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)), url(${card.background_image_url})` : undefined;
+
+  return (
+    <aside className="xl:sticky xl:top-4 xl:self-start">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">Live Preview</CardTitle>
+              <CardDescription>Updates as customers type.</CardDescription>
+            </div>
+            <Badge variant="outline">{modeInfo.label}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4 grid grid-cols-3 gap-1 rounded-lg bg-secondary p-1">
+            {previewModes.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                className={cn("flex h-9 items-center justify-center gap-1 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground", mode === value && "bg-background text-foreground shadow-sm")}
+                onClick={() => onModeChange(value)}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border bg-secondary/25 p-3">
+            <div
+              className="mx-auto min-h-[560px] overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all"
+              style={{
+                width: modeInfo.width,
+                background: card.background_color,
+                color: card.text_color,
+                backgroundImage,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
+              <div className="min-h-[560px] bg-black/20 p-4 backdrop-blur-[1px]">
+                <div className="flex items-center justify-between gap-2">
+                  {card.logo_url ? (
+                    <img className="max-h-10 max-w-[120px] object-contain" src={card.logo_url} alt="" />
+                  ) : (
+                    <div className="text-xs font-semibold opacity-70">controlp.io card</div>
+                  )}
+                  <span className="rounded-full border border-white/15 px-2 py-1 text-[10px] opacity-70">{card.status === "published" ? "Public" : "Draft"}</span>
+                </div>
+
+                <div className="mt-8 text-center">
+                  {card.profile_photo_url ? (
+                    <img className="mx-auto h-24 w-24 rounded-full border-4 border-white/15 object-cover shadow-xl" src={card.profile_photo_url} alt="" />
+                  ) : (
+                    <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border-4 border-white/15 bg-white/10 text-2xl font-semibold shadow-xl">{(card.display_name || card.card_name || "CP").slice(0, 2).toUpperCase()}</div>
+                  )}
+                  <div className="mt-4 text-2xl font-semibold leading-tight">{card.display_name || card.card_name || "Your Name"}</div>
+                  <div className="mt-1 text-xs opacity-75">{[card.job_title, card.company_name].filter(Boolean).join(" - ") || "Title - Company"}</div>
+                  {card.bio ? <p className="mt-4 text-sm leading-5 opacity-85">{card.bio}</p> : <p className="mt-4 text-sm leading-5 opacity-50">Short bio and introduction will appear here.</p>}
+                </div>
+
+                <div className="mt-5 grid grid-cols-3 gap-2 text-center text-[11px]">
+                  {card.primary_phone && <PreviewPill label="Call" accent={card.accent_color} />}
+                  {card.sms_phone && <PreviewPill label="SMS" accent={card.accent_color} />}
+                  {card.primary_email && <PreviewPill label="Email" accent={card.accent_color} />}
+                </div>
+
+                <div className="mt-5 space-y-2">
+                  {card.website_url && <PreviewButton label="Website" accent={card.accent_color} />}
+                  {visibleLinks.map((link, index) => <PreviewButton key={`${link.label}-${index}`} label={link.label} accent={card.accent_color} />)}
+                  {!card.website_url && !visibleLinks.length && <PreviewButton label="Add links to preview buttons" accent={card.accent_color} muted />}
+                </div>
+
+                <div className="mt-5 rounded-xl border border-white/10 bg-white/10 p-2 text-[10px] opacity-70">
+                  {publicUrl}
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </aside>
+  );
+}
+
+function PreviewPill({ label, accent }: { label: string; accent: string }) {
+  return <div className="rounded-2xl border border-white/15 bg-white/10 px-2 py-2 font-medium" style={{ color: accent }}>{label}</div>;
+}
+
+function PreviewButton({ label, accent, muted }: { label: string; accent: string; muted?: boolean }) {
+  return <div className={cn("flex items-center justify-between rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold", muted && "opacity-60")}><span>{label}</span><span style={{ color: accent }}>↗</span></div>;
 }
 
 function Nav({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
