@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Box, CreditCard, FileCheck2, Home, LogOut, Mail, MessageSquare, Moon, PackageCheck, Phone, Search, Truck, type LucideIcon } from "lucide-react";
+import { Bell, Box, CreditCard, FileCheck2, Home, IdCard, LogOut, Mail, MessageSquare, Moon, PackageCheck, Phone, Search, Truck, type LucideIcon } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
@@ -105,13 +105,14 @@ type CustomerData = {
 };
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
-const navItems: { label: string; icon: LucideIcon }[] = [
-  { label: "Overview", icon: Home },
-  { label: "Orders", icon: Box },
-  { label: "Invoices", icon: CreditCard },
-  { label: "Artwork", icon: FileCheck2 },
-  { label: "Messages", icon: MessageSquare },
-  { label: "Shipping", icon: Truck },
+const navItems: { label: string; icon: LucideIcon; href: string }[] = [
+  { label: "Overview", icon: Home, href: "#overview" },
+  { label: "Orders", icon: Box, href: "#orders" },
+  { label: "Invoices", icon: CreditCard, href: "#invoices" },
+  { label: "Artwork", icon: FileCheck2, href: "#artwork" },
+  { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
+  { label: "Messages", icon: MessageSquare, href: "#messages" },
+  { label: "Shipping", icon: Truck, href: "#shipping" },
 ];
 
 function human(value: string | null | undefined) {
@@ -197,8 +198,8 @@ export function CustomerDashboard() {
           </div>
         </a>
         <nav className="space-y-1">
-          {navItems.map(({ label, icon: Icon }) => (
-            <a key={label} href={`#${label.toLowerCase()}`} className="flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-accent-foreground">
+          {navItems.map(({ label, icon: Icon, href }) => (
+            <a key={label} href={href} className="flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-accent-foreground">
               <Icon className="h-4 w-4" />
               {label}
             </a>
