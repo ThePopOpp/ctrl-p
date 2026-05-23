@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent } from "react";
 import { Bell, ChevronRight, Eye, EyeOff, Flag, Link2, Moon, Plus, Search, Sun, Trash2 } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
@@ -80,8 +81,10 @@ type ScheduleDependency = {
   parent_item_id: string;
   dependent_item_id: string;
   dependency_type: string;
+  lag_days: number | null;
   required_completion_date: string | null;
   delay_impact_notes: string | null;
+  notes: string | null;
   auto_shift_schedule: boolean;
   parent?: { id: string; title: string | null; status: string | null; due_date: string | null } | null;
   dependent?: { id: string; title: string | null; status: string | null; start_date: string | null } | null;
@@ -218,6 +221,7 @@ export function AdminProductionSchedule() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [visibilityFilter, setVisibilityFilter] = useState("all");
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
+  const [selectedDependency, setSelectedDependency] = useState<ScheduleDependency | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -335,8 +339,10 @@ export function AdminProductionSchedule() {
     parent_item_id: string;
     dependent_item_id: string;
     dependency_type: string;
+    lag_days?: number;
     required_completion_date: string | null;
-    delay_impact_notes: string;
+    delay_impact_notes?: string;
+    notes?: string;
     auto_shift_schedule: boolean;
   }) {
     const payload = await apiJson<{ dependency: ScheduleDependency }>("/api/admin/production-schedule/dependencies", {
@@ -347,12 +353,35 @@ export function AdminProductionSchedule() {
     setMessage(`Dependency created for ${payload.dependency.dependency_type.replace(/_/g, " ")}.`);
   }
 
+  async function updateDependency(input: {
+    id: string;
+    parent_item_id: string;
+    dependent_item_id: string;
+    dependency_type: string;
+    lag_days: number;
+    required_completion_date: string | null;
+    notes: string;
+    auto_shift_schedule: boolean;
+  }) {
+    const payload = await apiJson<{ dependency: ScheduleDependency }>("/api/admin/production-schedule/dependencies", {
+      method: "PATCH",
+      body: JSON.stringify({
+        ...input,
+        delay_impact_notes: input.notes,
+      }),
+    });
+    await refresh();
+    setSelectedDependency(payload.dependency);
+    setMessage("Dependency updated.");
+  }
+
   async function deleteDependency(dependency: ScheduleDependency) {
     await apiJson("/api/admin/production-schedule/dependencies", {
       method: "DELETE",
       body: JSON.stringify({ id: dependency.id }),
     });
     await refresh();
+    setSelectedDependency(null);
     setMessage("Dependency removed.");
   }
 
@@ -461,7 +490,13 @@ export function AdminProductionSchedule() {
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
                   <div className="space-y-4">
                     {(activeView === "Overview" || activeView === "Gantt Timeline") && (
-                      <GanttTimeline items={sectionItems} dependencies={dependencies} onSelect={setSelectedItem} />
+                      <GanttTimeline
+                        items={sectionItems}
+                        dependencies={dependencies}
+                        onSelect={setSelectedItem}
+                        onCreateDependency={createDependency}
+                        onSelectDependency={setSelectedDependency}
+                      />
                     )}
                     <ScheduleTable items={sectionItems} orders={orders} users={users} products={products} onSelect={setSelectedItem} onDelete={deleteItem} />
                   </div>
@@ -495,6 +530,15 @@ export function AdminProductionSchedule() {
           }}
           onDelete={selectedItem ? () => deleteItem(selectedItem) : undefined}
         />
+        <DependencyInspector
+          dependency={selectedDependency}
+          items={items}
+          onOpenChange={(open) => {
+            if (!open) setSelectedDependency(null);
+          }}
+          onSave={updateDependency}
+          onDelete={deleteDependency}
+        />
       </div>
     </div>
   );
@@ -524,7 +568,61 @@ function FilterSelect({ value, onChange, items, placeholder }: { value: string; 
   );
 }
 
-function GanttTimeline({ items, dependencies, onSelect }: { items: ScheduleItem[]; dependencies: ScheduleDependency[]; onSelect: (item: ScheduleItem) => void }) {
+type ConnectorSide = "start" | "finish";
+type DependencyPath = {
+  id: string;
+  d: string;
+  sourceId: string;
+  targetId: string;
+  dependencyType: string;
+  blocked: boolean;
+  complete: boolean;
+};
+
+function dependencyTypeFromSides(sourceSide: ConnectorSide, targetSide: ConnectorSide) {
+  if (sourceSide === "finish" && targetSide === "start") return "finish_to_start";
+  if (sourceSide === "start" && targetSide === "start") return "start_to_start";
+  if (sourceSide === "finish" && targetSide === "finish") return "finish_to_finish";
+  return "start_to_finish";
+}
+
+function connectorX(rect: DOMRect, side: ConnectorSide) {
+  return side === "finish" ? rect.right : rect.left;
+}
+
+function sideFromDependency(type: string, role: "source" | "target"): ConnectorSide {
+  if (type === "start_to_start") return "start";
+  if (type === "finish_to_finish") return "finish";
+  if (type === "start_to_finish") return role === "source" ? "start" : "finish";
+  return role === "source" ? "finish" : "start";
+}
+
+function GanttTimeline({
+  items,
+  dependencies,
+  onSelect,
+  onCreateDependency,
+  onSelectDependency,
+}: {
+  items: ScheduleItem[];
+  dependencies: ScheduleDependency[];
+  onSelect: (item: ScheduleItem) => void;
+  onCreateDependency: (input: {
+    parent_item_id: string;
+    dependent_item_id: string;
+    dependency_type: string;
+    lag_days?: number;
+    required_completion_date: string | null;
+    notes?: string;
+    auto_shift_schedule: boolean;
+  }) => Promise<void>;
+  onSelectDependency: (dependency: ScheduleDependency) => void;
+}) {
+  const overlayRef = useRef<SVGSVGElement | null>(null);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
+  const [paths, setPaths] = useState<DependencyPath[]>([]);
+  const [draftSource, setDraftSource] = useState<{ itemId: string; side: ConnectorSide } | null>(null);
+  const [linkMessage, setLinkMessage] = useState("");
   const datedItems = items.filter((item) => item.start_date || item.due_date || item.end_date);
   const today = dateOnly(new Date());
   const dates = datedItems.flatMap((item) => [item.start_date, item.due_date, item.end_date]).filter(Boolean) as string[];
@@ -534,6 +632,91 @@ function GanttTimeline({ items, dependencies, onSelect }: { items: ScheduleItem[
   const timelineEnd = dateOnly(addDays(new Date(`${maxDate}T12:00:00`), 4));
   const totalDays = Math.max(7, daysBetween(timelineStart, timelineEnd) + 1);
   const ticks = Array.from({ length: Math.min(totalDays, 45) }, (_, index) => dateOnly(addDays(new Date(`${timelineStart}T12:00:00`), index)));
+
+  const recalculatePaths = useCallback(() => {
+    const overlay = overlayRef.current;
+    const timeline = timelineRef.current;
+    if (!overlay || !timeline) return;
+
+    const overlayRect = overlay.getBoundingClientRect();
+    const nextPaths = dependencies.flatMap((dependency) => {
+      const source = dependency.parent_item_id;
+      const target = dependency.dependent_item_id;
+      const sourceEl = timeline.querySelector<HTMLElement>(`[data-gantt-id="${source}"]`);
+      const targetEl = timeline.querySelector<HTMLElement>(`[data-gantt-id="${target}"]`);
+      if (!sourceEl || !targetEl) return [];
+
+      const sourceRect = sourceEl.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const sourceSide = sideFromDependency(dependency.dependency_type, "source");
+      const targetSide = sideFromDependency(dependency.dependency_type, "target");
+      const x1 = connectorX(sourceRect, sourceSide) - overlayRect.left;
+      const y1 = sourceRect.top + sourceRect.height / 2 - overlayRect.top;
+      const x2 = connectorX(targetRect, targetSide) - overlayRect.left;
+      const y2 = targetRect.top + targetRect.height / 2 - overlayRect.top;
+      const elbow = Math.max(18, Math.abs(x2 - x1) / 2);
+      const c1 = sourceSide === "finish" ? x1 + elbow : x1 - elbow;
+      const c2 = targetSide === "start" ? x2 - elbow : x2 + elbow;
+      const d = `M ${x1} ${y1} C ${c1} ${y1}, ${c2} ${y2}, ${x2} ${y2}`;
+      const sourceItem = items.find((item) => item.id === source);
+      const targetItem = items.find((item) => item.id === target);
+      return [{
+        id: dependency.id,
+        d,
+        sourceId: source,
+        targetId: target,
+        dependencyType: dependency.dependency_type,
+        blocked: Boolean(sourceItem?.is_blocked || targetItem?.is_blocked || targetItem?.status === "blocked"),
+        complete: Boolean(sourceItem?.status === "completed" && targetItem?.status === "completed"),
+      }];
+    });
+    setPaths(nextPaths);
+  }, [dependencies, items]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(recalculatePaths, 0);
+    const timeline = timelineRef.current;
+    const resizeObserver = new ResizeObserver(recalculatePaths);
+    if (timeline) resizeObserver.observe(timeline);
+    window.addEventListener("resize", recalculatePaths);
+    return () => {
+      window.clearTimeout(timeout);
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", recalculatePaths);
+    };
+  }, [recalculatePaths]);
+
+  async function completeConnection(targetItemId: string, targetSide: ConnectorSide) {
+    if (!draftSource) return;
+    if (draftSource.itemId === targetItemId) {
+      setLinkMessage("A schedule item cannot depend on itself.");
+      setDraftSource(null);
+      return;
+    }
+    const dependencyType = dependencyTypeFromSides(draftSource.side, targetSide);
+    const duplicate = dependencies.some((dependency) => dependency.parent_item_id === draftSource.itemId && dependency.dependent_item_id === targetItemId && dependency.dependency_type === dependencyType);
+    if (duplicate) {
+      setLinkMessage("That dependency already exists.");
+      setDraftSource(null);
+      return;
+    }
+    try {
+      await onCreateDependency({
+        parent_item_id: draftSource.itemId,
+        dependent_item_id: targetItemId,
+        dependency_type: dependencyType,
+        lag_days: 0,
+        required_completion_date: null,
+        notes: "",
+        auto_shift_schedule: true,
+      });
+      setLinkMessage(`Dependency created: ${human(dependencyType)}.`);
+    } catch (error) {
+      setLinkMessage(error instanceof Error ? error.message : "Could not create dependency.");
+    } finally {
+      setDraftSource(null);
+    }
+  }
 
   return (
     <Card>
@@ -545,8 +728,49 @@ function GanttTimeline({ items, dependencies, onSelect }: { items: ScheduleItem[
         {!items.length ? (
           <EmptyState title="No schedule items yet" description="Add a phase, task, milestone, proof, production step, or delivery item to start building the timeline." />
         ) : (
-          <div className="overflow-x-auto">
-            <div className="min-w-[860px]">
+          <div ref={timelineRef} className="overflow-x-auto" onScroll={recalculatePaths}>
+            <div className="relative min-w-[860px]">
+              <svg ref={overlayRef} className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible">
+                {paths.map((path) => {
+                  const dependency = dependencies.find((item) => item.id === path.id);
+                  return (
+                    <g key={path.id}>
+                      <path
+                        d={path.d}
+                        fill="none"
+                        stroke="transparent"
+                        strokeWidth="14"
+                        className="pointer-events-auto cursor-pointer"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (dependency) onSelectDependency(dependency);
+                        }}
+                      />
+                      <path
+                        d={path.d}
+                        fill="none"
+                        stroke={path.blocked ? "rgb(239 68 68)" : path.complete ? "rgb(16 185 129)" : "rgb(132 204 22)"}
+                        strokeDasharray={path.dependencyType.includes("start_to") ? "5 4" : undefined}
+                        strokeLinecap="round"
+                        strokeWidth="2"
+                        markerEnd={`url(#dependency-arrow-${path.blocked ? "blocked" : path.complete ? "complete" : "normal"})`}
+                        className="pointer-events-none drop-shadow-sm"
+                      />
+                    </g>
+                  );
+                })}
+                <defs>
+                  <marker id="dependency-arrow-normal" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                    <path d="M 0 0 L 8 4 L 0 8 z" fill="rgb(132 204 22)" />
+                  </marker>
+                  <marker id="dependency-arrow-blocked" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                    <path d="M 0 0 L 8 4 L 0 8 z" fill="rgb(239 68 68)" />
+                  </marker>
+                  <marker id="dependency-arrow-complete" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                    <path d="M 0 0 L 8 4 L 0 8 z" fill="rgb(16 185 129)" />
+                  </marker>
+                </defs>
+              </svg>
               <div className="grid grid-cols-[260px_minmax(600px,1fr)] border-b pb-2 text-[11px] font-medium text-muted-foreground">
                 <div>Item</div>
                 <div className="grid" style={{ gridTemplateColumns: `repeat(${ticks.length}, minmax(24px, 1fr))` }}>
@@ -562,7 +786,7 @@ function GanttTimeline({ items, dependencies, onSelect }: { items: ScheduleItem[
                   const blocked = item.is_blocked || item.status === "blocked";
                   const hasDependency = dependencies.some((dependency) => dependency.parent_item_id === item.id || dependency.dependent_item_id === item.id);
                   return (
-                    <button key={item.id} className="grid w-full grid-cols-[260px_minmax(600px,1fr)] py-2 text-left hover:bg-accent/30" onClick={() => onSelect(item)}>
+                    <button key={item.id} className={cn("grid w-full grid-cols-[260px_minmax(600px,1fr)] py-2 text-left hover:bg-accent/30", draftSource?.itemId === item.id && "bg-primary/10")} onClick={() => onSelect(item)}>
                       <div className="pr-3">
                         <div className="truncate text-sm font-medium">{item.title}</div>
                         <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -575,21 +799,77 @@ function GanttTimeline({ items, dependencies, onSelect }: { items: ScheduleItem[
                       <div className="relative grid min-h-9" style={{ gridTemplateColumns: `repeat(${ticks.length}, minmax(24px, 1fr))` }}>
                         {ticks.map((tick) => <div key={tick} className={cn("border-l", tick === today && "bg-primary/10")} />)}
                         <div
+                          data-gantt-id={item.id}
                           className={cn("absolute top-1 h-7 rounded-md border px-2 text-[11px] font-medium leading-7 shadow-sm", blocked ? "border-red-500/35 bg-red-500/20 text-red-700 dark:text-red-200" : "border-primary/20 bg-primary/25 text-lime-900 dark:text-lime-100")}
                           style={{ left: `${(offset / ticks.length) * 100}%`, width: `${(span / ticks.length) * 100}%` }}
                         >
+                          <ConnectorHandle
+                            side="start"
+                            active={draftSource?.itemId === item.id && draftSource.side === "start"}
+                            onStart={(event) => {
+                              event.stopPropagation();
+                              setDraftSource({ itemId: item.id, side: "start" });
+                              setLinkMessage("Drag to another task handle to create a dependency.");
+                            }}
+                            onEnd={(event) => {
+                              event.stopPropagation();
+                              completeConnection(item.id, "start");
+                            }}
+                          />
                           <span className="block truncate">{item.progress_percent ?? 0}% {human(item.status)}</span>
+                          <ConnectorHandle
+                            side="finish"
+                            active={draftSource?.itemId === item.id && draftSource.side === "finish"}
+                            onStart={(event) => {
+                              event.stopPropagation();
+                              setDraftSource({ itemId: item.id, side: "finish" });
+                              setLinkMessage("Drag to another task handle to create a dependency.");
+                            }}
+                            onEnd={(event) => {
+                              event.stopPropagation();
+                              completeConnection(item.id, "finish");
+                            }}
+                          />
                         </div>
                       </div>
                     </button>
                   );
                 })}
               </div>
+              {linkMessage && <div className="mt-3 rounded-lg border bg-background/80 px-3 py-2 text-xs text-muted-foreground">{linkMessage}</div>}
             </div>
           </div>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function ConnectorHandle({
+  side,
+  active,
+  onStart,
+  onEnd,
+}: {
+  side: ConnectorSide;
+  active: boolean;
+  onStart: (event: PointerEvent<HTMLSpanElement>) => void;
+  onEnd: (event: PointerEvent<HTMLSpanElement>) => void;
+}) {
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={`${side} dependency connector`}
+      title={`${side === "start" ? "Start" : "Finish"} connector`}
+      onPointerDown={onStart}
+      onPointerUp={onEnd}
+      className={cn(
+        "absolute top-1/2 z-30 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-background bg-primary shadow-md ring-2 ring-primary/25",
+        side === "start" ? "-left-2.5" : "-right-2.5",
+        active && "scale-125 bg-red-500 ring-red-500/30",
+      )}
+    />
   );
 }
 
@@ -692,8 +972,10 @@ function DependencyPanel({
     parent_item_id: string;
     dependent_item_id: string;
     dependency_type: string;
+    lag_days?: number;
     required_completion_date: string | null;
-    delay_impact_notes: string;
+    delay_impact_notes?: string;
+    notes?: string;
     auto_shift_schedule: boolean;
   }) => Promise<void>;
   onDelete: (dependency: ScheduleDependency) => Promise<void>;
@@ -713,9 +995,11 @@ function DependencyPanel({
         parent_item_id: parentItemId,
         dependent_item_id: dependentItemId,
         dependency_type: dependencyType,
+        lag_days: 0,
         required_completion_date: requiredDate || null,
         delay_impact_notes: notes,
-        auto_shift_schedule: false,
+        notes,
+        auto_shift_schedule: true,
       });
       setParentItemId("none");
       setDependentItemId("none");
@@ -737,6 +1021,10 @@ function DependencyPanel({
           <FieldSelect label="Must finish first" value={parentItemId} onChange={setParentItemId} items={items.map((item) => ({ value: item.id, label: item.title }))} placeholder="Select item" />
           <FieldSelect label="Dependent item" value={dependentItemId} onChange={setDependentItemId} items={items.filter((item) => item.id !== parentItemId).map((item) => ({ value: item.id, label: item.title }))} placeholder="Select item" />
           <FieldSelect label="Dependency type" value={dependencyType} onChange={setDependencyType} items={["finish_to_start", "start_to_start", "finish_to_finish", "start_to_finish"].map((item) => ({ value: item, label: human(item) }))} />
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Lag days</div>
+            <Input value="0" readOnly />
+          </div>
           <div>
             <div className="mb-1.5 text-xs font-medium text-muted-foreground">Required completion date</div>
             <Input type="date" value={requiredDate} onChange={(event) => setRequiredDate(event.target.value)} />
@@ -763,9 +1051,9 @@ function DependencyPanel({
             return (
               <div key={dependency.id} className="rounded-lg border bg-secondary/20 p-3">
                 <div className="text-sm font-medium">{parent?.title || dependency.parent?.title || "Parent item"}</div>
-                <div className="my-1 text-[11px] uppercase tracking-wide text-muted-foreground">{human(dependency.dependency_type)}</div>
+                <div className="my-1 text-[11px] uppercase tracking-wide text-muted-foreground">{human(dependency.dependency_type)} {dependency.lag_days ? `+ ${dependency.lag_days}d` : ""}</div>
                 <div className="text-sm text-muted-foreground">{dependent?.title || dependency.dependent?.title || "Dependent item"}</div>
-                {dependency.delay_impact_notes && <div className="mt-2 text-xs text-muted-foreground">{dependency.delay_impact_notes}</div>}
+                {(dependency.notes || dependency.delay_impact_notes) && <div className="mt-2 text-xs text-muted-foreground">{dependency.notes || dependency.delay_impact_notes}</div>}
                 <Button variant="ghost" size="sm" className="mt-2 h-7 px-2 text-red-600 dark:text-red-300" onClick={() => onDelete(dependency)}>Remove</Button>
               </div>
             );
@@ -774,6 +1062,115 @@ function DependencyPanel({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function DependencyInspector({
+  dependency,
+  items,
+  onOpenChange,
+  onSave,
+  onDelete,
+}: {
+  dependency: ScheduleDependency | null;
+  items: ScheduleItem[];
+  onOpenChange: (open: boolean) => void;
+  onSave: (input: {
+    id: string;
+    parent_item_id: string;
+    dependent_item_id: string;
+    dependency_type: string;
+    lag_days: number;
+    required_completion_date: string | null;
+    notes: string;
+    auto_shift_schedule: boolean;
+  }) => Promise<void>;
+  onDelete: (dependency: ScheduleDependency) => Promise<void>;
+}) {
+  const [dependencyType, setDependencyType] = useState("finish_to_start");
+  const [lagDays, setLagDays] = useState("0");
+  const [requiredDate, setRequiredDate] = useState("");
+  const [autoShift, setAutoShift] = useState(true);
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!dependency) return;
+    setDependencyType(dependency.dependency_type || "finish_to_start");
+    setLagDays(String(dependency.lag_days ?? 0));
+    setRequiredDate(dateInput(dependency.required_completion_date));
+    setAutoShift(dependency.auto_shift_schedule !== false);
+    setNotes(dependency.notes || dependency.delay_impact_notes || "");
+    setMessage("");
+  }, [dependency]);
+
+  if (!dependency) return null;
+
+  const source = items.find((item) => item.id === dependency.parent_item_id);
+  const target = items.find((item) => item.id === dependency.dependent_item_id);
+
+  async function save() {
+    const current = dependency;
+    if (!current) return;
+    setSaving(true);
+    setMessage("Saving dependency...");
+    try {
+      await onSave({
+        id: current.id,
+        parent_item_id: current.parent_item_id,
+        dependent_item_id: current.dependent_item_id,
+        dependency_type: dependencyType,
+        lag_days: Number(lagDays || 0),
+        required_completion_date: requiredDate || null,
+        notes,
+        auto_shift_schedule: autoShift,
+      });
+      setMessage("Dependency updated.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not update dependency.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Sheet open={Boolean(dependency)} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
+        <SheetHeader>
+          <SheetTitle>Dependency inspector</SheetTitle>
+          <SheetDescription>Dependencies are editable records that connect a source schedule item to a target schedule item.</SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <LinkedMeta label="Source item" value={source?.title || dependency.parent?.title || "Source item"} subvalue={source ? `${itemTypeLabel(source)} - ${human(source.status)}` : undefined} />
+            <LinkedMeta label="Target item" value={target?.title || dependency.dependent?.title || "Target item"} subvalue={target ? `${itemTypeLabel(target)} - ${human(target.status)}` : undefined} />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <FieldSelect label="Dependency type" value={dependencyType} onChange={setDependencyType} items={["finish_to_start", "start_to_start", "finish_to_finish", "start_to_finish"].map((item) => ({ value: item, label: human(item) }))} />
+            <TextField label="Lag days" value={lagDays} onChange={setLagDays} inputMode="numeric" />
+            <DateField label="Required completion" value={requiredDate} onChange={setRequiredDate} />
+          </div>
+
+          <ToggleRow label="Auto-shift schedule" description="Future schedule automation can move dependent target items when the source item moves." checked={autoShift} onChange={setAutoShift} />
+
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Notes</div>
+            <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Dependency notes, delay impact, production risk, or handoff details." />
+          </div>
+
+          {message && <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{message}</div>}
+
+          <div className="flex flex-wrap gap-2">
+            <Button className="flex-1" onClick={save} disabled={saving}>{saving ? "Saving..." : "Save dependency"}</Button>
+            <Button variant="outline" className="text-red-600 dark:text-red-300" onClick={() => onDelete(dependency)}><Trash2 className="h-4 w-4" /> Delete dependency</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
