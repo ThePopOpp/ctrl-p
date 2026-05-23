@@ -37,6 +37,7 @@ type ScheduleItem = {
   assigned_to_user_id: string | null;
   assigned_department: string | null;
   start_date: string | null;
+  start_offset_minutes: number | null;
   end_date: string | null;
   due_date: string | null;
   estimated_duration_days: number | string | null;
@@ -107,6 +108,7 @@ type SchedulePayload = {
   assigned_to_user_id: string | null;
   assigned_department: string;
   start_date: string | null;
+  start_offset_minutes: number;
   end_date: string | null;
   due_date: string | null;
   estimated_duration_days: number | null;
@@ -159,6 +161,33 @@ function daysBetween(start: string, end: string) {
   const startMs = new Date(`${start}T12:00:00`).getTime();
   const endMs = new Date(`${end}T12:00:00`).getTime();
   return Math.max(0, Math.round((endMs - startMs) / 86400000));
+}
+
+function clampOffsetMinutes(value: number) {
+  return Math.min(1439, Math.max(0, Math.round(value)));
+}
+
+function offsetToFraction(minutes: number | null | undefined) {
+  return clampOffsetMinutes(Number(minutes || 0)) / 1440;
+}
+
+function formatOffset(minutes: number | null | undefined) {
+  const safe = clampOffsetMinutes(Number(minutes || 0));
+  const hours = Math.floor(safe / 60);
+  const mins = safe % 60;
+  const suffix = hours >= 12 ? "PM" : "AM";
+  const displayHour = hours % 12 || 12;
+  return `${displayHour}:${String(mins).padStart(2, "0")} ${suffix}`;
+}
+
+function offsetToInput(minutes: number | null | undefined) {
+  const safe = clampOffsetMinutes(Number(minutes || 0));
+  return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`;
+}
+
+function inputToOffset(value: string) {
+  const [hours, minutes] = value.split(":").map((part) => Number(part));
+  return clampOffsetMinutes((hours || 0) * 60 + (minutes || 0));
 }
 
 function durationDays(item: ScheduleItem, start: string, end: string) {
@@ -329,13 +358,15 @@ export function AdminProductionSchedule() {
     return payload.item;
   }
 
-  async function updateItemDates(item: ScheduleItem, updates: { start_date: string | null; end_date: string | null; due_date: string | null; estimated_duration_days?: number | null }) {
+  async function updateItemDates(item: ScheduleItem, updates: { start_date: string | null; start_offset_minutes?: number | null; end_date: string | null; due_date: string | null; estimated_duration_days?: number | null; sort_order?: number | null }) {
     const nextPayload = {
       ...payloadFromItem(item),
       start_date: updates.start_date,
+      start_offset_minutes: updates.start_offset_minutes ?? Number(item.start_offset_minutes || 0),
       end_date: updates.end_date,
       due_date: updates.due_date,
       estimated_duration_days: updates.estimated_duration_days ?? (updates.start_date && updates.end_date ? daysBetween(updates.start_date, updates.end_date) + 1 : Number(item.estimated_duration_days || 0)),
+      sort_order: updates.sort_order ?? Number(item.sort_order || 100),
     };
     await saveItem(nextPayload);
   }
@@ -601,11 +632,16 @@ type GanttDrag = {
   item: ScheduleItem;
   mode: "move" | "resize-start" | "resize-end";
   pointerStartX: number;
+  pointerStartY: number;
   originalStart: string;
   originalEnd: string;
+  originalOffsetMinutes: number;
+  originalSortOrder: number;
   originalDurationDays: number;
   previewStart: string;
   previewEnd: string;
+  previewOffsetMinutes: number;
+  previewSortOrder: number;
   previewDurationDays: number;
   moved: boolean;
 };
@@ -639,7 +675,7 @@ function GanttTimeline({
   items: ScheduleItem[];
   dependencies: ScheduleDependency[];
   onSelect: (item: ScheduleItem) => void;
-  onUpdateItemDates: (item: ScheduleItem, updates: { start_date: string | null; end_date: string | null; due_date: string | null; estimated_duration_days?: number | null }) => Promise<void>;
+  onUpdateItemDates: (item: ScheduleItem, updates: { start_date: string | null; start_offset_minutes?: number | null; end_date: string | null; due_date: string | null; estimated_duration_days?: number | null; sort_order?: number | null }) => Promise<void>;
   onCreateDependency: (input: {
     parent_item_id: string;
     dependent_item_id: string;
@@ -656,8 +692,10 @@ function GanttTimeline({
   const [paths, setPaths] = useState<DependencyPath[]>([]);
   const [draftSource, setDraftSource] = useState<{ itemId: string; side: ConnectorSide } | null>(null);
   const [dragState, setDragState] = useState<GanttDrag | null>(null);
+  const dragStateRef = useRef<GanttDrag | null>(null);
   const suppressNextSelectRef = useRef(false);
   const [linkMessage, setLinkMessage] = useState("");
+  const timelineItems = useMemo(() => [...items].sort((a, b) => Number(a.sort_order || 100) - Number(b.sort_order || 100)), [items]);
   const datedItems = items.filter((item) => item.start_date || item.due_date || item.end_date);
   const today = dateOnly(new Date());
   const dates = datedItems.flatMap((item) => [item.start_date, item.due_date, item.end_date]).filter(Boolean) as string[];
@@ -727,20 +765,32 @@ function GanttTimeline({
     return Math.max(16, grid.getBoundingClientRect().width / ticks.length);
   }, [ticks.length]);
 
+  const rowHeight = useCallback(() => {
+    const row = timelineRef.current?.querySelector<HTMLElement>("[data-gantt-row]");
+    return Math.max(48, row?.getBoundingClientRect().height || 62);
+  }, []);
+
   const startDrag = useCallback((event: PointerEvent<HTMLElement>, item: ScheduleItem, mode: GanttDrag["mode"]) => {
     const start = item.start_date || item.due_date || item.end_date || timelineStart;
     const end = item.end_date || item.due_date || start;
+    const originalOffsetMinutes = clampOffsetMinutes(Number(item.start_offset_minutes || 0));
+    const originalSortOrder = Number(item.sort_order || 100);
     const originalDurationDays = durationDays(item, start, end);
     event.currentTarget.setPointerCapture?.(event.pointerId);
     setDragState({
       item,
       mode,
       pointerStartX: event.clientX,
+      pointerStartY: event.clientY,
       originalStart: start,
       originalEnd: end,
+      originalOffsetMinutes,
+      originalSortOrder,
       originalDurationDays,
       previewStart: start,
       previewEnd: end,
+      previewOffsetMinutes: originalOffsetMinutes,
+      previewSortOrder: originalSortOrder,
       previewDurationDays: originalDurationDays,
       moved: false,
     });
@@ -748,20 +798,32 @@ function GanttTimeline({
   }, [timelineStart]);
 
   useEffect(() => {
+    dragStateRef.current = dragState;
+  }, [dragState]);
+
+  useEffect(() => {
     if (!dragState) return;
     const activeDrag = dragState;
 
     function handleMove(event: globalThis.PointerEvent) {
       const rawDeltaDays = (event.clientX - activeDrag.pointerStartX) / dayWidth();
-      const moved = Math.abs(event.clientX - activeDrag.pointerStartX) > 4;
+      const moved = Math.abs(event.clientX - activeDrag.pointerStartX) > 4 || Math.abs(event.clientY - activeDrag.pointerStartY) > 4;
+      const preciseDeltaDays = Math.round(rawDeltaDays * 96) / 96;
+      const wholeDayDelta = Math.floor((activeDrag.originalOffsetMinutes / 1440) + preciseDeltaDays);
+      const nextOffsetFraction = ((activeDrag.originalOffsetMinutes / 1440) + preciseDeltaDays) - wholeDayDelta;
       const deltaDays = Math.round(rawDeltaDays);
+      const deltaRows = Math.round((event.clientY - activeDrag.pointerStartY) / rowHeight());
       const fractionalDelta = Math.round(rawDeltaDays * 8) / 8;
       let previewStart = activeDrag.originalStart;
       let previewEnd = activeDrag.originalEnd;
+      let previewOffsetMinutes = activeDrag.originalOffsetMinutes;
+      let previewSortOrder = activeDrag.originalSortOrder;
       let previewDurationDays = activeDrag.originalDurationDays;
       if (activeDrag.mode === "move") {
-        previewStart = dateOnly(addDays(new Date(`${activeDrag.originalStart}T12:00:00`), deltaDays));
-        previewEnd = dateOnly(addDays(new Date(`${activeDrag.originalEnd}T12:00:00`), deltaDays));
+        previewStart = dateOnly(addDays(new Date(`${activeDrag.originalStart}T12:00:00`), wholeDayDelta));
+        previewEnd = dateOnly(addDays(new Date(`${activeDrag.originalEnd}T12:00:00`), wholeDayDelta));
+        previewOffsetMinutes = clampOffsetMinutes(nextOffsetFraction * 1440);
+        previewSortOrder = Math.max(1, activeDrag.originalSortOrder + deltaRows);
       } else if (activeDrag.mode === "resize-start") {
         const proposedStart = dateOnly(addDays(new Date(`${activeDrag.originalStart}T12:00:00`), deltaDays));
         previewStart = proposedStart <= activeDrag.originalEnd ? proposedStart : activeDrag.originalEnd;
@@ -771,12 +833,12 @@ function GanttTimeline({
         previewEnd = proposedEnd >= activeDrag.originalStart ? proposedEnd : activeDrag.originalStart;
         previewDurationDays = Math.max(0.125, activeDrag.originalDurationDays + fractionalDelta);
       }
-      setDragState((current) => current ? { ...current, previewStart, previewEnd, previewDurationDays, moved: current.moved || moved } : current);
+      setDragState((current) => current ? { ...current, previewStart, previewEnd, previewOffsetMinutes, previewSortOrder, previewDurationDays, moved: current.moved || moved || Math.abs(event.clientY - activeDrag.pointerStartY) > 4 } : current);
       window.requestAnimationFrame(recalculatePaths);
     }
 
     async function handleUp() {
-      const current = activeDrag;
+      const current = dragStateRef.current || activeDrag;
       setDragState(null);
       if (!current.moved) {
         suppressNextSelectRef.current = false;
@@ -784,7 +846,13 @@ function GanttTimeline({
         setLinkMessage("");
         return;
       }
-      if (current.previewStart === current.originalStart && current.previewEnd === current.originalEnd && current.previewDurationDays === current.originalDurationDays) {
+      if (
+        current.previewStart === current.originalStart
+        && current.previewEnd === current.originalEnd
+        && current.previewOffsetMinutes === current.originalOffsetMinutes
+        && current.previewSortOrder === current.originalSortOrder
+        && current.previewDurationDays === current.originalDurationDays
+      ) {
         setLinkMessage("");
         suppressNextSelectRef.current = false;
         return;
@@ -792,11 +860,13 @@ function GanttTimeline({
       try {
         await onUpdateItemDates(current.item, {
           start_date: current.previewStart,
+          start_offset_minutes: current.previewOffsetMinutes,
           end_date: current.previewEnd,
           due_date: current.previewEnd,
           estimated_duration_days: current.previewDurationDays,
+          sort_order: current.previewSortOrder,
         });
-        setLinkMessage(`Updated ${current.item.title}: ${formatDate(current.previewStart)} - ${formatDate(current.previewEnd)} (${current.previewDurationDays}d).`);
+        setLinkMessage(`Updated ${current.item.title}: ${formatDate(current.previewStart)} ${formatOffset(current.previewOffsetMinutes)} - ${formatDate(current.previewEnd)} (${current.previewDurationDays}d).`);
       } catch (error) {
         setLinkMessage(error instanceof Error ? error.message : "Could not update schedule dates.");
       }
@@ -893,11 +963,12 @@ function GanttTimeline({
                 </div>
               </div>
               <div className="divide-y">
-                {items.map((item) => {
+                {timelineItems.map((item) => {
                   const preview = dragState?.item.id === item.id ? dragState : null;
                   const start = preview?.previewStart || item.start_date || item.due_date || item.end_date || timelineStart;
                   const end = preview?.previewEnd || item.end_date || item.due_date || start;
-                  const offset = Math.min(ticks.length - 1, Math.max(0, daysBetween(timelineStart, start)));
+                  const startOffsetMinutes = preview?.previewOffsetMinutes ?? Number(item.start_offset_minutes || 0);
+                  const offset = Math.min(ticks.length - 1, Math.max(0, daysBetween(timelineStart, start) + offsetToFraction(startOffsetMinutes)));
                   const displayDuration = preview?.previewDurationDays ?? durationDays(item, start, end);
                   const span = Math.max(0.125, Math.min(ticks.length - offset, displayDuration));
                   const blocked = item.is_blocked || item.status === "blocked";
@@ -905,6 +976,7 @@ function GanttTimeline({
                   return (
                     <button
                       key={item.id}
+                      data-gantt-row
                       className={cn("grid w-full grid-cols-[260px_minmax(600px,1fr)] py-2 text-left hover:bg-accent/30", draftSource?.itemId === item.id && "bg-primary/10", preview && "bg-primary/15")}
                       onClick={() => {
                         if (suppressNextSelectRef.current) return;
@@ -952,7 +1024,7 @@ function GanttTimeline({
                               completeConnection(item.id, "start");
                             }}
                           />
-                          <span className="block truncate">{item.progress_percent ?? 0}% {human(item.status)} {displayDuration < 1 ? `• ${displayDuration}d` : ""}</span>
+                          <span className="block truncate">{item.progress_percent ?? 0}% {human(item.status)} • {formatOffset(startOffsetMinutes)} {displayDuration < 1 ? `• ${displayDuration}d` : ""}</span>
                           <span
                             className="absolute inset-y-0 right-1 z-20 w-2 cursor-ew-resize rounded-r-md bg-background/20 hover:bg-primary/40"
                             title="Drag to adjust end date"
@@ -1438,8 +1510,9 @@ function ScheduleItemSheet({
             <FieldSelect label="Production job" value={form.production_job_id || "none"} onChange={(value) => update("production_job_id", value === "none" ? null : value)} items={productionJobs.map((job) => ({ value: job.id, label: `${job.station || "Job"} - ${human(job.status)}` }))} placeholder="No production job" />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-5">
             <DateField label="Start date" value={form.start_date || ""} onChange={(value) => update("start_date", value || null)} />
+            <TimeField label="Start time" value={form.start_offset_minutes} onChange={(value) => update("start_offset_minutes", value)} />
             <DateField label="End date" value={form.end_date || ""} onChange={(value) => update("end_date", value || null)} />
             <DateField label="Due date" value={form.due_date || ""} onChange={(value) => update("due_date", value || null)} />
             <TextField label="Progress %" value={String(form.progress_percent)} onChange={(value) => update("progress_percent", Number(value || 0))} inputMode="numeric" />
@@ -1530,6 +1603,7 @@ function emptyPayload(): SchedulePayload {
     assigned_to_user_id: null,
     assigned_department: "Design",
     start_date: dateOnly(new Date()),
+    start_offset_minutes: 0,
     end_date: dateOnly(addDays(new Date(), 2)),
     due_date: dateOnly(addDays(new Date(), 2)),
     estimated_duration_days: 2,
@@ -1567,6 +1641,7 @@ function payloadFromItem(item?: ScheduleItem | null): SchedulePayload {
     assigned_to_user_id: item.assigned_to_user_id,
     assigned_department: item.assigned_department || "",
     start_date: dateInput(item.start_date) || null,
+    start_offset_minutes: clampOffsetMinutes(Number(item.start_offset_minutes || 0)),
     end_date: dateInput(item.end_date) || null,
     due_date: dateInput(item.due_date) || null,
     estimated_duration_days: Number(item.estimated_duration_days || 0),
@@ -1617,6 +1692,20 @@ function TextField({ label, value, onChange, placeholder, inputMode }: { label: 
     <div>
       <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
       <Input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} inputMode={inputMode} />
+    </div>
+  );
+}
+
+function TimeField({ label, value, onChange }: { label: string; value: number | null | undefined; onChange: (value: number) => void }) {
+  return (
+    <div>
+      <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
+      <Input
+        type="time"
+        step={900}
+        value={offsetToInput(value)}
+        onChange={(event) => onChange(inputToOffset(event.target.value))}
+      />
     </div>
   );
 }

@@ -57,6 +57,7 @@ type ScheduleBody = {
   assigned_to_user_id?: string | null;
   assigned_department?: string | null;
   start_date?: string | null;
+  start_offset_minutes?: number | string | null;
   end_date?: string | null;
   due_date?: string | null;
   estimated_duration_days?: number | string | null;
@@ -92,6 +93,7 @@ function scheduleSelect() {
     "assigned_to_user_id",
     "assigned_department",
     "start_date",
+    "start_offset_minutes",
     "end_date",
     "due_date",
     "estimated_duration_days",
@@ -181,6 +183,7 @@ function buildPayload(body: ScheduleBody, actorId: string, mode: "create" | "upd
     assigned_to_user_id: nullableText(body.assigned_to_user_id),
     assigned_department: nullableText(body.assigned_department),
     start_date: nullableDate(body.start_date),
+    start_offset_minutes: Math.min(1439, Math.max(0, Math.round(Number(body.start_offset_minutes || 0)))),
     end_date: nullableDate(body.end_date),
     due_date: nullableDate(body.due_date),
     estimated_duration_days: nullableNumber(body.estimated_duration_days),
@@ -217,6 +220,7 @@ export async function GET(request: Request) {
     .from("production_schedule_items")
     .select(scheduleSelect())
     .order("start_date", { ascending: true, nullsFirst: false })
+    .order("start_offset_minutes", { ascending: true })
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false })
     .limit(300);
