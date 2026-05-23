@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
-import { Bell, Calendar, ChevronLeft, ChevronRight, Eye, EyeOff, Flag, Link2, Moon, Plus, Search, Sun, Trash2 } from "lucide-react";
+import { Bell, Calendar, ChevronLeft, ChevronRight, Eye, EyeOff, Flag, GripVertical, Link2, Moon, Plus, Search, Sun, Trash2 } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
@@ -633,6 +633,8 @@ type GanttDrag = {
   mode: "move" | "resize-start" | "resize-end";
   pointerStartX: number;
   pointerStartY: number;
+  pointerX: number;
+  pointerY: number;
   originalStart: string;
   originalEnd: string;
   originalOffsetMinutes: number;
@@ -705,6 +707,12 @@ function GanttTimeline({
   const timelineEnd = dateOnly(addDays(new Date(`${maxDate}T12:00:00`), 4));
   const totalDays = Math.max(7, daysBetween(timelineStart, timelineEnd) + 1);
   const ticks = Array.from({ length: Math.min(totalDays, 45) }, (_, index) => dateOnly(addDays(new Date(`${timelineStart}T12:00:00`), index)));
+  const dragTooltip = dragState ? {
+    label: dragState.mode === "move" ? "Move item" : dragState.mode === "resize-start" ? "Adjust start" : "Adjust end",
+    dateRange: `${formatDate(dragState.previewStart)} ${formatOffset(dragState.previewOffsetMinutes)} - ${formatDate(dragState.previewEnd)}`,
+    duration: `${Number(dragState.previewDurationDays.toFixed(3))}d duration`,
+    rowDelta: dragState.previewSortOrder - dragState.originalSortOrder,
+  } : null;
 
   const recalculatePaths = useCallback(() => {
     const overlay = overlayRef.current;
@@ -782,6 +790,8 @@ function GanttTimeline({
       mode,
       pointerStartX: event.clientX,
       pointerStartY: event.clientY,
+      pointerX: event.clientX,
+      pointerY: event.clientY,
       originalStart: start,
       originalEnd: end,
       originalOffsetMinutes,
@@ -833,7 +843,17 @@ function GanttTimeline({
         previewEnd = proposedEnd >= activeDrag.originalStart ? proposedEnd : activeDrag.originalStart;
         previewDurationDays = Math.max(0.125, activeDrag.originalDurationDays + fractionalDelta);
       }
-      setDragState((current) => current ? { ...current, previewStart, previewEnd, previewOffsetMinutes, previewSortOrder, previewDurationDays, moved: current.moved || moved || Math.abs(event.clientY - activeDrag.pointerStartY) > 4 } : current);
+      setDragState((current) => current ? {
+        ...current,
+        pointerX: event.clientX,
+        pointerY: event.clientY,
+        previewStart,
+        previewEnd,
+        previewOffsetMinutes,
+        previewSortOrder,
+        previewDurationDays,
+        moved: current.moved || moved || Math.abs(event.clientY - activeDrag.pointerStartY) > 4,
+      } : current);
       window.requestAnimationFrame(recalculatePaths);
     }
 
@@ -927,6 +947,22 @@ function GanttTimeline({
         ) : (
           <div ref={timelineRef} className="overflow-x-auto" onScroll={recalculatePaths}>
             <div className="relative min-w-[860px]">
+              {dragState && dragTooltip && (
+                <div
+                  className="pointer-events-none fixed z-[80] rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg"
+                  style={{
+                    left: Math.min(window.innerWidth - 260, Math.max(12, dragState.pointerX + 14)),
+                    top: Math.min(window.innerHeight - 110, Math.max(12, dragState.pointerY + 14)),
+                  }}
+                >
+                  <div className="font-semibold">{dragTooltip.label}</div>
+                  <div className="mt-0.5 text-muted-foreground">{dragTooltip.dateRange}</div>
+                  <div className="mt-0.5 text-muted-foreground">
+                    {dragTooltip.duration}
+                    {dragTooltip.rowDelta !== 0 ? ` | row ${dragTooltip.rowDelta > 0 ? "+" : ""}${dragTooltip.rowDelta}` : ""}
+                  </div>
+                </div>
+              )}
               <svg ref={overlayRef} className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible">
                 {paths.map((path) => {
                   const dependency = dependencies.find((item) => item.id === path.id);
@@ -996,7 +1032,7 @@ function GanttTimeline({
                         {ticks.map((tick) => <div key={tick} className={cn("border-l", tick === today && "bg-primary/10")} />)}
                         <div
                           data-gantt-id={item.id}
-                          className={cn("absolute top-1 h-7 cursor-grab rounded-md border px-2 text-[11px] font-medium leading-7 shadow-sm active:cursor-grabbing", blocked ? "border-red-500/35 bg-red-500/20 text-red-700 dark:text-red-200" : "border-primary/20 bg-primary/25 text-lime-900 dark:text-lime-100", preview && "ring-2 ring-primary/60")}
+                          className={cn("group absolute top-1 h-7 cursor-grab rounded-md border px-7 text-[11px] font-medium leading-7 shadow-sm active:cursor-grabbing", blocked ? "border-red-500/35 bg-red-500/20 text-red-700 dark:text-red-200" : "border-primary/20 bg-primary/25 text-lime-900 dark:text-lime-100", preview && "ring-2 ring-primary/60")}
                           style={{ left: `${(offset / ticks.length) * 100}%`, width: `${(span / ticks.length) * 100}%` }}
                           onPointerDown={(event) => {
                             event.stopPropagation();
@@ -1004,13 +1040,21 @@ function GanttTimeline({
                           }}
                         >
                           <span
-                            className="absolute inset-y-0 left-1 z-20 w-2 cursor-ew-resize rounded-l-md bg-background/20 hover:bg-primary/40"
-                            title="Drag to adjust start date"
+                            className="absolute inset-y-0 left-0 z-20 flex w-5 cursor-ew-resize items-center justify-center rounded-l-md border-r border-background/35 bg-background/25 text-current opacity-80 transition-opacity hover:bg-primary/40 group-hover:opacity-100"
+                            title="Drag to adjust start date and duration"
                             onPointerDown={(event) => {
                               event.stopPropagation();
                               startDrag(event, item, "resize-start");
                             }}
-                          />
+                          >
+                            <span className="h-3.5 w-0.5 rounded-full bg-current opacity-80" />
+                          </span>
+                          <span
+                            className="pointer-events-none absolute left-5 top-1/2 z-10 -translate-y-1/2 text-current opacity-55 transition-opacity group-hover:opacity-90"
+                            title="Drag the bar to move date, time, or row"
+                          >
+                            <GripVertical className="h-3.5 w-3.5" />
+                          </span>
                           <ConnectorHandle
                             side="start"
                             active={draftSource?.itemId === item.id && draftSource.side === "start"}
@@ -1024,15 +1068,17 @@ function GanttTimeline({
                               completeConnection(item.id, "start");
                             }}
                           />
-                          <span className="block truncate">{item.progress_percent ?? 0}% {human(item.status)} • {formatOffset(startOffsetMinutes)} {displayDuration < 1 ? `• ${displayDuration}d` : ""}</span>
+                          <span className="block truncate">{item.progress_percent ?? 0}% {human(item.status)} | {formatOffset(startOffsetMinutes)} {displayDuration < 1 ? `| ${Number(displayDuration.toFixed(3))}d` : ""}</span>
                           <span
-                            className="absolute inset-y-0 right-1 z-20 w-2 cursor-ew-resize rounded-r-md bg-background/20 hover:bg-primary/40"
-                            title="Drag to adjust end date"
+                            className="absolute inset-y-0 right-0 z-20 flex w-5 cursor-ew-resize items-center justify-center rounded-r-md border-l border-background/35 bg-background/25 text-current opacity-80 transition-opacity hover:bg-primary/40 group-hover:opacity-100"
+                            title="Drag to adjust end date and duration"
                             onPointerDown={(event) => {
                               event.stopPropagation();
                               startDrag(event, item, "resize-end");
                             }}
-                          />
+                          >
+                            <span className="h-3.5 w-0.5 rounded-full bg-current opacity-80" />
+                          </span>
                           <ConnectorHandle
                             side="finish"
                             active={draftSource?.itemId === item.id && draftSource.side === "finish"}
