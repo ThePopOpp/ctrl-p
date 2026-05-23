@@ -161,6 +161,12 @@ function daysBetween(start: string, end: string) {
   return Math.max(0, Math.round((endMs - startMs) / 86400000));
 }
 
+function durationDays(item: ScheduleItem, start: string, end: string) {
+  const explicit = Number(item.estimated_duration_days || 0);
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  return daysBetween(start, end) + 1;
+}
+
 function statusTone(status: string) {
   if (["completed", "approved"].includes(status)) return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
   if (["blocked", "on_hold", "reopened"].includes(status)) return "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300";
@@ -323,13 +329,13 @@ export function AdminProductionSchedule() {
     return payload.item;
   }
 
-  async function updateItemDates(item: ScheduleItem, updates: { start_date: string | null; end_date: string | null; due_date: string | null }) {
+  async function updateItemDates(item: ScheduleItem, updates: { start_date: string | null; end_date: string | null; due_date: string | null; estimated_duration_days?: number | null }) {
     const nextPayload = {
       ...payloadFromItem(item),
       start_date: updates.start_date,
       end_date: updates.end_date,
       due_date: updates.due_date,
-      estimated_duration_days: updates.start_date && updates.end_date ? daysBetween(updates.start_date, updates.end_date) + 1 : Number(item.estimated_duration_days || 0),
+      estimated_duration_days: updates.estimated_duration_days ?? (updates.start_date && updates.end_date ? daysBetween(updates.start_date, updates.end_date) + 1 : Number(item.estimated_duration_days || 0)),
     };
     await saveItem(nextPayload);
   }
@@ -597,8 +603,11 @@ type GanttDrag = {
   pointerStartX: number;
   originalStart: string;
   originalEnd: string;
+  originalDurationDays: number;
   previewStart: string;
   previewEnd: string;
+  previewDurationDays: number;
+  moved: boolean;
 };
 
 function dependencyTypeFromSides(sourceSide: ConnectorSide, targetSide: ConnectorSide) {
@@ -630,7 +639,7 @@ function GanttTimeline({
   items: ScheduleItem[];
   dependencies: ScheduleDependency[];
   onSelect: (item: ScheduleItem) => void;
-  onUpdateItemDates: (item: ScheduleItem, updates: { start_date: string | null; end_date: string | null; due_date: string | null }) => Promise<void>;
+  onUpdateItemDates: (item: ScheduleItem, updates: { start_date: string | null; end_date: string | null; due_date: string | null; estimated_duration_days?: number | null }) => Promise<void>;
   onCreateDependency: (input: {
     parent_item_id: string;
     dependent_item_id: string;
@@ -721,6 +730,7 @@ function GanttTimeline({
   const startDrag = useCallback((event: PointerEvent<HTMLElement>, item: ScheduleItem, mode: GanttDrag["mode"]) => {
     const start = item.start_date || item.due_date || item.end_date || timelineStart;
     const end = item.end_date || item.due_date || start;
+    const originalDurationDays = durationDays(item, start, end);
     event.currentTarget.setPointerCapture?.(event.pointerId);
     setDragState({
       item,
@@ -728,10 +738,12 @@ function GanttTimeline({
       pointerStartX: event.clientX,
       originalStart: start,
       originalEnd: end,
+      originalDurationDays,
       previewStart: start,
       previewEnd: end,
+      previewDurationDays: originalDurationDays,
+      moved: false,
     });
-    suppressNextSelectRef.current = true;
     setLinkMessage(mode === "move" ? "Dragging schedule item. Release to save date changes." : "Resizing schedule item. Release to save duration.");
   }, [timelineStart]);
 
@@ -740,28 +752,41 @@ function GanttTimeline({
     const activeDrag = dragState;
 
     function handleMove(event: globalThis.PointerEvent) {
-      const deltaDays = Math.round((event.clientX - activeDrag.pointerStartX) / dayWidth());
+      const rawDeltaDays = (event.clientX - activeDrag.pointerStartX) / dayWidth();
+      const moved = Math.abs(event.clientX - activeDrag.pointerStartX) > 4;
+      const deltaDays = Math.round(rawDeltaDays);
+      const fractionalDelta = Math.round(rawDeltaDays * 8) / 8;
       let previewStart = activeDrag.originalStart;
       let previewEnd = activeDrag.originalEnd;
+      let previewDurationDays = activeDrag.originalDurationDays;
       if (activeDrag.mode === "move") {
         previewStart = dateOnly(addDays(new Date(`${activeDrag.originalStart}T12:00:00`), deltaDays));
         previewEnd = dateOnly(addDays(new Date(`${activeDrag.originalEnd}T12:00:00`), deltaDays));
       } else if (activeDrag.mode === "resize-start") {
         const proposedStart = dateOnly(addDays(new Date(`${activeDrag.originalStart}T12:00:00`), deltaDays));
         previewStart = proposedStart <= activeDrag.originalEnd ? proposedStart : activeDrag.originalEnd;
+        previewDurationDays = Math.max(0.125, activeDrag.originalDurationDays - fractionalDelta);
       } else {
         const proposedEnd = dateOnly(addDays(new Date(`${activeDrag.originalEnd}T12:00:00`), deltaDays));
         previewEnd = proposedEnd >= activeDrag.originalStart ? proposedEnd : activeDrag.originalStart;
+        previewDurationDays = Math.max(0.125, activeDrag.originalDurationDays + fractionalDelta);
       }
-      setDragState((current) => current ? { ...current, previewStart, previewEnd } : current);
+      setDragState((current) => current ? { ...current, previewStart, previewEnd, previewDurationDays, moved: current.moved || moved } : current);
       window.requestAnimationFrame(recalculatePaths);
     }
 
     async function handleUp() {
       const current = activeDrag;
       setDragState(null);
-      if (current.previewStart === current.originalStart && current.previewEnd === current.originalEnd) {
+      if (!current.moved) {
+        suppressNextSelectRef.current = false;
+        onSelect(current.item);
         setLinkMessage("");
+        return;
+      }
+      if (current.previewStart === current.originalStart && current.previewEnd === current.originalEnd && current.previewDurationDays === current.originalDurationDays) {
+        setLinkMessage("");
+        suppressNextSelectRef.current = false;
         return;
       }
       try {
@@ -769,8 +794,9 @@ function GanttTimeline({
           start_date: current.previewStart,
           end_date: current.previewEnd,
           due_date: current.previewEnd,
+          estimated_duration_days: current.previewDurationDays,
         });
-        setLinkMessage(`Updated ${current.item.title}: ${formatDate(current.previewStart)} - ${formatDate(current.previewEnd)}.`);
+        setLinkMessage(`Updated ${current.item.title}: ${formatDate(current.previewStart)} - ${formatDate(current.previewEnd)} (${current.previewDurationDays}d).`);
       } catch (error) {
         setLinkMessage(error instanceof Error ? error.message : "Could not update schedule dates.");
       }
@@ -872,7 +898,8 @@ function GanttTimeline({
                   const start = preview?.previewStart || item.start_date || item.due_date || item.end_date || timelineStart;
                   const end = preview?.previewEnd || item.end_date || item.due_date || start;
                   const offset = Math.min(ticks.length - 1, Math.max(0, daysBetween(timelineStart, start)));
-                  const span = Math.max(1, Math.min(ticks.length - offset, daysBetween(start, end) + 1));
+                  const displayDuration = preview?.previewDurationDays ?? durationDays(item, start, end);
+                  const span = Math.max(0.125, Math.min(ticks.length - offset, displayDuration));
                   const blocked = item.is_blocked || item.status === "blocked";
                   const hasDependency = dependencies.some((dependency) => dependency.parent_item_id === item.id || dependency.dependent_item_id === item.id);
                   return (
@@ -925,7 +952,7 @@ function GanttTimeline({
                               completeConnection(item.id, "start");
                             }}
                           />
-                          <span className="block truncate">{item.progress_percent ?? 0}% {human(item.status)}</span>
+                          <span className="block truncate">{item.progress_percent ?? 0}% {human(item.status)} {displayDuration < 1 ? `• ${displayDuration}d` : ""}</span>
                           <span
                             className="absolute inset-y-0 right-1 z-20 w-2 cursor-ew-resize rounded-r-md bg-background/20 hover:bg-primary/40"
                             title="Drag to adjust end date"
