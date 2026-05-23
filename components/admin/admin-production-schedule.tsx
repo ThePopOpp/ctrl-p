@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
-import { Bell, ChevronRight, Eye, EyeOff, Flag, Link2, Moon, Plus, Search, Sun, Trash2 } from "lucide-react";
+import { Bell, Calendar, ChevronLeft, ChevronRight, Eye, EyeOff, Flag, Link2, Moon, Plus, Search, Sun, Trash2 } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
@@ -323,6 +323,17 @@ export function AdminProductionSchedule() {
     return payload.item;
   }
 
+  async function updateItemDates(item: ScheduleItem, updates: { start_date: string | null; end_date: string | null; due_date: string | null }) {
+    const nextPayload = {
+      ...payloadFromItem(item),
+      start_date: updates.start_date,
+      end_date: updates.end_date,
+      due_date: updates.due_date,
+      estimated_duration_days: updates.start_date && updates.end_date ? daysBetween(updates.start_date, updates.end_date) + 1 : Number(item.estimated_duration_days || 0),
+    };
+    await saveItem(nextPayload);
+  }
+
   async function deleteItem(item: ScheduleItem) {
     const confirmed = window.confirm(`Delete "${item.title}" from the production schedule?`);
     if (!confirmed) return;
@@ -494,6 +505,7 @@ export function AdminProductionSchedule() {
                         items={sectionItems}
                         dependencies={dependencies}
                         onSelect={setSelectedItem}
+                        onUpdateItemDates={updateItemDates}
                         onCreateDependency={createDependency}
                         onSelectDependency={setSelectedDependency}
                       />
@@ -579,6 +591,16 @@ type DependencyPath = {
   complete: boolean;
 };
 
+type GanttDrag = {
+  item: ScheduleItem;
+  mode: "move" | "resize-start" | "resize-end";
+  pointerStartX: number;
+  originalStart: string;
+  originalEnd: string;
+  previewStart: string;
+  previewEnd: string;
+};
+
 function dependencyTypeFromSides(sourceSide: ConnectorSide, targetSide: ConnectorSide) {
   if (sourceSide === "finish" && targetSide === "start") return "finish_to_start";
   if (sourceSide === "start" && targetSide === "start") return "start_to_start";
@@ -601,12 +623,14 @@ function GanttTimeline({
   items,
   dependencies,
   onSelect,
+  onUpdateItemDates,
   onCreateDependency,
   onSelectDependency,
 }: {
   items: ScheduleItem[];
   dependencies: ScheduleDependency[];
   onSelect: (item: ScheduleItem) => void;
+  onUpdateItemDates: (item: ScheduleItem, updates: { start_date: string | null; end_date: string | null; due_date: string | null }) => Promise<void>;
   onCreateDependency: (input: {
     parent_item_id: string;
     dependent_item_id: string;
@@ -622,6 +646,7 @@ function GanttTimeline({
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const [paths, setPaths] = useState<DependencyPath[]>([]);
   const [draftSource, setDraftSource] = useState<{ itemId: string; side: ConnectorSide } | null>(null);
+  const [dragState, setDragState] = useState<GanttDrag | null>(null);
   const [linkMessage, setLinkMessage] = useState("");
   const datedItems = items.filter((item) => item.start_date || item.due_date || item.end_date);
   const today = dateOnly(new Date());
@@ -685,6 +710,77 @@ function GanttTimeline({
       window.removeEventListener("resize", recalculatePaths);
     };
   }, [recalculatePaths]);
+
+  const dayWidth = useCallback(() => {
+    const grid = timelineRef.current?.querySelector<HTMLElement>("[data-timeline-grid]");
+    if (!grid) return 32;
+    return Math.max(16, grid.getBoundingClientRect().width / ticks.length);
+  }, [ticks.length]);
+
+  const startDrag = useCallback((event: PointerEvent<HTMLElement>, item: ScheduleItem, mode: GanttDrag["mode"]) => {
+    const start = item.start_date || item.due_date || item.end_date || timelineStart;
+    const end = item.end_date || item.due_date || start;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setDragState({
+      item,
+      mode,
+      pointerStartX: event.clientX,
+      originalStart: start,
+      originalEnd: end,
+      previewStart: start,
+      previewEnd: end,
+    });
+    setLinkMessage(mode === "move" ? "Dragging schedule item. Release to save date changes." : "Resizing schedule item. Release to save duration.");
+  }, [timelineStart]);
+
+  useEffect(() => {
+    if (!dragState) return;
+    const activeDrag = dragState;
+
+    function handleMove(event: globalThis.PointerEvent) {
+      const deltaDays = Math.round((event.clientX - activeDrag.pointerStartX) / dayWidth());
+      let previewStart = activeDrag.originalStart;
+      let previewEnd = activeDrag.originalEnd;
+      if (activeDrag.mode === "move") {
+        previewStart = dateOnly(addDays(new Date(`${activeDrag.originalStart}T12:00:00`), deltaDays));
+        previewEnd = dateOnly(addDays(new Date(`${activeDrag.originalEnd}T12:00:00`), deltaDays));
+      } else if (activeDrag.mode === "resize-start") {
+        const proposedStart = dateOnly(addDays(new Date(`${activeDrag.originalStart}T12:00:00`), deltaDays));
+        previewStart = proposedStart <= activeDrag.originalEnd ? proposedStart : activeDrag.originalEnd;
+      } else {
+        const proposedEnd = dateOnly(addDays(new Date(`${activeDrag.originalEnd}T12:00:00`), deltaDays));
+        previewEnd = proposedEnd >= activeDrag.originalStart ? proposedEnd : activeDrag.originalStart;
+      }
+      setDragState((current) => current ? { ...current, previewStart, previewEnd } : current);
+      window.requestAnimationFrame(recalculatePaths);
+    }
+
+    async function handleUp() {
+      const current = activeDrag;
+      setDragState(null);
+      if (current.previewStart === current.originalStart && current.previewEnd === current.originalEnd) {
+        setLinkMessage("");
+        return;
+      }
+      try {
+        await onUpdateItemDates(current.item, {
+          start_date: current.previewStart,
+          end_date: current.previewEnd,
+          due_date: current.previewEnd,
+        });
+        setLinkMessage(`Updated ${current.item.title}: ${formatDate(current.previewStart)} - ${formatDate(current.previewEnd)}.`);
+      } catch (error) {
+        setLinkMessage(error instanceof Error ? error.message : "Could not update schedule dates.");
+      }
+    }
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [dayWidth, dragState, onUpdateItemDates, recalculatePaths]);
 
   async function completeConnection(targetItemId: string, targetSide: ConnectorSide) {
     if (!draftSource) return;
@@ -773,20 +869,21 @@ function GanttTimeline({
               </svg>
               <div className="grid grid-cols-[260px_minmax(600px,1fr)] border-b pb-2 text-[11px] font-medium text-muted-foreground">
                 <div>Item</div>
-                <div className="grid" style={{ gridTemplateColumns: `repeat(${ticks.length}, minmax(24px, 1fr))` }}>
+                <div data-timeline-grid className="grid" style={{ gridTemplateColumns: `repeat(${ticks.length}, minmax(24px, 1fr))` }}>
                   {ticks.map((tick) => <div key={tick} className={cn("border-l pl-1", tick === today && "text-primary")}>{new Date(`${tick}T12:00:00`).getDate()}</div>)}
                 </div>
               </div>
               <div className="divide-y">
                 {items.map((item) => {
-                  const start = item.start_date || item.due_date || item.end_date || timelineStart;
-                  const end = item.end_date || item.due_date || start;
+                  const preview = dragState?.item.id === item.id ? dragState : null;
+                  const start = preview?.previewStart || item.start_date || item.due_date || item.end_date || timelineStart;
+                  const end = preview?.previewEnd || item.end_date || item.due_date || start;
                   const offset = Math.min(ticks.length - 1, Math.max(0, daysBetween(timelineStart, start)));
                   const span = Math.max(1, Math.min(ticks.length - offset, daysBetween(start, end) + 1));
                   const blocked = item.is_blocked || item.status === "blocked";
                   const hasDependency = dependencies.some((dependency) => dependency.parent_item_id === item.id || dependency.dependent_item_id === item.id);
                   return (
-                    <button key={item.id} className={cn("grid w-full grid-cols-[260px_minmax(600px,1fr)] py-2 text-left hover:bg-accent/30", draftSource?.itemId === item.id && "bg-primary/10")} onClick={() => onSelect(item)}>
+                    <button key={item.id} className={cn("grid w-full grid-cols-[260px_minmax(600px,1fr)] py-2 text-left hover:bg-accent/30", draftSource?.itemId === item.id && "bg-primary/10", preview && "bg-primary/15")} onClick={() => onSelect(item)}>
                       <div className="pr-3">
                         <div className="truncate text-sm font-medium">{item.title}</div>
                         <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -800,9 +897,21 @@ function GanttTimeline({
                         {ticks.map((tick) => <div key={tick} className={cn("border-l", tick === today && "bg-primary/10")} />)}
                         <div
                           data-gantt-id={item.id}
-                          className={cn("absolute top-1 h-7 rounded-md border px-2 text-[11px] font-medium leading-7 shadow-sm", blocked ? "border-red-500/35 bg-red-500/20 text-red-700 dark:text-red-200" : "border-primary/20 bg-primary/25 text-lime-900 dark:text-lime-100")}
+                          className={cn("absolute top-1 h-7 cursor-grab rounded-md border px-2 text-[11px] font-medium leading-7 shadow-sm active:cursor-grabbing", blocked ? "border-red-500/35 bg-red-500/20 text-red-700 dark:text-red-200" : "border-primary/20 bg-primary/25 text-lime-900 dark:text-lime-100", preview && "ring-2 ring-primary/60")}
                           style={{ left: `${(offset / ticks.length) * 100}%`, width: `${(span / ticks.length) * 100}%` }}
+                          onPointerDown={(event) => {
+                            event.stopPropagation();
+                            startDrag(event, item, "move");
+                          }}
                         >
+                          <span
+                            className="absolute inset-y-0 left-1 z-20 w-2 cursor-ew-resize rounded-l-md bg-background/20 hover:bg-primary/40"
+                            title="Drag to adjust start date"
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                              startDrag(event, item, "resize-start");
+                            }}
+                          />
                           <ConnectorHandle
                             side="start"
                             active={draftSource?.itemId === item.id && draftSource.side === "start"}
@@ -817,6 +926,14 @@ function GanttTimeline({
                             }}
                           />
                           <span className="block truncate">{item.progress_percent ?? 0}% {human(item.status)}</span>
+                          <span
+                            className="absolute inset-y-0 right-1 z-20 w-2 cursor-ew-resize rounded-r-md bg-background/20 hover:bg-primary/40"
+                            title="Drag to adjust end date"
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                              startDrag(event, item, "resize-end");
+                            }}
+                          />
                           <ConnectorHandle
                             side="finish"
                             active={draftSource?.itemId === item.id && draftSource.side === "finish"}
@@ -1467,10 +1584,74 @@ function TextField({ label, value, onChange, placeholder, inputMode }: { label: 
 }
 
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = value ? new Date(`${value}T12:00:00`) : new Date();
+  const [visibleMonth, setVisibleMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
+  const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(visibleMonth);
+  const firstDay = visibleMonth.getDay();
+  const gridStart = addDays(visibleMonth, -firstDay);
+  const days = Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));
+  const today = dateOnly(new Date());
+
+  function choose(day: Date) {
+    onChange(dateOnly(day));
+    setVisibleMonth(new Date(day.getFullYear(), day.getMonth(), 1));
+    setOpen(false);
+  }
+
   return (
-    <div>
+    <div className="relative">
       <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
-      <Input type="date" value={value} onChange={(event) => onChange(event.target.value)} />
+      <button
+        type="button"
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-left text-sm text-foreground shadow-sm ring-offset-background transition-colors hover:border-primary/60 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>{value ? new Intl.DateTimeFormat("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }).format(selected) : "Select date"}</span>
+        <Calendar className="h-4 w-4 text-muted-foreground" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-[4.4rem] z-[70] w-[320px] rounded-lg border bg-card p-3 text-card-foreground shadow-xl">
+          <div className="mb-3 flex items-center justify-between">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-sm font-semibold">{monthLabel}</div>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-muted-foreground">
+            {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => <div key={day} className="py-1">{day}</div>)}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((day) => {
+              const key = dateOnly(day);
+              const selectedDay = value === key;
+              const inMonth = day.getMonth() === visibleMonth.getMonth();
+              return (
+                <button
+                  type="button"
+                  key={key}
+                  className={cn(
+                    "grid h-9 place-items-center rounded-md text-sm transition-colors hover:bg-primary hover:text-primary-foreground",
+                    !inMonth && "text-muted-foreground/55",
+                    key === today && "border border-primary/50",
+                    selectedDay && "bg-primary font-semibold text-primary-foreground shadow-sm",
+                  )}
+                  onClick={() => choose(day)}
+                >
+                  {day.getDate()}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t pt-3">
+            <Button variant="ghost" size="sm" onClick={() => { onChange(""); setOpen(false); }}>Clear</Button>
+            <Button variant="outline" size="sm" onClick={() => choose(new Date())}>Today</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
