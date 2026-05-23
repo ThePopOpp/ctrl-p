@@ -647,6 +647,7 @@ function GanttTimeline({
   const [paths, setPaths] = useState<DependencyPath[]>([]);
   const [draftSource, setDraftSource] = useState<{ itemId: string; side: ConnectorSide } | null>(null);
   const [dragState, setDragState] = useState<GanttDrag | null>(null);
+  const suppressNextSelectRef = useRef(false);
   const [linkMessage, setLinkMessage] = useState("");
   const datedItems = items.filter((item) => item.start_date || item.due_date || item.end_date);
   const today = dateOnly(new Date());
@@ -730,6 +731,7 @@ function GanttTimeline({
       previewStart: start,
       previewEnd: end,
     });
+    suppressNextSelectRef.current = true;
     setLinkMessage(mode === "move" ? "Dragging schedule item. Release to save date changes." : "Resizing schedule item. Release to save duration.");
   }, [timelineStart]);
 
@@ -772,6 +774,9 @@ function GanttTimeline({
       } catch (error) {
         setLinkMessage(error instanceof Error ? error.message : "Could not update schedule dates.");
       }
+      window.setTimeout(() => {
+        suppressNextSelectRef.current = false;
+      }, 80);
     }
 
     window.addEventListener("pointermove", handleMove);
@@ -849,23 +854,11 @@ function GanttTimeline({
                         strokeDasharray={path.dependencyType.includes("start_to") ? "5 4" : undefined}
                         strokeLinecap="round"
                         strokeWidth="2"
-                        markerEnd={`url(#dependency-arrow-${path.blocked ? "blocked" : path.complete ? "complete" : "normal"})`}
                         className="pointer-events-none drop-shadow-sm"
                       />
                     </g>
                   );
                 })}
-                <defs>
-                  <marker id="dependency-arrow-normal" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-                    <path d="M 0 0 L 8 4 L 0 8 z" fill="rgb(132 204 22)" />
-                  </marker>
-                  <marker id="dependency-arrow-blocked" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-                    <path d="M 0 0 L 8 4 L 0 8 z" fill="rgb(239 68 68)" />
-                  </marker>
-                  <marker id="dependency-arrow-complete" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-                    <path d="M 0 0 L 8 4 L 0 8 z" fill="rgb(16 185 129)" />
-                  </marker>
-                </defs>
               </svg>
               <div className="grid grid-cols-[260px_minmax(600px,1fr)] border-b pb-2 text-[11px] font-medium text-muted-foreground">
                 <div>Item</div>
@@ -883,7 +876,14 @@ function GanttTimeline({
                   const blocked = item.is_blocked || item.status === "blocked";
                   const hasDependency = dependencies.some((dependency) => dependency.parent_item_id === item.id || dependency.dependent_item_id === item.id);
                   return (
-                    <button key={item.id} className={cn("grid w-full grid-cols-[260px_minmax(600px,1fr)] py-2 text-left hover:bg-accent/30", draftSource?.itemId === item.id && "bg-primary/10", preview && "bg-primary/15")} onClick={() => onSelect(item)}>
+                    <button
+                      key={item.id}
+                      className={cn("grid w-full grid-cols-[260px_minmax(600px,1fr)] py-2 text-left hover:bg-accent/30", draftSource?.itemId === item.id && "bg-primary/10", preview && "bg-primary/15")}
+                      onClick={() => {
+                        if (suppressNextSelectRef.current) return;
+                        onSelect(item);
+                      }}
+                    >
                       <div className="pr-3">
                         <div className="truncate text-sm font-medium">{item.title}</div>
                         <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -1416,6 +1416,17 @@ function ScheduleItemSheet({
             <DateField label="End date" value={form.end_date || ""} onChange={(value) => update("end_date", value || null)} />
             <DateField label="Due date" value={form.due_date || ""} onChange={(value) => update("due_date", value || null)} />
             <TextField label="Progress %" value={String(form.progress_percent)} onChange={(value) => update("progress_percent", Number(value || 0))} inputMode="numeric" />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField
+              label="Estimated duration days"
+              value={String(form.estimated_duration_days ?? "")}
+              onChange={(value) => update("estimated_duration_days", value === "" ? null : Number(value))}
+              placeholder="0.125 for 1 hour, 0.5 for half day"
+              inputMode="decimal"
+            />
+            <LinkedMeta label="Duration examples" value="0.125 = 1 hour, 0.25 = 2 hours, 0.5 = half day" subvalue="Timeline bars remain day-positioned in this pass; duration data can now be fractional." />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
