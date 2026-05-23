@@ -1,6 +1,7 @@
 import {
   Bot,
   Boxes,
+  CalendarRange,
   CircleDollarSign,
   FileText,
   LayoutDashboard,
@@ -28,6 +29,7 @@ export const adminNavGroups: readonly {
       ["Dashboard", LayoutDashboard, "/admin"],
       ["Analytics", Radio, "/admin/analytics"],
       ["Orders", ShoppingBag, "/admin/orders"],
+      ["Projects", CalendarRange, "/admin/production-schedule"],
       ["Production", Boxes, "/admin/production"],
       ["Payments", CircleDollarSign, "/admin/payments"],
       ["Messages", MessageSquare, "/admin/messages"],
