@@ -5,6 +5,7 @@ import { getServerSupabaseConfig, jsonError, serverEnv } from "@/lib/admin/serve
 
 const LINK_TYPES = new Set(["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"]);
 const STATUSES = new Set(["draft", "published", "unpublished"]);
+const SECTION_TYPES = new Set(["profile_header", "quick_actions", "links", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"]);
 
 type DigitalCardLinkBody = {
   id?: string;
@@ -15,6 +16,24 @@ type DigitalCardLinkBody = {
   display_order?: number | string;
   is_visible?: boolean;
   open_in_new_tab?: boolean;
+};
+
+type DigitalCardSectionBody = {
+  id?: string;
+  section_type?: string;
+  label?: string;
+  content?: Record<string, unknown>;
+  display_order?: number | string;
+  is_visible?: boolean;
+  customer_editable?: boolean;
+  margin_top?: number | string;
+  margin_right?: number | string;
+  margin_bottom?: number | string;
+  margin_left?: number | string;
+  padding_top?: number | string;
+  padding_right?: number | string;
+  padding_bottom?: number | string;
+  padding_left?: number | string;
 };
 
 type DigitalCardBody = {
@@ -60,6 +79,7 @@ type DigitalCardBody = {
   assigned_order_id?: string | null;
   assigned_product_id?: string | null;
   links?: DigitalCardLinkBody[];
+  sections?: DigitalCardSectionBody[];
 };
 
 function clean(value: unknown) {
@@ -147,7 +167,7 @@ async function uniqueSlug(adminClient: { from: (table: string) => any }, request
 }
 
 function cardSelect() {
-  return "*, digital_card_links(id, label, url, link_type, icon, display_order, is_visible, open_in_new_tab, click_count, created_at, updated_at)";
+  return "*, digital_card_links(id, label, url, link_type, icon, display_order, is_visible, open_in_new_tab, click_count, created_at, updated_at), digital_card_sections(id, section_type, label, content, display_order, is_visible, customer_editable, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left, created_at, updated_at)";
 }
 
 function buildLinks(links: DigitalCardLinkBody[] | undefined, cardId: string) {
@@ -178,6 +198,37 @@ function buildLinks(links: DigitalCardLinkBody[] | undefined, cardId: string) {
       is_visible: boolean;
       open_in_new_tab: boolean;
     } => Boolean(link));
+}
+
+function spacing(value: unknown, fallback = 0) {
+  const number = Number(value ?? fallback);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(0, Math.min(240, Math.round(number)));
+}
+
+function buildSections(sections: DigitalCardSectionBody[] | undefined, cardId: string) {
+  return (sections || [])
+    .map((section, index) => {
+      const sectionType = SECTION_TYPES.has(clean(section.section_type)) ? clean(section.section_type) : "custom";
+      const label = clean(section.label) || sectionType.replace(/_/g, " ");
+      return {
+        digital_card_id: cardId,
+        section_type: sectionType,
+        label,
+        content: section.content && typeof section.content === "object" ? section.content : {},
+        display_order: Number(section.display_order || index + 1),
+        is_visible: section.is_visible !== false,
+        customer_editable: section.customer_editable !== false,
+        margin_top: spacing(section.margin_top),
+        margin_right: spacing(section.margin_right),
+        margin_bottom: spacing(section.margin_bottom, 16),
+        margin_left: spacing(section.margin_left),
+        padding_top: spacing(section.padding_top),
+        padding_right: spacing(section.padding_right),
+        padding_bottom: spacing(section.padding_bottom),
+        padding_left: spacing(section.padding_left),
+      };
+    });
 }
 
 export async function GET(request: Request) {
@@ -300,6 +351,15 @@ export async function POST(request: Request) {
   if (linkRows.length) {
     const linksResult = await verified.adminClient.from("digital_card_links").insert(linkRows);
     if (linksResult.error) return jsonError(linksResult.error.message, 400);
+  }
+
+  const sectionDeleteResult = await verified.adminClient.from("digital_card_sections").delete().eq("digital_card_id", cardId);
+  if (sectionDeleteResult.error) return jsonError(sectionDeleteResult.error.message, 400);
+
+  const sectionRows = buildSections(body.sections, cardId);
+  if (sectionRows.length) {
+    const sectionsResult = await verified.adminClient.from("digital_card_sections").insert(sectionRows);
+    if (sectionsResult.error) return jsonError(sectionsResult.error.message, 400);
   }
 
   const cardResult = await verified.adminClient

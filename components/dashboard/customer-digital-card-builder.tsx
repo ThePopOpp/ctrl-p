@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bell, Box, Copy, CreditCard, Download, Eye, FileCheck2, Home, IdCard, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Plus, QrCode, Save, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Bell, Box, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Plus, QrCode, Save, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,24 @@ type DigitalCardLink = {
   display_order: number;
   is_visible: boolean;
   open_in_new_tab: boolean;
+};
+
+type DigitalCardSection = {
+  id?: string;
+  section_type: string;
+  label: string;
+  content?: Record<string, unknown>;
+  display_order: number;
+  is_visible: boolean;
+  customer_editable?: boolean;
+  margin_top: number;
+  margin_right: number;
+  margin_bottom: number;
+  margin_left: number;
+  padding_top: number;
+  padding_right: number;
+  padding_bottom: number;
+  padding_left: number;
 };
 
 type DigitalCard = {
@@ -55,6 +73,7 @@ type DigitalCard = {
   assigned_order_id?: string | null;
   assigned_product_id?: string | null;
   digital_card_links?: DigitalCardLink[];
+  digital_card_sections?: DigitalCardSection[];
 };
 
 type CardData = {
@@ -65,6 +84,7 @@ type CardData = {
 };
 
 const linkTypes = ["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"];
+const sectionTypes = ["profile_header", "quick_actions", "links", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"];
 const customerNavItems = [
   { label: "Overview", icon: Home, href: "/dashboard/customer" },
   { label: "Orders", icon: Box, href: "/dashboard/customer#orders" },
@@ -108,7 +128,59 @@ function emptyCard(profile?: CardData["profile"]): DigitalCard {
     text_color: "#f7fff2",
     qr_settings: { foreground: "#07130b", background: "#ffffff", size: 512 },
     digital_card_links: [],
+    digital_card_sections: defaultSections(),
   };
+}
+
+function defaultSections(): DigitalCardSection[] {
+  return [
+    newSection("profile_header", "Profile header", 1, { margin_bottom: 24 }),
+    newSection("quick_actions", "Quick actions", 2, { margin_bottom: 20 }),
+    newSection("links", "Links and socials", 3, { margin_bottom: 20 }),
+    newSection("video", "Intro video", 4, { is_visible: false, margin_bottom: 20 }),
+    newSection("qr_code", "QR code", 5, { margin_bottom: 0 }),
+    newSection("nfc", "NFC tap to share", 6, { is_visible: false, margin_bottom: 0 }),
+  ];
+}
+
+function newSection(sectionType = "custom", label?: string, order = 100, patch: Partial<DigitalCardSection> = {}): DigitalCardSection {
+  return {
+    section_type: sectionType,
+    label: label || human(sectionType),
+    content: {},
+    display_order: order,
+    is_visible: true,
+    customer_editable: true,
+    margin_top: 0,
+    margin_right: 0,
+    margin_bottom: 16,
+    margin_left: 0,
+    padding_top: 0,
+    padding_right: 0,
+    padding_bottom: 0,
+    padding_left: 0,
+    ...patch,
+  };
+}
+
+function normalizeSections(sections: DigitalCardSection[] | undefined) {
+  const list = sections?.length ? sections : defaultSections();
+  return [...list]
+    .map((section, index) => ({
+      ...newSection(section.section_type, section.label, index + 1),
+      ...section,
+      display_order: Number(section.display_order || index + 1),
+      margin_top: Number(section.margin_top || 0),
+      margin_right: Number(section.margin_right || 0),
+      margin_bottom: Number(section.margin_bottom ?? 16),
+      margin_left: Number(section.margin_left || 0),
+      padding_top: Number(section.padding_top || 0),
+      padding_right: Number(section.padding_right || 0),
+      padding_bottom: Number(section.padding_bottom || 0),
+      padding_left: Number(section.padding_left || 0),
+    }))
+    .sort((a, b) => Number(a.display_order || 100) - Number(b.display_order || 100))
+    .map((section, index) => ({ ...section, display_order: index + 1 }));
 }
 
 function qrUrl(cardUrl: string, card: DigitalCard) {
@@ -168,7 +240,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
           setState("missing");
           return;
         }
-        setForm({ ...emptyCard(nextData.profile), ...card, digital_card_links: card.digital_card_links || [] });
+        setForm({ ...emptyCard(nextData.profile), ...card, digital_card_links: card.digital_card_links || [], digital_card_sections: normalizeSections(card.digital_card_sections) });
       } else {
         setForm(emptyCard(nextData.profile));
       }
@@ -208,6 +280,35 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
     setForm((current) => ({ ...current, digital_card_links: (current.digital_card_links || []).filter((_, itemIndex) => itemIndex !== index) }));
   }
 
+  function updateSection(index: number, patch: Partial<DigitalCardSection>) {
+    setForm((current) => {
+      const sections = normalizeSections(current.digital_card_sections);
+      sections[index] = { ...sections[index], ...patch };
+      return { ...current, digital_card_sections: normalizeSections(sections) };
+    });
+  }
+
+  function addSection(sectionType = "custom") {
+    setForm((current) => {
+      const sections = normalizeSections(current.digital_card_sections);
+      return { ...current, digital_card_sections: normalizeSections([...sections, newSection(sectionType, undefined, sections.length + 1)]) };
+    });
+  }
+
+  function removeSection(index: number) {
+    setForm((current) => ({ ...current, digital_card_sections: normalizeSections(current.digital_card_sections).filter((_, itemIndex) => itemIndex !== index) }));
+  }
+
+  function moveSection(index: number, direction: -1 | 1) {
+    setForm((current) => {
+      const sections = normalizeSections(current.digital_card_sections);
+      const target = index + direction;
+      if (target < 0 || target >= sections.length) return current;
+      [sections[index], sections[target]] = [sections[target], sections[index]];
+      return { ...current, digital_card_sections: sections.map((section, itemIndex) => ({ ...section, display_order: itemIndex + 1 })) };
+    });
+  }
+
   async function save(nextForm = form) {
     setSaving(true);
     setMessage("");
@@ -216,13 +317,13 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
       const response = await fetch("/api/dashboard/customer/digital-cards", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...nextForm, links: nextForm.digital_card_links || [] }),
+        body: JSON.stringify({ ...nextForm, links: nextForm.digital_card_links || [], sections: normalizeSections(nextForm.digital_card_sections) }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not save digital card.");
       setMessage("Digital card saved.");
       if (!cardId && payload.card?.id) router.replace(`/dashboard/customer/manage-products/digital-cards/${payload.card.id}`);
-      setForm({ ...emptyCard(data?.profile), ...payload.card, digital_card_links: payload.card?.digital_card_links || [] });
+      setForm({ ...emptyCard(data?.profile), ...payload.card, digital_card_links: payload.card?.digital_card_links || [], digital_card_sections: normalizeSections(payload.card?.digital_card_sections) });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not save digital card.");
     } finally {
@@ -328,6 +429,47 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
               </Card>
 
               <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base"><Layers className="h-4 w-4" /> Sections / layers</CardTitle>
+                      <CardDescription>Rearrange the public card, hide sections, and tune padding and margin on every side.</CardDescription>
+                    </div>
+                    <Select value="custom" onValueChange={addSection}>
+                      <SelectTrigger className="w-[190px]"><SelectValue placeholder="Add section" /></SelectTrigger>
+                      <SelectContent>{sectionTypes.map((type) => <SelectItem key={type} value={type}>{human(type)}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {normalizeSections(form.digital_card_sections).map((section, index) => (
+                    <div key={`${section.section_type}-${index}`} className={cn("rounded-lg border bg-background/35 p-3", !section.is_visible && "opacity-60")}>
+                      <div className="flex flex-wrap items-end gap-2">
+                        <div className="flex h-10 items-center text-muted-foreground"><GripVertical className="h-4 w-4" /></div>
+                        <Field label="Layer name" value={section.label} onChange={(value) => updateSection(index, { label: value })} />
+                        <div className="min-w-[180px] flex-1">
+                          <SelectField label="Section type" value={section.section_type} values={sectionTypes} onChange={(value) => updateSection(index, { section_type: value })} />
+                        </div>
+                        <Button variant="outline" size="icon" onClick={() => moveSection(index, -1)} disabled={index === 0} aria-label="Move section up"><ArrowUp className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" onClick={() => moveSection(index, 1)} disabled={index === normalizeSections(form.digital_card_sections).length - 1} aria-label="Move section down"><ArrowDown className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" onClick={() => updateSection(index, { is_visible: !section.is_visible })} aria-label="Toggle section visibility">{section.is_visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</Button>
+                        <Button variant="outline" size="icon" onClick={() => removeSection(index)} aria-label="Remove section"><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <SpacingGroup title="Margin" section={section} prefix="margin" onChange={(patch) => updateSection(index, patch)} />
+                        <SpacingGroup title="Padding" section={section} prefix="padding" onChange={(patch) => updateSection(index, patch)} />
+                      </div>
+                      {["gallery", "scratch_card", "punch_card", "loyalty_card", "nfc"].includes(section.section_type) && (
+                        <div className="mt-3 rounded-md border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
+                          {human(section.section_type)} is staged as a flexible layer now. Its advanced editor will plug into this section record next.
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base">Identity</CardTitle><CardDescription>The primary profile content shown at the top of the card.</CardDescription></CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-2">
                   <Field label="Display name" value={form.display_name || ""} onChange={(value) => update("display_name", value)} />
@@ -411,7 +553,6 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
 
 function LivePreview({ card, publicUrl, mode, onModeChange }: { card: DigitalCard; publicUrl: string; mode: PreviewMode; onModeChange: (mode: PreviewMode) => void }) {
   const modeInfo = previewModes.find((item) => item.value === mode) || previewModes[0];
-  const visibleLinks = (card.digital_card_links || []).filter((link) => link.is_visible !== false && link.label && link.url);
   const backgroundImage = card.background_image_url ? `linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)), url(${card.background_image_url})` : undefined;
 
   return (
@@ -434,36 +575,8 @@ function LivePreview({ card, publicUrl, mode, onModeChange }: { card: DigitalCar
 
           <div className="overflow-auto rounded-xl border bg-secondary/25 p-4">
             <div className="mx-auto overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all" style={{ width: modeInfo.width, maxWidth: "100%", minHeight: mode === "mobile" ? 640 : 720, background: card.background_color, color: card.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center" }}>
-              <div className={cn("min-h-[640px] bg-black/20 p-5 backdrop-blur-[1px]", mode !== "mobile" && "grid gap-8 md:grid-cols-[1fr_1.1fr] md:p-8")}>
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    {card.logo_url ? <img className="max-h-10 max-w-[140px] object-contain" src={card.logo_url} alt="" /> : <div className="text-xs font-semibold opacity-70">controlp.io card</div>}
-                    <span className="rounded-full border border-white/15 px-2 py-1 text-[10px] opacity-70">{card.status === "published" ? "Public" : "Draft"}</span>
-                  </div>
-                  <div className="mt-8 text-center">
-                    {card.profile_photo_url ? <img className="mx-auto h-24 w-24 rounded-full border-4 border-white/15 object-cover shadow-xl" src={card.profile_photo_url} alt="" /> : <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border-4 border-white/15 bg-white/10 text-2xl font-semibold shadow-xl">{(card.display_name || card.card_name || "CP").slice(0, 2).toUpperCase()}</div>}
-                    <div className="mt-4 text-2xl font-semibold leading-tight">{card.display_name || card.card_name || "Your Name"}</div>
-                    <div className="mt-1 text-xs opacity-75">{[card.job_title, card.company_name].filter(Boolean).join(" - ") || "Title - Company"}</div>
-                    {card.bio ? <p className="mt-4 text-sm leading-5 opacity-85">{card.bio}</p> : <p className="mt-4 text-sm leading-5 opacity-50">Short bio and introduction will appear here.</p>}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mt-5 grid grid-cols-3 gap-2 text-center text-[11px] md:mt-0">
-                    {card.primary_phone && <PreviewPill label="Call" accent={card.accent_color} />}
-                    {card.sms_phone && <PreviewPill label="SMS" accent={card.accent_color} />}
-                    {card.primary_email && <PreviewPill label="Email" accent={card.accent_color} />}
-                  </div>
-                  <div className="mt-5 space-y-2">
-                    {card.website_url && <PreviewButton label="Website" accent={card.accent_color} />}
-                    {visibleLinks.map((link, index) => <PreviewButton key={`${link.label}-${index}`} label={link.label} accent={card.accent_color} icon={link.link_type} />)}
-                    {!card.website_url && !visibleLinks.length && <PreviewButton label="Add links to preview buttons" accent={card.accent_color} muted />}
-                  </div>
-                  <div className="mt-5 grid gap-3 md:grid-cols-[120px_1fr] md:items-center">
-                    <img className="h-[120px] w-[120px] rounded-lg border bg-white p-2" src={qrUrl(publicUrl, card)} alt="QR code preview" />
-                    <div className="rounded-xl border border-white/10 bg-white/10 p-3 text-[10px] opacity-70">{publicUrl}</div>
-                  </div>
-                </div>
+              <div className="min-h-[640px] bg-black/20 p-5 backdrop-blur-[1px] md:p-8">
+                <CardSections card={card} publicUrl={publicUrl} mode={mode} />
               </div>
             </div>
           </div>
@@ -471,6 +584,98 @@ function LivePreview({ card, publicUrl, mode, onModeChange }: { card: DigitalCar
       </Card>
     </aside>
   );
+}
+
+function CardSections({ card, publicUrl, mode }: { card: DigitalCard; publicUrl: string; mode: PreviewMode }) {
+  const sections = normalizeSections(card.digital_card_sections).filter((section) => section.is_visible);
+  const visibleLinks = (card.digital_card_links || []).filter((link) => link.is_visible !== false && link.label && link.url);
+  return (
+    <div className={cn(mode !== "mobile" && "grid gap-x-8 md:grid-cols-[1fr_1.1fr]")}>
+      {sections.map((section) => (
+        <div key={`${section.section_type}-${section.display_order}`} style={sectionStyle(section)}>
+          <PreviewSection section={section} card={card} publicUrl={publicUrl} visibleLinks={visibleLinks} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function sectionStyle(section: DigitalCardSection): React.CSSProperties {
+  return {
+    marginTop: section.margin_top,
+    marginRight: section.margin_right,
+    marginBottom: section.margin_bottom,
+    marginLeft: section.margin_left,
+    paddingTop: section.padding_top,
+    paddingRight: section.padding_right,
+    paddingBottom: section.padding_bottom,
+    paddingLeft: section.padding_left,
+  };
+}
+
+function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: DigitalCardSection; card: DigitalCard; publicUrl: string; visibleLinks: DigitalCardLink[] }) {
+  if (section.section_type === "profile_header") {
+    return (
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          {card.logo_url ? <img className="max-h-10 max-w-[140px] object-contain" src={card.logo_url} alt="" /> : <div className="text-xs font-semibold opacity-70">controlp.io card</div>}
+          <span className="rounded-full border border-white/15 px-2 py-1 text-[10px] opacity-70">{card.status === "published" ? "Public" : "Draft"}</span>
+        </div>
+        <div className="mt-8 text-center">
+          {card.profile_photo_url ? <img className="mx-auto h-24 w-24 rounded-full border-4 border-white/15 object-cover shadow-xl" src={card.profile_photo_url} alt="" /> : <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border-4 border-white/15 bg-white/10 text-2xl font-semibold shadow-xl">{(card.display_name || card.card_name || "CP").slice(0, 2).toUpperCase()}</div>}
+          <div className="mt-4 text-2xl font-semibold leading-tight">{card.display_name || card.card_name || "Your Name"}</div>
+          <div className="mt-1 text-xs opacity-75">{[card.job_title, card.company_name].filter(Boolean).join(" - ") || "Title - Company"}</div>
+          {card.bio ? <p className="mt-4 text-sm leading-5 opacity-85">{card.bio}</p> : <p className="mt-4 text-sm leading-5 opacity-50">Short bio and introduction will appear here.</p>}
+        </div>
+      </div>
+    );
+  }
+
+  if (section.section_type === "quick_actions") {
+    return (
+      <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
+        {card.primary_phone && <PreviewPill label="Call" accent={card.accent_color} />}
+        {card.sms_phone && <PreviewPill label="SMS" accent={card.accent_color} />}
+        {card.primary_email && <PreviewPill label="Email" accent={card.accent_color} />}
+        {card.maps_url && <PreviewPill label="Map" accent={card.accent_color} />}
+      </div>
+    );
+  }
+
+  if (section.section_type === "links") {
+    return (
+      <div className="space-y-2">
+        {card.website_url && <PreviewButton label="Website" accent={card.accent_color} />}
+        {visibleLinks.map((link, index) => <PreviewButton key={`${link.label}-${index}`} label={link.label} accent={card.accent_color} icon={link.link_type} />)}
+        {!card.website_url && !visibleLinks.length && <PreviewButton label="Add links to preview buttons" accent={card.accent_color} muted />}
+      </div>
+    );
+  }
+
+  if (section.section_type === "video") {
+    if (!card.intro_video_url) return <PlaceholderSection label={section.label} text="Add an intro video URL to show this section." />;
+    return <PreviewButton label="Watch intro video" accent={card.accent_color} icon="video" />;
+  }
+
+  if (section.section_type === "qr_code") {
+    return (
+      <div className="grid gap-3 md:grid-cols-[120px_1fr] md:items-center">
+        <img className="h-[120px] w-[120px] rounded-lg border bg-white p-2" src={qrUrl(publicUrl, card)} alt="QR code preview" />
+        <div className="rounded-xl border border-white/10 bg-white/10 p-3 text-[10px] opacity-70">{publicUrl}</div>
+      </div>
+    );
+  }
+
+  if (section.section_type === "nfc") return <PlaceholderSection label={section.label} text="NFC tap-to-share destination will use this public URL once access is active." />;
+  if (section.section_type === "gallery") return <PlaceholderSection label={section.label} text="Slider/gallery cards will live in this layer." />;
+  if (section.section_type === "scratch_card") return <PlaceholderSection label={section.label} text="Scratch-to-reveal interactions will live in this layer." />;
+  if (section.section_type === "punch_card") return <PlaceholderSection label={section.label} text="Digital stamp card progress will live in this layer." />;
+  if (section.section_type === "loyalty_card") return <PlaceholderSection label={section.label} text="Rewards and loyalty actions will live in this layer." />;
+  return <PlaceholderSection label={section.label} text="Custom content section." />;
+}
+
+function PlaceholderSection({ label, text }: { label: string; text: string }) {
+  return <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm"><div className="font-semibold">{label}</div><div className="mt-1 text-xs opacity-70">{text}</div></div>;
 }
 
 function PreviewPill({ label, accent }: { label: string; accent: string }) {
@@ -487,6 +692,25 @@ function SelectField({ label, value, values, onChange }: { label: string; value:
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div><Input value={value} onChange={(event) => onChange(event.target.value)} /></div>;
+}
+
+function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  return <div><div className="mb-1.5 text-[11px] font-medium text-muted-foreground">{label}</div><Input type="number" min={0} max={240} value={value} onChange={(event) => onChange(Math.max(0, Math.min(240, Number(event.target.value || 0))))} /></div>;
+}
+
+function SpacingGroup({ title, section, prefix, onChange }: { title: string; section: DigitalCardSection; prefix: "margin" | "padding"; onChange: (patch: Partial<DigitalCardSection>) => void }) {
+  const keys = ["top", "right", "bottom", "left"] as const;
+  return (
+    <div className="rounded-md border bg-background/30 p-3 xl:col-span-2">
+      <div className="mb-2 text-xs font-semibold text-muted-foreground">{title}</div>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        {keys.map((side) => {
+          const key = `${prefix}_${side}` as keyof DigitalCardSection;
+          return <NumberField key={side} label={human(side)} value={Number(section[key] || 0)} onChange={(value) => onChange({ [key]: value } as Partial<DigitalCardSection>)} />;
+        })}
+      </div>
+    </div>
+  );
 }
 
 function Nav({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
