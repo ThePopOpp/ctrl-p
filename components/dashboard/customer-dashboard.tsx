@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Box, CreditCard, FileCheck2, Home, IdCard, LogOut, Mail, MessageSquare, Moon, PackageCheck, Phone, Search, Truck, type LucideIcon } from "lucide-react";
+import { Bell, Box, CreditCard, FileCheck2, Home, IdCard, LogOut, Mail, MessageSquare, Moon, PackageCheck, Phone, Search, Sun, Truck, type LucideIcon } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -141,6 +142,12 @@ export function CustomerDashboard() {
   const [state, setState] = useState<"loading" | "ready" | "denied">("loading");
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem("controlp_customer_theme");
+    if (storedTheme === "light" || storedTheme === "dark") setTheme(storedTheme);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -172,6 +179,14 @@ export function CustomerDashboard() {
     router.replace("/login");
   }
 
+  function toggleTheme() {
+    setTheme((current) => {
+      const next = current === "dark" ? "light" : "dark";
+      window.localStorage.setItem("controlp_customer_theme", next);
+      return next;
+    });
+  }
+
   const orders = data?.orders ?? [];
   const payments = data?.payments ?? [];
   const messages = data?.messages ?? [];
@@ -188,7 +203,7 @@ export function CustomerDashboard() {
   }, [orders, query]);
 
   return (
-    <div className="dark min-h-screen bg-background text-foreground">
+    <div className={cn(theme === "dark" && "dark", "min-h-screen bg-background text-foreground")}>
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
         <a className="mb-5 flex items-center gap-3 px-2" href="/">
           <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-[11px] font-black text-primary-foreground">cp</div>
@@ -216,7 +231,7 @@ export function CustomerDashboard() {
               <Input className="h-8 rounded-lg pl-9 text-xs" placeholder="Search orders, status, invoices..." value={query} onChange={(event) => setQuery(event.target.value)} />
             </div>
             <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Notifications"><Bell className="h-4 w-4" /></Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Theme"><Moon className="h-4 w-4" /></Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Toggle theme" onClick={toggleTheme}>{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
             <Button variant="outline" className="h-8 text-xs" onClick={signOut}><LogOut className="h-4 w-4" /> Sign out</Button>
           </div>
         </div>

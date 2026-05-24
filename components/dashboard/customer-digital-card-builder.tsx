@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bell, Copy, CreditCard, Download, Eye, Home, Link as LinkIcon, LogOut, Monitor, Moon, Plus, QrCode, Save, Smartphone, Tablet, Trash2 } from "lucide-react";
+import { ArrowLeft, Bell, Box, Copy, CreditCard, Download, Eye, FileCheck2, Home, IdCard, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Plus, QrCode, Save, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -65,6 +65,15 @@ type CardData = {
 };
 
 const linkTypes = ["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"];
+const customerNavItems = [
+  { label: "Overview", icon: Home, href: "/dashboard/customer" },
+  { label: "Orders", icon: Box, href: "/dashboard/customer#orders" },
+  { label: "Invoices", icon: CreditCard, href: "/dashboard/customer#invoices" },
+  { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
+  { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
+  { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },
+  { label: "Shipping", icon: Truck, href: "/dashboard/customer#shipping" },
+];
 const previewModes = [
   { value: "mobile", label: "Mobile", width: 340, icon: Smartphone },
   { value: "tablet", label: "Tablet", width: 620, icon: Tablet },
@@ -138,6 +147,12 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem("controlp_customer_theme");
+    if (storedTheme === "light" || storedTheme === "dark") setTheme(storedTheme);
+  }, []);
 
   async function load() {
     try {
@@ -193,7 +208,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
     setForm((current) => ({ ...current, digital_card_links: (current.digital_card_links || []).filter((_, itemIndex) => itemIndex !== index) }));
   }
 
-  async function save() {
+  async function save(nextForm = form) {
     setSaving(true);
     setMessage("");
     try {
@@ -201,7 +216,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
       const response = await fetch("/api/dashboard/customer/digital-cards", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...form, links: form.digital_card_links || [] }),
+        body: JSON.stringify({ ...nextForm, links: nextForm.digital_card_links || [] }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not save digital card.");
@@ -215,7 +230,17 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
     }
   }
 
+  async function publishAndSave() {
+    const nextForm = { ...form, status: "published", is_public: true };
+    setForm(nextForm);
+    await save(nextForm);
+  }
+
   async function copy(value: string) {
+    if (form.status !== "published" || !form.is_public) {
+      setMessage("Publish and save this card before sharing the public URL.");
+      return;
+    }
     await navigator.clipboard.writeText(value);
     setMessage("Copied to clipboard.");
   }
@@ -226,16 +251,25 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
     router.replace("/login");
   }
 
+  function toggleTheme() {
+    setTheme((current) => {
+      const next = current === "dark" ? "light" : "dark";
+      window.localStorage.setItem("controlp_customer_theme", next);
+      return next;
+    });
+  }
+
   return (
-    <div className="dark min-h-screen bg-background text-foreground">
+    <div className={cn(theme === "dark" && "dark", "min-h-screen bg-background text-foreground")}>
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
         <a className="mb-5 flex items-center gap-3 px-2" href="/dashboard/customer">
           <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-[11px] font-black text-primary-foreground">cp</div>
           <div><div className="text-[10px] font-semibold uppercase tracking-[0.32em] text-muted-foreground">controlp.io</div><div className="text-sm font-semibold">Customer</div></div>
         </a>
         <nav className="space-y-1">
-          <Nav href="/dashboard/customer" icon={<Home className="h-4 w-4" />} label="Dashboard" />
-          <Nav href="/dashboard/customer/manage-products" icon={<CreditCard className="h-4 w-4" />} label="Manage Products" active />
+          {customerNavItems.map(({ label, icon: Icon, href }) => (
+            <Nav key={label} href={href} icon={<Icon className="h-4 w-4" />} label={label} active={label === "Manage Products"} />
+          ))}
         </nav>
       </aside>
 
@@ -244,7 +278,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
           <div className="text-xs text-muted-foreground">Customer <span className="mx-2">/</span> Manage Products <span className="mx-2">/</span><span className="font-medium text-foreground">Digital Card Builder</span></div>
           <div className="ml-auto flex items-center gap-2">
             <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Notifications"><Bell className="h-4 w-4" /></Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Theme"><Moon className="h-4 w-4" /></Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Toggle theme" onClick={toggleTheme}>{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
             <Button variant="outline" className="h-8 text-xs" onClick={signOut}><LogOut className="h-4 w-4" /> Sign out</Button>
           </div>
         </div>
@@ -259,8 +293,13 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => copy(publicUrl)}><Copy className="h-4 w-4" /> Copy URL</Button>
-            <Button variant="outline" asChild><a href={`/c/${form.slug}`} target="_blank"><Eye className="h-4 w-4" /> Preview</a></Button>
-            <Button onClick={save} disabled={saving || state !== "ready"}><Save className="h-4 w-4" /> {saving ? "Saving..." : "Save card"}</Button>
+            {form.status === "published" && form.is_public ? (
+              <Button variant="outline" asChild><a href={`/c/${form.slug}`} target="_blank"><Eye className="h-4 w-4" /> Public page</a></Button>
+            ) : (
+              <Button variant="outline" disabled><Eye className="h-4 w-4" /> Publish first</Button>
+            )}
+            <Button variant="outline" onClick={publishAndSave} disabled={saving || state !== "ready"}><QrCode className="h-4 w-4" /> Publish & save</Button>
+            <Button onClick={() => save()} disabled={saving || state !== "ready"}><Save className="h-4 w-4" /> {saving ? "Saving..." : "Save card"}</Button>
           </div>
         </div>
 
@@ -283,6 +322,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   <div className="rounded-lg border bg-background/35 p-3">
                     <div className="text-xs font-medium text-muted-foreground">Public URL</div>
                     <code className="mt-2 block rounded-md bg-secondary px-2 py-2 text-xs">{publicUrl}</code>
+                    {form.status !== "published" || !form.is_public ? <div className="mt-2 text-xs text-muted-foreground">This URL goes live after you choose Published or click Publish & save.</div> : null}
                   </div>
                 </CardContent>
               </Card>
