@@ -73,6 +73,22 @@ type CustomerArtwork = {
   created_at: string | null;
 };
 
+type CustomerDesignDraft = {
+  id: string;
+  product_id: string | null;
+  product_key: string | null;
+  product_label: string | null;
+  title: string | null;
+  status: string | null;
+  preview_svg?: string | null;
+  preview_image_url?: string | null;
+  order_id?: string | null;
+  order_item_id?: string | null;
+  last_saved_at: string | null;
+  created_at: string | null;
+  products?: { id: string; name: string | null; slug: string | null; category: string | null } | null;
+};
+
 type CustomerProof = {
   id: string;
   order_item_id: string;
@@ -101,6 +117,7 @@ type CustomerData = {
   payments: CustomerPayment[];
   messages: CustomerMessage[];
   artworkFiles: CustomerArtwork[];
+  designDrafts: CustomerDesignDraft[];
   proofs: CustomerProof[];
   shipments: CustomerShipment[];
 };
@@ -110,6 +127,7 @@ const navItems: { label: string; icon: LucideIcon; href: string }[] = [
   { label: "Overview", icon: Home, href: "#overview" },
   { label: "Orders", icon: Box, href: "#orders" },
   { label: "Invoices", icon: CreditCard, href: "#invoices" },
+  { label: "Saved Designs", icon: IdCard, href: "#designs" },
   { label: "Artwork", icon: FileCheck2, href: "#artwork" },
   { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Messages", icon: MessageSquare, href: "#messages" },
@@ -191,6 +209,7 @@ export function CustomerDashboard() {
   const payments = data?.payments ?? [];
   const messages = data?.messages ?? [];
   const artwork = data?.artworkFiles ?? [];
+  const designDrafts = data?.designDrafts ?? [];
   const proofs = data?.proofs ?? [];
   const shipments = data?.shipments ?? [];
   const openOrders = orders.filter((order) => !["completed", "delivered", "cancelled", "refunded"].includes(order.status));
@@ -253,10 +272,11 @@ export function CustomerDashboard() {
               </div>
             </section>
 
-            <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
               <Stat label="Open orders" value={String(openOrders.length)} hint={`${orders.length} total orders`} />
               <Stat label="Payment due" value={String(unpaidPayments.length)} hint={amount(unpaidPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0))} />
               <Stat label="Proofs" value={String(proofQueue.length)} hint="Awaiting review" />
+              <Stat label="Designs" value={String(designDrafts.length)} hint="Saved drafts" />
               <Stat label="Shipments" value={String(shipments.length)} hint="Tracking records" />
               <Stat label="Unread" value={String(unreadMessages.length)} hint="Dashboard messages" />
             </section>
@@ -286,6 +306,57 @@ export function CustomerDashboard() {
                   <CardContent className="space-y-2">{messages.slice(0, 5).map((item) => <MiniRow key={item.id} title={item.subject || human(item.channel)} detail={item.body || "No message body"} value={human(item.channel)} />)}{!messages.length && <Empty text="No messages yet." />}</CardContent>
                 </Card>
               </div>
+            </section>
+
+            <section className="mb-5 grid gap-4 xl:grid-cols-[1fr_380px]">
+              <Card id="designs">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-base">Saved designs</CardTitle>
+                      <CardDescription>Online designer drafts saved to your account.</CardDescription>
+                    </div>
+                    <Button size="sm" asChild><a href="/designer.html">Open designer</a></Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {designDrafts.slice(0, 6).map((draft) => (
+                    <div key={draft.id} className="rounded-lg border bg-background/35 p-3">
+                      <div className="flex min-w-0 items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">{draft.title || "Untitled design"}</div>
+                          <div className="mt-1 truncate text-xs text-muted-foreground">{draft.product_label || draft.products?.name || human(draft.product_key)}</div>
+                        </div>
+                        <Status value={draft.status || "draft"} />
+                      </div>
+                      <div className="mt-3 grid h-28 place-items-center overflow-hidden rounded-md border bg-secondary/40">
+                        {draft.preview_image_url ? (
+                          <img className="h-full w-full object-cover" src={draft.preview_image_url} alt="" />
+                        ) : draft.preview_svg ? (
+                          <div className="h-full w-full [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: draft.preview_svg }} />
+                        ) : (
+                          <div className="text-xs text-muted-foreground">No preview yet</div>
+                        )}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" asChild><a href={`/designer.html?draft=${draft.id}`}>Continue editing</a></Button>
+                        <Button size="sm" variant="outline">Order this design</Button>
+                      </div>
+                      <div className="mt-2 text-[11px] text-muted-foreground">Saved {date(draft.last_saved_at || draft.created_at)}</div>
+                    </div>
+                  ))}
+                  {!designDrafts.length && <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground md:col-span-2 xl:col-span-3">No saved designs yet. Open the designer and save a draft to see it here.</div>}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Design tools</CardTitle><CardDescription>Start from the online designer and bring work into orders, proofs, and production.</CardDescription></CardHeader>
+                <CardContent className="space-y-2">
+                  <MiniRow title="Online designer" detail="Create cards, hats, stickers, signage, and apparel designs." value="Open" href="/designer.html" />
+                  <MiniRow title="Proof workflow" detail="Saved designs can later become proof requests." value="Next" />
+                  <MiniRow title="Checkout handoff" detail="Order this design will connect drafts to order items." value="Planned" />
+                </CardContent>
+              </Card>
             </section>
 
             <section className="grid gap-4 xl:grid-cols-3">

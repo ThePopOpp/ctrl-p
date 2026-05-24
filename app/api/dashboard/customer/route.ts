@@ -55,7 +55,7 @@ export async function GET(request: Request) {
   const orders = ordersResult.data ?? [];
   const orderIds = orders.map((order) => order.id);
 
-  const [itemsResult, paymentsResult, messagesResult, artworkResult, shipmentsResult] = await Promise.all([
+  const [itemsResult, paymentsResult, messagesResult, artworkResult, shipmentsResult, designDraftsResult] = await Promise.all([
     orderIds.length
       ? adminClient
           .from("order_items")
@@ -105,9 +105,15 @@ export async function GET(request: Request) {
           .order("created_at", { ascending: false })
           .limit(100)
       : Promise.resolve({ data: [], error: null }),
+    adminClient
+      .from("design_drafts")
+      .select("id, user_id, product_id, product_key, product_label, title, state, status, preview_svg, preview_image_url, order_id, order_item_id, notes, last_saved_at, created_at, updated_at, products(id, name, slug, category)")
+      .eq("user_id", actorId)
+      .order("last_saved_at", { ascending: false })
+      .limit(50),
   ]);
 
-  const results = [itemsResult, paymentsResult, messagesResult, artworkResult, shipmentsResult];
+  const results = [itemsResult, paymentsResult, messagesResult, artworkResult, shipmentsResult, designDraftsResult];
   const failed = results.find((result) => result.error);
   if (failed?.error) return jsonError(failed.error.message, 400);
 
@@ -130,6 +136,7 @@ export async function GET(request: Request) {
     payments: paymentsResult.data ?? [],
     messages: messagesResult.data ?? [],
     artworkFiles: artworkResult.data ?? [],
+    designDrafts: designDraftsResult.data ?? [],
     proofs: proofsResult.data ?? [],
     shipments: shipmentsResult.data ?? [],
   });

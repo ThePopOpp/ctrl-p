@@ -2442,7 +2442,7 @@ function renderSaved() {
     <div style="padding:12px;border-bottom:1px solid #f0f0f0;">
       <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Save current design</div>
       <input id="save-title" placeholder="Enter a title (optional)" style="width:100%;border:1px solid #e4e4e7;border-radius:6px;padding:7px 10px;font-size:12.5px;outline:none;margin-bottom:8px;"/>
-      <button onclick="saveDesign()" style="width:100%;padding:8px;border-radius:6px;font-size:13px;font-weight:700;background:#2563eb;color:white;border:none;cursor:pointer;">SAVE DESIGN</button>
+      <button onclick="saveDesign()" style="width:100%;padding:8px;border-radius:6px;font-size:13px;font-weight:700;background:#2563eb;color:white;border:none;cursor:pointer;">SAVE TO DASHBOARD</button>
     </div>
     <div style="padding:10px 12px;flex:1;overflow-y:auto;" class="thin-scroll">
       <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Saved</div>
@@ -2451,8 +2451,8 @@ function renderSaved() {
           <div style="width:30px;height:30px;border-radius:5px;background:#f4f4f5;border:1px solid #e4e4e7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/></svg>
           </div>
-          <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.title}</div><div style="font-size:10.5px;color:#a1a1aa;">${d.layers} layer${d.layers!==1?'s':''}</div></div>
-          <button style="padding:4px;border:none;background:none;cursor:pointer;color:#a1a1aa;" onmouseover="this.style.color='#18181b'" onmouseout="this.style.color='#a1a1aa'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 7L14.5 12L9.5 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(d.title || 'Untitled design')}</div><div style="font-size:10.5px;color:#a1a1aa;">${escapeHtml(d.product_label || d.product_key || 'Design draft')}</div></div>
+          <button onclick="loadSavedDesign('${String(d.id || '').replace(/'/g, "\\'")}')" title="Continue editing" style="padding:4px;border:none;background:none;cursor:pointer;color:#a1a1aa;" onmouseover="this.style.color='#18181b'" onmouseout="this.style.color='#a1a1aa'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 7L14.5 12L9.5 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>`).join('')}</div>
     </div>`;
 }
@@ -3155,6 +3155,7 @@ let layers = [];
 let selLayer = -1;
 let rulerVisible = false;
 let savedDesigns = [];
+let activeDesignDraftId = null;
 let undoStack = [];
 let redoStack = [];
 let historyStart = null;
@@ -3772,10 +3773,195 @@ function deleteLayer(i) {
   selLayer = -1; updateSelectionBox(); setTool('layers');
 }
 
-function saveDesign() {
-  const title = document.getElementById('save-title')?.value || 'Untitled Design';
-  savedDesigns.push({ title: title || 'Untitled', layers: layers.length });
-  setTool('saved');
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function clonePlain(value) {
+  return JSON.parse(JSON.stringify(value || {}));
+}
+
+function designerProductLabel() {
+  if (currentProduct === 'hat') {
+    const product = getHatProduct();
+    return product ? product.name : 'Custom hat';
+  }
+  const labels = {
+    bc: 'Business cards',
+    wa: 'Wall art',
+    bn: 'Banner',
+    rs: 'Rigid sign',
+    af: 'A-frame sign',
+    fl: 'Flag'
+  };
+  return labels[currentProduct] || 'Custom design';
+}
+
+function getCustomerAccessToken() {
+  try {
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      const raw = key ? localStorage.getItem(key) : null;
+      if (!raw || !key.includes('auth-token')) continue;
+      const parsed = JSON.parse(raw);
+      const token = parsed?.access_token || parsed?.currentSession?.access_token || parsed?.session?.access_token;
+      if (token) return token;
+    }
+  } catch (error) {
+    console.warn('Could not read customer session token.', error);
+  }
+  return null;
+}
+
+function currentPreviewSvg() {
+  const svg = document.getElementById('card-svg');
+  if (!svg) return '';
+  const clone = svg.cloneNode(true);
+  clone.querySelectorAll('#selection-group,#designer-selection-overlay').forEach(el => el.remove());
+  clone.removeAttribute('style');
+  return clone.outerHTML.slice(0, 200000);
+}
+
+function designerStatePayload() {
+  if (currentProduct === 'fl') stashFlagSideLayers();
+  return {
+    currentProduct,
+    canvasZoom,
+    bc: clonePlain(bc),
+    wa: clonePlain(wa),
+    bn: clonePlain(bn),
+    rs: clonePlain(rs),
+    af: clonePlain(af),
+    fl: clonePlain(fl),
+    hat: clonePlain(hat),
+    layers: snapshotDesign().layers,
+    selLayer,
+    savedAt: new Date().toISOString()
+  };
+}
+
+function restoreDesignerState(state) {
+  if (!state || typeof state !== 'object') return;
+  currentProduct = state.currentProduct || currentProduct || 'hat';
+  if (state.bc) Object.assign(bc, state.bc);
+  if (state.wa) Object.assign(wa, state.wa);
+  if (state.bn) Object.assign(bn, state.bn);
+  if (state.rs) Object.assign(rs, state.rs);
+  if (state.af) Object.assign(af, state.af);
+  if (state.fl) Object.assign(fl, state.fl);
+  if (state.hat) Object.assign(hat, state.hat);
+  canvasZoom = Number(state.canvasZoom || 1);
+  buildCanvas();
+  restoreDesign({ layers: state.layers || [], selLayer: state.selLayer ?? -1 });
+  setZoom(canvasZoom);
+  updatePrice();
+  setTool('layers');
+}
+
+async function loadCustomerDesignDrafts() {
+  const token = getCustomerAccessToken();
+  if (!token) return;
+  try {
+    const response = await fetch('/api/dashboard/customer/design-drafts', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Could not load saved designs.');
+    savedDesigns = payload.drafts || [];
+    if (currentTool === 'saved') setTool('saved');
+  } catch (error) {
+    console.warn(error);
+  }
+}
+
+async function loadSavedDesign(id) {
+  const localDraft = savedDesigns.find(d => d.id === id);
+  if (localDraft?.state) {
+    activeDesignDraftId = localDraft.id || null;
+    restoreDesignerState(localDraft.state);
+    return;
+  }
+
+  const token = getCustomerAccessToken();
+  if (!token || !id) {
+    alert('Sign in to your customer dashboard to reopen saved designs.');
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/dashboard/customer/design-drafts?id=${encodeURIComponent(id)}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Could not load this design.');
+    activeDesignDraftId = payload.draft?.id || null;
+    restoreDesignerState(payload.draft?.state);
+  } catch (error) {
+    alert(error?.message || 'Could not load this design.');
+  }
+}
+
+async function loadDesignDraftFromUrl() {
+  const id = new URLSearchParams(window.location.search).get('draft');
+  if (!id) return;
+  await loadSavedDesign(id);
+}
+
+async function saveDesign() {
+  const title = document.getElementById('save-title')?.value || `${designerProductLabel()} design`;
+  const state = designerStatePayload();
+  const localDraft = {
+    id: activeDesignDraftId || `local-${Date.now()}`,
+    title: title || 'Untitled design',
+    product_key: currentProduct || 'custom',
+    product_label: designerProductLabel(),
+    state,
+    layers: layers.length,
+    last_saved_at: new Date().toISOString()
+  };
+  const token = getCustomerAccessToken();
+
+  if (!token) {
+    savedDesigns = [localDraft, ...savedDesigns.filter(d => d.id !== localDraft.id)];
+    setTool('saved');
+    alert('Saved locally for this browser. Sign in to save designs to your customer dashboard.');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/dashboard/customer/design-drafts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        id: activeDesignDraftId,
+        title,
+        product_key: currentProduct || 'custom',
+        product_label: designerProductLabel(),
+        status: 'draft',
+        state,
+        preview_svg: currentPreviewSvg()
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Could not save design.');
+    activeDesignDraftId = payload.draft?.id || activeDesignDraftId;
+    const savedDraft = payload.draft || { ...localDraft, id: activeDesignDraftId };
+    savedDesigns = [savedDraft, ...savedDesigns.filter(d => d.id !== savedDraft.id)];
+    setTool('saved');
+    alert('Design saved to your customer dashboard.');
+  } catch (error) {
+    savedDesigns = [localDraft, ...savedDesigns.filter(d => d.id !== localDraft.id)];
+    setTool('saved');
+    alert(error?.message || 'Could not save to the dashboard. Saved locally for this browser.');
+  }
 }
 
 function toggleRuler() {
@@ -3965,6 +4151,8 @@ function handleDone() {
 // ─── Init ───
 buildCanvas();
 setTool('swap');
+loadCustomerDesignDrafts();
+loadDesignDraftFromUrl();
 document.addEventListener('keydown', e => {
   const tag = (e.target && e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
