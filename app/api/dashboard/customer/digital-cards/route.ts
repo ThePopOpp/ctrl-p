@@ -86,6 +86,16 @@ function safeUrl(value: unknown) {
   return `https://${text}`;
 }
 
+function safeLinkUrl(value: unknown, linkType: string) {
+  const text = clean(value);
+  if (!text) return null;
+  if (/^(https?:|mailto:|tel:|sms:)/i.test(text)) return text;
+  if (linkType === "phone") return `tel:${text}`;
+  if (linkType === "sms") return `sms:${text}`;
+  if (linkType === "email") return `mailto:${text}`;
+  return `https://${text}`;
+}
+
 function publicBase() {
   return serverEnv("PUBLIC_APP_URL").replace(/\/$/, "") || "https://my.controlp.io";
 }
@@ -144,8 +154,8 @@ function buildLinks(links: DigitalCardLinkBody[] | undefined, cardId: string) {
   return (links || [])
     .map((link, index) => {
       const label = clean(link.label);
-      const url = safeUrl(link.url);
       const linkType = LINK_TYPES.has(clean(link.link_type)) ? clean(link.link_type) : "custom";
+      const url = safeLinkUrl(link.url, linkType);
       if (!label || !url) return null;
       return {
         digital_card_id: cardId,

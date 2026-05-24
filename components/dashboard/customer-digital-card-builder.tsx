@@ -1,0 +1,454 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Bell, Copy, CreditCard, Download, Eye, Home, Link as LinkIcon, LogOut, Monitor, Moon, Plus, QrCode, Save, Smartphone, Tablet, Trash2 } from "lucide-react";
+
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+
+type DigitalCardLink = {
+  id?: string;
+  label: string;
+  url: string;
+  link_type: string;
+  icon?: string | null;
+  display_order: number;
+  is_visible: boolean;
+  open_in_new_tab: boolean;
+};
+
+type DigitalCard = {
+  id?: string;
+  card_name: string;
+  slug: string;
+  status: string;
+  is_public: boolean;
+  public_url?: string | null;
+  display_name?: string | null;
+  job_title?: string | null;
+  company_name?: string | null;
+  department?: string | null;
+  bio?: string | null;
+  profile_photo_url?: string | null;
+  logo_url?: string | null;
+  background_image_url?: string | null;
+  background_color: string;
+  accent_color: string;
+  text_color: string;
+  primary_phone?: string | null;
+  sms_phone?: string | null;
+  primary_email?: string | null;
+  website_url?: string | null;
+  maps_url?: string | null;
+  intro_video_url?: string | null;
+  qr_settings: { foreground?: string; background?: string; size?: number };
+  nfc_status?: string | null;
+  access_status?: string | null;
+  access_plan?: string | null;
+  assigned_order_id?: string | null;
+  assigned_product_id?: string | null;
+  digital_card_links?: DigitalCardLink[];
+};
+
+type CardData = {
+  cards: DigitalCard[];
+  products: { id: string; name: string; slug: string | null; category: string | null; tagline: string | null }[];
+  publicBase: string;
+  profile: { email: string | null; full_name: string | null; phone: string | null; company: string | null };
+};
+
+const linkTypes = ["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"];
+const previewModes = [
+  { value: "mobile", label: "Mobile", width: 340, icon: Smartphone },
+  { value: "tablet", label: "Tablet", width: 620, icon: Tablet },
+  { value: "desktop", label: "Desktop", width: 920, icon: Monitor },
+] as const;
+
+type PreviewMode = typeof previewModes[number]["value"];
+
+function human(value: string | null | undefined) {
+  return String(value || "none").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function slugify(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+}
+
+function emptyCard(profile?: CardData["profile"]): DigitalCard {
+  const display = profile?.full_name || "My Digital Card";
+  return {
+    card_name: display,
+    slug: slugify(display) || "my-card",
+    status: "draft",
+    is_public: false,
+    display_name: profile?.full_name || "",
+    company_name: profile?.company || "",
+    primary_phone: profile?.phone || "",
+    sms_phone: profile?.phone || "",
+    primary_email: profile?.email || "",
+    website_url: "",
+    background_color: "#07130b",
+    accent_color: "#a3ff12",
+    text_color: "#f7fff2",
+    qr_settings: { foreground: "#07130b", background: "#ffffff", size: 512 },
+    digital_card_links: [],
+  };
+}
+
+function qrUrl(cardUrl: string, card: DigitalCard) {
+  const foreground = String(card.qr_settings?.foreground || "#07130b").replace("#", "");
+  const background = String(card.qr_settings?.background || "#ffffff").replace("#", "");
+  const size = Number(card.qr_settings?.size || 512);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&color=${foreground}&bgcolor=${background}&data=${encodeURIComponent(cardUrl)}`;
+}
+
+async function customerToken() {
+  const db = getSupabaseBrowserClient();
+  const session = db ? (await db.auth.getSession()).data.session : null;
+  if (!session?.access_token) throw new Error("Sign in again before managing digital cards.");
+  return session.access_token;
+}
+
+function newLink(type: string): DigitalCardLink {
+  const presets: Record<string, { label: string; url: string }> = {
+    phone: { label: "Phone", url: "tel:" },
+    sms: { label: "Text me", url: "sms:" },
+    email: { label: "Email", url: "mailto:" },
+    website: { label: "Website", url: "https://" },
+    social: { label: "Social profile", url: "https://" },
+    booking: { label: "Book appointment", url: "https://" },
+    payment: { label: "Pay online", url: "https://" },
+  };
+  const preset = presets[type] || { label: "New link", url: "https://" };
+  return { ...preset, link_type: type, display_order: 100, is_visible: true, open_in_new_tab: true };
+}
+
+export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
+  const router = useRouter();
+  const [data, setData] = useState<CardData | null>(null);
+  const [form, setForm] = useState<DigitalCard>(() => emptyCard());
+  const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile");
+
+  async function load() {
+    try {
+      const token = await customerToken();
+      const response = await fetch("/api/dashboard/customer/digital-cards", { headers: { authorization: `Bearer ${token}` } });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not load digital card builder.");
+      const nextData = payload as CardData;
+      setData(nextData);
+      if (cardId) {
+        const card = nextData.cards.find((item) => item.id === cardId);
+        if (!card) {
+          setState("missing");
+          return;
+        }
+        setForm({ ...emptyCard(nextData.profile), ...card, digital_card_links: card.digital_card_links || [] });
+      } else {
+        setForm(emptyCard(nextData.profile));
+      }
+      setState("ready");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not load digital card builder.");
+      setState("error");
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, [cardId]);
+
+  const publicUrl = useMemo(() => `${data?.publicBase || "https://my.controlp.io"}/c/${form.slug || "card"}`, [data?.publicBase, form.slug]);
+
+  function update<K extends keyof DigitalCard>(key: K, value: DigitalCard[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateLink(index: number, patch: Partial<DigitalCardLink>) {
+    setForm((current) => {
+      const links = [...(current.digital_card_links || [])];
+      links[index] = { ...links[index], ...patch };
+      return { ...current, digital_card_links: links };
+    });
+  }
+
+  function addLink(type = "custom") {
+    setForm((current) => ({
+      ...current,
+      digital_card_links: [...(current.digital_card_links || []), { ...newLink(type), display_order: (current.digital_card_links || []).length + 1 }],
+    }));
+  }
+
+  function removeLink(index: number) {
+    setForm((current) => ({ ...current, digital_card_links: (current.digital_card_links || []).filter((_, itemIndex) => itemIndex !== index) }));
+  }
+
+  async function save() {
+    setSaving(true);
+    setMessage("");
+    try {
+      const token = await customerToken();
+      const response = await fetch("/api/dashboard/customer/digital-cards", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...form, links: form.digital_card_links || [] }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not save digital card.");
+      setMessage("Digital card saved.");
+      if (!cardId && payload.card?.id) router.replace(`/dashboard/customer/manage-products/digital-cards/${payload.card.id}`);
+      setForm({ ...emptyCard(data?.profile), ...payload.card, digital_card_links: payload.card?.digital_card_links || [] });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save digital card.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function copy(value: string) {
+    await navigator.clipboard.writeText(value);
+    setMessage("Copied to clipboard.");
+  }
+
+  async function signOut() {
+    const db = getSupabaseBrowserClient();
+    await db?.auth.signOut();
+    router.replace("/login");
+  }
+
+  return (
+    <div className="dark min-h-screen bg-background text-foreground">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
+        <a className="mb-5 flex items-center gap-3 px-2" href="/dashboard/customer">
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-[11px] font-black text-primary-foreground">cp</div>
+          <div><div className="text-[10px] font-semibold uppercase tracking-[0.32em] text-muted-foreground">controlp.io</div><div className="text-sm font-semibold">Customer</div></div>
+        </a>
+        <nav className="space-y-1">
+          <Nav href="/dashboard/customer" icon={<Home className="h-4 w-4" />} label="Dashboard" />
+          <Nav href="/dashboard/customer/manage-products" icon={<CreditCard className="h-4 w-4" />} label="Manage Products" active />
+        </nav>
+      </aside>
+
+      <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">
+        <div className="flex h-12 items-center gap-3 px-5">
+          <div className="text-xs text-muted-foreground">Customer <span className="mx-2">/</span> Manage Products <span className="mx-2">/</span><span className="font-medium text-foreground">Digital Card Builder</span></div>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Notifications"><Bell className="h-4 w-4" /></Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Theme"><Moon className="h-4 w-4" /></Button>
+            <Button variant="outline" className="h-8 text-xs" onClick={signOut}><LogOut className="h-4 w-4" /> Sign out</Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="px-4 py-5 lg:pl-[258px] lg:pr-6">
+        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <Button variant="ghost" className="mb-2 h-8 px-0 text-muted-foreground" onClick={() => router.push("/dashboard/customer/manage-products")}><ArrowLeft className="h-4 w-4" /> Back to products</Button>
+            <h1 className="text-[25px] font-semibold tracking-tight">Digital Business Card Builder</h1>
+            <p className="mt-1 max-w-3xl text-sm leading-5 text-muted-foreground">Build a QR and NFC-ready public profile with repeatable phones, emails, websites, social profiles, and action links.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => copy(publicUrl)}><Copy className="h-4 w-4" /> Copy URL</Button>
+            <Button variant="outline" asChild><a href={`/c/${form.slug}`} target="_blank"><Eye className="h-4 w-4" /> Preview</a></Button>
+            <Button onClick={save} disabled={saving || state !== "ready"}><Save className="h-4 w-4" /> {saving ? "Saving..." : "Save card"}</Button>
+          </div>
+        </div>
+
+        {message && <div className="mb-4 rounded-lg border bg-background/50 p-3 text-sm text-muted-foreground">{message}</div>}
+        {state === "loading" && <Card><CardContent className="p-5 text-sm text-muted-foreground">Loading builder...</CardContent></Card>}
+        {state === "error" && <Card className="border-red-500/30"><CardContent className="p-5 text-sm text-red-200">{message || "Could not load this builder."}</CardContent></Card>}
+        {state === "missing" && <Card><CardContent className="p-5 text-sm text-muted-foreground">This digital card could not be found for your account.</CardContent></Card>}
+
+        {state === "ready" && (
+          <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.95fr)]">
+            <section className="space-y-5">
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Card details</CardTitle><CardDescription>Name, status, public URL, and publish controls.</CardDescription></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Field label="Card name" value={form.card_name} onChange={(value) => update("card_name", value)} />
+                    <Field label="Slug" value={form.slug} onChange={(value) => update("slug", slugify(value))} />
+                    <SelectField label="Status" value={form.status} values={["draft", "published", "unpublished"]} onChange={(value) => { update("status", value); update("is_public", value === "published"); }} />
+                  </div>
+                  <div className="rounded-lg border bg-background/35 p-3">
+                    <div className="text-xs font-medium text-muted-foreground">Public URL</div>
+                    <code className="mt-2 block rounded-md bg-secondary px-2 py-2 text-xs">{publicUrl}</code>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Identity</CardTitle><CardDescription>The primary profile content shown at the top of the card.</CardDescription></CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-2">
+                  <Field label="Display name" value={form.display_name || ""} onChange={(value) => update("display_name", value)} />
+                  <Field label="Company" value={form.company_name || ""} onChange={(value) => update("company_name", value)} />
+                  <Field label="Job title" value={form.job_title || ""} onChange={(value) => update("job_title", value)} />
+                  <Field label="Department" value={form.department || ""} onChange={(value) => update("department", value)} />
+                  <div className="md:col-span-2"><div className="mb-1.5 text-xs font-medium text-muted-foreground">Bio</div><Textarea value={form.bio || ""} onChange={(event) => update("bio", event.target.value)} placeholder="Short customer-facing intro" /></div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Primary contact fields</CardTitle><CardDescription>These are pinned quick actions. Add more numbers, emails, websites, and socials below.</CardDescription></CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-3">
+                  <Field label="Primary phone" value={form.primary_phone || ""} onChange={(value) => update("primary_phone", value)} />
+                  <Field label="SMS phone" value={form.sms_phone || ""} onChange={(value) => update("sms_phone", value)} />
+                  <Field label="Primary email" value={form.primary_email || ""} onChange={(value) => update("primary_email", value)} />
+                  <Field label="Website" value={form.website_url || ""} onChange={(value) => update("website_url", value)} />
+                  <Field label="Maps URL" value={form.maps_url || ""} onChange={(value) => update("maps_url", value)} />
+                  <Field label="Intro video URL" value={form.intro_video_url || ""} onChange={(value) => update("intro_video_url", value)} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Repeatable links and contact methods</CardTitle>
+                  <CardDescription>Add unlimited phone numbers, emails, websites, social media profiles, payment links, files, bookings, and custom buttons.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {["phone", "sms", "email", "website", "social", "booking", "payment", "custom"].map((type) => (
+                      <Button key={type} variant="outline" size="sm" onClick={() => addLink(type)}><Plus className="h-4 w-4" /> {human(type)}</Button>
+                    ))}
+                  </div>
+                  {(form.digital_card_links || []).map((link, index) => (
+                    <div key={index} className="grid gap-2 rounded-lg border bg-background/35 p-3 lg:grid-cols-[1fr_1.5fr_170px_auto]">
+                      <Field label="Label" value={link.label} onChange={(value) => updateLink(index, { label: value })} />
+                      <Field label="URL / phone / email" value={link.url} onChange={(value) => updateLink(index, { url: value })} />
+                      <SelectField label="Type" value={link.link_type} values={linkTypes} onChange={(value) => updateLink(index, { link_type: value })} />
+                      <Button className="self-end" variant="outline" size="icon" onClick={() => removeLink(index)} aria-label="Remove link"><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
+                  {!form.digital_card_links?.length && <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">No repeatable links yet. Add a phone, email, website, social profile, or custom action.</div>}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Visuals and QR</CardTitle><CardDescription>Phase 1 supports URL-based media and simple QR styling.</CardDescription></CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-3">
+                  <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
+                  <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
+                  <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />
+                  <Field label="Background color" value={form.background_color} onChange={(value) => update("background_color", value)} />
+                  <Field label="Accent color" value={form.accent_color} onChange={(value) => update("accent_color", value)} />
+                  <Field label="Text color" value={form.text_color} onChange={(value) => update("text_color", value)} />
+                  <Field label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} />
+                  <Field label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} />
+                  <Button className="self-end" variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download QR PNG</a></Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Product and access prep</CardTitle><CardDescription>Future-ready hooks for monthly access, NFC products, bundles, and linked customer orders.</CardDescription></CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-3">
+                  <SelectField label="Access status" value={form.access_status || "trial"} values={["trial", "active", "past_due", "paused", "expired", "none"]} onChange={(value) => update("access_status", value)} />
+                  <Field label="Access plan" value={form.access_plan || ""} onChange={(value) => update("access_plan", value)} />
+                  <SelectField label="NFC status" value={form.nfc_status || "not_ordered"} values={["not_ordered", "ordered", "assigned", "programmed", "shipped"]} onChange={(value) => update("nfc_status", value)} />
+                  <div className="md:col-span-3 rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">
+                    Products ready for future bundles: {(data?.products || []).map((product) => product.name).join(", ") || "NFC cards, QR stickers, ID badges, and other managed products."}
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} />
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function LivePreview({ card, publicUrl, mode, onModeChange }: { card: DigitalCard; publicUrl: string; mode: PreviewMode; onModeChange: (mode: PreviewMode) => void }) {
+  const modeInfo = previewModes.find((item) => item.value === mode) || previewModes[0];
+  const visibleLinks = (card.digital_card_links || []).filter((link) => link.is_visible !== false && link.label && link.url);
+  const backgroundImage = card.background_image_url ? `linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)), url(${card.background_image_url})` : undefined;
+
+  return (
+    <aside className="2xl:sticky 2xl:top-16 2xl:self-start">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div><CardTitle className="text-base">Live responsive preview</CardTitle><CardDescription>Switch between mobile, tablet, and desktop while editing.</CardDescription></div>
+            <Badge variant="outline">{modeInfo.label}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4 grid grid-cols-3 gap-1 rounded-lg bg-secondary p-1">
+            {previewModes.map(({ value, label, icon: Icon }) => (
+              <button key={value} type="button" className={cn("flex h-9 items-center justify-center gap-1 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground", mode === value && "bg-background text-foreground shadow-sm")} onClick={() => onModeChange(value)}>
+                <Icon className="h-3.5 w-3.5" /> {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="overflow-auto rounded-xl border bg-secondary/25 p-4">
+            <div className="mx-auto overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all" style={{ width: modeInfo.width, maxWidth: "100%", minHeight: mode === "mobile" ? 640 : 720, background: card.background_color, color: card.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center" }}>
+              <div className={cn("min-h-[640px] bg-black/20 p-5 backdrop-blur-[1px]", mode !== "mobile" && "grid gap-8 md:grid-cols-[1fr_1.1fr] md:p-8")}>
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    {card.logo_url ? <img className="max-h-10 max-w-[140px] object-contain" src={card.logo_url} alt="" /> : <div className="text-xs font-semibold opacity-70">controlp.io card</div>}
+                    <span className="rounded-full border border-white/15 px-2 py-1 text-[10px] opacity-70">{card.status === "published" ? "Public" : "Draft"}</span>
+                  </div>
+                  <div className="mt-8 text-center">
+                    {card.profile_photo_url ? <img className="mx-auto h-24 w-24 rounded-full border-4 border-white/15 object-cover shadow-xl" src={card.profile_photo_url} alt="" /> : <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border-4 border-white/15 bg-white/10 text-2xl font-semibold shadow-xl">{(card.display_name || card.card_name || "CP").slice(0, 2).toUpperCase()}</div>}
+                    <div className="mt-4 text-2xl font-semibold leading-tight">{card.display_name || card.card_name || "Your Name"}</div>
+                    <div className="mt-1 text-xs opacity-75">{[card.job_title, card.company_name].filter(Boolean).join(" - ") || "Title - Company"}</div>
+                    {card.bio ? <p className="mt-4 text-sm leading-5 opacity-85">{card.bio}</p> : <p className="mt-4 text-sm leading-5 opacity-50">Short bio and introduction will appear here.</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mt-5 grid grid-cols-3 gap-2 text-center text-[11px] md:mt-0">
+                    {card.primary_phone && <PreviewPill label="Call" accent={card.accent_color} />}
+                    {card.sms_phone && <PreviewPill label="SMS" accent={card.accent_color} />}
+                    {card.primary_email && <PreviewPill label="Email" accent={card.accent_color} />}
+                  </div>
+                  <div className="mt-5 space-y-2">
+                    {card.website_url && <PreviewButton label="Website" accent={card.accent_color} />}
+                    {visibleLinks.map((link, index) => <PreviewButton key={`${link.label}-${index}`} label={link.label} accent={card.accent_color} icon={link.link_type} />)}
+                    {!card.website_url && !visibleLinks.length && <PreviewButton label="Add links to preview buttons" accent={card.accent_color} muted />}
+                  </div>
+                  <div className="mt-5 grid gap-3 md:grid-cols-[120px_1fr] md:items-center">
+                    <img className="h-[120px] w-[120px] rounded-lg border bg-white p-2" src={qrUrl(publicUrl, card)} alt="QR code preview" />
+                    <div className="rounded-xl border border-white/10 bg-white/10 p-3 text-[10px] opacity-70">{publicUrl}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </aside>
+  );
+}
+
+function PreviewPill({ label, accent }: { label: string; accent: string }) {
+  return <div className="rounded-2xl border border-white/15 bg-white/10 px-2 py-2 font-medium" style={{ color: accent }}>{label}</div>;
+}
+
+function PreviewButton({ label, accent, icon, muted }: { label: string; accent: string; icon?: string; muted?: boolean }) {
+  return <div className={cn("flex items-center justify-between rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold", muted && "opacity-60")}><span className="flex items-center gap-2"><LinkIcon className="h-3.5 w-3.5" />{label}</span><span style={{ color: accent }}>{icon ? human(icon) : "Open"}</span></div>;
+}
+
+function SelectField({ label, value, values, onChange }: { label: string; value: string; values: string[]; onChange: (value: string) => void }) {
+  return <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div><Select value={value} onValueChange={onChange}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{values.map((item) => <SelectItem key={item} value={item}>{human(item)}</SelectItem>)}</SelectContent></Select></div>;
+}
+
+function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div><Input value={value} onChange={(event) => onChange(event.target.value)} /></div>;
+}
+
+function Nav({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
+  return <a href={href} className={cn("flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-accent-foreground", active && "bg-accent font-medium text-accent-foreground")}>{icon}{label}</a>;
+}

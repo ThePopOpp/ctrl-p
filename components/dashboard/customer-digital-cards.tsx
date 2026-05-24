@@ -169,15 +169,13 @@ export function CustomerDigitalCards() {
   const publicUrl = useMemo(() => `${data?.publicBase || "https://my.controlp.io"}/c/${form.slug || "card"}`, [data?.publicBase, form.slug]);
 
   function openNew() {
-    setForm(emptyCard(data?.profile));
     setMessage("");
-    setEditorOpen(true);
+    router.push("/dashboard/customer/manage-products/digital-cards/new");
   }
 
   function openEdit(card: DigitalCard) {
-    setForm({ ...emptyCard(data?.profile), ...card, digital_card_links: card.digital_card_links || [] });
     setMessage("");
-    setEditorOpen(true);
+    if (card.id) router.push(`/dashboard/customer/manage-products/digital-cards/${card.id}`);
   }
 
   function update<K extends keyof DigitalCard>(key: K, value: DigitalCard[K]) {
