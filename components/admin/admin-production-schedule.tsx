@@ -91,6 +91,25 @@ type ScheduleDependency = {
   dependent?: { id: string; title: string | null; status: string | null; start_date: string | null } | null;
 };
 
+type WorkflowTemplate = {
+  name: string;
+  slug: string;
+  category: string;
+  description: string;
+  item_count: number;
+  items: {
+    key: string;
+    title: string;
+    item_type: string;
+    phase: string;
+    owner_role: string;
+    duration_days: number;
+    start_offset_days: number;
+    customer_visible?: boolean;
+    depends_on?: string;
+  }[];
+};
+
 type SchedulePayload = {
   id?: string;
   order_id: string | null;
@@ -250,6 +269,7 @@ export function AdminProductionSchedule() {
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [dependencies, setDependencies] = useState<ScheduleDependency[]>([]);
+  const [workflowTemplates, setWorkflowTemplates] = useState<WorkflowTemplate[]>([]);
   const [activeView, setActiveView] = useState("Overview");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -262,14 +282,16 @@ export function AdminProductionSchedule() {
   const [message, setMessage] = useState("");
 
   async function refresh(openItemId?: string) {
-    const [nextData, itemPayload, dependencyPayload] = await Promise.all([
+    const [nextData, itemPayload, dependencyPayload, templatePayload] = await Promise.all([
       loadAdminDashboardData(),
       apiJson<{ items: ScheduleItem[] }>("/api/admin/production-schedule"),
       apiJson<{ dependencies: ScheduleDependency[] }>("/api/admin/production-schedule/dependencies"),
+      apiJson<{ templates: WorkflowTemplate[] }>("/api/admin/production-schedule/templates"),
     ]);
     setData(nextData);
     setItems(itemPayload.items);
     setDependencies(dependencyPayload.dependencies);
+    setWorkflowTemplates(templatePayload.templates);
     if (openItemId) setSelectedItem(itemPayload.items.find((item) => item.id === openItemId) ?? null);
   }
 
@@ -433,6 +455,23 @@ export function AdminProductionSchedule() {
     setMessage("Dependency removed.");
   }
 
+  async function applyWorkflowTemplate(input: {
+    template_slug: string;
+    start_date: string;
+    order_id: string | null;
+    order_item_id: string | null;
+    production_job_id: string | null;
+    product_id: string | null;
+    customer_id: string | null;
+  }) {
+    const payload = await apiJson<{ created_item_count: number; created_dependency_count: number; template: { name: string } }>("/api/admin/production-schedule/templates", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    await refresh();
+    setMessage(`Applied ${payload.template.name}: ${payload.created_item_count} items and ${payload.created_dependency_count} dependencies created.`);
+  }
+
   return (
     <div className={cn(theme === "dark" && "dark")}>
       <div className="min-h-screen bg-background text-foreground">
@@ -549,7 +588,18 @@ export function AdminProductionSchedule() {
                     )}
                     <ScheduleTable items={sectionItems} orders={orders} users={users} products={products} onSelect={setSelectedItem} onDelete={deleteItem} />
                   </div>
-                  <DependencyPanel items={items} dependencies={dependencies} onCreate={createDependency} onDelete={deleteDependency} />
+                  <div className="space-y-4">
+                    <WorkflowTemplatePanel
+                      templates={workflowTemplates}
+                      orders={orders}
+                      orderItems={orderItems}
+                      users={users}
+                      products={products}
+                      productionJobs={productionJobs}
+                      onApply={applyWorkflowTemplate}
+                    />
+                    <DependencyPanel items={items} dependencies={dependencies} onCreate={createDependency} onDelete={deleteDependency} />
+                  </div>
                 </div>
               )}
             </>
@@ -1217,6 +1267,126 @@ function ScheduleTable({
             {!items.length && <TableRow><TableCell colSpan={8} className="p-6"><EmptyState title="No matching schedule items" description="Adjust filters or add a schedule item to connect orders, products, artwork, production, and fulfillment." /></TableCell></TableRow>}
           </TableBody>
         </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WorkflowTemplatePanel({
+  templates,
+  orders,
+  orderItems,
+  users,
+  products,
+  productionJobs,
+  onApply,
+}: {
+  templates: WorkflowTemplate[];
+  orders: Order[];
+  orderItems: OrderItem[];
+  users: AdminUser[];
+  products: Product[];
+  productionJobs: ProductionJob[];
+  onApply: (input: {
+    template_slug: string;
+    start_date: string;
+    order_id: string | null;
+    order_item_id: string | null;
+    production_job_id: string | null;
+    product_id: string | null;
+    customer_id: string | null;
+  }) => Promise<void>;
+}) {
+  const [templateSlug, setTemplateSlug] = useState(templates[0]?.slug || "none");
+  const [startDate, setStartDate] = useState(dateOnly(new Date()));
+  const [orderId, setOrderId] = useState("none");
+  const [orderItemId, setOrderItemId] = useState("none");
+  const [customerId, setCustomerId] = useState("none");
+  const [productId, setProductId] = useState("none");
+  const [jobId, setJobId] = useState("none");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (templateSlug === "none" && templates[0]) setTemplateSlug(templates[0].slug);
+  }, [templateSlug, templates]);
+
+  const selectedTemplate = templates.find((template) => template.slug === templateSlug);
+  const selectedOrder = orders.find((order) => order.id === orderId);
+  const selectedOrderItems = orderItems.filter((item) => item.order_id === orderId);
+
+  function updateOrder(value: string) {
+    const order = orders.find((row) => row.id === value);
+    setOrderId(value);
+    setOrderItemId("none");
+    if (order?.user_id) setCustomerId(order.user_id);
+  }
+
+  function updateOrderItem(value: string) {
+    const line = orderItems.find((item) => item.id === value);
+    setOrderItemId(value);
+    if (line?.products?.id) setProductId(line.products.id);
+  }
+
+  async function apply() {
+    if (!selectedTemplate) {
+      setMessage("Select a workflow template first.");
+      return;
+    }
+    setSaving(true);
+    setMessage("Applying workflow template...");
+    try {
+      await onApply({
+        template_slug: selectedTemplate.slug,
+        start_date: startDate,
+        order_id: orderId === "none" ? null : orderId,
+        order_item_id: orderItemId === "none" ? null : orderItemId,
+        production_job_id: jobId === "none" ? null : jobId,
+        product_id: productId === "none" ? null : productId,
+        customer_id: customerId === "none" ? null : customerId,
+      });
+      setMessage("Workflow template applied.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not apply workflow template.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Workflow templates</CardTitle>
+        <CardDescription>Apply repeatable print, design, approval, production, fulfillment, install, and digital card workflows.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <FieldSelect label="Template" value={templateSlug} onChange={setTemplateSlug} items={templates.map((template) => ({ value: template.slug, label: `${template.name} (${template.item_count})` }))} placeholder="Select template" />
+        {selectedTemplate && (
+          <div className="rounded-lg border bg-secondary/20 p-3">
+            <div className="text-sm font-medium">{selectedTemplate.name}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{selectedTemplate.description}</div>
+            <div className="mt-2 flex flex-wrap gap-1">
+              <Badge variant="outline">{human(selectedTemplate.category)}</Badge>
+              <Badge variant="outline">{selectedTemplate.item_count} items</Badge>
+              <Badge variant="outline">{selectedTemplate.items.filter((item) => item.customer_visible).length} customer visible</Badge>
+            </div>
+            <div className="mt-3 max-h-40 space-y-1 overflow-y-auto pr-1 text-xs text-muted-foreground">
+              {selectedTemplate.items.slice(0, 12).map((item, index) => <div key={item.key}>{index + 1}. {item.title} <span className="opacity-70">({item.phase})</span></div>)}
+              {selectedTemplate.items.length > 12 && <div>+ {selectedTemplate.items.length - 12} more items</div>}
+            </div>
+          </div>
+        )}
+        <DateField label="Workflow start date" value={startDate} onChange={setStartDate} />
+        <FieldSelect label="Order" value={orderId} onChange={updateOrder} items={orders.map((order) => ({ value: order.id, label: `#${order.order_number || order.id.slice(0, 8)} - ${order.users?.full_name || order.company || order.customer_email || "Customer"}` }))} placeholder="No order" />
+        <FieldSelect label="Order item" value={orderItemId} onChange={updateOrderItem} items={selectedOrderItems.map((line) => ({ value: line.id, label: `${line.products?.name || "Product"} - Qty ${line.quantity || 1}` }))} placeholder="No line item" />
+        <FieldSelect label="Customer / user" value={customerId} onChange={setCustomerId} items={users.map((user) => ({ value: user.id, label: `${user.full_name || user.email || "User"} - ${human(user.role)}` }))} placeholder="No customer" />
+        <FieldSelect label="Product" value={productId} onChange={setProductId} items={products.map((product) => ({ value: product.id, label: `${product.name} - ${product.category}` }))} placeholder="No product" />
+        <FieldSelect label="Production job" value={jobId} onChange={setJobId} items={productionJobs.map((job) => ({ value: job.id, label: `${job.station || "Job"} - ${human(job.status)}` }))} placeholder="No production job" />
+        {selectedOrder && <div className="text-xs text-muted-foreground">Template will attach to #{selectedOrder.order_number || selectedOrder.id.slice(0, 8)}.</div>}
+        {message && <div className="rounded-lg border bg-background/35 p-3 text-xs text-muted-foreground">{message}</div>}
+        <Button className="w-full" onClick={apply} disabled={saving || !selectedTemplate}>
+          <Plus className="h-4 w-4" /> {saving ? "Applying..." : "Apply workflow template"}
+        </Button>
       </CardContent>
     </Card>
   );
