@@ -27,6 +27,10 @@ type ScheduleItem = {
   production_job_id: string | null;
   product_id: string | null;
   customer_id: string | null;
+  schedule_group_id: string | null;
+  project_name: string | null;
+  workflow_template_slug: string | null;
+  workflow_template_name: string | null;
   parent_item_id: string | null;
   title: string;
   description: string | null;
@@ -117,6 +121,10 @@ type SchedulePayload = {
   production_job_id: string | null;
   product_id: string | null;
   customer_id: string | null;
+  schedule_group_id?: string | null;
+  project_name?: string | null;
+  workflow_template_slug?: string | null;
+  workflow_template_name?: string | null;
   parent_item_id: string | null;
   title: string;
   description: string;
@@ -152,6 +160,21 @@ const priorities = ["low", "normal", "high", "rush", "critical", "blocking_produ
 const phases = ["Intake / Quote", "Artwork / Design", "File Review", "Proofing / Approval", "Materials / Procurement", "Pre-Production", "Print Production", "Fabrication", "Finishing", "Quality Check", "Packaging", "Pickup / Shipping / Delivery", "Installation", "Customer Sign-Off", "Closeout"];
 const departments = ["Design", "Prepress", "Production", "Print", "Embroidery", "Screen Printing", "DTF / DTG", "Vinyl", "Fabrication", "QC", "Shipping", "Install", "Customer Support"];
 const views = ["Overview", "Gantt Timeline", "Tasks", "Milestones", "Approvals", "Install / Delivery", "Blocked Items"];
+type ProjectSortMode = "recent" | "oldest";
+
+type ScheduleProjectGroup = {
+  key: string;
+  name: string;
+  items: ScheduleItem[];
+  latest: string;
+  oldest: string;
+  openCount: number;
+  completeCount: number;
+  blockedCount: number;
+  customerVisibleCount: number;
+  orderLabel: string;
+  productLabel: string;
+};
 
 function human(value: string | null | undefined) {
   return String(value || "none").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -235,6 +258,61 @@ function itemTypeLabel(item: ScheduleItem) {
   return human(item.item_type);
 }
 
+function projectKey(item: ScheduleItem) {
+  return item.schedule_group_id || item.order_id || item.production_job_id || item.project_name || `item-${item.id}`;
+}
+
+function projectName(item: ScheduleItem, orders: Order[], products: Product[]) {
+  if (item.project_name) return item.project_name;
+  const order = orders.find((row) => row.id === item.order_id);
+  if (order?.order_number) return `Order #${order.order_number}`;
+  const product = products.find((row) => row.id === item.product_id);
+  if (product?.name) return `${product.name} project`;
+  if (item.workflow_template_name) return item.workflow_template_name;
+  return item.title || "Unlinked schedule item";
+}
+
+function buildProjectGroups(items: ScheduleItem[], orders: Order[], products: Product[], users: AdminUser[]): ScheduleProjectGroup[] {
+  const groups = new Map<string, ScheduleItem[]>();
+  for (const item of items) {
+    const key = projectKey(item);
+    groups.set(key, [...(groups.get(key) || []), item]);
+  }
+  return Array.from(groups.entries()).map(([key, groupItems]) => {
+    const sorted = [...groupItems].sort((a, b) => Number(a.sort_order || 100) - Number(b.sort_order || 100));
+    const dates = sorted.flatMap((item) => [item.created_at, item.start_date, item.due_date, item.end_date]).filter(Boolean) as string[];
+    const latest = dates.length ? dates.reduce((max, value) => value > max ? value : max, dates[0]) : "";
+    const oldest = dates.length ? dates.reduce((min, value) => value < min ? value : min, dates[0]) : "";
+    const first = sorted[0];
+    const order = orders.find((row) => row.id === first.order_id);
+    const customer = users.find((row) => row.id === first.customer_id);
+    const product = products.find((row) => row.id === first.product_id);
+    return {
+      key,
+      name: projectName(first, orders, products),
+      items: sorted,
+      latest,
+      oldest,
+      openCount: sorted.filter((item) => !["completed", "approved"].includes(item.status)).length,
+      completeCount: sorted.filter((item) => ["completed", "approved"].includes(item.status)).length,
+      blockedCount: sorted.filter((item) => item.is_blocked || item.status === "blocked").length,
+      customerVisibleCount: sorted.filter((item) => item.customer_visible).length,
+      orderLabel: order?.order_number ? `#${order.order_number}` : customer?.full_name || customer?.email || "Unlinked",
+      productLabel: product?.name || first.products?.name || first.order_items?.products?.name || "No product",
+    };
+  });
+}
+
+function sortProjectGroups(groups: ScheduleProjectGroup[], mode: ProjectSortMode) {
+  return [...groups].sort((a, b) => {
+    const aComplete = a.openCount === 0;
+    const bComplete = b.openCount === 0;
+    if (aComplete !== bComplete) return aComplete ? 1 : -1;
+    if (mode === "oldest") return (a.oldest || "").localeCompare(b.oldest || "");
+    return (b.latest || "").localeCompare(a.latest || "");
+  });
+}
+
 async function getAdminToken() {
   const db = getSupabaseBrowserClient();
   if (!db) throw new Error("Supabase is not configured.");
@@ -275,6 +353,9 @@ export function AdminProductionSchedule() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [visibilityFilter, setVisibilityFilter] = useState("all");
+  const [projectSortMode, setProjectSortMode] = useState<ProjectSortMode>("recent");
+  const [visibleProjectKeys, setVisibleProjectKeys] = useState<string[]>([]);
+  const [expandedProjectKeys, setExpandedProjectKeys] = useState<string[]>([]);
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
   const [selectedDependency, setSelectedDependency] = useState<ScheduleDependency | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -369,6 +450,29 @@ export function AdminProductionSchedule() {
   const overdueItems = items.filter((item) => item.due_date && !["completed", "approved"].includes(item.status) && item.due_date < dateOnly(new Date()));
   const approvalItems = items.filter((item) => ["approval", "proof", "artwork_review", "customer_action"].includes(item.item_type));
   const installItems = items.filter((item) => ["delivery", "installation"].includes(item.item_type));
+  const projectGroups = useMemo(() => buildProjectGroups(sectionItems, orders, products, users), [orders, products, sectionItems, users]);
+  const sortedProjectGroups = useMemo(() => sortProjectGroups(projectGroups, projectSortMode), [projectGroups, projectSortMode]);
+  const visibleProjectSet = useMemo(() => new Set(visibleProjectKeys), [visibleProjectKeys]);
+  const ganttItems = useMemo(() => sectionItems.filter((item) => visibleProjectSet.has(projectKey(item))), [sectionItems, visibleProjectSet]);
+  const ganttItemIds = useMemo(() => new Set(ganttItems.map((item) => item.id)), [ganttItems]);
+  const ganttDependencies = useMemo(() => dependencies.filter((dependency) => ganttItemIds.has(dependency.parent_item_id) && ganttItemIds.has(dependency.dependent_item_id)), [dependencies, ganttItemIds]);
+
+  useEffect(() => {
+    if (!sortedProjectGroups.length) {
+      setVisibleProjectKeys([]);
+      setExpandedProjectKeys([]);
+      return;
+    }
+    setVisibleProjectKeys((current) => {
+      const valid = current.filter((key) => sortedProjectGroups.some((group) => group.key === key));
+      if (valid.length) return valid;
+      return [sortedProjectGroups[0].key];
+    });
+    setExpandedProjectKeys((current) => {
+      const valid = current.filter((key) => sortedProjectGroups.some((group) => group.key === key));
+      return valid.length ? valid : [sortedProjectGroups[0].key];
+    });
+  }, [sortedProjectGroups]);
 
   async function saveItem(input: SchedulePayload) {
     const payload = await apiJson<{ item: ScheduleItem }>("/api/admin/production-schedule", {
@@ -457,6 +561,7 @@ export function AdminProductionSchedule() {
 
   async function applyWorkflowTemplate(input: {
     template_slug: string;
+    project_name: string;
     start_date: string;
     order_id: string | null;
     order_item_id: string | null;
@@ -578,15 +683,36 @@ export function AdminProductionSchedule() {
                   <div className="space-y-4">
                     {(activeView === "Overview" || activeView === "Gantt Timeline") && (
                       <GanttTimeline
-                        items={sectionItems}
-                        dependencies={dependencies}
+                        items={ganttItems}
+                        dependencies={ganttDependencies}
                         onSelect={setSelectedItem}
                         onUpdateItemDates={updateItemDates}
                         onCreateDependency={createDependency}
                         onSelectDependency={setSelectedDependency}
                       />
                     )}
-                    <ScheduleTable items={sectionItems} orders={orders} users={users} products={products} onSelect={setSelectedItem} onDelete={deleteItem} />
+                    <ScheduleProjects
+                      groups={sortedProjectGroups}
+                      orders={orders}
+                      users={users}
+                      products={products}
+                      visibleKeys={visibleProjectKeys}
+                      expandedKeys={expandedProjectKeys}
+                      sortMode={projectSortMode}
+                      onSortModeChange={(mode) => {
+                        setProjectSortMode(mode);
+                        setVisibleProjectKeys([]);
+                        setExpandedProjectKeys([]);
+                      }}
+                      onToggleVisible={(key) => {
+                        setVisibleProjectKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+                      }}
+                      onToggleExpanded={(key) => {
+                        setExpandedProjectKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+                      }}
+                      onSelect={setSelectedItem}
+                      onDelete={deleteItem}
+                    />
                   </div>
                   <div className="space-y-4">
                     <WorkflowTemplatePanel
@@ -1185,28 +1311,77 @@ function ConnectorHandle({
   );
 }
 
-function ScheduleTable({
-  items,
+function ScheduleProjects({
+  groups,
   orders,
   users,
   products,
+  visibleKeys,
+  expandedKeys,
+  sortMode,
+  onSortModeChange,
+  onToggleVisible,
+  onToggleExpanded,
   onSelect,
   onDelete,
 }: {
-  items: ScheduleItem[];
+  groups: ScheduleProjectGroup[];
   orders: Order[];
   users: AdminUser[];
   products: Product[];
+  visibleKeys: string[];
+  expandedKeys: string[];
+  sortMode: ProjectSortMode;
+  onSortModeChange: (mode: ProjectSortMode) => void;
+  onToggleVisible: (key: string) => void;
+  onToggleExpanded: (key: string) => void;
   onSelect: (item: ScheduleItem) => void;
   onDelete: (item: ScheduleItem) => void;
 }) {
+  const visibleSet = new Set(visibleKeys);
+  const expandedSet = new Set(expandedKeys);
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Schedule items</CardTitle>
-        <CardDescription>List view for phases, tasks, milestones, approvals, install, delivery, and blocked work.</CardDescription>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Scheduled items</CardTitle>
+            <CardDescription>Expandable project groups. Toggle projects to show or hide them on the Gantt timeline.</CardDescription>
+          </div>
+          <Select value={sortMode} onValueChange={(value) => onSortModeChange(value as ProjectSortMode)}>
+            <SelectTrigger className="h-9 w-[210px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Default: most recent open</SelectItem>
+              <SelectItem value="oldest">Default: oldest open</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="space-y-3">
+        {!groups.length && <EmptyState title="No matching schedule projects" description="Adjust filters or apply a workflow template to create a project group." />}
+        {groups.map((group) => {
+          const expanded = expandedSet.has(group.key);
+          const visible = visibleSet.has(group.key);
+          return (
+            <div key={group.key} className={cn("overflow-hidden rounded-lg border bg-background/35", visible && "border-primary/35")}>
+              <div className="flex flex-wrap items-center gap-3 p-3">
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => onToggleExpanded(group.key)}>{expanded ? "Hide" : "Open"}</Button>
+                <button className="min-w-[260px] flex-1 text-left" onClick={() => onToggleExpanded(group.key)}>
+                  <div className="font-semibold">{group.name}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{group.orderLabel} | {group.productLabel} | {group.items.length} schedule items</div>
+                </button>
+                <div className="flex flex-wrap gap-1">
+                  <Badge variant="outline">{group.openCount} open</Badge>
+                  <Badge variant="outline">{group.customerVisibleCount} visible</Badge>
+                  {group.blockedCount > 0 && <Badge className="border border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300">{group.blockedCount} blocked</Badge>}
+                </div>
+                <Button variant={visible ? "default" : "outline"} size="sm" onClick={() => onToggleVisible(group.key)}>
+                  {visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  {visible ? "Shown on Gantt" : "Show on Gantt"}
+                </Button>
+              </div>
+              {expanded && (
+                <div className="border-t">
         <Table>
           <TableHeader>
             <TableRow>
@@ -1221,7 +1396,7 @@ function ScheduleTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => {
+            {group.items.map((item) => {
               const order = orders.find((row) => row.id === item.order_id);
               const customer = users.find((row) => row.id === item.customer_id);
               const assignee = users.find((row) => row.id === item.assigned_to_user_id);
@@ -1264,9 +1439,13 @@ function ScheduleTable({
                 </TableRow>
               );
             })}
-            {!items.length && <TableRow><TableCell colSpan={8} className="p-6"><EmptyState title="No matching schedule items" description="Adjust filters or add a schedule item to connect orders, products, artwork, production, and fulfillment." /></TableCell></TableRow>}
           </TableBody>
         </Table>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );
@@ -1289,6 +1468,7 @@ function WorkflowTemplatePanel({
   productionJobs: ProductionJob[];
   onApply: (input: {
     template_slug: string;
+    project_name: string;
     start_date: string;
     order_id: string | null;
     order_item_id: string | null;
@@ -1298,6 +1478,7 @@ function WorkflowTemplatePanel({
   }) => Promise<void>;
 }) {
   const [templateSlug, setTemplateSlug] = useState(templates[0]?.slug || "none");
+  const [projectName, setProjectName] = useState("");
   const [startDate, setStartDate] = useState(dateOnly(new Date()));
   const [orderId, setOrderId] = useState("none");
   const [orderItemId, setOrderItemId] = useState("none");
@@ -1338,6 +1519,7 @@ function WorkflowTemplatePanel({
     try {
       await onApply({
         template_slug: selectedTemplate.slug,
+        project_name: projectName.trim() || selectedTemplate.name,
         start_date: startDate,
         order_id: orderId === "none" ? null : orderId,
         order_item_id: orderItemId === "none" ? null : orderItemId,
@@ -1376,6 +1558,7 @@ function WorkflowTemplatePanel({
             </div>
           </div>
         )}
+        <TextField label="Project name" value={projectName} onChange={setProjectName} placeholder={selectedTemplate ? `${selectedTemplate.name} project` : "Project name"} />
         <DateField label="Workflow start date" value={startDate} onChange={setStartDate} />
         <FieldSelect label="Order" value={orderId} onChange={updateOrder} items={orders.map((order) => ({ value: order.id, label: `#${order.order_number || order.id.slice(0, 8)} - ${order.users?.full_name || order.company || order.customer_email || "Customer"}` }))} placeholder="No order" />
         <FieldSelect label="Order item" value={orderItemId} onChange={updateOrderItem} items={selectedOrderItems.map((line) => ({ value: line.id, label: `${line.products?.name || "Product"} - Qty ${line.quantity || 1}` }))} placeholder="No line item" />
@@ -1704,6 +1887,8 @@ function ScheduleItemSheet({
             <FieldSelect label="Type" value={form.item_type} onChange={(value) => update("item_type", value)} items={itemTypes.map((value) => ({ value, label: human(value) }))} />
           </div>
 
+          <TextField label="Project name" value={form.project_name || ""} onChange={(value) => update("project_name", value)} placeholder="Controlp.io Business Card Order" />
+
           <div className="grid gap-3 sm:grid-cols-2">
             <FieldSelect label="Order" value={form.order_id || "none"} onChange={updateOrder} items={orders.map((order) => ({ value: order.id, label: `#${order.order_number || order.id.slice(0, 8)} - ${order.users?.full_name || order.company || order.customer_email || "Customer"}` }))} placeholder="No order" />
             <FieldSelect label="Order item" value={form.order_item_id || "none"} onChange={updateOrderItem} items={selectedItems.map((line) => ({ value: line.id, label: `${line.products?.name || "Product"} - Qty ${line.quantity || 1}` }))} placeholder="No line item" />
@@ -1809,6 +1994,10 @@ function emptyPayload(): SchedulePayload {
     production_job_id: null,
     product_id: null,
     customer_id: null,
+    schedule_group_id: null,
+    project_name: "",
+    workflow_template_slug: null,
+    workflow_template_name: null,
     parent_item_id: null,
     title: "",
     description: "",
@@ -1847,6 +2036,10 @@ function payloadFromItem(item?: ScheduleItem | null): SchedulePayload {
     production_job_id: item.production_job_id,
     product_id: item.product_id,
     customer_id: item.customer_id,
+    schedule_group_id: item.schedule_group_id,
+    project_name: item.project_name || "",
+    workflow_template_slug: item.workflow_template_slug,
+    workflow_template_name: item.workflow_template_name,
     parent_item_id: item.parent_item_id,
     title: item.title,
     description: item.description || "",

@@ -7,6 +7,7 @@ const ALLOWED_ROLES = ["super_admin", "admin", "employee", "staff", "production_
 
 type ApplyTemplateBody = {
   template_slug?: string;
+  project_name?: string;
   start_date?: string;
   order_id?: string | null;
   order_item_id?: string | null;
@@ -68,6 +69,8 @@ export async function POST(request: Request) {
   if (!template) return jsonError("Workflow template was not found.", 404);
 
   const startDate = body.start_date ? new Date(`${body.start_date}T12:00:00`) : new Date();
+  const scheduleGroupId = crypto.randomUUID();
+  const projectName = clean(body.project_name) || template.name;
   const keyToGeneratedId = new Map<string, string>();
   const itemRows = template.items.map((item, index) => {
     const start = addDays(startDate, item.start_offset_days);
@@ -78,6 +81,10 @@ export async function POST(request: Request) {
       production_job_id: nullable(body.production_job_id),
       product_id: nullable(body.product_id),
       customer_id: nullable(body.customer_id),
+      schedule_group_id: scheduleGroupId,
+      project_name: projectName,
+      workflow_template_slug: template.slug,
+      workflow_template_name: template.name,
       title: item.title,
       description: item.description || `${template.name} workflow: ${item.owner_role}${item.requires_payment ? " | payment gate" : ""}${item.requires_approval ? " | approval gate" : ""}${item.requires_deposit ? " | deposit gate" : ""}`,
       item_type: itemType(item.item_type),
@@ -150,6 +157,8 @@ export async function POST(request: Request) {
     details: {
       template_slug: template.slug,
       template_name: template.name,
+      project_name: projectName,
+      schedule_group_id: scheduleGroupId,
       order_id: nullable(body.order_id),
       production_job_id: nullable(body.production_job_id),
       item_count: insertedItems.data?.length || 0,
@@ -159,6 +168,8 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     template: { name: template.name, slug: template.slug },
+    project_name: projectName,
+    schedule_group_id: scheduleGroupId,
     created_items: insertedItems.data ?? [],
     created_item_count: insertedItems.data?.length || 0,
     created_dependency_count: createdDependencies,

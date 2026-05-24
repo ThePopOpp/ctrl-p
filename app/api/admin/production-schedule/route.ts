@@ -73,6 +73,10 @@ type ScheduleBody = {
   sort_order?: number | string | null;
   internal_notes?: string | null;
   customer_notes?: string | null;
+  schedule_group_id?: string | null;
+  project_name?: string | null;
+  workflow_template_slug?: string | null;
+  workflow_template_name?: string | null;
 };
 
 function scheduleSelect() {
@@ -83,6 +87,10 @@ function scheduleSelect() {
     "production_job_id",
     "product_id",
     "customer_id",
+    "schedule_group_id",
+    "project_name",
+    "workflow_template_slug",
+    "workflow_template_name",
     "parent_item_id",
     "title",
     "description",
@@ -174,6 +182,10 @@ function buildPayload(body: ScheduleBody, actorId: string, mode: "create" | "upd
     production_job_id: nullableText(body.production_job_id),
     product_id: nullableText(body.product_id),
     customer_id: nullableText(body.customer_id),
+    schedule_group_id: nullableText(body.schedule_group_id),
+    project_name: nullableText(body.project_name),
+    workflow_template_slug: nullableText(body.workflow_template_slug),
+    workflow_template_name: nullableText(body.workflow_template_name),
     parent_item_id: nullableText(body.parent_item_id),
     description: nullableText(body.description),
     item_type: itemType,
