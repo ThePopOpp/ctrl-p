@@ -130,7 +130,7 @@ const navItems: { label: string; icon: LucideIcon; href: string }[] = [
   { label: "Invoices", icon: CreditCard, href: "#invoices" },
   { label: "Saved Designs", icon: IdCard, href: "#designs" },
   { label: "Artwork", icon: FileCheck2, href: "#artwork" },
-  { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
+  { label: "My Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
   { label: "Messages", icon: MessageSquare, href: "#messages" },
   { label: "Shipping", icon: Truck, href: "#shipping" },

@@ -16,7 +16,7 @@ const navItems: { label: string; icon: LucideIcon; href: string }[] = [
   { label: "Orders", icon: Box, href: "/dashboard/customer#orders" },
   { label: "Invoices", icon: CreditCard, href: "/dashboard/customer#invoices" },
   { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
-  { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
+  { label: "My Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },
   { label: "Shipping", icon: Truck, href: "/dashboard/customer#shipping" },

@@ -102,7 +102,7 @@ const customerNavItems = [
   { label: "Orders", icon: Box, href: "/dashboard/customer#orders" },
   { label: "Invoices", icon: CreditCard, href: "/dashboard/customer#invoices" },
   { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
-  { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
+  { label: "My Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },
   { label: "Shipping", icon: Truck, href: "/dashboard/customer#shipping" },
@@ -114,17 +114,23 @@ const previewModes = [
   { value: "desktop", label: "Desktop", width: 920, icon: Monitor },
 ] as const;
 type PreviewMode = typeof previewModes[number]["value"];
-type BuilderPanel = "card" | "sections" | "content" | "links" | "forms" | "visuals" | "opener" | "access" | "automations";
+type BuilderPanel = "sections" | "layers" | "content" | "links" | "color_modes" | "splash" | "qr_code" | "nfc" | "media" | "forms" | "slideshow" | "steps" | "automate" | "settings" | "wizard";
 const builderPanels: { value: BuilderPanel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { value: "card", label: "Product", icon: IdCard },
   { value: "sections", label: "Sections", icon: Layers },
+  { value: "layers", label: "Layers", icon: Layers },
   { value: "content", label: "Content", icon: FileCheck2 },
   { value: "links", label: "Links", icon: LinkIcon },
-  { value: "forms", label: "Leads", icon: FormInput },
-  { value: "visuals", label: "Visuals", icon: Palette },
-  { value: "opener", label: "Opener", icon: PlayCircle },
-  { value: "access", label: "Access", icon: Settings },
-  { value: "automations", label: "Automations", icon: Zap },
+  { value: "color_modes", label: "Color Modes", icon: Palette },
+  { value: "splash", label: "Splash Page", icon: PlayCircle },
+  { value: "qr_code", label: "QR Code", icon: QrCode },
+  { value: "nfc", label: "NFC", icon: Smartphone },
+  { value: "media", label: "Media", icon: Camera },
+  { value: "forms", label: "Forms", icon: FormInput },
+  { value: "slideshow", label: "Slideshow", icon: Monitor },
+  { value: "steps", label: "Steps", icon: GripVertical },
+  { value: "automate", label: "Automate", icon: Zap },
+  { value: "settings", label: "Settings", icon: Settings },
+  { value: "wizard", label: "Setup Wizard", icon: UserCircle },
 ];
 const cardModes = ["standard", "opener_slider", "qr_only", "nfc_landing"];
 const layoutTemplates = ["classic", "split_profile", "link_hub", "sales_intro", "portfolio", "appointment_first"];
@@ -133,9 +139,9 @@ const qrCornerStyles = ["square", "rounded", "extra_rounded", "dot"];
 const qrDotStyles = ["square", "rounded", "dots", "classy"];
 const digitalProductOptions = [
   { title: "Digital Business Card", subtitle: "Public profile, links, QR code, and NFC-ready URL", panel: "content" as BuilderPanel },
-  { title: "Opener / Slider Card", subtitle: "Animated intro, video spot, buttons, then card reveal", panel: "opener" as BuilderPanel },
-  { title: "NFC Tap Card", subtitle: "Tap-to-share destination and physical product prep", panel: "access" as BuilderPanel },
-  { title: "QR Code Card", subtitle: "QR-first landing card with custom colors", panel: "visuals" as BuilderPanel },
+  { title: "Splash / Slider Card", subtitle: "Animated intro, video spot, buttons, then card reveal", panel: "splash" as BuilderPanel },
+  { title: "NFC Tap Card", subtitle: "Tap-to-share destination and physical product prep", panel: "nfc" as BuilderPanel },
+  { title: "QR Code Card", subtitle: "QR-first landing card with custom colors", panel: "qr_code" as BuilderPanel },
   { title: "Loyalty / Punch Card", subtitle: "Future rewards and stamp card sections", panel: "sections" as BuilderPanel },
   { title: "Scratch Card", subtitle: "Future reveal interaction layer", panel: "sections" as BuilderPanel },
 ];
@@ -397,7 +403,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
   const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile");
   const [previewThemeMode, setPreviewThemeMode] = useState<CardThemeMode>("dark");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [activePanel, setActivePanel] = useState<BuilderPanel>("card");
+  const [activePanel, setActivePanel] = useState<BuilderPanel>("sections");
   const [previewZoom, setPreviewZoom] = useState(100);
   const [uploadingMedia, setUploadingMedia] = useState<string | null>(null);
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>(["profile_header-0"]);
@@ -757,7 +763,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
         </a>
         <nav className="space-y-1">
           {customerNavItems.map(({ label, icon: Icon, href }) => (
-            <Nav key={label} href={href} icon={<Icon className="h-4 w-4" />} label={label} active={label === "Manage Products"} />
+            <Nav key={label} href={href} icon={<Icon className="h-4 w-4" />} label={label} active={label === "My Products"} />
           ))}
         </nav>
         {data?.profile && <div className="absolute bottom-3 left-3 right-3 rounded-xl border bg-background/55 p-2">
@@ -773,7 +779,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
 
       <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">
         <div className="flex h-12 items-center gap-3 px-5">
-          <div className="text-xs text-muted-foreground">Customer <span className="mx-2">/</span> Manage Products <span className="mx-2">/</span><span className="font-medium text-foreground">Digital Card Builder</span></div>
+          <div className="text-xs text-muted-foreground">Customer <span className="mx-2">/</span> My Products <span className="mx-2">/</span><span className="font-medium text-foreground">Digital Card Builder</span></div>
           <div className="ml-auto flex items-center gap-2">
             <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Notifications"><Bell className="h-4 w-4" /></Button>
             <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Toggle theme" onClick={toggleTheme}>{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
@@ -785,7 +791,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
       <main className="px-4 py-5 lg:pl-[258px] lg:pr-6">
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <Button variant="ghost" className="mb-2 h-8 px-0 text-muted-foreground" onClick={() => router.push("/dashboard/customer/manage-products")}><ArrowLeft className="h-4 w-4" /> Back to products</Button>
+            <Button variant="ghost" className="mb-2 h-8 px-0 text-muted-foreground" onClick={() => router.push("/dashboard/customer/manage-products")}><ArrowLeft className="h-4 w-4" /> Back to My Products</Button>
             <h1 className="text-[25px] font-semibold tracking-tight">Digital Business Card Builder</h1>
             <p className="mt-1 max-w-3xl text-sm leading-5 text-muted-foreground">Build a QR and NFC-ready public profile with repeatable phones, emails, websites, social profiles, and action links.</p>
           </div>
@@ -812,19 +818,19 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
               active={activePanel}
               onChange={(panel) => {
                 setActivePanel(panel);
-                if (panel === "opener") ensureOpenerSection();
+                if (panel === "splash") ensureOpenerSection();
                 if (panel === "forms") ensureLeadCaptureSection();
               }}
             />
             <section className="max-h-[calc(100vh-9rem)] overflow-y-auto border-r bg-background/45 p-4">
-              {activePanel === "card" && (
+              {activePanel === "settings" && (
                 <div className="space-y-4">
                   <ProductChooser onSelect={(panel) => {
                     setActivePanel(panel);
-                    if (panel === "opener") ensureOpenerSection();
+                    if (panel === "splash") ensureOpenerSection();
                   }} />
                   <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-base">Card details</CardTitle><CardDescription>Name, status, public URL, and publish controls.</CardDescription></CardHeader>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Card settings</CardTitle><CardDescription>Name, status, public URL, accessibility, and publish controls.</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-3 md:grid-cols-3">
                     <Field label="Card name" value={form.card_name} onChange={(value) => update("card_name", value)} />
@@ -853,8 +859,38 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <CardTitle className="flex items-center gap-2 text-base"><Layers className="h-4 w-4" /> Sections / layers</CardTitle>
-                      <CardDescription>Control which sections are active, visible, and ordered on the public card.</CardDescription>
+                      <CardTitle className="flex items-center gap-2 text-base"><Layers className="h-4 w-4" /> Sections</CardTitle>
+                      <CardDescription>Enable the public card sections your customer wants to show. Use Layers to reorder and tune spacing.</CardDescription>
+                    </div>
+                    <Select value="custom" onValueChange={addSection}>
+                      <SelectTrigger className="w-[190px]"><SelectValue placeholder="Add section" /></SelectTrigger>
+                      <SelectContent>{sectionTypes.map((type) => <SelectItem key={type} value={type}>{human(type)}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {normalizeSections(form.digital_card_sections).map((section, index) => (
+                    <div key={sectionKey(section, index)} className="flex items-center gap-3 rounded-lg border bg-background/35 p-3">
+                      <button type="button" className="min-w-0 flex-1 text-left" onClick={() => updateSection(index, { is_visible: !section.is_visible })}>
+                        <div className="truncate font-medium">{section.label || human(section.section_type)}</div>
+                        <div className="mt-0.5 text-xs text-muted-foreground">{human(section.section_type)} / Layer {index + 1}</div>
+                      </button>
+                      <Badge variant={section.is_visible ? "default" : "secondary"}>{section.is_visible ? "Active" : "Inactive"}</Badge>
+                      <Button variant={section.is_visible ? "outline" : "default"} size="sm" onClick={() => updateSection(index, { is_visible: !section.is_visible })}>
+                        {section.is_visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {section.is_visible ? "Hide" : "Show"}
+                      </Button>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>}
+
+              {activePanel === "layers" && <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base"><Layers className="h-4 w-4" /> Layers</CardTitle>
+                      <CardDescription>Drag, reorder, expand, and tune padding or margin for every public card layer.</CardDescription>
                     </div>
                     <Select value="custom" onValueChange={addSection}>
                       <SelectTrigger className="w-[190px]"><SelectValue placeholder="Add section" /></SelectTrigger>
@@ -937,21 +973,6 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   <div className="md:col-span-2"><div className="mb-1.5 text-xs font-medium text-muted-foreground">Bio</div><Textarea value={form.bio || ""} onChange={(event) => update("bio", event.target.value)} placeholder="Short customer-facing intro" /></div>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Media</CardTitle>
-                  <CardDescription>Add profile, logo, background, and intro media for this card.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-3 md:grid-cols-2">
-                  <MediaUploadField label="Profile photo" mediaType="profile-photo" accept="image/*" value={form.profile_photo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("profile_photo_url", url)} />
-                  <MediaUploadField label="Logo" mediaType="logo" accept="image/*" value={form.logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("logo_url", url)} />
-                  <MediaUploadField label="Background image" mediaType="background-image" accept="image/*" value={form.background_image_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("background_image_url", url)} />
-                  <MediaUploadField label="Background video" mediaType="background-video" accept="video/*" value={String((form.media_settings?.background_video_url as string) || "")} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("media_settings", { ...(form.media_settings || {}), background_video_url: url })} />
-                  <MediaUploadField label="Intro video" mediaType="intro-video" accept="video/*" value={form.intro_video_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("intro_video_url", url)} />
-                </CardContent>
-              </Card>
-
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base">Primary contact fields</CardTitle><CardDescription>These are pinned quick actions. Add more numbers, emails, websites, and socials below.</CardDescription></CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-3">
@@ -965,8 +986,8 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
 
               {activePanel === "links" && <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Repeatable links and contact methods</CardTitle>
-                  <CardDescription>Add unlimited phone numbers, emails, websites, social media profiles, payment links, files, bookings, and custom buttons.</CardDescription>
+                  <CardTitle className="text-base">Links, buttons, and chips</CardTitle>
+                  <CardDescription>Create separate links, larger action buttons, and lightweight chips for social, booking, payments, files, maps, videos, reviews, and more.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex flex-wrap gap-2">
@@ -986,6 +1007,21 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 </CardContent>
               </Card>}
 
+              {activePanel === "media" && <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base"><Camera className="h-4 w-4" /> Media</CardTitle>
+                  <CardDescription>Upload or capture card photos, logos, backgrounds, and video media without needing URL fields.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-2">
+                  <MediaUploadField label="Profile photo" mediaType="profile-photo" accept="image/*" value={form.profile_photo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("profile_photo_url", url)} />
+                  <MediaUploadField label="Logo" mediaType="logo" accept="image/*" value={form.logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("logo_url", url)} />
+                  <MediaUploadField label="Background image" mediaType="background-image" accept="image/*" value={form.background_image_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("background_image_url", url)} />
+                  <MediaUploadField label="Background video" mediaType="background-video" accept="video/*" value={String((form.media_settings?.background_video_url as string) || "")} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("media_settings", { ...(form.media_settings || {}), background_video_url: url })} />
+                  <MediaUploadField label="Intro video" mediaType="intro-video" accept="video/*" value={form.intro_video_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("intro_video_url", url)} />
+                  <MediaUploadField label="QR logo center" mediaType="qr-logo" accept="image/*" value={form.qr_logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("qr_logo_url", url)} />
+                </CardContent>
+              </Card>}
+
               {activePanel === "forms" && <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base"><FormInput className="h-4 w-4" /> Lead Generation Form Builder</CardTitle>
@@ -1000,8 +1036,8 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 </CardContent>
               </Card>}
 
-              {activePanel === "visuals" && <Card>
-                <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Palette className="h-4 w-4" /> Visuals and QR</CardTitle><CardDescription>Pick brand colors, add media URLs, and style the QR code.</CardDescription></CardHeader>
+              {activePanel === "color_modes" && <Card>
+                <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Palette className="h-4 w-4" /> Color Modes</CardTitle><CardDescription>Set reusable dark and light palettes for the public card and preview each mode before saving.</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                     {colorPresets.map((preset) => (
@@ -1022,7 +1058,6 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     <SelectField label="Light / dark mode" value={form.theme_mode || "dark"} values={["light", "dark", "both"]} onChange={(value) => update("theme_mode", value)} />
                     <SelectField label="Preview color mode" value={previewThemeMode} values={["dark", "light"]} onChange={(value) => setPreviewThemeMode(value as CardThemeMode)} />
                     <SelectField label="Sync accent color" value={cardThemeSettings.sync_accent ? "yes" : "no"} values={["yes", "no"]} onChange={(value) => updateThemeSync(value === "yes")} />
-                    <Field label="QR logo center URL" value={form.qr_logo_url || ""} onChange={(value) => update("qr_logo_url", value)} />
                   </div>
                   <div className="grid gap-3 xl:grid-cols-2">
                     <div className="rounded-lg border bg-background/35 p-3">
@@ -1042,24 +1077,34 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                       </div>
                     </div>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <ColorField label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} />
-                    <ColorField label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} />
-                    <SelectField label="QR corner style" value={form.qr_corner_style || "square"} values={qrCornerStyles} onChange={(value) => update("qr_corner_style", value)} />
-                    <SelectField label="QR dot style" value={form.qr_dot_style || "square"} values={qrDotStyles} onChange={(value) => update("qr_dot_style", value)} />
-                    <Button className="self-end" variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download QR PNG</a></Button>
-                    <Button className="self-end" variant="outline" asChild><a href={`${qrUrl(publicUrl, form)}&format=svg`} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /> Open QR SVG</a></Button>
-                  </div>
                   <div className="rounded-lg border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
-                    Use Content for profile/logo/background media. Visuals controls color modes, QR colors, and reusable theme presets.
+                    Use Media for photos, logos, and videos. Use QR Code for QR colors, logo center, and export controls.
                   </div>
                 </CardContent>
               </Card>}
 
-              {activePanel === "opener" && <OpenerPanel content={getOpenerContent()} primaryPhone={form.primary_phone || ""} onChange={updateOpenerContent} />}
+              {activePanel === "qr_code" && <Card>
+                <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><QrCode className="h-4 w-4" /> QR Code</CardTitle><CardDescription>Customize QR colors, center logo, corner style, dot style, and exports.</CardDescription></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-[180px_1fr]">
+                    <img className="h-[180px] w-[180px] rounded-lg border bg-white p-2" src={qrUrl(publicUrl, form)} alt="QR code preview" />
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <MediaUploadField label="QR logo center" mediaType="qr-logo" accept="image/*" value={form.qr_logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("qr_logo_url", url)} />
+                      <ColorField label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} />
+                      <ColorField label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} />
+                      <SelectField label="QR corner style" value={form.qr_corner_style || "square"} values={qrCornerStyles} onChange={(value) => update("qr_corner_style", value)} />
+                      <SelectField label="QR dot style" value={form.qr_dot_style || "square"} values={qrDotStyles} onChange={(value) => update("qr_dot_style", value)} />
+                      <Button className="self-end" variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download QR PNG</a></Button>
+                      <Button className="self-end" variant="outline" asChild><a href={`${qrUrl(publicUrl, form)}&format=svg`} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /> Open QR SVG</a></Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>}
 
-              {activePanel === "opener" && <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-base">Multi-page slider cards</CardTitle><CardDescription>Add intro, services, gallery, testimonials, and contact slides for opener/slider card mode.</CardDescription></CardHeader>
+              {activePanel === "splash" && <OpenerPanel content={getOpenerContent()} primaryPhone={form.primary_phone || ""} onChange={updateOpenerContent} />}
+
+              {activePanel === "slideshow" && <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Slideshow</CardTitle><CardDescription>Add intro, services, gallery, testimonials, and contact slides for slider-based card experiences.</CardDescription></CardHeader>
                 <CardContent className="space-y-3">
                   {(form.slider_pages || []).map((page, index) => (
                     <div key={index} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-2">
@@ -1075,8 +1120,8 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 </CardContent>
               </Card>}
 
-              {activePanel === "access" && <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-base">Product and access prep</CardTitle><CardDescription>Future-ready hooks for monthly access, NFC products, bundles, and linked customer orders.</CardDescription></CardHeader>
+              {activePanel === "nfc" && <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">NFC</CardTitle><CardDescription>Prepare tap-to-share URLs, physical NFC product status, and future activation flows.</CardDescription></CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-3">
                   <SelectField label="Access status" value={form.access_status || "trial"} values={["trial", "active", "past_due", "paused", "expired", "none"]} onChange={(value) => update("access_status", value)} />
                   <Field label="Access plan" value={form.access_plan || ""} onChange={(value) => update("access_plan", value)} />
@@ -1089,7 +1134,22 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 </CardContent>
               </Card>}
 
-              {activePanel === "automations" && <Card>
+              {activePanel === "steps" && <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base"><GripVertical className="h-4 w-4" /> Steps</CardTitle>
+                  <CardDescription>Plan how many pages the digital product uses and how visitors move between them.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <SelectField label="Step count" value={String(form.media_settings?.step_count || "1")} values={["1", "2", "3", "4", "5"]} onChange={(value) => update("media_settings", { ...(form.media_settings || {}), step_count: value })} />
+                    <SelectField label="Slider control" value={String(form.media_settings?.slider_control || "pagination_dots")} values={["pagination_dots", "arrows", "arrows_and_dots", "swipe_only"]} onChange={(value) => update("media_settings", { ...(form.media_settings || {}), slider_control: value })} />
+                    <SelectField label="Start page" value={String(form.media_settings?.start_page || "splash")} values={["splash", "profile", "links", "qr_code"]} onChange={(value) => update("media_settings", { ...(form.media_settings || {}), start_page: value })} />
+                  </div>
+                  <div className="rounded-lg border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">Detailed drag ordering between pages will connect to Slideshow and Sections in the next pass.</div>
+                </CardContent>
+              </Card>}
+
+              {activePanel === "automate" && <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base"><Zap className="h-4 w-4" /> Automations</CardTitle>
                   <CardDescription>Coming soon: notifications, lead routing, Square subscription triggers, follow-up messages, and product upsell automations.</CardDescription>
@@ -1097,6 +1157,26 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 <CardContent className="space-y-3">
                   {["Lead notification emails and SMS alerts", "Square payment or subscription status triggers", "NFC activation and QR product fulfillment handoffs", "Follow-up reminders for new leads", "Customer tags, source tracking, and CRM-style workflows"].map((item) => (
                     <div key={item} className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{item}</div>
+                  ))}
+                </CardContent>
+              </Card>}
+
+              {activePanel === "wizard" && <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base"><UserCircle className="h-4 w-4" /> Setup Wizard</CardTitle>
+                  <CardDescription>Guided setup for customers who want help choosing features and understanding what each section does.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {[
+                    ["Start with content", "Add name, title, bio, primary contact actions, and media."],
+                    ["Choose color modes", "Set dark and light palettes so visitors can switch modes on their device."],
+                    ["Add conversion tools", "Enable forms, links, chips, QR, NFC, and splash page features as upsells."],
+                    ["Publish and test", "Copy the public URL, scan the QR code, and verify the card on mobile."],
+                  ].map(([title, description]) => (
+                    <div key={title} className="rounded-lg border bg-background/35 p-3">
+                      <div className="font-medium">{title}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{description}</div>
+                    </div>
                   ))}
                 </CardContent>
               </Card>}
@@ -1203,12 +1283,12 @@ function OpenerPanel({ content, primaryPhone, onChange }: { content: OpenerConte
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base"><PlayCircle className="h-4 w-4" /> Opener customizer</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base"><PlayCircle className="h-4 w-4" /> Splash page customizer</CardTitle>
         <CardDescription>Create a short intro slide before the visitor opens the business card.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3">
-          <Field label="Opener title" value={content.title || ""} onChange={(value) => onChange({ title: value })} />
+          <Field label="Splash title" value={content.title || ""} onChange={(value) => onChange({ title: value })} />
           <Field label="Subtitle" value={content.subtitle || ""} onChange={(value) => onChange({ subtitle: value })} />
         </div>
         <div className="grid gap-3 md:grid-cols-3">
@@ -1226,7 +1306,7 @@ function OpenerPanel({ content, primaryPhone, onChange }: { content: OpenerConte
           <SelectField label="Close animation" value={content.close_animation || "fade_out"} values={["fade_out", "zoom_out", "slide_up", "slide_left", "flip_out"]} onChange={(value) => onChange({ close_animation: value })} />
         </div>
         <div className="space-y-2">
-          <div className="text-xs font-semibold text-muted-foreground">Opener buttons, max 2</div>
+          <div className="text-xs font-semibold text-muted-foreground">Splash buttons, max 2</div>
           {[0, 1].map((index) => {
             const button = buttons[index] || { label: index === 0 ? "View card" : "Call me", action: index === 0 ? "open_card" : "call" };
             return (
@@ -1352,7 +1432,6 @@ function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: D
       <div>
         <div className="flex items-center justify-between gap-2">
           {card.logo_url ? <img className="max-h-10 max-w-[140px] object-contain" src={card.logo_url} alt="" /> : <div className="text-xs font-semibold opacity-70">controlp.io card</div>}
-          <span className="rounded-full border border-white/15 px-2 py-1 text-[10px] opacity-70">{card.status === "published" ? "Public" : "Draft"}</span>
         </div>
         <div className="mt-8 text-center">
           {card.profile_photo_url ? <img className="mx-auto h-24 w-24 rounded-full border-4 border-white/15 object-cover shadow-xl" src={card.profile_photo_url} alt="" /> : <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border-4 border-white/15 bg-white/10 text-2xl font-semibold shadow-xl">{(card.display_name || card.card_name || "CP").slice(0, 2).toUpperCase()}</div>}
