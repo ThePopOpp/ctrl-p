@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Box, CreditCard, FileCheck2, Home, IdCard, LogOut, Mail, MessageSquare, Moon, PackageCheck, Phone, Search, Sun, Truck, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, Box, CreditCard, FileCheck2, Home, IdCard, LogOut, Mail, MessageSquare, Moon, PackageCheck, Phone, Search, Sun, Truck, type LucideIcon } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -130,6 +130,7 @@ const navItems: { label: string; icon: LucideIcon; href: string }[] = [
   { label: "Saved Designs", icon: IdCard, href: "#designs" },
   { label: "Artwork", icon: FileCheck2, href: "#artwork" },
   { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
+  { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
   { label: "Messages", icon: MessageSquare, href: "#messages" },
   { label: "Shipping", icon: Truck, href: "#shipping" },
 ];

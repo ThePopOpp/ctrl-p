@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -91,6 +91,7 @@ const customerNavItems = [
   { label: "Invoices", icon: CreditCard, href: "/dashboard/customer#invoices" },
   { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
   { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
+  { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },
   { label: "Shipping", icon: Truck, href: "/dashboard/customer#shipping" },
 ];
@@ -866,16 +867,40 @@ function LivePreview({ card, publicUrl, mode, onModeChange, zoom, onZoomChange }
               </button>
             ))}
           </div>
-          <div className="mb-4 grid gap-2 rounded-lg border bg-background/35 p-3">
-            <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Zoom</span><span>{zoom}%</span></div>
-            <Input type="range" min={55} max={130} value={zoom} onChange={(event) => onZoomChange(Number(event.target.value))} />
-          </div>
-
-          <div className="overflow-auto rounded-xl border bg-secondary/25 p-4">
+          <div className="relative overflow-auto rounded-xl border bg-secondary/25 p-4">
             <div className="mx-auto origin-top overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all" style={{ width: modeInfo.width, maxWidth: "100%", minHeight: mode === "mobile" ? 640 : 720, background: card.background_color, color: card.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center", transform: `scale(${zoom / 100})` }}>
               <div className="min-h-[640px] bg-black/20 p-5 backdrop-blur-[1px] md:p-8">
                 <CardSections card={card} publicUrl={publicUrl} mode={mode} />
               </div>
+            </div>
+            <div className="absolute right-5 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-2 rounded-2xl border bg-background/95 p-2 shadow-2xl">
+              <button
+                type="button"
+                className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-lg font-semibold hover:bg-accent"
+                aria-label="Zoom in"
+                onClick={() => onZoomChange(Math.min(130, zoom + 5))}
+              >
+                +
+              </button>
+              <input
+                aria-label="Preview zoom"
+                type="range"
+                min={55}
+                max={130}
+                value={zoom}
+                onChange={(event) => onZoomChange(Number(event.target.value))}
+                className="h-32 w-4 accent-foreground"
+                style={{ writingMode: "vertical-lr", direction: "rtl" }}
+              />
+              <button
+                type="button"
+                className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-lg font-semibold hover:bg-accent"
+                aria-label="Zoom out"
+                onClick={() => onZoomChange(Math.max(55, zoom - 5))}
+              >
+                -
+              </button>
+              <div className="text-xs font-semibold">{zoom}%</div>
             </div>
           </div>
         </CardContent>

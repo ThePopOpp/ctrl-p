@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { ExternalLink, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
 
 import { getServerSupabaseConfig } from "@/lib/admin/server-auth";
+import { PublicCardActions, PublicLeadCapture } from "./public-card-actions";
 
 type PublicCardLink = {
   id: string;
@@ -18,6 +19,7 @@ type PublicCardSection = {
   id: string;
   section_type: string;
   label: string;
+  content?: Record<string, unknown> | null;
   display_order: number;
   is_visible: boolean;
   margin_top: number;
@@ -28,6 +30,27 @@ type PublicCardSection = {
   padding_right: number;
   padding_bottom: number;
   padding_left: number;
+};
+
+type OpenerButton = {
+  label?: string;
+  action?: "open_card" | "call" | "sms" | "email" | "url";
+  url?: string;
+};
+
+type OpenerContent = {
+  digital_product?: string;
+  title?: string;
+  subtitle?: string;
+  background_color?: string;
+  accent_color?: string;
+  text_color?: string;
+  background_image_url?: string;
+  background_video_url?: string;
+  duration_seconds?: number;
+  open_animation?: string;
+  close_animation?: string;
+  buttons?: OpenerButton[];
 };
 
 type PublicCard = {
@@ -107,6 +130,28 @@ function normalizeSections(sections: PublicCardSection[] | undefined) {
     .sort((a, b) => Number(a.display_order || 100) - Number(b.display_order || 100));
 }
 
+function defaultOpenerContent(): OpenerContent {
+  return {
+    digital_product: "opener",
+    title: "Welcome",
+    subtitle: "Tap to view my digital business card.",
+    background_color: "#07130b",
+    accent_color: "#a3ff12",
+    text_color: "#f7fff2",
+    duration_seconds: 7,
+    open_animation: "fade_up",
+    close_animation: "fade_out",
+    buttons: [
+      { label: "View card", action: "open_card" },
+      { label: "Call me", action: "call" },
+    ],
+  };
+}
+
+function openerSection(sections: PublicCardSection[]) {
+  return sections.find((section) => section.section_type === "gallery" && (section.content?.digital_product === "opener" || section.label.toLowerCase().includes("opener")));
+}
+
 function sectionStyle(item: PublicCardSection): React.CSSProperties {
   return {
     marginTop: Number(item.margin_top || 0),
@@ -131,7 +176,7 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
 
   const result = await adminClient
     .from("digital_cards")
-    .select("id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
+    .select("id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
     .eq("slug", slug)
     .eq("status", "published")
     .eq("is_public", true)
@@ -150,16 +195,74 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
     .sort((a, b) => Number(a.display_order || 100) - Number(b.display_order || 100));
   const sections = normalizeSections(card.digital_card_sections);
   const backgroundImage = card.background_image_url ? `linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)), url(${card.background_image_url})` : undefined;
+  const publicUrl = card.public_url || `https://my.controlp.io/c/${card.slug}`;
+  const opener = openerSection(sections);
 
   return (
     <main className="min-h-screen px-4 py-6" style={{ background: card.background_color, color: card.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center" }}>
+      {opener && <PublicOpener section={opener} card={card} publicUrl={publicUrl} />}
       <section className="mx-auto max-w-md">
-        <div className="rounded-[2rem] border border-white/15 bg-black/25 p-5 shadow-2xl backdrop-blur">
-          {sections.map((item) => <PublicSection key={item.id} section={item} card={card} links={links} publicUrl={card.public_url || `https://my.controlp.io/c/${card.slug}`} />)}
+        <div id="card" className="rounded-[2rem] border border-white/15 bg-black/25 p-5 shadow-2xl backdrop-blur">
+          <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} />
+          {sections.filter((item) => item.id !== opener?.id).map((item) => <PublicSection key={item.id} section={item} card={card} links={links} publicUrl={publicUrl} />)}
+          <PublicLeadCapture cardId={card.id} slug={card.slug} publicUrl={publicUrl} accent={card.accent_color} />
         </div>
         <div className="mt-5 text-center text-xs opacity-60">Powered by ControlP.io</div>
       </section>
     </main>
+  );
+}
+
+function openerButtonHref(button: OpenerButton, card: PublicCard) {
+  if (button.action === "call") return `tel:${button.url || card.primary_phone || ""}`;
+  if (button.action === "sms") return `sms:${button.url || card.sms_phone || card.primary_phone || ""}`;
+  if (button.action === "email") return `mailto:${button.url || card.primary_email || ""}`;
+  if (button.action === "url") return safeHref(button.url);
+  return "#card";
+}
+
+function PublicOpener({ section, card, publicUrl }: { section: PublicCardSection; card: PublicCard; publicUrl: string }) {
+  const content = { ...defaultOpenerContent(), ...(section.content || {}) } as OpenerContent;
+  const duration = Math.max(1, Math.min(30, Number(content.duration_seconds || 7)));
+  const backgroundImage = content.background_image_url ? `linear-gradient(rgba(0,0,0,.38), rgba(0,0,0,.38)), url(${content.background_image_url})` : undefined;
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center px-5"
+      style={{
+        background: content.background_color || card.background_color,
+        color: content.text_color || card.text_color,
+        backgroundImage,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        animation: `public-opener-hide 450ms ease ${duration}s forwards`,
+      }}
+    >
+      {content.background_video_url && (
+        <video className="absolute inset-0 h-full w-full object-cover opacity-45" src={content.background_video_url} autoPlay muted playsInline loop />
+      )}
+      <style>{`
+        @keyframes public-opener-hide {
+          to { opacity: 0; visibility: hidden; pointer-events: none; }
+        }
+        @keyframes public-opener-enter {
+          from { opacity: 0; transform: translateY(18px) scale(.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+      <div className="relative z-10 mx-auto max-w-lg text-center" style={{ animation: "public-opener-enter 650ms ease both" }}>
+        <div className="text-xs uppercase tracking-[0.35em] opacity-70">Digital card</div>
+        <h1 className="mt-5 text-5xl font-semibold tracking-tight">{content.title || card.display_name || card.card_name}</h1>
+        <p className="mx-auto mt-4 max-w-md text-lg opacity-80">{content.subtitle || `Connect with ${card.display_name || card.card_name}`}</p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          {(content.buttons || []).slice(0, 2).map((button, index) => (
+            <a key={index} href={openerButtonHref(button, card)} className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur" style={{ color: content.accent_color || card.accent_color }}>
+              {button.label || (index === 0 ? "View card" : "Contact")}
+            </a>
+          ))}
+        </div>
+        <div className="mt-5 text-xs opacity-60">{publicUrl}</div>
+      </div>
+    </div>
   );
 }
 
