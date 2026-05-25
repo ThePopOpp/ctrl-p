@@ -452,27 +452,30 @@ export function AdminProductionSchedule() {
   const installItems = items.filter((item) => ["delivery", "installation"].includes(item.item_type));
   const projectGroups = useMemo(() => buildProjectGroups(sectionItems, orders, products, users), [orders, products, sectionItems, users]);
   const sortedProjectGroups = useMemo(() => sortProjectGroups(projectGroups, projectSortMode), [projectGroups, projectSortMode]);
+  const sortedProjectGroupKeys = useMemo(() => sortedProjectGroups.map((group) => group.key), [sortedProjectGroups]);
   const visibleProjectSet = useMemo(() => new Set(visibleProjectKeys), [visibleProjectKeys]);
   const ganttItems = useMemo(() => sectionItems.filter((item) => visibleProjectSet.has(projectKey(item))), [sectionItems, visibleProjectSet]);
   const ganttItemIds = useMemo(() => new Set(ganttItems.map((item) => item.id)), [ganttItems]);
   const ganttDependencies = useMemo(() => dependencies.filter((dependency) => ganttItemIds.has(dependency.parent_item_id) && ganttItemIds.has(dependency.dependent_item_id)), [dependencies, ganttItemIds]);
 
   useEffect(() => {
-    if (!sortedProjectGroups.length) {
-      setVisibleProjectKeys([]);
-      setExpandedProjectKeys([]);
+    const sameKeys = (left: string[], right: string[]) => left.length === right.length && left.every((key, index) => key === right[index]);
+    if (!sortedProjectGroupKeys.length) {
+      setVisibleProjectKeys((current) => current.length ? [] : current);
+      setExpandedProjectKeys((current) => current.length ? [] : current);
       return;
     }
     setVisibleProjectKeys((current) => {
-      const valid = current.filter((key) => sortedProjectGroups.some((group) => group.key === key));
-      if (valid.length) return valid;
-      return [sortedProjectGroups[0].key];
+      const valid = current.filter((key) => sortedProjectGroupKeys.includes(key));
+      const next = valid.length ? valid : [sortedProjectGroupKeys[0]];
+      return sameKeys(current, next) ? current : next;
     });
     setExpandedProjectKeys((current) => {
-      const valid = current.filter((key) => sortedProjectGroups.some((group) => group.key === key));
-      return valid.length ? valid : [sortedProjectGroups[0].key];
+      const valid = current.filter((key) => sortedProjectGroupKeys.includes(key));
+      const next = valid.length ? valid : [sortedProjectGroupKeys[0]];
+      return sameKeys(current, next) ? current : next;
     });
-  }, [sortedProjectGroups]);
+  }, [sortedProjectGroupKeys]);
 
   async function saveItem(input: SchedulePayload) {
     const payload = await apiJson<{ item: ScheduleItem }>("/api/admin/production-schedule", {
