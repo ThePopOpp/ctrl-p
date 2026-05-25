@@ -403,11 +403,10 @@ export function AdminProductionSchedule() {
   const orderItems = data?.orderItems ?? [];
   const productionJobs = data?.productionJobs ?? [];
   const staff = users.filter((user) => staffRoles.has(user.role));
-  const dashboardItems = useMemo(() => items.filter((item) => !item.hidden_from_schedule), [items]);
 
   const visibleItems = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return dashboardItems.filter((item) => {
+    return items.filter((item) => {
       if (statusFilter !== "all" && item.status !== statusFilter) return false;
       if (priorityFilter !== "all" && item.priority !== priorityFilter) return false;
       if (visibilityFilter === "customer" && !item.customer_visible) return false;
@@ -436,7 +435,7 @@ export function AdminProductionSchedule() {
         assignee?.email,
       ].some((value) => String(value || "").toLowerCase().includes(needle));
     });
-  }, [dashboardItems, orders, priorityFilter, products, query, statusFilter, users, visibilityFilter]);
+  }, [items, orders, priorityFilter, products, query, statusFilter, users, visibilityFilter]);
 
   const sectionItems = useMemo(() => {
     if (activeView === "Tasks") return visibleItems.filter((item) => ["task", "production_step", "artwork_review", "qc_check"].includes(item.item_type));
@@ -447,17 +446,17 @@ export function AdminProductionSchedule() {
     return visibleItems;
   }, [activeView, visibleItems]);
 
-  const activeItems = dashboardItems.filter((item) => !["completed", "approved"].includes(item.status));
-  const blockedItems = dashboardItems.filter((item) => item.is_blocked || item.status === "blocked");
-  const customerVisibleItems = dashboardItems.filter((item) => item.customer_visible);
-  const overdueItems = dashboardItems.filter((item) => item.due_date && !["completed", "approved"].includes(item.status) && item.due_date < dateOnly(new Date()));
-  const approvalItems = dashboardItems.filter((item) => ["approval", "proof", "artwork_review", "customer_action"].includes(item.item_type));
-  const installItems = dashboardItems.filter((item) => ["delivery", "installation"].includes(item.item_type));
+  const activeItems = items.filter((item) => !["completed", "approved"].includes(item.status));
+  const blockedItems = items.filter((item) => item.is_blocked || item.status === "blocked");
+  const customerVisibleItems = items.filter((item) => item.customer_visible);
+  const overdueItems = items.filter((item) => item.due_date && !["completed", "approved"].includes(item.status) && item.due_date < dateOnly(new Date()));
+  const approvalItems = items.filter((item) => ["approval", "proof", "artwork_review", "customer_action"].includes(item.item_type));
+  const installItems = items.filter((item) => ["delivery", "installation"].includes(item.item_type));
   const projectGroups = useMemo(() => buildProjectGroups(sectionItems, orders, products, users), [orders, products, sectionItems, users]);
   const sortedProjectGroups = useMemo(() => sortProjectGroups(projectGroups, projectSortMode), [projectGroups, projectSortMode]);
   const sortedProjectGroupKeys = useMemo(() => sortedProjectGroups.map((group) => group.key), [sortedProjectGroups]);
   const visibleProjectSet = useMemo(() => new Set(visibleProjectKeys), [visibleProjectKeys]);
-  const ganttItems = useMemo(() => sectionItems.filter((item) => visibleProjectSet.has(projectKey(item))), [sectionItems, visibleProjectSet]);
+  const ganttItems = useMemo(() => sectionItems.filter((item) => visibleProjectSet.has(projectKey(item)) && !item.hidden_from_schedule), [sectionItems, visibleProjectSet]);
   const ganttItemIds = useMemo(() => new Set(ganttItems.map((item) => item.id)), [ganttItems]);
   const ganttDependencies = useMemo(() => dependencies.filter((dependency) => ganttItemIds.has(dependency.parent_item_id) && ganttItemIds.has(dependency.dependent_item_id)), [dependencies, ganttItemIds]);
 
@@ -526,7 +525,11 @@ export function AdminProductionSchedule() {
   }
 
   async function hideItem(item: ScheduleItem) {
-    await updateTaskAction(item, { hidden_from_schedule: true }, `Hidden "${item.title}" from Scheduled Items and Gantt.`);
+    await updateTaskAction(item, { hidden_from_schedule: true }, `Hidden "${item.title}" from the Gantt timeline. It is still available in Scheduled Items.`);
+  }
+
+  async function showItem(item: ScheduleItem) {
+    await updateTaskAction(item, { hidden_from_schedule: false }, `Showing "${item.title}" on the Gantt timeline.`);
   }
 
   async function cancelItem(item: ScheduleItem) {
@@ -740,6 +743,7 @@ export function AdminProductionSchedule() {
                       }}
                       onSelect={setSelectedItem}
                       onHide={hideItem}
+                      onShow={showItem}
                       onCancel={cancelItem}
                       onComplete={completeItem}
                       onDelete={deleteItem}
@@ -1355,6 +1359,7 @@ function ScheduleProjects({
   onToggleExpanded,
   onSelect,
   onHide,
+  onShow,
   onCancel,
   onComplete,
   onDelete,
@@ -1371,6 +1376,7 @@ function ScheduleProjects({
   onToggleExpanded: (key: string) => void;
   onSelect: (item: ScheduleItem) => void;
   onHide: (item: ScheduleItem) => void;
+  onShow: (item: ScheduleItem) => void;
   onCancel: (item: ScheduleItem) => void;
   onComplete: (item: ScheduleItem) => void;
   onDelete: (item: ScheduleItem) => void;
@@ -1410,6 +1416,7 @@ function ScheduleProjects({
                 <div className="flex flex-wrap gap-1">
                   <Badge variant="outline">{group.openCount} open</Badge>
                   <Badge variant="outline">{group.customerVisibleCount} visible</Badge>
+                  {group.items.some((item) => item.hidden_from_schedule) && <Badge variant="outline">{group.items.filter((item) => item.hidden_from_schedule).length} hidden on Gantt</Badge>}
                   {group.blockedCount > 0 && <Badge className="border border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300">{group.blockedCount} blocked</Badge>}
                 </div>
                 <Button variant={visible ? "default" : "outline"} size="sm" onClick={() => onToggleVisible(group.key)}>
@@ -1448,6 +1455,7 @@ function ScheduleProjects({
                       <span>{item.phase || "No phase"}</span>
                       {item.customer_visible && <span>• Customer visible</span>}
                       {item.is_blocked && <span className="text-red-600 dark:text-red-300">• Blocked</span>}
+                      {item.hidden_from_schedule && <span className="text-amber-600 dark:text-amber-300">• Hidden on Gantt</span>}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -1464,15 +1472,16 @@ function ScheduleProjects({
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label="Hide schedule item"
-                        title="Hide from Scheduled Items and Gantt"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        aria-label={item.hidden_from_schedule ? "Show schedule item on Gantt" : "Hide schedule item from Gantt"}
+                        title={item.hidden_from_schedule ? "Show on Gantt" : "Hide from Gantt only"}
+                        className={cn("h-8 w-8 text-muted-foreground hover:text-foreground", item.hidden_from_schedule && "text-amber-600 dark:text-amber-300")}
                         onClick={(event) => {
                           event.stopPropagation();
-                          onHide(item);
+                          if (item.hidden_from_schedule) onShow(item);
+                          else onHide(item);
                         }}
                       >
-                        <EyeOff className="h-4 w-4" />
+                        {item.hidden_from_schedule ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                       </Button>
                       <Button
                         variant="ghost"
