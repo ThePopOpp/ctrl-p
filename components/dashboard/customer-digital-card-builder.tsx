@@ -112,12 +112,13 @@ const previewModes = [
   { value: "desktop", label: "Desktop", width: 920, icon: Monitor },
 ] as const;
 type PreviewMode = typeof previewModes[number]["value"];
-type BuilderPanel = "card" | "sections" | "content" | "links" | "visuals" | "opener" | "access" | "automations";
+type BuilderPanel = "card" | "sections" | "content" | "links" | "forms" | "visuals" | "opener" | "access" | "automations";
 const builderPanels: { value: BuilderPanel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: "card", label: "Product", icon: IdCard },
   { value: "sections", label: "Sections", icon: Layers },
   { value: "content", label: "Content", icon: FileCheck2 },
   { value: "links", label: "Links", icon: LinkIcon },
+  { value: "forms", label: "Leads", icon: FormInput },
   { value: "visuals", label: "Visuals", icon: Palette },
   { value: "opener", label: "Opener", icon: PlayCircle },
   { value: "access", label: "Access", icon: Settings },
@@ -504,6 +505,37 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
     update("lead_form_settings", { ...leadSettings(), ...patch });
   }
 
+  function findLeadCaptureSection(sections = normalizeSections(form.digital_card_sections)) {
+    return sections.findIndex((section) => section.section_type === "lead_capture");
+  }
+
+  function ensureLeadCaptureSection(visible = leadSettings().enabled !== false) {
+    setForm((current) => {
+      const sections = normalizeSections(current.digital_card_sections);
+      const index = findLeadCaptureSection(sections);
+      if (index >= 0) {
+        sections[index] = {
+          ...sections[index],
+          label: sections[index].label || "Lead capture button",
+          is_visible: visible,
+        };
+        return { ...current, digital_card_sections: normalizeSections(sections) };
+      }
+      return {
+        ...current,
+        digital_card_sections: normalizeSections([
+          ...sections,
+          newSection("lead_capture", "Lead capture button", sections.length + 1, { is_visible: visible, margin_bottom: 20 }),
+        ]),
+      };
+    });
+  }
+
+  function updateLeadSettingsAndSection(patch: Partial<LeadFormSettings>) {
+    updateLeadSettings(patch);
+    if (typeof patch.enabled === "boolean") ensureLeadCaptureSection(patch.enabled);
+  }
+
   function updateLeadField(index: number, patch: Partial<LeadField>) {
     const settings = leadSettings();
     const fields = [...settings.fields];
@@ -628,7 +660,14 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
 
         {state === "ready" && (
           <div className="grid overflow-hidden rounded-xl border bg-card/60 xl:grid-cols-[86px_minmax(360px,520px)_minmax(0,1fr)]">
-            <BuilderToolRail active={activePanel} onChange={setActivePanel} />
+            <BuilderToolRail
+              active={activePanel}
+              onChange={(panel) => {
+                setActivePanel(panel);
+                if (panel === "opener") ensureOpenerSection();
+                if (panel === "forms") ensureLeadCaptureSection();
+              }}
+            />
             <section className="max-h-[calc(100vh-9rem)] overflow-y-auto border-r bg-background/45 p-4">
               {activePanel === "card" && (
                 <div className="space-y-4">
@@ -662,7 +701,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <CardTitle className="flex items-center gap-2 text-base"><Layers className="h-4 w-4" /> Sections / layers</CardTitle>
-                      <CardDescription>Rearrange the public card, hide sections, and tune padding and margin on every side.</CardDescription>
+                      <CardDescription>Control which sections are active, visible, and ordered on the public card.</CardDescription>
                     </div>
                     <Select value="custom" onValueChange={addSection}>
                       <SelectTrigger className="w-[190px]"><SelectValue placeholder="Add section" /></SelectTrigger>
@@ -722,13 +761,6 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                                 </div>
                               )}
                             </div>
-                            {section.section_type === "lead_capture" && (
-                              <LeadCaptureSectionEditor
-                                settings={leadSettings()}
-                                onChange={updateLeadSettings}
-                                onFieldChange={updateLeadField}
-                              />
-                            )}
                             {["gallery", "scratch_card", "punch_card", "loyalty_card", "nfc"].includes(section.section_type) && (
                               <div className="rounded-md border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
                                 {human(section.section_type)} is staged as a flexible layer now. Its advanced editor will plug into this section record next.
@@ -785,6 +817,20 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     </div>
                   ))}
                   {!form.digital_card_links?.length && <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">No repeatable links yet. Add a phone, email, website, social profile, or custom action.</div>}
+                </CardContent>
+              </Card>}
+
+              {activePanel === "forms" && <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base"><FormInput className="h-4 w-4" /> Lead Generation Form Builder</CardTitle>
+                  <CardDescription>Customize the button shown on the digital card and the dedicated lead form visitors open from it.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <LeadCaptureSectionEditor
+                    settings={leadSettings()}
+                    onChange={updateLeadSettingsAndSection}
+                    onFieldChange={updateLeadField}
+                  />
                 </CardContent>
               </Card>}
 
@@ -1083,7 +1129,10 @@ function LivePreview({ card, publicUrl, mode, onModeChange, zoom, onZoomChange }
 }
 
 function CardSections({ card, publicUrl, mode }: { card: DigitalCard; publicUrl: string; mode: PreviewMode }) {
-  const sections = normalizeSections(card.digital_card_sections).filter((section) => section.is_visible);
+  const sections = normalizeSections(card.digital_card_sections).filter((section) => {
+    const isOpenerLayer = section.section_type === "gallery" && (section.content?.digital_product === "opener" || section.label.toLowerCase().includes("opener"));
+    return section.is_visible && !isOpenerLayer;
+  });
   const visibleLinks = (card.digital_card_links || []).filter((link) => link.is_visible !== false && link.label && link.url);
   return (
     <div className={cn(mode !== "mobile" && "grid gap-x-8 md:grid-cols-[1fr_1.1fr]")}>
@@ -1152,12 +1201,11 @@ function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: D
     const settings = { ...defaultLeadFormSettings(), ...(card.lead_form_settings || {}) };
     if (!settings.enabled) return <PlaceholderSection label={section.label} text="Lead capture is disabled." />;
     return (
-      <div className="rounded-2xl border border-white/15 p-4" style={{ background: `${settings.button_background || card.accent_color}22` }}>
-        <div className="text-sm font-semibold">{settings.title || "Send me your info"}</div>
-        <div className="mt-1 text-xs opacity-70">{settings.description || "Visitors can send contact details from a separate lead form page."}</div>
-        <div className="mt-3 rounded-2xl px-4 py-3 text-center text-sm font-semibold" style={{ background: settings.button_background || card.accent_color, color: settings.button_text_color || card.background_color }}>
-          {settings.button_label || "Send me your info"}
-        </div>
+      <div
+        className="rounded-2xl px-4 py-3 text-center text-sm font-semibold"
+        style={{ background: settings.button_background || card.accent_color, color: settings.button_text_color || card.background_color }}
+      >
+        {settings.button_label || "Send me your info"}
       </div>
     );
   }
@@ -1178,18 +1226,7 @@ function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: D
 
   if (section.section_type === "nfc") return <PlaceholderSection label={section.label} text="NFC tap-to-share destination will use this public URL once access is active." />;
   if (section.section_type === "gallery" && (section.content?.digital_product === "opener" || section.label.toLowerCase().includes("opener"))) {
-    const content = { ...defaultOpenerContent(), ...(section.content || {}) } as OpenerContent;
-    const bg = content.background_image_url ? `linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url(${content.background_image_url})` : undefined;
-    return (
-      <div className="rounded-3xl border border-white/15 p-6 text-center shadow-xl" style={{ background: content.background_color, color: content.text_color, backgroundImage: bg, backgroundSize: "cover", backgroundPosition: "center" }}>
-        <div className="text-[10px] uppercase tracking-[0.25em] opacity-70">{content.open_animation} / {content.close_animation} / {content.duration_seconds}s</div>
-        <div className="mt-6 text-3xl font-semibold leading-tight">{content.title || "Welcome"}</div>
-        <div className="mx-auto mt-3 max-w-xs text-sm opacity-80">{content.subtitle || "Tap to view my digital business card."}</div>
-        <div className="mt-6 grid gap-2 sm:grid-cols-2">
-          {(content.buttons || []).slice(0, 2).map((button, index) => <PreviewPill key={index} label={button.label || "Button"} accent={content.accent_color || card.accent_color} />)}
-        </div>
-      </div>
-    );
+    return null;
   }
   if (section.section_type === "gallery") return <PlaceholderSection label={section.label} text="Slider/gallery cards will live in this layer." />;
   if (section.section_type === "scratch_card") return <PlaceholderSection label={section.label} text="Scratch-to-reveal interactions will live in this layer." />;
