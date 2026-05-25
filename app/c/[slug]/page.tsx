@@ -37,6 +37,8 @@ type OpenerButton = {
   action?: "open_card" | "call" | "sms" | "email" | "url";
   url?: string;
 };
+type PublicLeadField = { key: string; label: string; enabled: boolean; required: boolean };
+type PublicLeadFormSettings = { enabled?: boolean; title?: string; description?: string; submit_label?: string; fields?: PublicLeadField[] };
 
 type OpenerContent = {
   digital_product?: string;
@@ -68,6 +70,7 @@ type PublicCard = {
   background_color: string;
   accent_color: string;
   text_color: string;
+  lead_form_settings?: PublicLeadFormSettings | null;
   primary_phone: string | null;
   sms_phone: string | null;
   primary_email: string | null;
@@ -176,7 +179,7 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
 
   const result = await adminClient
     .from("digital_cards")
-    .select("id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
+    .select("id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, lead_form_settings, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
     .eq("slug", slug)
     .eq("status", "published")
     .eq("is_public", true)
@@ -205,7 +208,7 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
         <div id="card" className="rounded-[2rem] border border-white/15 bg-black/25 p-5 shadow-2xl backdrop-blur">
           <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} />
           {sections.filter((item) => item.id !== opener?.id).map((item) => <PublicSection key={item.id} section={item} card={card} links={links} publicUrl={publicUrl} />)}
-          <PublicLeadCapture cardId={card.id} slug={card.slug} publicUrl={publicUrl} accent={card.accent_color} />
+          <PublicLeadCapture cardId={card.id} slug={card.slug} publicUrl={publicUrl} accent={card.accent_color} settings={card.lead_form_settings} />
         </div>
         <div className="mt-5 text-center text-xs opacity-60">Powered by ControlP.io</div>
       </section>

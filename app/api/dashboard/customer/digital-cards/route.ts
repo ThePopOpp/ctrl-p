@@ -6,6 +6,11 @@ import { getServerSupabaseConfig, jsonError, serverEnv } from "@/lib/admin/serve
 const LINK_TYPES = new Set(["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"]);
 const STATUSES = new Set(["draft", "published", "unpublished"]);
 const SECTION_TYPES = new Set(["profile_header", "quick_actions", "links", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"]);
+const CARD_MODES = new Set(["standard", "opener_slider", "qr_only", "nfc_landing"]);
+const THEME_MODES = new Set(["light", "dark", "both"]);
+const LAYOUT_TEMPLATES = new Set(["classic", "split_profile", "link_hub", "sales_intro", "portfolio", "appointment_first"]);
+const QR_CORNER_STYLES = new Set(["square", "rounded", "extra_rounded", "dot"]);
+const QR_DOT_STYLES = new Set(["square", "rounded", "dots", "classy"]);
 
 type DigitalCardLinkBody = {
   id?: string;
@@ -55,6 +60,17 @@ type DigitalCardBody = {
   background_color?: string;
   accent_color?: string;
   text_color?: string;
+  card_mode?: string;
+  theme_mode?: string;
+  layout_template?: string;
+  qr_logo_url?: string;
+  qr_corner_style?: string;
+  qr_dot_style?: string;
+  lead_form_settings?: Record<string, unknown>;
+  slider_pages?: Record<string, unknown>[];
+  media_settings?: Record<string, unknown>;
+  subscription_provider?: string;
+  subscription_reference?: string;
   button_style?: string;
   layout_style?: string;
   primary_phone?: string;
@@ -301,6 +317,17 @@ export async function POST(request: Request) {
     background_color: clean(body.background_color) || "#07130b",
     accent_color: clean(body.accent_color) || "#a3ff12",
     text_color: clean(body.text_color) || "#f7fff2",
+    card_mode: CARD_MODES.has(clean(body.card_mode)) ? clean(body.card_mode) : "standard",
+    theme_mode: THEME_MODES.has(clean(body.theme_mode)) ? clean(body.theme_mode) : "dark",
+    layout_template: LAYOUT_TEMPLATES.has(clean(body.layout_template)) ? clean(body.layout_template) : "classic",
+    qr_logo_url: safeUrl(body.qr_logo_url),
+    qr_corner_style: QR_CORNER_STYLES.has(clean(body.qr_corner_style)) ? clean(body.qr_corner_style) : "square",
+    qr_dot_style: QR_DOT_STYLES.has(clean(body.qr_dot_style)) ? clean(body.qr_dot_style) : "square",
+    lead_form_settings: body.lead_form_settings && typeof body.lead_form_settings === "object" ? body.lead_form_settings : {},
+    slider_pages: Array.isArray(body.slider_pages) ? body.slider_pages : [],
+    media_settings: body.media_settings && typeof body.media_settings === "object" ? body.media_settings : {},
+    subscription_provider: nullable(body.subscription_provider),
+    subscription_reference: nullable(body.subscription_reference),
     button_style: clean(body.button_style) || "rounded",
     layout_style: clean(body.layout_style) || "stacked",
     primary_phone: nullable(body.primary_phone || verified.profile.phone),

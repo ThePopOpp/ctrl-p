@@ -10,6 +10,9 @@ type ActionProps = {
   publicUrl: string;
 };
 
+type LeadField = { key: string; label: string; enabled: boolean; required: boolean };
+type LeadFormSettings = { enabled?: boolean; title?: string; description?: string; submit_label?: string; fields?: LeadField[] };
+
 async function track(cardId: string, eventType: string, metadata?: Record<string, unknown>) {
   await fetch("/api/digital-cards/events", {
     method: "POST",
@@ -72,9 +75,24 @@ export function PublicCardActions({ cardId, slug, publicUrl }: ActionProps) {
   );
 }
 
-export function PublicLeadCapture({ cardId, slug, accent }: ActionProps & { accent: string }) {
+export function PublicLeadCapture({ cardId, slug, accent, settings }: ActionProps & { accent: string; settings?: LeadFormSettings | null }) {
+  const leadSettings = {
+    enabled: true,
+    title: "Send me your info",
+    description: "Share your contact details and I'll follow up.",
+    submit_label: "Send info",
+    fields: [
+      { key: "name", label: "Name", enabled: true, required: false },
+      { key: "email", label: "Email", enabled: true, required: false },
+      { key: "phone", label: "Phone", enabled: true, required: false },
+      { key: "company", label: "Company", enabled: false, required: false },
+      { key: "message", label: "Message", enabled: true, required: false },
+    ],
+    ...(settings || {}),
+  };
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "" });
   const [state, setState] = useState<"idle" | "saving" | "sent" | "error">("idle");
+  if (leadSettings.enabled === false) return null;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,16 +108,17 @@ export function PublicLeadCapture({ cardId, slug, accent }: ActionProps & { acce
 
   return (
     <form onSubmit={submit} className="mt-4 rounded-2xl border border-white/15 bg-white/10 p-4">
-      <div className="font-semibold">Send me your info</div>
-      <div className="mt-1 text-xs opacity-70">Share your contact details and I&apos;ll follow up.</div>
+      <div className="font-semibold">{leadSettings.title}</div>
+      {leadSettings.description && <div className="mt-1 text-xs opacity-70">{leadSettings.description}</div>}
       <div className="mt-3 grid gap-2">
-        <input className="rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none placeholder:text-current/45" placeholder="Name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-        <input className="rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none placeholder:text-current/45" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
-        <input className="rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none placeholder:text-current/45" placeholder="Phone" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
-        <textarea className="min-h-20 rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none placeholder:text-current/45" placeholder="Message" value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} />
+        {leadSettings.fields?.filter((field) => field.enabled).map((field) => field.key === "message" ? (
+          <textarea key={field.key} required={field.required} className="min-h-20 rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none placeholder:text-current/45" placeholder={field.label} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} />
+        ) : (
+          <input key={field.key} required={field.required} className="rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none placeholder:text-current/45" placeholder={field.label} value={String(form[field.key as keyof typeof form] || "")} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} />
+        ))}
       </div>
       <button disabled={state === "saving"} className="mt-3 w-full rounded-xl px-4 py-2 text-sm font-semibold text-black disabled:opacity-60" style={{ background: accent }}>
-        {state === "saving" ? "Sending..." : "Send info"}
+        {state === "saving" ? "Sending..." : leadSettings.submit_label}
       </button>
       {state === "sent" && <div className="mt-2 text-xs opacity-80">Sent. Thank you.</div>}
       {state === "error" && <div className="mt-2 text-xs text-red-200">Could not send. Try again.</div>}

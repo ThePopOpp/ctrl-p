@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -67,6 +67,17 @@ type DigitalCard = {
   maps_url?: string | null;
   intro_video_url?: string | null;
   qr_settings: { foreground?: string; background?: string; size?: number };
+  card_mode?: string | null;
+  theme_mode?: string | null;
+  layout_template?: string | null;
+  qr_logo_url?: string | null;
+  qr_corner_style?: string | null;
+  qr_dot_style?: string | null;
+  lead_form_settings?: LeadFormSettings | null;
+  slider_pages?: SliderPage[];
+  media_settings?: Record<string, unknown> | null;
+  subscription_provider?: string | null;
+  subscription_reference?: string | null;
   nfc_status?: string | null;
   access_status?: string | null;
   access_plan?: string | null;
@@ -101,16 +112,21 @@ const previewModes = [
   { value: "desktop", label: "Desktop", width: 920, icon: Monitor },
 ] as const;
 type PreviewMode = typeof previewModes[number]["value"];
-type BuilderPanel = "card" | "sections" | "content" | "links" | "visuals" | "opener" | "access";
+type BuilderPanel = "card" | "sections" | "content" | "links" | "forms" | "visuals" | "opener" | "access";
 const builderPanels: { value: BuilderPanel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: "card", label: "Product", icon: IdCard },
   { value: "sections", label: "Sections", icon: Layers },
   { value: "content", label: "Content", icon: FileCheck2 },
   { value: "links", label: "Links", icon: LinkIcon },
+  { value: "forms", label: "Leads", icon: FormInput },
   { value: "visuals", label: "Visuals", icon: Palette },
   { value: "opener", label: "Opener", icon: PlayCircle },
   { value: "access", label: "Access", icon: Settings },
 ];
+const cardModes = ["standard", "opener_slider", "qr_only", "nfc_landing"];
+const layoutTemplates = ["classic", "split_profile", "link_hub", "sales_intro", "portfolio", "appointment_first"];
+const qrCornerStyles = ["square", "rounded", "extra_rounded", "dot"];
+const qrDotStyles = ["square", "rounded", "dots", "classy"];
 const digitalProductOptions = [
   { title: "Digital Business Card", subtitle: "Public profile, links, QR code, and NFC-ready URL", panel: "content" as BuilderPanel },
   { title: "Opener / Slider Card", subtitle: "Animated intro, video spot, buttons, then card reveal", panel: "opener" as BuilderPanel },
@@ -143,6 +159,9 @@ type OpenerContent = {
   close_animation?: string;
   buttons?: OpenerButton[];
 };
+type LeadField = { key: string; label: string; enabled: boolean; required: boolean };
+type LeadFormSettings = { enabled: boolean; title: string; description?: string; submit_label?: string; fields: LeadField[] };
+type SliderPage = { title: string; subtitle?: string; media_url?: string; button_label?: string; button_url?: string };
 
 function human(value: string | null | undefined) {
   return String(value || "none").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -168,9 +187,34 @@ function emptyCard(profile?: CardData["profile"]): DigitalCard {
     background_color: "#07130b",
     accent_color: "#a3ff12",
     text_color: "#f7fff2",
+    card_mode: "standard",
+    theme_mode: "dark",
+    layout_template: "classic",
+    qr_logo_url: "",
+    qr_corner_style: "square",
+    qr_dot_style: "square",
+    lead_form_settings: defaultLeadFormSettings(),
+    slider_pages: [],
+    media_settings: {},
     qr_settings: { foreground: "#07130b", background: "#ffffff", size: 512 },
     digital_card_links: [],
     digital_card_sections: defaultSections(),
+  };
+}
+
+function defaultLeadFormSettings(): LeadFormSettings {
+  return {
+    enabled: true,
+    title: "Send me your info",
+    description: "Share your contact details and I will follow up.",
+    submit_label: "Send info",
+    fields: [
+      { key: "name", label: "Name", enabled: true, required: false },
+      { key: "email", label: "Email", enabled: true, required: false },
+      { key: "phone", label: "Phone", enabled: true, required: false },
+      { key: "company", label: "Company", enabled: false, required: false },
+      { key: "message", label: "Message", enabled: true, required: false },
+    ],
   };
 }
 
@@ -435,6 +479,36 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
     });
   }
 
+  function leadSettings() {
+    return { ...defaultLeadFormSettings(), ...(form.lead_form_settings || {}), fields: (form.lead_form_settings?.fields?.length ? form.lead_form_settings.fields : defaultLeadFormSettings().fields) };
+  }
+
+  function updateLeadSettings(patch: Partial<LeadFormSettings>) {
+    update("lead_form_settings", { ...leadSettings(), ...patch });
+  }
+
+  function updateLeadField(index: number, patch: Partial<LeadField>) {
+    const settings = leadSettings();
+    const fields = [...settings.fields];
+    fields[index] = { ...fields[index], ...patch };
+    updateLeadSettings({ fields });
+  }
+
+  function addSliderPage() {
+    update("slider_pages", [...(form.slider_pages || []), { title: "New slide", subtitle: "", media_url: "", button_label: "", button_url: "" }]);
+    update("card_mode", "opener_slider");
+  }
+
+  function updateSliderPage(index: number, patch: Partial<SliderPage>) {
+    const pages = [...(form.slider_pages || [])];
+    pages[index] = { ...pages[index], ...patch };
+    update("slider_pages", pages);
+  }
+
+  function removeSliderPage(index: number) {
+    update("slider_pages", (form.slider_pages || []).filter((_, itemIndex) => itemIndex !== index));
+  }
+
   async function save(nextForm = form) {
     setSaving(true);
     setMessage("");
@@ -552,6 +626,9 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     <Field label="Card name" value={form.card_name} onChange={(value) => update("card_name", value)} />
                     <Field label="Slug" value={form.slug} onChange={(value) => update("slug", slugify(value))} />
                     <SelectField label="Status" value={form.status} values={["draft", "published", "unpublished"]} onChange={(value) => { update("status", value); update("is_public", value === "published"); }} />
+                    <SelectField label="Card page mode" value={form.card_mode || "standard"} values={cardModes} onChange={(value) => update("card_mode", value)} />
+                    <SelectField label="Light / dark mode" value={form.theme_mode || "dark"} values={["light", "dark", "both"]} onChange={(value) => update("theme_mode", value)} />
+                    <SelectField label="Layout template" value={form.layout_template || "classic"} values={layoutTemplates} onChange={(value) => update("layout_template", value)} />
                   </div>
                   <div className="rounded-lg border bg-background/35 p-3">
                     <div className="text-xs font-medium text-muted-foreground">Public URL</div>
@@ -687,6 +764,33 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 </CardContent>
               </Card>}
 
+              {activePanel === "forms" && <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base"><FormInput className="h-4 w-4" /> Lead Generation Form Builder</CardTitle>
+                  <CardDescription>Choose fields visitors can submit from the public card. More drag-and-drop field types can plug into this structure later.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-[160px_1fr]">
+                    <SelectField label="Lead form" value={leadSettings().enabled ? "enabled" : "disabled"} values={["enabled", "disabled"]} onChange={(value) => updateLeadSettings({ enabled: value === "enabled" })} />
+                    <Field label="Form title" value={leadSettings().title} onChange={(value) => updateLeadSettings({ title: value })} />
+                    <div className="md:col-span-2"><Field label="Description" value={leadSettings().description || ""} onChange={(value) => updateLeadSettings({ description: value })} /></div>
+                    <Field label="Submit button" value={leadSettings().submit_label || "Send info"} onChange={(value) => updateLeadSettings({ submit_label: value })} />
+                  </div>
+                  <div className="space-y-2">
+                    {leadSettings().fields.map((field, index) => (
+                      <div key={field.key} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-[1fr_120px_120px]">
+                        <Field label="Field label" value={field.label} onChange={(value) => updateLeadField(index, { label: value })} />
+                        <SelectField label="Shown" value={field.enabled ? "yes" : "no"} values={["yes", "no"]} onChange={(value) => updateLeadField(index, { enabled: value === "yes" })} />
+                        <SelectField label="Required" value={field.required ? "yes" : "no"} values={["no", "yes"]} onChange={(value) => updateLeadField(index, { required: value === "yes" })} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-lg border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
+                    Coming next: drag-and-drop field palette, custom fields, hidden fields, tags, lead routing, and Square/customer automation triggers.
+                  </div>
+                </CardContent>
+              </Card>}
+
               {activePanel === "visuals" && <Card>
                 <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Palette className="h-4 w-4" /> Visuals and QR</CardTitle><CardDescription>Pick brand colors, add media URLs, and style the QR code.</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
@@ -713,12 +817,17 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
                     <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
                     <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />
+                    <Field label="Background video URL" value={String((form.media_settings?.background_video_url as string) || "")} onChange={(value) => update("media_settings", { ...(form.media_settings || {}), background_video_url: value })} />
+                    <Field label="QR logo center URL" value={form.qr_logo_url || ""} onChange={(value) => update("qr_logo_url", value)} />
                     <ColorField label="Background color" value={form.background_color} onChange={(value) => update("background_color", value)} />
                     <ColorField label="Accent color" value={form.accent_color} onChange={(value) => update("accent_color", value)} />
                     <ColorField label="Text color" value={form.text_color} onChange={(value) => update("text_color", value)} />
                     <ColorField label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} />
                     <ColorField label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} />
+                    <SelectField label="QR corner style" value={form.qr_corner_style || "square"} values={qrCornerStyles} onChange={(value) => update("qr_corner_style", value)} />
+                    <SelectField label="QR dot style" value={form.qr_dot_style || "square"} values={qrDotStyles} onChange={(value) => update("qr_dot_style", value)} />
                     <Button className="self-end" variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download QR PNG</a></Button>
+                    <Button className="self-end" variant="outline" asChild><a href={`${qrUrl(publicUrl, form)}&format=svg`} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /> Open QR SVG</a></Button>
                   </div>
                   <div className="rounded-lg border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
                     Background gradients, video backgrounds, and full QR designer controls are queued for the next data-model slice. Image URLs and color presets work now.
@@ -728,11 +837,30 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
 
               {activePanel === "opener" && <OpenerPanel content={getOpenerContent()} primaryPhone={form.primary_phone || ""} onChange={updateOpenerContent} />}
 
+              {activePanel === "opener" && <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Multi-page slider cards</CardTitle><CardDescription>Add intro, services, gallery, testimonials, and contact slides for opener/slider card mode.</CardDescription></CardHeader>
+                <CardContent className="space-y-3">
+                  {(form.slider_pages || []).map((page, index) => (
+                    <div key={index} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-2">
+                      <Field label="Slide title" value={page.title} onChange={(value) => updateSliderPage(index, { title: value })} />
+                      <Field label="Media URL" value={page.media_url || ""} onChange={(value) => updateSliderPage(index, { media_url: value })} />
+                      <Field label="Subtitle" value={page.subtitle || ""} onChange={(value) => updateSliderPage(index, { subtitle: value })} />
+                      <Field label="Button label" value={page.button_label || ""} onChange={(value) => updateSliderPage(index, { button_label: value })} />
+                      <Field label="Button URL" value={page.button_url || ""} onChange={(value) => updateSliderPage(index, { button_url: value })} />
+                      <Button className="self-end" variant="outline" onClick={() => removeSliderPage(index)}><Trash2 className="h-4 w-4" /> Remove slide</Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" onClick={addSliderPage}><Plus className="h-4 w-4" /> Add slide</Button>
+                </CardContent>
+              </Card>}
+
               {activePanel === "access" && <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base">Product and access prep</CardTitle><CardDescription>Future-ready hooks for monthly access, NFC products, bundles, and linked customer orders.</CardDescription></CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-3">
                   <SelectField label="Access status" value={form.access_status || "trial"} values={["trial", "active", "past_due", "paused", "expired", "none"]} onChange={(value) => update("access_status", value)} />
                   <Field label="Access plan" value={form.access_plan || ""} onChange={(value) => update("access_plan", value)} />
+                  <SelectField label="Subscription provider" value={form.subscription_provider || "none"} values={["none", "square", "stripe", "manual"]} onChange={(value) => update("subscription_provider", value === "none" ? "" : value)} />
+                  <Field label="Subscription reference" value={form.subscription_reference || ""} onChange={(value) => update("subscription_reference", value)} />
                   <SelectField label="NFC status" value={form.nfc_status || "not_ordered"} values={["not_ordered", "ordered", "assigned", "programmed", "shipped"]} onChange={(value) => update("nfc_status", value)} />
                   <div className="md:col-span-3 rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">
                     Products ready for future bundles: {(data?.products || []).map((product) => product.name).join(", ") || "NFC cards, QR stickers, ID badges, and other managed products."}
@@ -1045,7 +1173,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
 }
 
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return <div><div className="mb-1.5 text-[11px] font-medium text-muted-foreground">{label}</div><Input type="number" min={0} max={240} value={value} onChange={(event) => onChange(Math.max(0, Math.min(240, Number(event.target.value || 0))))} /></div>;
+  return <div><div className="mb-1.5 text-[11px] font-medium text-muted-foreground">{label}</div><Input type="number" min={0} max={240} value={value} onChange={(event) => onChange(Math.max(0, Math.min(240, Number(event.target.value || 0))))} className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /></div>;
 }
 
 function SpacingGroup({ title, section, prefix, onChange }: { title: string; section: DigitalCardSection; prefix: "margin" | "padding"; onChange: (patch: Partial<DigitalCardSection>) => void }) {
