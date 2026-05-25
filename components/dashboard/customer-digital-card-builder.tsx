@@ -215,7 +215,7 @@ function themeSettings(card: DigitalCard): CardThemeSettings {
   };
   const settings = isObject(card.media_settings?.theme_settings) ? card.media_settings.theme_settings : {};
   return {
-    sync_accent: typeof settings.sync_accent === "boolean" ? settings.sync_accent : true,
+    sync_accent: typeof settings.sync_accent === "boolean" ? settings.sync_accent : false,
     dark: safeThemePalette(settings.dark, fallbackDark),
     light: safeThemePalette(settings.light, fallbackLight),
   };
@@ -450,7 +450,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
         ...currentSettings,
         [mode]: { ...currentSettings[mode], ...patch },
       };
-      if (currentSettings.sync_accent && patch.accent) {
+      if (currentSettings.sync_accent && patch.accent && mode === "dark") {
         nextSettings.dark = { ...nextSettings.dark, accent: patch.accent };
         nextSettings.light = { ...nextSettings.light, accent: patch.accent };
       }
@@ -906,6 +906,20 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
               </Card>
 
               <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Media</CardTitle>
+                  <CardDescription>Add profile, logo, background, and intro media for this card.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-2">
+                  <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
+                  <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
+                  <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />
+                  <Field label="Background video URL" value={String((form.media_settings?.background_video_url as string) || "")} onChange={(value) => update("media_settings", { ...(form.media_settings || {}), background_video_url: value })} />
+                  <Field label="Intro video URL" value={form.intro_video_url || ""} onChange={(value) => update("intro_video_url", value)} />
+                </CardContent>
+              </Card>
+
+              <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base">Primary contact fields</CardTitle><CardDescription>These are pinned quick actions. Add more numbers, emails, websites, and socials below.</CardDescription></CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-3">
                   <Field label="Primary phone" value={form.primary_phone || ""} onChange={(value) => update("primary_phone", value)} />
@@ -913,7 +927,6 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   <Field label="Primary email" value={form.primary_email || ""} onChange={(value) => update("primary_email", value)} />
                   <Field label="Website" value={form.website_url || ""} onChange={(value) => update("website_url", value)} />
                   <Field label="Maps URL" value={form.maps_url || ""} onChange={(value) => update("maps_url", value)} />
-                  <Field label="Intro video URL" value={form.intro_video_url || ""} onChange={(value) => update("intro_video_url", value)} />
                 </CardContent>
               </Card></div>}
 
@@ -976,10 +989,6 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     <SelectField label="Light / dark mode" value={form.theme_mode || "dark"} values={["light", "dark", "both"]} onChange={(value) => update("theme_mode", value)} />
                     <SelectField label="Preview color mode" value={previewThemeMode} values={["dark", "light"]} onChange={(value) => setPreviewThemeMode(value as CardThemeMode)} />
                     <SelectField label="Sync accent color" value={cardThemeSettings.sync_accent ? "yes" : "no"} values={["yes", "no"]} onChange={(value) => updateThemeSync(value === "yes")} />
-                    <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
-                    <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
-                    <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />
-                    <Field label="Background video URL" value={String((form.media_settings?.background_video_url as string) || "")} onChange={(value) => update("media_settings", { ...(form.media_settings || {}), background_video_url: value })} />
                     <Field label="QR logo center URL" value={form.qr_logo_url || ""} onChange={(value) => update("qr_logo_url", value)} />
                   </div>
                   <div className="grid gap-3 xl:grid-cols-2">
@@ -1009,7 +1018,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     <Button className="self-end" variant="outline" asChild><a href={`${qrUrl(publicUrl, form)}&format=svg`} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /> Open QR SVG</a></Button>
                   </div>
                   <div className="rounded-lg border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
-                    Background gradients, video backgrounds, and full QR designer controls are queued for the next data-model slice. Image URLs and color presets work now.
+                    Use Content for profile/logo/background media. Visuals controls color modes, QR colors, and reusable theme presets.
                   </div>
                 </CardContent>
               </Card>}
