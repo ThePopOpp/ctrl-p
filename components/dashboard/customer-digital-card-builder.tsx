@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, Plus, QrCode, Save, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -99,6 +99,25 @@ const previewModes = [
   { value: "tablet", label: "Tablet", width: 620, icon: Tablet },
   { value: "desktop", label: "Desktop", width: 920, icon: Monitor },
 ] as const;
+type PreviewMode = typeof previewModes[number]["value"];
+type BuilderPanel = "card" | "sections" | "content" | "links" | "visuals" | "opener" | "access";
+const builderPanels: { value: BuilderPanel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { value: "card", label: "Product", icon: IdCard },
+  { value: "sections", label: "Sections", icon: Layers },
+  { value: "content", label: "Content", icon: FileCheck2 },
+  { value: "links", label: "Links", icon: LinkIcon },
+  { value: "visuals", label: "Visuals", icon: Palette },
+  { value: "opener", label: "Opener", icon: PlayCircle },
+  { value: "access", label: "Access", icon: Settings },
+];
+const digitalProductOptions = [
+  { title: "Digital Business Card", subtitle: "Public profile, links, QR code, and NFC-ready URL", panel: "content" as BuilderPanel },
+  { title: "Opener / Slider Card", subtitle: "Animated intro, video spot, buttons, then card reveal", panel: "opener" as BuilderPanel },
+  { title: "NFC Tap Card", subtitle: "Tap-to-share destination and physical product prep", panel: "access" as BuilderPanel },
+  { title: "QR Code Card", subtitle: "QR-first landing card with custom colors", panel: "visuals" as BuilderPanel },
+  { title: "Loyalty / Punch Card", subtitle: "Future rewards and stamp card sections", panel: "sections" as BuilderPanel },
+  { title: "Scratch Card", subtitle: "Future reveal interaction layer", panel: "sections" as BuilderPanel },
+];
 const colorPresets = [
   { label: "ControlP Dark", background: "#07130b", accent: "#a3ff12", text: "#f7fff2" },
   { label: "Clean Light", background: "#f7fff2", accent: "#4d7c0f", text: "#07130b" },
@@ -108,7 +127,21 @@ const colorPresets = [
   { label: "Copper", background: "#3b1f12", accent: "#f59e0b", text: "#fff7ed" },
 ];
 
-type PreviewMode = typeof previewModes[number]["value"];
+type OpenerButton = { label: string; action: "open_card" | "call" | "sms" | "email" | "url"; url?: string };
+type OpenerContent = {
+  digital_product?: string;
+  title?: string;
+  subtitle?: string;
+  background_color?: string;
+  accent_color?: string;
+  text_color?: string;
+  background_image_url?: string;
+  background_video_url?: string;
+  duration_seconds?: number;
+  open_animation?: string;
+  close_animation?: string;
+  buttons?: OpenerButton[];
+};
 
 function human(value: string | null | undefined) {
   return String(value || "none").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -219,6 +252,26 @@ function newLink(type: string): DigitalCardLink {
   return { ...preset, link_type: type, display_order: 100, is_visible: true, open_in_new_tab: true };
 }
 
+function defaultOpenerContent(): OpenerContent {
+  return {
+    digital_product: "opener",
+    title: "Welcome",
+    subtitle: "Tap to view my digital business card.",
+    background_color: "#07130b",
+    accent_color: "#a3ff12",
+    text_color: "#f7fff2",
+    background_image_url: "",
+    background_video_url: "",
+    duration_seconds: 7,
+    open_animation: "fade_up",
+    close_animation: "fade_out",
+    buttons: [
+      { label: "View card", action: "open_card" },
+      { label: "Call me", action: "call" },
+    ],
+  };
+}
+
 export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
   const router = useRouter();
   const [data, setData] = useState<CardData | null>(null);
@@ -228,6 +281,8 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
   const [message, setMessage] = useState("");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [activePanel, setActivePanel] = useState<BuilderPanel>("card");
+  const [previewZoom, setPreviewZoom] = useState(100);
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>(["profile_header-0"]);
   const [expandedSpacingKeys, setExpandedSpacingKeys] = useState<string[]>([]);
   const [dragSectionIndex, setDragSectionIndex] = useState<number | null>(null);
@@ -338,6 +393,47 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
     setter((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   }
 
+  function findOpenerSection(sections = normalizeSections(form.digital_card_sections)) {
+    return sections.findIndex((section) => section.section_type === "gallery" && (section.content?.digital_product === "opener" || section.label.toLowerCase().includes("opener")));
+  }
+
+  function ensureOpenerSection() {
+    setForm((current) => {
+      const sections = normalizeSections(current.digital_card_sections);
+      if (findOpenerSection(sections) >= 0) return current;
+      return {
+        ...current,
+        digital_card_sections: normalizeSections([
+          newSection("gallery", "Opener / slider", 1, {
+            margin_bottom: 20,
+            content: defaultOpenerContent(),
+          }),
+          ...sections.map((section, index) => ({ ...section, display_order: index + 2 })),
+        ]),
+      };
+    });
+  }
+
+  function getOpenerContent(): OpenerContent {
+    const sections = normalizeSections(form.digital_card_sections);
+    const section = sections[findOpenerSection(sections)];
+    return { ...defaultOpenerContent(), ...(section?.content || {}) } as OpenerContent;
+  }
+
+  function updateOpenerContent(patch: Partial<OpenerContent>) {
+    setForm((current) => {
+      const sections = normalizeSections(current.digital_card_sections);
+      let index = findOpenerSection(sections);
+      if (index < 0) {
+        sections.unshift(newSection("gallery", "Opener / slider", 1, { margin_bottom: 20, content: defaultOpenerContent() }));
+        index = 0;
+      }
+      const content = { ...defaultOpenerContent(), ...(sections[index].content || {}), ...patch };
+      sections[index] = { ...sections[index], content, is_visible: true, label: sections[index].label || "Opener / slider" };
+      return { ...current, digital_card_sections: normalizeSections(sections) };
+    });
+  }
+
   async function save(nextForm = form) {
     setSaving(true);
     setMessage("");
@@ -439,9 +535,16 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
         {state === "missing" && <Card><CardContent className="p-5 text-sm text-muted-foreground">This digital card could not be found for your account.</CardContent></Card>}
 
         {state === "ready" && (
-          <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.95fr)]">
-            <section className="space-y-5">
-              <Card>
+          <div className="grid overflow-hidden rounded-xl border bg-card/60 xl:grid-cols-[86px_minmax(360px,520px)_minmax(0,1fr)]">
+            <BuilderToolRail active={activePanel} onChange={setActivePanel} />
+            <section className="max-h-[calc(100vh-9rem)] overflow-y-auto border-r bg-background/45 p-4">
+              {activePanel === "card" && (
+                <div className="space-y-4">
+                  <ProductChooser onSelect={(panel) => {
+                    setActivePanel(panel);
+                    if (panel === "opener") ensureOpenerSection();
+                  }} />
+                  <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base">Card details</CardTitle><CardDescription>Name, status, public URL, and publish controls.</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-3 md:grid-cols-3">
@@ -455,9 +558,11 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     {form.status !== "published" || !form.is_public ? <div className="mt-2 text-xs text-muted-foreground">This URL goes live after you choose Published or click Publish & save.</div> : null}
                   </div>
                 </CardContent>
-              </Card>
+                  </Card>
+                </div>
+              )}
 
-              <Card>
+              {activePanel === "sections" && <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -533,9 +638,9 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     );
                   })}
                 </CardContent>
-              </Card>
+              </Card>}
 
-              <Card>
+              {activePanel === "content" && <div className="space-y-4"><Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base">Identity</CardTitle><CardDescription>The primary profile content shown at the top of the card.</CardDescription></CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-2">
                   <Field label="Display name" value={form.display_name || ""} onChange={(value) => update("display_name", value)} />
@@ -556,9 +661,9 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   <Field label="Maps URL" value={form.maps_url || ""} onChange={(value) => update("maps_url", value)} />
                   <Field label="Intro video URL" value={form.intro_video_url || ""} onChange={(value) => update("intro_video_url", value)} />
                 </CardContent>
-              </Card>
+              </Card></div>}
 
-              <Card>
+              {activePanel === "links" && <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Repeatable links and contact methods</CardTitle>
                   <CardDescription>Add unlimited phone numbers, emails, websites, social media profiles, payment links, files, bookings, and custom buttons.</CardDescription>
@@ -579,9 +684,9 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   ))}
                   {!form.digital_card_links?.length && <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">No repeatable links yet. Add a phone, email, website, social profile, or custom action.</div>}
                 </CardContent>
-              </Card>
+              </Card>}
 
-              <Card>
+              {activePanel === "visuals" && <Card>
                 <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Palette className="h-4 w-4" /> Visuals and QR</CardTitle><CardDescription>Pick brand colors, add media URLs, and style the QR code.</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -618,9 +723,11 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     Background gradients, video backgrounds, and full QR designer controls are queued for the next data-model slice. Image URLs and color presets work now.
                   </div>
                 </CardContent>
-              </Card>
+              </Card>}
 
-              <Card>
+              {activePanel === "opener" && <OpenerPanel content={getOpenerContent()} primaryPhone={form.primary_phone || ""} onChange={updateOpenerContent} />}
+
+              {activePanel === "access" && <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base">Product and access prep</CardTitle><CardDescription>Future-ready hooks for monthly access, NFC products, bundles, and linked customer orders.</CardDescription></CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-3">
                   <SelectField label="Access status" value={form.access_status || "trial"} values={["trial", "active", "past_due", "paused", "expired", "none"]} onChange={(value) => update("access_status", value)} />
@@ -630,10 +737,10 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     Products ready for future bundles: {(data?.products || []).map((product) => product.name).join(", ") || "NFC cards, QR stickers, ID badges, and other managed products."}
                   </div>
                 </CardContent>
-              </Card>
+              </Card>}
             </section>
 
-            <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} />
+            <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} zoom={previewZoom} onZoomChange={setPreviewZoom} />
           </div>
         )}
       </main>
@@ -641,13 +748,110 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
   );
 }
 
-function LivePreview({ card, publicUrl, mode, onModeChange }: { card: DigitalCard; publicUrl: string; mode: PreviewMode; onModeChange: (mode: PreviewMode) => void }) {
+function BuilderToolRail({ active, onChange }: { active: BuilderPanel; onChange: (panel: BuilderPanel) => void }) {
+  return (
+    <nav className="flex flex-row gap-1 overflow-x-auto border-b bg-card p-2 xl:flex-col xl:overflow-visible xl:border-b-0 xl:border-r">
+      {builderPanels.map(({ value, label, icon: Icon }) => (
+        <button
+          key={value}
+          type="button"
+          className={cn("flex min-w-[72px] flex-col items-center justify-center gap-1 rounded-lg px-2 py-3 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground", active === value && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground")}
+          onClick={() => onChange(value)}
+        >
+          <Icon className="h-5 w-5" />
+          <span>{label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function ProductChooser({ onSelect }: { onSelect: (panel: BuilderPanel) => void }) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Choose a Digital Product</CardTitle>
+        <CardDescription>Select what you would like to customize.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {digitalProductOptions.map((product) => (
+          <button
+            key={product.title}
+            type="button"
+            className="flex w-full items-center justify-between gap-3 rounded-lg border bg-background/35 p-3 text-left transition-colors hover:border-primary/70 hover:bg-primary/5"
+            onClick={() => onSelect(product.panel)}
+          >
+            <span>
+              <span className="block font-semibold">{product.title}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">{product.subtitle}</span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </button>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function OpenerPanel({ content, primaryPhone, onChange }: { content: OpenerContent; primaryPhone: string; onChange: (patch: Partial<OpenerContent>) => void }) {
+  const buttons = (content.buttons || []).slice(0, 2);
+
+  function updateButton(index: number, patch: Partial<OpenerButton>) {
+    const next = [...buttons];
+    next[index] = { ...(next[index] || { label: "Button", action: "open_card" as const }), ...patch };
+    onChange({ buttons: next.slice(0, 2) });
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base"><PlayCircle className="h-4 w-4" /> Opener customizer</CardTitle>
+        <CardDescription>Create a short intro slide before the visitor opens the business card.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3">
+          <Field label="Opener title" value={content.title || ""} onChange={(value) => onChange({ title: value })} />
+          <Field label="Subtitle" value={content.subtitle || ""} onChange={(value) => onChange({ subtitle: value })} />
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <ColorField label="Background" value={content.background_color || "#07130b"} onChange={(value) => onChange({ background_color: value })} />
+          <ColorField label="Accent" value={content.accent_color || "#a3ff12"} onChange={(value) => onChange({ accent_color: value })} />
+          <ColorField label="Text" value={content.text_color || "#f7fff2"} onChange={(value) => onChange({ text_color: value })} />
+        </div>
+        <div className="grid gap-3">
+          <Field label="Background image URL" value={content.background_image_url || ""} onChange={(value) => onChange({ background_image_url: value })} />
+          <Field label="Background video URL" value={content.background_video_url || ""} onChange={(value) => onChange({ background_video_url: value })} />
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <NumberField label="Duration seconds" value={Number(content.duration_seconds || 7)} onChange={(value) => onChange({ duration_seconds: Math.max(1, Math.min(30, value)) })} />
+          <SelectField label="Open animation" value={content.open_animation || "fade_up"} values={["fade_up", "fade_in", "zoom_in", "slide_left", "flip_in"]} onChange={(value) => onChange({ open_animation: value })} />
+          <SelectField label="Close animation" value={content.close_animation || "fade_out"} values={["fade_out", "zoom_out", "slide_up", "slide_left", "flip_out"]} onChange={(value) => onChange({ close_animation: value })} />
+        </div>
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-muted-foreground">Opener buttons, max 2</div>
+          {[0, 1].map((index) => {
+            const button = buttons[index] || { label: index === 0 ? "View card" : "Call me", action: index === 0 ? "open_card" : "call" };
+            return (
+              <div key={index} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-[1fr_160px_1fr]">
+                <Field label={`Button ${index + 1}`} value={button.label || ""} onChange={(value) => updateButton(index, { label: value })} />
+                <SelectField label="Action" value={button.action || "open_card"} values={["open_card", "call", "sms", "email", "url"]} onChange={(value) => updateButton(index, { action: value as OpenerButton["action"] })} />
+                <Field label="URL override" value={button.url || (button.action === "call" ? primaryPhone : "")} onChange={(value) => updateButton(index, { url: value })} />
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LivePreview({ card, publicUrl, mode, onModeChange, zoom, onZoomChange }: { card: DigitalCard; publicUrl: string; mode: PreviewMode; onModeChange: (mode: PreviewMode) => void; zoom: number; onZoomChange: (zoom: number) => void }) {
   const modeInfo = previewModes.find((item) => item.value === mode) || previewModes[0];
   const backgroundImage = card.background_image_url ? `linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)), url(${card.background_image_url})` : undefined;
 
   return (
-    <aside className="2xl:sticky 2xl:top-16 2xl:self-start">
-      <Card>
+    <aside className="min-w-0 bg-background/30 p-4 2xl:sticky 2xl:top-16 2xl:self-start">
+      <Card className="h-full">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div><CardTitle className="text-base">Live responsive preview</CardTitle><CardDescription>Switch between mobile, tablet, and desktop while editing.</CardDescription></div>
@@ -662,9 +866,13 @@ function LivePreview({ card, publicUrl, mode, onModeChange }: { card: DigitalCar
               </button>
             ))}
           </div>
+          <div className="mb-4 grid gap-2 rounded-lg border bg-background/35 p-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Zoom</span><span>{zoom}%</span></div>
+            <Input type="range" min={55} max={130} value={zoom} onChange={(event) => onZoomChange(Number(event.target.value))} />
+          </div>
 
           <div className="overflow-auto rounded-xl border bg-secondary/25 p-4">
-            <div className="mx-auto overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all" style={{ width: modeInfo.width, maxWidth: "100%", minHeight: mode === "mobile" ? 640 : 720, background: card.background_color, color: card.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center" }}>
+            <div className="mx-auto origin-top overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all" style={{ width: modeInfo.width, maxWidth: "100%", minHeight: mode === "mobile" ? 640 : 720, background: card.background_color, color: card.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center", transform: `scale(${zoom / 100})` }}>
               <div className="min-h-[640px] bg-black/20 p-5 backdrop-blur-[1px] md:p-8">
                 <CardSections card={card} publicUrl={publicUrl} mode={mode} />
               </div>
@@ -757,6 +965,20 @@ function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: D
   }
 
   if (section.section_type === "nfc") return <PlaceholderSection label={section.label} text="NFC tap-to-share destination will use this public URL once access is active." />;
+  if (section.section_type === "gallery" && (section.content?.digital_product === "opener" || section.label.toLowerCase().includes("opener"))) {
+    const content = { ...defaultOpenerContent(), ...(section.content || {}) } as OpenerContent;
+    const bg = content.background_image_url ? `linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url(${content.background_image_url})` : undefined;
+    return (
+      <div className="rounded-3xl border border-white/15 p-6 text-center shadow-xl" style={{ background: content.background_color, color: content.text_color, backgroundImage: bg, backgroundSize: "cover", backgroundPosition: "center" }}>
+        <div className="text-[10px] uppercase tracking-[0.25em] opacity-70">{content.open_animation} / {content.close_animation} / {content.duration_seconds}s</div>
+        <div className="mt-6 text-3xl font-semibold leading-tight">{content.title || "Welcome"}</div>
+        <div className="mx-auto mt-3 max-w-xs text-sm opacity-80">{content.subtitle || "Tap to view my digital business card."}</div>
+        <div className="mt-6 grid gap-2 sm:grid-cols-2">
+          {(content.buttons || []).slice(0, 2).map((button, index) => <PreviewPill key={index} label={button.label || "Button"} accent={content.accent_color || card.accent_color} />)}
+        </div>
+      </div>
+    );
+  }
   if (section.section_type === "gallery") return <PlaceholderSection label={section.label} text="Slider/gallery cards will live in this layer." />;
   if (section.section_type === "scratch_card") return <PlaceholderSection label={section.label} text="Scratch-to-reveal interactions will live in this layer." />;
   if (section.section_type === "punch_card") return <PlaceholderSection label={section.label} text="Digital stamp card progress will live in this layer." />;
