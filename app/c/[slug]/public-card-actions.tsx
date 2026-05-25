@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Copy, Heart, Plus, Share2, UserPlus, X } from "lucide-react";
+import { Copy, Heart, Moon, Plus, Share2, Sun, UserPlus, X } from "lucide-react";
 
 type ActionProps = {
   cardId: string;
@@ -24,6 +24,12 @@ type LeadFormSettings = {
   field_background?: string;
   field_text_color?: string;
   fields?: LeadField[];
+};
+
+type PublicThemeToggleProps = {
+  mode?: string | null;
+  dark: { background: string; text: string; accent: string };
+  light: { background: string; text: string; accent: string };
 };
 
 async function track(cardId: string, eventType: string, metadata?: Record<string, unknown>) {
@@ -111,6 +117,35 @@ export function PublicCardActions({ cardId, slug, publicUrl, position = "bottom_
         {open ? <X className="h-5 w-5" /> : <Plus className="h-6 w-6" />}
       </button>
     </div>
+  );
+}
+
+export function PublicThemeToggle({ mode = "dark", dark, light }: PublicThemeToggleProps) {
+  const initialMode = mode === "light" ? "light" : "dark";
+  const [active, setActive] = useState<"dark" | "light">(initialMode);
+  const canToggle = mode === "both";
+
+  function applyTheme(next: "dark" | "light") {
+    const theme = next === "light" ? light : dark;
+    const root = document.getElementById("public-card-page");
+    root?.style.setProperty("--public-bg", theme.background);
+    root?.style.setProperty("--public-text", theme.text);
+    root?.style.setProperty("--public-accent", theme.accent);
+    setActive(next);
+  }
+
+  if (!canToggle) return null;
+
+  return (
+    <button
+      type="button"
+      aria-label={`Switch to ${active === "dark" ? "light" : "dark"} mode`}
+      onClick={() => applyTheme(active === "dark" ? "light" : "dark")}
+      className="grid h-10 w-10 place-items-center rounded-xl border border-white/15 bg-white/10 shadow-lg transition hover:scale-105 hover:bg-white/15"
+      style={{ color: "var(--public-accent)" }}
+    >
+      {active === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+    </button>
   );
 }
 

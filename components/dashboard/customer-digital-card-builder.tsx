@@ -684,7 +684,6 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     <Field label="Slug" value={form.slug} onChange={(value) => update("slug", slugify(value))} />
                     <SelectField label="Status" value={form.status} values={["draft", "published", "unpublished"]} onChange={(value) => { update("status", value); update("is_public", value === "published"); }} />
                     <SelectField label="Card page mode" value={form.card_mode || "standard"} values={cardModes} onChange={(value) => update("card_mode", value)} />
-                    <SelectField label="Light / dark mode" value={form.theme_mode || "dark"} values={["light", "dark", "both"]} onChange={(value) => update("theme_mode", value)} />
                     <SelectField label="Layout template" value={form.layout_template || "classic"} values={layoutTemplates} onChange={(value) => update("layout_template", value)} />
                     <SelectField
                       label="Public action FAB"
@@ -864,6 +863,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     ))}
                   </div>
                   <div className="grid gap-3 md:grid-cols-3">
+                    <SelectField label="Light / dark mode" value={form.theme_mode || "dark"} values={["light", "dark", "both"]} onChange={(value) => update("theme_mode", value)} />
                     <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
                     <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
                     <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />

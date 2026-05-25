@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
+import type { CSSProperties } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { ExternalLink, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
 
 import { getServerSupabaseConfig } from "@/lib/admin/server-auth";
-import { PublicCardActions } from "./public-card-actions";
+import { PublicCardActions, PublicThemeToggle } from "./public-card-actions";
 
 type PublicCardLink = {
   id: string;
@@ -70,6 +71,7 @@ type PublicCard = {
   background_color: string;
   accent_color: string;
   text_color: string;
+  theme_mode?: string | null;
   media_settings?: Record<string, unknown> | null;
   lead_form_settings?: PublicLeadFormSettings | null;
   primary_phone: string | null;
@@ -180,7 +182,7 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
 
   const result = await adminClient
     .from("digital_cards")
-    .select("id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, media_settings, lead_form_settings, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
+    .select("id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, theme_mode, media_settings, lead_form_settings, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
     .eq("slug", slug)
     .eq("status", "published")
     .eq("is_public", true)
@@ -202,14 +204,31 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
   const publicUrl = card.public_url || `https://my.controlp.io/c/${card.slug}`;
   const opener = openerSection(sections);
   const fabPosition = typeof card.media_settings?.public_fab_position === "string" ? card.media_settings.public_fab_position : "bottom_right";
+  const darkTheme = { background: card.background_color, text: card.text_color, accent: card.accent_color };
+  const lightTheme = { background: "#f7fff2", text: "#07130b", accent: card.accent_color || "#4d7c0f" };
+  const initialTheme = card.theme_mode === "light" ? lightTheme : darkTheme;
+  const pageStyle = {
+    "--public-bg": initialTheme.background,
+    "--public-text": initialTheme.text,
+    "--public-accent": initialTheme.accent,
+    background: "var(--public-bg)",
+    color: "var(--public-text)",
+    backgroundImage,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  } as CSSProperties;
+  const themedCard = { ...card, background_color: "var(--public-bg)", accent_color: "var(--public-accent)", text_color: "var(--public-text)" };
 
   return (
-    <main className="min-h-screen px-4 py-6" style={{ background: card.background_color, color: card.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center" }}>
+    <main id="public-card-page" className="min-h-screen px-4 py-6" style={pageStyle}>
       {opener && <PublicOpener section={opener} card={card} publicUrl={publicUrl} />}
-      <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} position={fabPosition} accent={card.accent_color} background={card.background_color} />
+      <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} position={fabPosition} accent="var(--public-accent)" background="var(--public-bg)" />
       <section className="mx-auto max-w-md">
         <div id="card" className="rounded-[2rem] border border-white/15 bg-black/25 p-5 shadow-2xl backdrop-blur">
-          {sections.filter((item) => item.id !== opener?.id).map((item) => <PublicSection key={item.id} section={item} card={card} links={links} publicUrl={publicUrl} />)}
+          {sections.filter((item) => item.id !== opener?.id).map((item) => <PublicSection key={item.id} section={item} card={themedCard} links={links} publicUrl={publicUrl} themeMode={card.theme_mode || "dark"} darkTheme={darkTheme} lightTheme={lightTheme} />)}
+          <div className="mt-5 grid place-items-center text-center">
+            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs opacity-75">Public Digital Card</span>
+          </div>
         </div>
         <div className="mt-5 text-center text-xs opacity-60">Powered by ControlP.io</div>
       </section>
@@ -274,13 +293,29 @@ function IconLink({ href, label, icon, accent }: { href: string; label: string; 
   return <a className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/15 bg-white/10 px-2 py-3 text-xs font-medium" href={href} style={{ color: accent }}>{icon}<span>{label}</span></a>;
 }
 
-function PublicSection({ section, card, links, publicUrl }: { section: PublicCardSection; card: PublicCard; links: PublicCardLink[]; publicUrl: string }) {
+function PublicSection({
+  section,
+  card,
+  links,
+  publicUrl,
+  themeMode,
+  darkTheme,
+  lightTheme,
+}: {
+  section: PublicCardSection;
+  card: PublicCard;
+  links: PublicCardLink[];
+  publicUrl: string;
+  themeMode: string;
+  darkTheme: { background: string; text: string; accent: string };
+  lightTheme: { background: string; text: string; accent: string };
+}) {
   if (section.section_type === "profile_header") {
     return (
       <div style={sectionStyle(section)}>
         <div className="flex items-center justify-between gap-3">
           {card.logo_url ? <img className="max-h-12 max-w-[140px] object-contain" src={card.logo_url} alt={`${card.company_name || card.card_name} logo`} /> : <div className="text-sm font-semibold opacity-75">controlp.io card</div>}
-          <span className="rounded-full border border-white/15 px-3 py-1 text-xs opacity-75">Digital Card</span>
+          <PublicThemeToggle mode={themeMode} dark={darkTheme} light={lightTheme} />
         </div>
 
         <div className="mt-8 text-center">
