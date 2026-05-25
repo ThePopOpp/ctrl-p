@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Copy, Heart, Share2, UserPlus } from "lucide-react";
+import { Copy, Heart, Plus, Share2, UserPlus, X } from "lucide-react";
 
 type ActionProps = {
   cardId: string;
   slug: string;
   publicUrl: string;
+  position?: string;
+  accent?: string;
+  background?: string;
 };
 
 type LeadField = { key: string; label: string; enabled: boolean; required: boolean };
@@ -31,8 +34,16 @@ async function track(cardId: string, eventType: string, metadata?: Record<string
   }).catch(() => null);
 }
 
-export function PublicCardActions({ cardId, slug, publicUrl }: ActionProps) {
+const fabPositions: Record<string, string> = {
+  bottom_right: "bottom-5 right-5 items-end",
+  bottom_left: "bottom-5 left-5 items-start",
+  bottom_center: "bottom-5 left-1/2 -translate-x-1/2 items-center",
+  top_right: "right-5 top-5 items-end",
+};
+
+export function PublicCardActions({ cardId, slug, publicUrl, position = "bottom_right", accent = "#a3ff12", background = "#07130b" }: ActionProps) {
   const [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
 
   async function copyLink() {
     await navigator.clipboard?.writeText(publicUrl);
@@ -60,27 +71,45 @@ export function PublicCardActions({ cardId, slug, publicUrl }: ActionProps) {
     window.location.href = `/api/digital-cards/vcf?slug=${encodeURIComponent(slug)}`;
   }
 
+  const actions = [
+    { label: "Copy", icon: Copy, onClick: copyLink },
+    { label: "Share", icon: Share2, onClick: shareCard },
+    { label: "Save", icon: UserPlus, onClick: saveContact },
+    { label: "Like", icon: Heart, onClick: likeCard },
+  ];
+
   return (
-    <div className="mb-4">
-      <div className="grid grid-cols-4 gap-2">
-        <button type="button" onClick={copyLink} className="grid place-items-center rounded-2xl border border-white/15 bg-white/10 p-3 text-xs font-medium">
-          <Copy className="h-4 w-4" />
-          <span className="mt-1">Copy</span>
-        </button>
-        <button type="button" onClick={shareCard} className="grid place-items-center rounded-2xl border border-white/15 bg-white/10 p-3 text-xs font-medium">
-          <Share2 className="h-4 w-4" />
-          <span className="mt-1">Share</span>
-        </button>
-        <button type="button" onClick={saveContact} className="grid place-items-center rounded-2xl border border-white/15 bg-white/10 p-3 text-xs font-medium">
-          <UserPlus className="h-4 w-4" />
-          <span className="mt-1">Save</span>
-        </button>
-        <button type="button" onClick={likeCard} className="grid place-items-center rounded-2xl border border-white/15 bg-white/10 p-3 text-xs font-medium">
-          <Heart className="h-4 w-4" />
-          <span className="mt-1">Like</span>
-        </button>
-      </div>
-      {message && <div className="mt-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-center text-xs opacity-80">{message}</div>}
+    <div className={`fixed z-40 flex flex-col gap-2 ${fabPositions[position] || fabPositions.bottom_right}`}>
+      {open && (
+        <div className="grid gap-2 rounded-[1.4rem] border border-white/15 bg-black/40 p-2 shadow-2xl backdrop-blur-xl">
+          {actions.map(({ label, icon: Icon, onClick }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={async () => {
+                await onClick();
+                setOpen(false);
+              }}
+              className="flex min-w-28 items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-left text-sm font-semibold shadow-lg transition hover:bg-white/15"
+              style={{ color: accent }}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {message && <div className="rounded-2xl border border-white/15 bg-black/50 px-3 py-2 text-center text-xs shadow-xl backdrop-blur-xl">{message}</div>}
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={open ? "Close card actions" : "Open card actions"}
+        onClick={() => setOpen((value) => !value)}
+        className="grid h-14 w-14 place-items-center rounded-full border border-white/15 text-lg font-semibold shadow-2xl transition hover:scale-105"
+        style={{ background: accent, color: background }}
+      >
+        {open ? <X className="h-5 w-5" /> : <Plus className="h-6 w-6" />}
+      </button>
     </div>
   );
 }

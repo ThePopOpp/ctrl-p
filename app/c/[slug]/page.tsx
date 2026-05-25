@@ -70,6 +70,7 @@ type PublicCard = {
   background_color: string;
   accent_color: string;
   text_color: string;
+  media_settings?: Record<string, unknown> | null;
   lead_form_settings?: PublicLeadFormSettings | null;
   primary_phone: string | null;
   sms_phone: string | null;
@@ -179,7 +180,7 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
 
   const result = await adminClient
     .from("digital_cards")
-    .select("id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, lead_form_settings, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
+    .select("id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, media_settings, lead_form_settings, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
     .eq("slug", slug)
     .eq("status", "published")
     .eq("is_public", true)
@@ -200,13 +201,14 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
   const backgroundImage = card.background_image_url ? `linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)), url(${card.background_image_url})` : undefined;
   const publicUrl = card.public_url || `https://my.controlp.io/c/${card.slug}`;
   const opener = openerSection(sections);
+  const fabPosition = typeof card.media_settings?.public_fab_position === "string" ? card.media_settings.public_fab_position : "bottom_right";
 
   return (
     <main className="min-h-screen px-4 py-6" style={{ background: card.background_color, color: card.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center" }}>
       {opener && <PublicOpener section={opener} card={card} publicUrl={publicUrl} />}
+      <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} position={fabPosition} accent={card.accent_color} background={card.background_color} />
       <section className="mx-auto max-w-md">
         <div id="card" className="rounded-[2rem] border border-white/15 bg-black/25 p-5 shadow-2xl backdrop-blur">
-          <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} />
           {sections.filter((item) => item.id !== opener?.id).map((item) => <PublicSection key={item.id} section={item} card={card} links={links} publicUrl={publicUrl} />)}
         </div>
         <div className="mt-5 text-center text-xs opacity-60">Powered by ControlP.io</div>

@@ -126,6 +126,7 @@ const builderPanels: { value: BuilderPanel; label: string; icon: React.Component
 ];
 const cardModes = ["standard", "opener_slider", "qr_only", "nfc_landing"];
 const layoutTemplates = ["classic", "split_profile", "link_hub", "sales_intro", "portfolio", "appointment_first"];
+const publicFabPositions = ["bottom_right", "bottom_left", "bottom_center", "top_right"];
 const qrCornerStyles = ["square", "rounded", "extra_rounded", "dot"];
 const qrDotStyles = ["square", "rounded", "dots", "classy"];
 const digitalProductOptions = [
@@ -685,6 +686,12 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     <SelectField label="Card page mode" value={form.card_mode || "standard"} values={cardModes} onChange={(value) => update("card_mode", value)} />
                     <SelectField label="Light / dark mode" value={form.theme_mode || "dark"} values={["light", "dark", "both"]} onChange={(value) => update("theme_mode", value)} />
                     <SelectField label="Layout template" value={form.layout_template || "classic"} values={layoutTemplates} onChange={(value) => update("layout_template", value)} />
+                    <SelectField
+                      label="Public action FAB"
+                      value={String(form.media_settings?.public_fab_position || "bottom_right")}
+                      values={publicFabPositions}
+                      onChange={(value) => update("media_settings", { ...(form.media_settings || {}), public_fab_position: value })}
+                    />
                   </div>
                   <div className="rounded-lg border bg-background/35 p-3">
                     <div className="text-xs font-medium text-muted-foreground">Public URL</div>
