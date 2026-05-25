@@ -85,6 +85,39 @@ type PublicCard = {
   digital_card_sections?: PublicCardSection[];
 };
 
+type PublicThemePalette = { background: string; accent: string; text: string };
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function safeThemePalette(value: unknown, fallback: PublicThemePalette): PublicThemePalette {
+  const source = isObject(value) ? value : {};
+  return {
+    background: typeof source.background === "string" && source.background ? source.background : fallback.background,
+    accent: typeof source.accent === "string" && source.accent ? source.accent : fallback.accent,
+    text: typeof source.text === "string" && source.text ? source.text : fallback.text,
+  };
+}
+
+function publicThemeSettings(card: PublicCard) {
+  const settings = isObject(card.media_settings?.theme_settings) ? card.media_settings.theme_settings : {};
+  const darkFallback = {
+    background: card.background_color || "#07130b",
+    accent: card.accent_color || "#a3ff12",
+    text: card.text_color || "#f7fff2",
+  };
+  const lightFallback = {
+    background: "#f7fff2",
+    accent: card.accent_color || "#4d7c0f",
+    text: "#07130b",
+  };
+  return {
+    dark: safeThemePalette(settings.dark, darkFallback),
+    light: safeThemePalette(settings.light, lightFallback),
+  };
+}
+
 function safeHref(value: string | null | undefined) {
   if (!value) return "";
   if (/^(https?:|mailto:|tel:|sms:)/i.test(value)) return value;
@@ -204,8 +237,7 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
   const publicUrl = card.public_url || `https://my.controlp.io/c/${card.slug}`;
   const opener = openerSection(sections);
   const fabPosition = typeof card.media_settings?.public_fab_position === "string" ? card.media_settings.public_fab_position : "bottom_right";
-  const darkTheme = { background: card.background_color, text: card.text_color, accent: card.accent_color };
-  const lightTheme = { background: "#f7fff2", text: "#07130b", accent: card.accent_color || "#4d7c0f" };
+  const { dark: darkTheme, light: lightTheme } = publicThemeSettings(card);
   const initialTheme = card.theme_mode === "light" ? lightTheme : darkTheme;
   const pageStyle = {
     "--public-bg": initialTheme.background,

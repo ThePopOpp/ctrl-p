@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck, Zap } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck, UserCircle, Zap } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -103,6 +103,8 @@ const customerNavItems = [
   { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
   { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
+  { label: "Profile", icon: UserCircle, href: "/dashboard/customer/profile" },
+  { label: "Settings", icon: Settings, href: "/dashboard/customer/settings" },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },
   { label: "Shipping", icon: Truck, href: "/dashboard/customer#shipping" },
 ];
@@ -175,9 +177,58 @@ type LeadFormSettings = {
   fields: LeadField[];
 };
 type SliderPage = { title: string; subtitle?: string; media_url?: string; button_label?: string; button_url?: string };
+type CardThemeMode = "dark" | "light";
+type CardThemePalette = { background: string; accent: string; text: string };
+type CardThemeSettings = {
+  sync_accent?: boolean;
+  dark: CardThemePalette;
+  light: CardThemePalette;
+};
 
 function human(value: string | null | undefined) {
   return String(value || "none").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function safeThemePalette(value: unknown, fallback: CardThemePalette): CardThemePalette {
+  const source = isObject(value) ? value : {};
+  return {
+    background: typeof source.background === "string" && source.background ? source.background : fallback.background,
+    accent: typeof source.accent === "string" && source.accent ? source.accent : fallback.accent,
+    text: typeof source.text === "string" && source.text ? source.text : fallback.text,
+  };
+}
+
+function themeSettings(card: DigitalCard): CardThemeSettings {
+  const fallbackDark = {
+    background: card.background_color || "#07130b",
+    accent: card.accent_color || "#a3ff12",
+    text: card.text_color || "#f7fff2",
+  };
+  const fallbackLight = {
+    background: "#f7fff2",
+    accent: card.accent_color || "#4d7c0f",
+    text: "#07130b",
+  };
+  const settings = isObject(card.media_settings?.theme_settings) ? card.media_settings.theme_settings : {};
+  return {
+    sync_accent: typeof settings.sync_accent === "boolean" ? settings.sync_accent : true,
+    dark: safeThemePalette(settings.dark, fallbackDark),
+    light: safeThemePalette(settings.light, fallbackLight),
+  };
+}
+
+function applyTheme(card: DigitalCard, mode: CardThemeMode): DigitalCard {
+  const palette = themeSettings(card)[mode];
+  return {
+    ...card,
+    background_color: palette.background,
+    accent_color: palette.accent,
+    text_color: palette.text,
+  };
 }
 
 function slugify(value: string) {
@@ -344,6 +395,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile");
+  const [previewThemeMode, setPreviewThemeMode] = useState<CardThemeMode>("dark");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [activePanel, setActivePanel] = useState<BuilderPanel>("card");
   const [previewZoom, setPreviewZoom] = useState(100);
@@ -389,6 +441,66 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
 
   function update<K extends keyof DigitalCard>(key: K, value: DigitalCard[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateThemePalette(mode: CardThemeMode, patch: Partial<CardThemePalette>) {
+    setForm((current) => {
+      const currentSettings = themeSettings(current);
+      const nextSettings: CardThemeSettings = {
+        ...currentSettings,
+        [mode]: { ...currentSettings[mode], ...patch },
+      };
+      if (currentSettings.sync_accent && patch.accent) {
+        nextSettings.dark = { ...nextSettings.dark, accent: patch.accent };
+        nextSettings.light = { ...nextSettings.light, accent: patch.accent };
+      }
+      return {
+        ...current,
+        background_color: nextSettings.dark.background,
+        accent_color: nextSettings.dark.accent,
+        text_color: nextSettings.dark.text,
+        media_settings: { ...(current.media_settings || {}), theme_settings: nextSettings },
+      };
+    });
+  }
+
+  function updateThemeSync(sync: boolean) {
+    setForm((current) => {
+      const currentSettings = themeSettings(current);
+      const nextSettings: CardThemeSettings = {
+        ...currentSettings,
+        sync_accent: sync,
+        light: sync ? { ...currentSettings.light, accent: currentSettings.dark.accent } : currentSettings.light,
+      };
+      return {
+        ...current,
+        background_color: nextSettings.dark.background,
+        accent_color: nextSettings.dark.accent,
+        text_color: nextSettings.dark.text,
+        media_settings: { ...(current.media_settings || {}), theme_settings: nextSettings },
+      };
+    });
+  }
+
+  function applyThemePreset(preset: CardThemePalette) {
+    setForm((current) => {
+      const currentSettings = themeSettings(current);
+      const nextSettings: CardThemeSettings = {
+        ...currentSettings,
+        [previewThemeMode]: preset,
+      };
+      if (currentSettings.sync_accent) {
+        nextSettings.dark = { ...nextSettings.dark, accent: preset.accent };
+        nextSettings.light = { ...nextSettings.light, accent: preset.accent };
+      }
+      return {
+        ...current,
+        background_color: nextSettings.dark.background,
+        accent_color: nextSettings.dark.accent,
+        text_color: nextSettings.dark.text,
+        media_settings: { ...(current.media_settings || {}), theme_settings: nextSettings },
+      };
+    });
   }
 
   function updateLink(index: number, patch: Partial<DigitalCardLink>) {
@@ -609,6 +721,8 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
       return next;
     });
   }
+
+  const cardThemeSettings = themeSettings(form);
 
   return (
     <div className={cn(theme === "dark" && "dark", "min-h-screen bg-background text-foreground")}>
@@ -849,11 +963,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                         key={preset.label}
                         type="button"
                         className="flex items-center gap-3 rounded-lg border bg-background/35 p-2 text-left text-xs transition-colors hover:border-primary/60"
-                        onClick={() => {
-                          update("background_color", preset.background);
-                          update("accent_color", preset.accent);
-                          update("text_color", preset.text);
-                        }}
+                        onClick={() => applyThemePreset(preset)}
                       >
                         <span className="flex -space-x-1">
                           {[preset.background, preset.accent, preset.text].map((color) => <span key={color} className="h-5 w-5 rounded-full border" style={{ backgroundColor: color }} />)}
@@ -864,14 +974,33 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   </div>
                   <div className="grid gap-3 md:grid-cols-3">
                     <SelectField label="Light / dark mode" value={form.theme_mode || "dark"} values={["light", "dark", "both"]} onChange={(value) => update("theme_mode", value)} />
+                    <SelectField label="Preview color mode" value={previewThemeMode} values={["dark", "light"]} onChange={(value) => setPreviewThemeMode(value as CardThemeMode)} />
+                    <SelectField label="Sync accent color" value={cardThemeSettings.sync_accent ? "yes" : "no"} values={["yes", "no"]} onChange={(value) => updateThemeSync(value === "yes")} />
                     <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
                     <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
                     <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />
                     <Field label="Background video URL" value={String((form.media_settings?.background_video_url as string) || "")} onChange={(value) => update("media_settings", { ...(form.media_settings || {}), background_video_url: value })} />
                     <Field label="QR logo center URL" value={form.qr_logo_url || ""} onChange={(value) => update("qr_logo_url", value)} />
-                    <ColorField label="Background color" value={form.background_color} onChange={(value) => update("background_color", value)} />
-                    <ColorField label="Accent color" value={form.accent_color} onChange={(value) => update("accent_color", value)} />
-                    <ColorField label="Text color" value={form.text_color} onChange={(value) => update("text_color", value)} />
+                  </div>
+                  <div className="grid gap-3 xl:grid-cols-2">
+                    <div className="rounded-lg border bg-background/35 p-3">
+                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Moon className="h-4 w-4" /> Dark mode colors</div>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <ColorField label="Background" value={cardThemeSettings.dark.background} onChange={(value) => updateThemePalette("dark", { background: value })} />
+                        <ColorField label="Accent" value={cardThemeSettings.dark.accent} onChange={(value) => updateThemePalette("dark", { accent: value })} />
+                        <ColorField label="Text" value={cardThemeSettings.dark.text} onChange={(value) => updateThemePalette("dark", { text: value })} />
+                      </div>
+                    </div>
+                    <div className="rounded-lg border bg-background/35 p-3">
+                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Sun className="h-4 w-4" /> Light mode colors</div>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <ColorField label="Background" value={cardThemeSettings.light.background} onChange={(value) => updateThemePalette("light", { background: value })} />
+                        <ColorField label="Accent" value={cardThemeSettings.light.accent} onChange={(value) => updateThemePalette("light", { accent: value })} />
+                        <ColorField label="Text" value={cardThemeSettings.light.text} onChange={(value) => updateThemePalette("light", { text: value })} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
                     <ColorField label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} />
                     <ColorField label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} />
                     <SelectField label="QR corner style" value={form.qr_corner_style || "square"} values={qrCornerStyles} onChange={(value) => update("qr_corner_style", value)} />
@@ -931,7 +1060,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
               </Card>}
             </section>
 
-            <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} zoom={previewZoom} onZoomChange={setPreviewZoom} />
+            <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} themeMode={previewThemeMode} onThemeModeChange={setPreviewThemeMode} zoom={previewZoom} onZoomChange={setPreviewZoom} />
           </div>
         )}
       </main>
@@ -1072,9 +1201,10 @@ function OpenerPanel({ content, primaryPhone, onChange }: { content: OpenerConte
   );
 }
 
-function LivePreview({ card, publicUrl, mode, onModeChange, zoom, onZoomChange }: { card: DigitalCard; publicUrl: string; mode: PreviewMode; onModeChange: (mode: PreviewMode) => void; zoom: number; onZoomChange: (zoom: number) => void }) {
+function LivePreview({ card, publicUrl, mode, onModeChange, themeMode, onThemeModeChange, zoom, onZoomChange }: { card: DigitalCard; publicUrl: string; mode: PreviewMode; onModeChange: (mode: PreviewMode) => void; themeMode: CardThemeMode; onThemeModeChange: (mode: CardThemeMode) => void; zoom: number; onZoomChange: (zoom: number) => void }) {
   const modeInfo = previewModes.find((item) => item.value === mode) || previewModes[0];
-  const backgroundImage = card.background_image_url ? `linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)), url(${card.background_image_url})` : undefined;
+  const previewCard = applyTheme(card, themeMode);
+  const backgroundImage = previewCard.background_image_url ? `linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)), url(${previewCard.background_image_url})` : undefined;
 
   return (
     <aside className="min-w-0 bg-background/30 p-4 2xl:sticky 2xl:top-16 2xl:self-start">
@@ -1082,7 +1212,16 @@ function LivePreview({ card, publicUrl, mode, onModeChange, zoom, onZoomChange }
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div><CardTitle className="text-base">Live responsive preview</CardTitle><CardDescription>Switch between mobile, tablet, and desktop while editing.</CardDescription></div>
-            <Badge variant="outline">{modeInfo.label}</Badge>
+            <div className="flex items-center gap-2">
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
+                {(["dark", "light"] as CardThemeMode[]).map((value) => (
+                  <button key={value} type="button" className={cn("grid h-7 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:text-foreground", themeMode === value && "bg-background text-foreground shadow-sm")} onClick={() => onThemeModeChange(value)} aria-label={`Preview ${value} mode`}>
+                    {value === "dark" ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
+                  </button>
+                ))}
+              </div>
+              <Badge variant="outline">{modeInfo.label}</Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -1094,9 +1233,9 @@ function LivePreview({ card, publicUrl, mode, onModeChange, zoom, onZoomChange }
             ))}
           </div>
           <div className="relative overflow-auto rounded-xl border bg-secondary/25 p-4">
-            <div className="mx-auto origin-top overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all" style={{ width: modeInfo.width, maxWidth: "100%", minHeight: mode === "mobile" ? 640 : 720, background: card.background_color, color: card.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center", transform: `scale(${zoom / 100})` }}>
+            <div className="mx-auto origin-top overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all" style={{ width: modeInfo.width, maxWidth: "100%", minHeight: mode === "mobile" ? 640 : 720, background: previewCard.background_color, color: previewCard.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center", transform: `scale(${zoom / 100})` }}>
               <div className="min-h-[640px] bg-black/20 p-5 backdrop-blur-[1px] md:p-8">
-                <CardSections card={card} publicUrl={publicUrl} mode={mode} />
+                <CardSections card={previewCard} publicUrl={publicUrl} mode={mode} />
               </div>
             </div>
             <div className="absolute right-5 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-2 rounded-2xl border bg-background/95 p-2 shadow-2xl">

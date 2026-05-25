@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bell, Box, CreditCard, Eye, FileCheck2, Heart, Home, IdCard, Link as LinkIcon, LogOut, MessageSquare, Moon, Share2, Sun, Truck, UserPlus, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, Box, CreditCard, Eye, FileCheck2, Heart, Home, IdCard, Link as LinkIcon, LogOut, MessageSquare, Moon, Settings, Share2, Sun, Truck, UserCircle, UserPlus, type LucideIcon } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,8 @@ const navItems: { label: string; icon: LucideIcon; href: string; active?: boolea
   { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
   { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics", active: true },
+  { label: "Profile", icon: UserCircle, href: "/dashboard/customer/profile" },
+  { label: "Settings", icon: Settings, href: "/dashboard/customer/settings" },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },
   { label: "Shipping", icon: Truck, href: "/dashboard/customer#shipping" },
 ];

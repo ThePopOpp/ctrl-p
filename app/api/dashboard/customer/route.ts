@@ -141,3 +141,53 @@ export async function GET(request: Request) {
     shipments: shipmentsResult.data ?? [],
   });
 }
+
+export async function PATCH(request: Request) {
+  const config = getServerSupabaseConfig();
+  if (config.error) return config.error;
+
+  const authHeader = request.headers.get("authorization") || "";
+  const accessToken = authHeader.replace(/^Bearer\s+/i, "");
+  if (!accessToken) return jsonError("Missing session token.", 401);
+
+  const userClient = createClient(config.supabaseUrl, config.publishableKey, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+
+  const authResult = await userClient.auth.getUser(accessToken);
+  const actorId = authResult.data.user?.id;
+  if (authResult.error || !actorId) return jsonError("Invalid session.", 401);
+
+  const body = await request.json().catch(() => ({}));
+  const updates = {
+    full_name: text(body.full_name) || null,
+    phone: text(body.phone) || null,
+    company: text(body.company) || null,
+  };
+
+  const adminClient = createClient(config.supabaseUrl, config.serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const currentResult = await adminClient
+    .from("users")
+    .select("id, status, deleted_at")
+    .eq("id", actorId)
+    .maybeSingle();
+
+  if (currentResult.error || !currentResult.data) return jsonError(currentResult.error?.message || "Customer profile not found.", 404);
+  if (currentResult.data.deleted_at || !["active", "pending"].includes(text(currentResult.data.status))) {
+    return jsonError("Your account is not active.", 403);
+  }
+
+  const profileResult = await adminClient
+    .from("users")
+    .update(updates)
+    .eq("id", actorId)
+    .select("id, email, full_name, phone, company, role, status, created_at")
+    .maybeSingle();
+
+  if (profileResult.error || !profileResult.data) return jsonError(profileResult.error?.message || "Could not update profile.", 400);
+
+  return NextResponse.json({ profile: profileResult.data });
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bell, Box, Copy, CreditCard, Download, Eye, FileCheck2, Home, IdCard, LogOut, MessageSquare, Monitor, Moon, Plus, QrCode, Save, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
+import { BarChart3, Bell, Box, Copy, CreditCard, Download, Eye, FileCheck2, Home, IdCard, LogOut, MessageSquare, Monitor, Moon, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck, UserCircle } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -88,6 +88,8 @@ const customerNavItems = [
   { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
   { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
+  { label: "Profile", icon: UserCircle, href: "/dashboard/customer/profile" },
+  { label: "Settings", icon: Settings, href: "/dashboard/customer/settings" },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },
   { label: "Shipping", icon: Truck, href: "/dashboard/customer#shipping" },
 ];
