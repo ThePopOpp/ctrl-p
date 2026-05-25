@@ -225,11 +225,7 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
       <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} position={fabPosition} accent="var(--public-accent)" background="var(--public-bg)" />
       <section className="mx-auto max-w-md">
         <div id="card" className="rounded-[2rem] border border-white/15 bg-black/25 p-5 shadow-2xl backdrop-blur">
-          {sections.filter((item) => item.id !== opener?.id).map((item) => <PublicSection key={item.id} section={item} card={themedCard} links={links} publicUrl={publicUrl} />)}
-          <div className="mt-5 grid place-items-center gap-3 text-center">
-            <PublicThemeToggle mode={card.theme_mode || "dark"} dark={darkTheme} light={lightTheme} />
-            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs opacity-75">Public Digital Card</span>
-          </div>
+          {sections.filter((item) => item.id !== opener?.id).map((item) => <PublicSection key={item.id} section={item} card={themedCard} links={links} publicUrl={publicUrl} themeMode={card.theme_mode || "dark"} darkTheme={darkTheme} lightTheme={lightTheme} />)}
         </div>
         <div className="mt-5 text-center text-xs opacity-60">Powered by ControlP.io</div>
       </section>
@@ -299,17 +295,24 @@ function PublicSection({
   card,
   links,
   publicUrl,
+  themeMode,
+  darkTheme,
+  lightTheme,
 }: {
   section: PublicCardSection;
   card: PublicCard;
   links: PublicCardLink[];
   publicUrl: string;
+  themeMode: string;
+  darkTheme: { background: string; text: string; accent: string };
+  lightTheme: { background: string; text: string; accent: string };
 }) {
   if (section.section_type === "profile_header") {
     return (
       <div style={sectionStyle(section)}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3">
           {card.logo_url ? <img className="max-h-12 max-w-[140px] object-contain" src={card.logo_url} alt={`${card.company_name || card.card_name} logo`} /> : <div className="text-sm font-semibold opacity-75">controlp.io card</div>}
+          <PublicThemeToggle mode={themeMode} dark={darkTheme} light={lightTheme} />
         </div>
 
         <div className="mt-8 text-center">
