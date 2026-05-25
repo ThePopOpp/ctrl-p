@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, Bell, Box, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Plus, QrCode, Save, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, Plus, QrCode, Save, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -99,6 +99,14 @@ const previewModes = [
   { value: "tablet", label: "Tablet", width: 620, icon: Tablet },
   { value: "desktop", label: "Desktop", width: 920, icon: Monitor },
 ] as const;
+const colorPresets = [
+  { label: "ControlP Dark", background: "#07130b", accent: "#a3ff12", text: "#f7fff2" },
+  { label: "Clean Light", background: "#f7fff2", accent: "#4d7c0f", text: "#07130b" },
+  { label: "Ink", background: "#111318", accent: "#f5f5f0", text: "#ffffff" },
+  { label: "Ocean", background: "#082f49", accent: "#38bdf8", text: "#ecfeff" },
+  { label: "Plum", background: "#2e1065", accent: "#c4b5fd", text: "#faf5ff" },
+  { label: "Copper", background: "#3b1f12", accent: "#f59e0b", text: "#fff7ed" },
+];
 
 type PreviewMode = typeof previewModes[number]["value"];
 
@@ -220,6 +228,9 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
   const [message, setMessage] = useState("");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>(["profile_header-0"]);
+  const [expandedSpacingKeys, setExpandedSpacingKeys] = useState<string[]>([]);
+  const [dragSectionIndex, setDragSectionIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("controlp_customer_theme");
@@ -307,6 +318,24 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
       [sections[index], sections[target]] = [sections[target], sections[index]];
       return { ...current, digital_card_sections: sections.map((section, itemIndex) => ({ ...section, display_order: itemIndex + 1 })) };
     });
+  }
+
+  function reorderSection(sourceIndex: number, targetIndex: number) {
+    setForm((current) => {
+      const sections = normalizeSections(current.digital_card_sections);
+      if (sourceIndex === targetIndex || sourceIndex < 0 || targetIndex < 0 || sourceIndex >= sections.length || targetIndex >= sections.length) return current;
+      const [moved] = sections.splice(sourceIndex, 1);
+      sections.splice(targetIndex, 0, moved);
+      return { ...current, digital_card_sections: sections.map((section, itemIndex) => ({ ...section, display_order: itemIndex + 1 })) };
+    });
+  }
+
+  function sectionKey(section: DigitalCardSection, index: number) {
+    return section.id || `${section.section_type}-${index}`;
+  }
+
+  function togglePanel(key: string, setter: (value: React.SetStateAction<string[]>) => void) {
+    setter((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   }
 
   async function save(nextForm = form) {
@@ -442,30 +471,67 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {normalizeSections(form.digital_card_sections).map((section, index) => (
-                    <div key={`${section.section_type}-${index}`} className={cn("rounded-lg border bg-background/35 p-3", !section.is_visible && "opacity-60")}>
-                      <div className="flex flex-wrap items-end gap-2">
-                        <div className="flex h-10 items-center text-muted-foreground"><GripVertical className="h-4 w-4" /></div>
-                        <Field label="Layer name" value={section.label} onChange={(value) => updateSection(index, { label: value })} />
-                        <div className="min-w-[180px] flex-1">
-                          <SelectField label="Section type" value={section.section_type} values={sectionTypes} onChange={(value) => updateSection(index, { section_type: value })} />
+                  {normalizeSections(form.digital_card_sections).map((section, index) => {
+                    const key = sectionKey(section, index);
+                    const expanded = expandedSectionKeys.includes(key);
+                    const spacingExpanded = expandedSpacingKeys.includes(key);
+                    const sectionCount = normalizeSections(form.digital_card_sections).length;
+                    return (
+                      <div
+                        key={key}
+                        draggable
+                        onDragStart={() => setDragSectionIndex(index)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          if (dragSectionIndex !== null) reorderSection(dragSectionIndex, index);
+                          setDragSectionIndex(null);
+                        }}
+                        onDragEnd={() => setDragSectionIndex(null)}
+                        className={cn("overflow-hidden rounded-lg border bg-background/35 transition-colors", !section.is_visible && "opacity-60", dragSectionIndex === index && "border-primary/60 bg-primary/5")}
+                      >
+                        <div className="flex flex-wrap items-center gap-2 p-3">
+                          <button type="button" className="flex h-9 items-center gap-2 text-left" onClick={() => togglePanel(key, setExpandedSectionKeys)}>
+                            {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                            <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground" />
+                          </button>
+                          <button type="button" className="min-w-[220px] flex-1 text-left" onClick={() => togglePanel(key, setExpandedSectionKeys)}>
+                            <div className="font-medium">{section.label || human(section.section_type)}</div>
+                            <div className="mt-0.5 text-xs text-muted-foreground">{human(section.section_type)} / Layer {index + 1}{!section.is_visible ? " / Hidden" : ""}</div>
+                          </button>
+                          <Button variant="outline" size="icon" onClick={() => moveSection(index, -1)} disabled={index === 0} aria-label="Move section up"><ArrowUp className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => moveSection(index, 1)} disabled={index === sectionCount - 1} aria-label="Move section down"><ArrowDown className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => updateSection(index, { is_visible: !section.is_visible })} aria-label="Toggle section visibility">{section.is_visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</Button>
+                          <Button variant="outline" size="icon" onClick={() => removeSection(index)} aria-label="Remove section"><Trash2 className="h-4 w-4" /></Button>
                         </div>
-                        <Button variant="outline" size="icon" onClick={() => moveSection(index, -1)} disabled={index === 0} aria-label="Move section up"><ArrowUp className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" onClick={() => moveSection(index, 1)} disabled={index === normalizeSections(form.digital_card_sections).length - 1} aria-label="Move section down"><ArrowDown className="h-4 w-4" /></Button>
-                        <Button variant="outline" size="icon" onClick={() => updateSection(index, { is_visible: !section.is_visible })} aria-label="Toggle section visibility">{section.is_visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</Button>
-                        <Button variant="outline" size="icon" onClick={() => removeSection(index)} aria-label="Remove section"><Trash2 className="h-4 w-4" /></Button>
+                        {expanded && (
+                          <div className="space-y-3 border-t p-3">
+                            <div className="grid gap-3 md:grid-cols-[220px_1fr]">
+                              <Field label="Layer name" value={section.label} onChange={(value) => updateSection(index, { label: value })} />
+                              <SelectField label="Section type" value={section.section_type} values={sectionTypes} onChange={(value) => updateSection(index, { section_type: value })} />
+                            </div>
+                            <div className="rounded-lg border bg-background/30">
+                              <button type="button" className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium" onClick={() => togglePanel(key, setExpandedSpacingKeys)}>
+                                <span>Spacing: margin and padding</span>
+                                {spacingExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                              </button>
+                              {spacingExpanded && (
+                                <div className="grid gap-3 border-t p-3 xl:grid-cols-2">
+                                  <SpacingGroup title="Margin" section={section} prefix="margin" onChange={(patch) => updateSection(index, patch)} />
+                                  <SpacingGroup title="Padding" section={section} prefix="padding" onChange={(patch) => updateSection(index, patch)} />
+                                </div>
+                              )}
+                            </div>
+                            {["gallery", "scratch_card", "punch_card", "loyalty_card", "nfc"].includes(section.section_type) && (
+                              <div className="rounded-md border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
+                                {human(section.section_type)} is staged as a flexible layer now. Its advanced editor will plug into this section record next.
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                        <SpacingGroup title="Margin" section={section} prefix="margin" onChange={(patch) => updateSection(index, patch)} />
-                        <SpacingGroup title="Padding" section={section} prefix="padding" onChange={(patch) => updateSection(index, patch)} />
-                      </div>
-                      {["gallery", "scratch_card", "punch_card", "loyalty_card", "nfc"].includes(section.section_type) && (
-                        <div className="mt-3 rounded-md border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
-                          {human(section.section_type)} is staged as a flexible layer now. Its advanced editor will plug into this section record next.
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </CardContent>
               </Card>
 
@@ -516,17 +582,41 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
               </Card>
 
               <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-base">Visuals and QR</CardTitle><CardDescription>Phase 1 supports URL-based media and simple QR styling.</CardDescription></CardHeader>
-                <CardContent className="grid gap-3 md:grid-cols-3">
-                  <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
-                  <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
-                  <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />
-                  <Field label="Background color" value={form.background_color} onChange={(value) => update("background_color", value)} />
-                  <Field label="Accent color" value={form.accent_color} onChange={(value) => update("accent_color", value)} />
-                  <Field label="Text color" value={form.text_color} onChange={(value) => update("text_color", value)} />
-                  <Field label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} />
-                  <Field label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} />
-                  <Button className="self-end" variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download QR PNG</a></Button>
+                <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Palette className="h-4 w-4" /> Visuals and QR</CardTitle><CardDescription>Pick brand colors, add media URLs, and style the QR code.</CardDescription></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {colorPresets.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        className="flex items-center gap-3 rounded-lg border bg-background/35 p-2 text-left text-xs transition-colors hover:border-primary/60"
+                        onClick={() => {
+                          update("background_color", preset.background);
+                          update("accent_color", preset.accent);
+                          update("text_color", preset.text);
+                        }}
+                      >
+                        <span className="flex -space-x-1">
+                          {[preset.background, preset.accent, preset.text].map((color) => <span key={color} className="h-5 w-5 rounded-full border" style={{ backgroundColor: color }} />)}
+                        </span>
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
+                    <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
+                    <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />
+                    <ColorField label="Background color" value={form.background_color} onChange={(value) => update("background_color", value)} />
+                    <ColorField label="Accent color" value={form.accent_color} onChange={(value) => update("accent_color", value)} />
+                    <ColorField label="Text color" value={form.text_color} onChange={(value) => update("text_color", value)} />
+                    <ColorField label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} />
+                    <ColorField label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} />
+                    <Button className="self-end" variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download QR PNG</a></Button>
+                  </div>
+                  <div className="rounded-lg border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
+                    Background gradients, video backgrounds, and full QR designer controls are queued for the next data-model slice. Image URLs and color presets work now.
+                  </div>
                 </CardContent>
               </Card>
 
@@ -694,6 +784,19 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
   return <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div><Input value={value} onChange={(event) => onChange(event.target.value)} /></div>;
 }
 
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const safeValue = /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : "#000000";
+  return (
+    <div>
+      <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
+      <div className="flex gap-2">
+        <Input type="color" value={safeValue} onChange={(event) => onChange(event.target.value)} className="h-10 w-12 shrink-0 p-1" />
+        <Input value={value} onChange={(event) => onChange(event.target.value)} placeholder="#07130b" />
+      </div>
+    </div>
+  );
+}
+
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   return <div><div className="mb-1.5 text-[11px] font-medium text-muted-foreground">{label}</div><Input type="number" min={0} max={240} value={value} onChange={(event) => onChange(Math.max(0, Math.min(240, Number(event.target.value || 0))))} /></div>;
 }
@@ -701,7 +804,7 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
 function SpacingGroup({ title, section, prefix, onChange }: { title: string; section: DigitalCardSection; prefix: "margin" | "padding"; onChange: (patch: Partial<DigitalCardSection>) => void }) {
   const keys = ["top", "right", "bottom", "left"] as const;
   return (
-    <div className="rounded-md border bg-background/30 p-3 xl:col-span-2">
+    <div className="rounded-md border bg-background/30 p-3">
       <div className="mb-2 text-xs font-semibold text-muted-foreground">{title}</div>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         {keys.map((side) => {
