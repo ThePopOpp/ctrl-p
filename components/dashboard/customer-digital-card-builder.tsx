@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck, UserCircle, Zap } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, Camera, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck, Upload, UserCircle, Zap } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -98,15 +98,15 @@ const linkTypes = ["website", "social", "phone", "email", "sms", "map", "booking
 const sectionTypes = ["profile_header", "quick_actions", "links", "lead_capture", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"];
 const customerNavItems = [
   { label: "Overview", icon: Home, href: "/dashboard/customer" },
+  { label: "Profile", icon: UserCircle, href: "/dashboard/customer/profile" },
   { label: "Orders", icon: Box, href: "/dashboard/customer#orders" },
   { label: "Invoices", icon: CreditCard, href: "/dashboard/customer#invoices" },
   { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
   { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
-  { label: "Profile", icon: UserCircle, href: "/dashboard/customer/profile" },
-  { label: "Settings", icon: Settings, href: "/dashboard/customer/settings" },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },
   { label: "Shipping", icon: Truck, href: "/dashboard/customer#shipping" },
+  { label: "Settings", icon: Settings, href: "/dashboard/customer/settings" },
 ];
 const previewModes = [
   { value: "mobile", label: "Mobile", width: 340, icon: Smartphone },
@@ -399,6 +399,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [activePanel, setActivePanel] = useState<BuilderPanel>("card");
   const [previewZoom, setPreviewZoom] = useState(100);
+  const [uploadingMedia, setUploadingMedia] = useState<string | null>(null);
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>(["profile_header-0"]);
   const [expandedSpacingKeys, setExpandedSpacingKeys] = useState<string[]>([]);
   const [dragSectionIndex, setDragSectionIndex] = useState<number | null>(null);
@@ -441,6 +442,29 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
 
   function update<K extends keyof DigitalCard>(key: K, value: DigitalCard[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function uploadMedia(file: File, mediaType: string, onUploaded: (url: string) => void) {
+    try {
+      setUploadingMedia(mediaType);
+      const token = await customerToken();
+      const body = new FormData();
+      body.append("file", file);
+      body.append("media_type", mediaType);
+      const response = await fetch("/api/dashboard/customer/digital-cards/media", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not upload media.");
+      onUploaded(String(payload.publicUrl || ""));
+      setMessage("Media uploaded. Save the card to keep this change.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not upload media.");
+    } finally {
+      setUploadingMedia(null);
+    }
   }
 
   function updateThemePalette(mode: CardThemeMode, patch: Partial<CardThemePalette>) {
@@ -736,6 +760,15 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
             <Nav key={label} href={href} icon={<Icon className="h-4 w-4" />} label={label} active={label === "Manage Products"} />
           ))}
         </nav>
+        {data?.profile && <div className="absolute bottom-3 left-3 right-3 rounded-xl border bg-background/55 p-2">
+          <div className="flex items-center gap-2">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(data.profile.full_name || data.profile.email || "C").slice(0, 1).toUpperCase()}</div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold">{data.profile.full_name || "Customer"}</div>
+              <div className="truncate text-xs text-muted-foreground">{data.profile.company || data.profile.email || "ControlP.io"}</div>
+            </div>
+          </div>
+        </div>}
       </aside>
 
       <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">
@@ -911,11 +944,11 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   <CardDescription>Add profile, logo, background, and intro media for this card.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-2">
-                  <Field label="Profile photo URL" value={form.profile_photo_url || ""} onChange={(value) => update("profile_photo_url", value)} />
-                  <Field label="Logo URL" value={form.logo_url || ""} onChange={(value) => update("logo_url", value)} />
-                  <Field label="Background image URL" value={form.background_image_url || ""} onChange={(value) => update("background_image_url", value)} />
-                  <Field label="Background video URL" value={String((form.media_settings?.background_video_url as string) || "")} onChange={(value) => update("media_settings", { ...(form.media_settings || {}), background_video_url: value })} />
-                  <Field label="Intro video URL" value={form.intro_video_url || ""} onChange={(value) => update("intro_video_url", value)} />
+                  <MediaUploadField label="Profile photo" mediaType="profile-photo" accept="image/*" value={form.profile_photo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("profile_photo_url", url)} />
+                  <MediaUploadField label="Logo" mediaType="logo" accept="image/*" value={form.logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("logo_url", url)} />
+                  <MediaUploadField label="Background image" mediaType="background-image" accept="image/*" value={form.background_image_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("background_image_url", url)} />
+                  <MediaUploadField label="Background video" mediaType="background-video" accept="video/*" value={String((form.media_settings?.background_video_url as string) || "")} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("media_settings", { ...(form.media_settings || {}), background_video_url: url })} />
+                  <MediaUploadField label="Intro video" mediaType="intro-video" accept="video/*" value={form.intro_video_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("intro_video_url", url)} />
                 </CardContent>
               </Card>
 
@@ -1404,6 +1437,53 @@ function PreviewButton({ label, accent, icon, muted }: { label: string; accent: 
 
 function SelectField({ label, value, values, onChange }: { label: string; value: string; values: string[]; onChange: (value: string) => void }) {
   return <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div><Select value={value} onValueChange={onChange}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{values.map((item) => <SelectItem key={item} value={item}>{human(item)}</SelectItem>)}</SelectContent></Select></div>;
+}
+
+function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload, onUploaded }: { label: string; mediaType: string; accept: string; value: string; uploading: string | null; onUpload: (file: File, mediaType: string, onUploaded: (url: string) => void) => void; onUploaded: (url: string) => void }) {
+  const isVideo = accept.includes("video");
+  const isUploading = uploading === mediaType;
+  const fieldId = `media-${mediaType}`;
+  const frontId = `${fieldId}-front`;
+  const rearId = `${fieldId}-rear`;
+  const handleFile = (file?: File) => {
+    if (file) onUpload(file, mediaType, onUploaded);
+  };
+
+  return (
+    <div className="rounded-lg border bg-background/35 p-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold">{label}</div>
+          <div className="text-xs text-muted-foreground">{isVideo ? "Upload or record video" : "Upload or take a photo"}</div>
+        </div>
+        {value ? <Badge variant="outline">Added</Badge> : <Badge variant="secondary">Empty</Badge>}
+      </div>
+      {value && (
+        <div className="mb-3 overflow-hidden rounded-lg border bg-black/10">
+          {isVideo ? (
+            <video className="h-28 w-full object-cover" src={value} controls muted />
+          ) : (
+            <img className="h-28 w-full object-cover" src={value} alt={`${label} preview`} />
+          )}
+        </div>
+      )}
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Button variant="outline" size="sm" asChild disabled={isUploading}>
+          <label htmlFor={fieldId} className="cursor-pointer"><Upload className="h-4 w-4" /> {isUploading ? "Uploading..." : "Upload"}</label>
+        </Button>
+        <Button variant="outline" size="sm" asChild disabled={isUploading}>
+          <label htmlFor={frontId} className="cursor-pointer"><Camera className="h-4 w-4" /> Front</label>
+        </Button>
+        <Button variant="outline" size="sm" asChild disabled={isUploading}>
+          <label htmlFor={rearId} className="cursor-pointer"><Camera className="h-4 w-4" /> Rear</label>
+        </Button>
+      </div>
+      <input id={fieldId} type="file" accept={accept} className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
+      <input id={frontId} type="file" accept={accept} capture="user" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
+      <input id={rearId} type="file" accept={accept} capture="environment" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
+      {value && <div className="mt-2 truncate rounded-md bg-secondary px-2 py-1 text-[11px] text-muted-foreground">{value}</div>}
+    </div>
+  );
 }
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

@@ -125,16 +125,16 @@ type CustomerData = {
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const navItems: { label: string; icon: LucideIcon; href: string }[] = [
   { label: "Overview", icon: Home, href: "#overview" },
+  { label: "Profile", icon: UserCircle, href: "/dashboard/customer/profile" },
   { label: "Orders", icon: Box, href: "#orders" },
   { label: "Invoices", icon: CreditCard, href: "#invoices" },
   { label: "Saved Designs", icon: IdCard, href: "#designs" },
   { label: "Artwork", icon: FileCheck2, href: "#artwork" },
   { label: "Manage Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
-  { label: "Profile", icon: UserCircle, href: "/dashboard/customer/profile" },
-  { label: "Settings", icon: Settings, href: "/dashboard/customer/settings" },
   { label: "Messages", icon: MessageSquare, href: "#messages" },
   { label: "Shipping", icon: Truck, href: "#shipping" },
+  { label: "Settings", icon: Settings, href: "/dashboard/customer/settings" },
 ];
 
 function human(value: string | null | undefined) {
@@ -242,6 +242,15 @@ export function CustomerDashboard() {
             </a>
           ))}
         </nav>
+        {data?.profile && <div className="absolute bottom-3 left-3 right-3 rounded-xl border bg-background/55 p-2">
+          <div className="flex items-center gap-2">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(data.profile.full_name || data.profile.email || "C").slice(0, 1).toUpperCase()}</div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold">{data.profile.full_name || "Customer"}</div>
+              <div className="truncate text-xs text-muted-foreground">{data.profile.company || data.profile.email || "ControlP.io"}</div>
+            </div>
+          </div>
+        </div>}
       </aside>
 
       <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">
