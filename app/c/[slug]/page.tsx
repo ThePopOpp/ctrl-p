@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { ExternalLink, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
 
 import { getServerSupabaseConfig } from "@/lib/admin/server-auth";
-import { PublicCardActions, PublicLeadCapture } from "./public-card-actions";
+import { PublicCardActions } from "./public-card-actions";
 
 type PublicCardLink = {
   id: string;
@@ -208,7 +208,6 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
         <div id="card" className="rounded-[2rem] border border-white/15 bg-black/25 p-5 shadow-2xl backdrop-blur">
           <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} />
           {sections.filter((item) => item.id !== opener?.id).map((item) => <PublicSection key={item.id} section={item} card={card} links={links} publicUrl={publicUrl} />)}
-          <PublicLeadCapture cardId={card.id} slug={card.slug} publicUrl={publicUrl} accent={card.accent_color} settings={card.lead_form_settings} />
         </div>
         <div className="mt-5 text-center text-xs opacity-60">Powered by ControlP.io</div>
       </section>
@@ -312,6 +311,28 @@ function PublicSection({ section, card, links, publicUrl }: { section: PublicCar
       <div className="space-y-2" style={sectionStyle(section)}>
         {card.website_url && <ButtonLink href={safeHref(card.website_url)} label="Website" accent={card.accent_color} />}
         {links.map((link) => <ButtonLink key={link.id} href={linkHref(link)} label={link.label} accent={card.accent_color} />)}
+      </div>
+    );
+  }
+
+  if (section.section_type === "lead_capture") {
+    const settings = {
+      enabled: true,
+      button_label: "Send me your info",
+      button_background: card.accent_color,
+      button_text_color: card.background_color,
+      ...(card.lead_form_settings || {}),
+    };
+    if (settings.enabled === false) return null;
+    return (
+      <div style={sectionStyle(section)}>
+        <a
+          className="block rounded-2xl px-4 py-3 text-center text-sm font-semibold shadow-lg"
+          href={`/c/${card.slug}/lead`}
+          style={{ background: settings.button_background || card.accent_color, color: settings.button_text_color || card.background_color }}
+        >
+          {settings.button_label || "Send me your info"}
+        </a>
       </div>
     );
   }

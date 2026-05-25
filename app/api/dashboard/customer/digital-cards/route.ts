@@ -5,7 +5,7 @@ import { getServerSupabaseConfig, jsonError, serverEnv } from "@/lib/admin/serve
 
 const LINK_TYPES = new Set(["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"]);
 const STATUSES = new Set(["draft", "published", "unpublished"]);
-const SECTION_TYPES = new Set(["profile_header", "quick_actions", "links", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"]);
+const SECTION_TYPES = new Set(["profile_header", "quick_actions", "links", "lead_capture", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"]);
 const CARD_MODES = new Set(["standard", "opener_slider", "qr_only", "nfc_landing"]);
 const THEME_MODES = new Set(["light", "dark", "both"]);
 const LAYOUT_TEMPLATES = new Set(["classic", "split_profile", "link_hub", "sales_intro", "portfolio", "appointment_first"]);

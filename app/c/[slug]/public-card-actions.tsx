@@ -11,7 +11,17 @@ type ActionProps = {
 };
 
 type LeadField = { key: string; label: string; enabled: boolean; required: boolean };
-type LeadFormSettings = { enabled?: boolean; title?: string; description?: string; submit_label?: string; fields?: LeadField[] };
+type LeadFormSettings = {
+  enabled?: boolean;
+  title?: string;
+  description?: string;
+  submit_label?: string;
+  button_background?: string;
+  button_text_color?: string;
+  field_background?: string;
+  field_text_color?: string;
+  fields?: LeadField[];
+};
 
 async function track(cardId: string, eventType: string, metadata?: Record<string, unknown>) {
   await fetch("/api/digital-cards/events", {
@@ -81,6 +91,10 @@ export function PublicLeadCapture({ cardId, slug, accent, settings }: ActionProp
     title: "Send me your info",
     description: "Share your contact details and I'll follow up.",
     submit_label: "Send info",
+    button_background: accent,
+    button_text_color: "#07130b",
+    field_background: "rgba(0,0,0,.2)",
+    field_text_color: "inherit",
     fields: [
       { key: "name", label: "Name", enabled: true, required: false },
       { key: "email", label: "Email", enabled: true, required: false },
@@ -93,6 +107,10 @@ export function PublicLeadCapture({ cardId, slug, accent, settings }: ActionProp
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "" });
   const [state, setState] = useState<"idle" | "saving" | "sent" | "error">("idle");
   if (leadSettings.enabled === false) return null;
+  const fieldStyle = {
+    background: leadSettings.field_background,
+    color: leadSettings.field_text_color,
+  };
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -112,12 +130,12 @@ export function PublicLeadCapture({ cardId, slug, accent, settings }: ActionProp
       {leadSettings.description && <div className="mt-1 text-xs opacity-70">{leadSettings.description}</div>}
       <div className="mt-3 grid gap-2">
         {leadSettings.fields?.filter((field) => field.enabled).map((field) => field.key === "message" ? (
-          <textarea key={field.key} required={field.required} className="min-h-20 rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none placeholder:text-current/45" placeholder={field.label} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} />
+          <textarea key={field.key} required={field.required} className="min-h-20 rounded-xl border border-white/15 px-3 py-2 text-sm outline-none placeholder:text-current/45" style={fieldStyle} placeholder={field.label} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} />
         ) : (
-          <input key={field.key} required={field.required} className="rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none placeholder:text-current/45" placeholder={field.label} value={String(form[field.key as keyof typeof form] || "")} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} />
+          <input key={field.key} required={field.required} className="rounded-xl border border-white/15 px-3 py-2 text-sm outline-none placeholder:text-current/45" style={fieldStyle} placeholder={field.label} value={String(form[field.key as keyof typeof form] || "")} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} />
         ))}
       </div>
-      <button disabled={state === "saving"} className="mt-3 w-full rounded-xl px-4 py-2 text-sm font-semibold text-black disabled:opacity-60" style={{ background: accent }}>
+      <button disabled={state === "saving"} className="mt-3 w-full rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: leadSettings.button_background || accent, color: leadSettings.button_text_color || "#07130b" }}>
         {state === "saving" ? "Sending..." : leadSettings.submit_label}
       </button>
       {state === "sent" && <div className="mt-2 text-xs opacity-80">Sent. Thank you.</div>}

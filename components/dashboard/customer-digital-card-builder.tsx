@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck, Zap } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -95,7 +95,7 @@ type CardData = {
 };
 
 const linkTypes = ["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"];
-const sectionTypes = ["profile_header", "quick_actions", "links", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"];
+const sectionTypes = ["profile_header", "quick_actions", "links", "lead_capture", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"];
 const customerNavItems = [
   { label: "Overview", icon: Home, href: "/dashboard/customer" },
   { label: "Orders", icon: Box, href: "/dashboard/customer#orders" },
@@ -112,16 +112,16 @@ const previewModes = [
   { value: "desktop", label: "Desktop", width: 920, icon: Monitor },
 ] as const;
 type PreviewMode = typeof previewModes[number]["value"];
-type BuilderPanel = "card" | "sections" | "content" | "links" | "forms" | "visuals" | "opener" | "access";
+type BuilderPanel = "card" | "sections" | "content" | "links" | "visuals" | "opener" | "access" | "automations";
 const builderPanels: { value: BuilderPanel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: "card", label: "Product", icon: IdCard },
   { value: "sections", label: "Sections", icon: Layers },
   { value: "content", label: "Content", icon: FileCheck2 },
   { value: "links", label: "Links", icon: LinkIcon },
-  { value: "forms", label: "Leads", icon: FormInput },
   { value: "visuals", label: "Visuals", icon: Palette },
   { value: "opener", label: "Opener", icon: PlayCircle },
   { value: "access", label: "Access", icon: Settings },
+  { value: "automations", label: "Automations", icon: Zap },
 ];
 const cardModes = ["standard", "opener_slider", "qr_only", "nfc_landing"];
 const layoutTemplates = ["classic", "split_profile", "link_hub", "sales_intro", "portfolio", "appointment_first"];
@@ -160,7 +160,18 @@ type OpenerContent = {
   buttons?: OpenerButton[];
 };
 type LeadField = { key: string; label: string; enabled: boolean; required: boolean };
-type LeadFormSettings = { enabled: boolean; title: string; description?: string; submit_label?: string; fields: LeadField[] };
+type LeadFormSettings = {
+  enabled: boolean;
+  title: string;
+  description?: string;
+  button_label?: string;
+  button_background?: string;
+  button_text_color?: string;
+  field_background?: string;
+  field_text_color?: string;
+  submit_label?: string;
+  fields: LeadField[];
+};
 type SliderPage = { title: string; subtitle?: string; media_url?: string; button_label?: string; button_url?: string };
 
 function human(value: string | null | undefined) {
@@ -207,6 +218,11 @@ function defaultLeadFormSettings(): LeadFormSettings {
     enabled: true,
     title: "Send me your info",
     description: "Share your contact details and I will follow up.",
+    button_label: "Send me your info",
+    button_background: "#a3ff12",
+    button_text_color: "#07130b",
+    field_background: "#07130b",
+    field_text_color: "#f7fff2",
     submit_label: "Send info",
     fields: [
       { key: "name", label: "Name", enabled: true, required: false },
@@ -223,9 +239,10 @@ function defaultSections(): DigitalCardSection[] {
     newSection("profile_header", "Profile header", 1, { margin_bottom: 24 }),
     newSection("quick_actions", "Quick actions", 2, { margin_bottom: 20 }),
     newSection("links", "Links and socials", 3, { margin_bottom: 20 }),
-    newSection("video", "Intro video", 4, { is_visible: false, margin_bottom: 20 }),
-    newSection("qr_code", "QR code", 5, { margin_bottom: 0 }),
-    newSection("nfc", "NFC tap to share", 6, { is_visible: false, margin_bottom: 0 }),
+    newSection("lead_capture", "Lead capture button", 4, { is_visible: false, margin_bottom: 20 }),
+    newSection("video", "Intro video", 5, { is_visible: false, margin_bottom: 20 }),
+    newSection("qr_code", "QR code", 6, { margin_bottom: 0 }),
+    newSection("nfc", "NFC tap to share", 7, { is_visible: false, margin_bottom: 0 }),
   ];
 }
 
@@ -705,6 +722,13 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                                 </div>
                               )}
                             </div>
+                            {section.section_type === "lead_capture" && (
+                              <LeadCaptureSectionEditor
+                                settings={leadSettings()}
+                                onChange={updateLeadSettings}
+                                onFieldChange={updateLeadField}
+                              />
+                            )}
                             {["gallery", "scratch_card", "punch_card", "loyalty_card", "nfc"].includes(section.section_type) && (
                               <div className="rounded-md border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
                                 {human(section.section_type)} is staged as a flexible layer now. Its advanced editor will plug into this section record next.
@@ -761,33 +785,6 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     </div>
                   ))}
                   {!form.digital_card_links?.length && <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">No repeatable links yet. Add a phone, email, website, social profile, or custom action.</div>}
-                </CardContent>
-              </Card>}
-
-              {activePanel === "forms" && <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base"><FormInput className="h-4 w-4" /> Lead Generation Form Builder</CardTitle>
-                  <CardDescription>Choose fields visitors can submit from the public card. More drag-and-drop field types can plug into this structure later.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-3 md:grid-cols-[160px_1fr]">
-                    <SelectField label="Lead form" value={leadSettings().enabled ? "enabled" : "disabled"} values={["enabled", "disabled"]} onChange={(value) => updateLeadSettings({ enabled: value === "enabled" })} />
-                    <Field label="Form title" value={leadSettings().title} onChange={(value) => updateLeadSettings({ title: value })} />
-                    <div className="md:col-span-2"><Field label="Description" value={leadSettings().description || ""} onChange={(value) => updateLeadSettings({ description: value })} /></div>
-                    <Field label="Submit button" value={leadSettings().submit_label || "Send info"} onChange={(value) => updateLeadSettings({ submit_label: value })} />
-                  </div>
-                  <div className="space-y-2">
-                    {leadSettings().fields.map((field, index) => (
-                      <div key={field.key} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-[1fr_120px_120px]">
-                        <Field label="Field label" value={field.label} onChange={(value) => updateLeadField(index, { label: value })} />
-                        <SelectField label="Shown" value={field.enabled ? "yes" : "no"} values={["yes", "no"]} onChange={(value) => updateLeadField(index, { enabled: value === "yes" })} />
-                        <SelectField label="Required" value={field.required ? "yes" : "no"} values={["no", "yes"]} onChange={(value) => updateLeadField(index, { required: value === "yes" })} />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="rounded-lg border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
-                    Coming next: drag-and-drop field palette, custom fields, hidden fields, tags, lead routing, and Square/customer automation triggers.
-                  </div>
                 </CardContent>
               </Card>}
 
@@ -867,6 +864,18 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   </div>
                 </CardContent>
               </Card>}
+
+              {activePanel === "automations" && <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base"><Zap className="h-4 w-4" /> Automations</CardTitle>
+                  <CardDescription>Coming soon: notifications, lead routing, Square subscription triggers, follow-up messages, and product upsell automations.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {["Lead notification emails and SMS alerts", "Square payment or subscription status triggers", "NFC activation and QR product fulfillment handoffs", "Follow-up reminders for new leads", "Customer tags, source tracking, and CRM-style workflows"].map((item) => (
+                    <div key={item} className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{item}</div>
+                  ))}
+                </CardContent>
+              </Card>}
             </section>
 
             <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} zoom={previewZoom} onZoomChange={setPreviewZoom} />
@@ -919,6 +928,42 @@ function ProductChooser({ onSelect }: { onSelect: (panel: BuilderPanel) => void 
         ))}
       </CardContent>
     </Card>
+  );
+}
+
+function LeadCaptureSectionEditor({ settings, onChange, onFieldChange }: { settings: LeadFormSettings; onChange: (patch: Partial<LeadFormSettings>) => void; onFieldChange: (index: number, patch: Partial<LeadField>) => void }) {
+  return (
+    <div className="space-y-3 rounded-lg border bg-background/30 p-3">
+      <div>
+        <div className="flex items-center gap-2 text-sm font-semibold"><FormInput className="h-4 w-4" /> Lead capture button and form</div>
+        <div className="mt-1 text-xs text-muted-foreground">This section shows a button on the card. The button opens a dedicated lead form page.</div>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <SelectField label="Lead form" value={settings.enabled ? "enabled" : "disabled"} values={["enabled", "disabled"]} onChange={(value) => onChange({ enabled: value === "enabled" })} />
+        <Field label="Card button title" value={settings.button_label || "Send me your info"} onChange={(value) => onChange({ button_label: value })} />
+        <Field label="Form title" value={settings.title} onChange={(value) => onChange({ title: value })} />
+        <Field label="Submit button" value={settings.submit_label || "Send info"} onChange={(value) => onChange({ submit_label: value })} />
+        <div className="md:col-span-2"><Field label="Form description" value={settings.description || ""} onChange={(value) => onChange({ description: value })} /></div>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <ColorField label="Button background" value={settings.button_background || "#a3ff12"} onChange={(value) => onChange({ button_background: value })} />
+        <ColorField label="Button text" value={settings.button_text_color || "#07130b"} onChange={(value) => onChange({ button_text_color: value })} />
+        <ColorField label="Form field background" value={settings.field_background || "#07130b"} onChange={(value) => onChange({ field_background: value })} />
+        <ColorField label="Form field text" value={settings.field_text_color || "#f7fff2"} onChange={(value) => onChange({ field_text_color: value })} />
+      </div>
+      <div className="space-y-2">
+        {settings.fields.map((field, index) => (
+          <div key={field.key} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-[1fr_120px_120px]">
+            <Field label="Field label" value={field.label} onChange={(value) => onFieldChange(index, { label: value })} />
+            <SelectField label="Shown" value={field.enabled ? "yes" : "no"} values={["yes", "no"]} onChange={(value) => onFieldChange(index, { enabled: value === "yes" })} />
+            <SelectField label="Required" value={field.required ? "yes" : "no"} values={["no", "yes"]} onChange={(value) => onFieldChange(index, { required: value === "yes" })} />
+          </div>
+        ))}
+      </div>
+      <div className="rounded-md border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
+        Automations for notifications, lead routing, and follow-up messages are staged under the new Automations tab.
+      </div>
+    </div>
   );
 }
 
@@ -1099,6 +1144,20 @@ function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: D
         {card.website_url && <PreviewButton label="Website" accent={card.accent_color} />}
         {visibleLinks.map((link, index) => <PreviewButton key={`${link.label}-${index}`} label={link.label} accent={card.accent_color} icon={link.link_type} />)}
         {!card.website_url && !visibleLinks.length && <PreviewButton label="Add links to preview buttons" accent={card.accent_color} muted />}
+      </div>
+    );
+  }
+
+  if (section.section_type === "lead_capture") {
+    const settings = { ...defaultLeadFormSettings(), ...(card.lead_form_settings || {}) };
+    if (!settings.enabled) return <PlaceholderSection label={section.label} text="Lead capture is disabled." />;
+    return (
+      <div className="rounded-2xl border border-white/15 p-4" style={{ background: `${settings.button_background || card.accent_color}22` }}>
+        <div className="text-sm font-semibold">{settings.title || "Send me your info"}</div>
+        <div className="mt-1 text-xs opacity-70">{settings.description || "Visitors can send contact details from a separate lead form page."}</div>
+        <div className="mt-3 rounded-2xl px-4 py-3 text-center text-sm font-semibold" style={{ background: settings.button_background || card.accent_color, color: settings.button_text_color || card.background_color }}>
+          {settings.button_label || "Send me your info"}
+        </div>
       </div>
     );
   }
