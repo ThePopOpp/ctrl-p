@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
-import { Bell, Calendar, ChevronLeft, ChevronRight, Eye, EyeOff, Flag, GripVertical, Link2, Moon, Plus, Search, Sun, Trash2 } from "lucide-react";
+import { Ban, Bell, Calendar, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Flag, GripVertical, Link2, Moon, Plus, Search, Sun, Trash2 } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
@@ -31,6 +31,7 @@ type ScheduleItem = {
   project_name: string | null;
   workflow_template_slug: string | null;
   workflow_template_name: string | null;
+  hidden_from_schedule: boolean;
   parent_item_id: string | null;
   title: string;
   description: string | null;
@@ -125,6 +126,7 @@ type SchedulePayload = {
   project_name?: string | null;
   workflow_template_slug?: string | null;
   workflow_template_name?: string | null;
+  hidden_from_schedule: boolean;
   parent_item_id: string | null;
   title: string;
   description: string;
@@ -401,10 +403,11 @@ export function AdminProductionSchedule() {
   const orderItems = data?.orderItems ?? [];
   const productionJobs = data?.productionJobs ?? [];
   const staff = users.filter((user) => staffRoles.has(user.role));
+  const dashboardItems = useMemo(() => items.filter((item) => !item.hidden_from_schedule), [items]);
 
   const visibleItems = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return items.filter((item) => {
+    return dashboardItems.filter((item) => {
       if (statusFilter !== "all" && item.status !== statusFilter) return false;
       if (priorityFilter !== "all" && item.priority !== priorityFilter) return false;
       if (visibilityFilter === "customer" && !item.customer_visible) return false;
@@ -433,7 +436,7 @@ export function AdminProductionSchedule() {
         assignee?.email,
       ].some((value) => String(value || "").toLowerCase().includes(needle));
     });
-  }, [items, orders, priorityFilter, products, query, statusFilter, users, visibilityFilter]);
+  }, [dashboardItems, orders, priorityFilter, products, query, statusFilter, users, visibilityFilter]);
 
   const sectionItems = useMemo(() => {
     if (activeView === "Tasks") return visibleItems.filter((item) => ["task", "production_step", "artwork_review", "qc_check"].includes(item.item_type));
@@ -444,12 +447,12 @@ export function AdminProductionSchedule() {
     return visibleItems;
   }, [activeView, visibleItems]);
 
-  const activeItems = items.filter((item) => !["completed", "approved"].includes(item.status));
-  const blockedItems = items.filter((item) => item.is_blocked || item.status === "blocked");
-  const customerVisibleItems = items.filter((item) => item.customer_visible);
-  const overdueItems = items.filter((item) => item.due_date && !["completed", "approved"].includes(item.status) && item.due_date < dateOnly(new Date()));
-  const approvalItems = items.filter((item) => ["approval", "proof", "artwork_review", "customer_action"].includes(item.item_type));
-  const installItems = items.filter((item) => ["delivery", "installation"].includes(item.item_type));
+  const activeItems = dashboardItems.filter((item) => !["completed", "approved"].includes(item.status));
+  const blockedItems = dashboardItems.filter((item) => item.is_blocked || item.status === "blocked");
+  const customerVisibleItems = dashboardItems.filter((item) => item.customer_visible);
+  const overdueItems = dashboardItems.filter((item) => item.due_date && !["completed", "approved"].includes(item.status) && item.due_date < dateOnly(new Date()));
+  const approvalItems = dashboardItems.filter((item) => ["approval", "proof", "artwork_review", "customer_action"].includes(item.item_type));
+  const installItems = dashboardItems.filter((item) => ["delivery", "installation"].includes(item.item_type));
   const projectGroups = useMemo(() => buildProjectGroups(sectionItems, orders, products, users), [orders, products, sectionItems, users]);
   const sortedProjectGroups = useMemo(() => sortProjectGroups(projectGroups, projectSortMode), [projectGroups, projectSortMode]);
   const sortedProjectGroupKeys = useMemo(() => sortedProjectGroups.map((group) => group.key), [sortedProjectGroups]);
@@ -510,6 +513,28 @@ export function AdminProductionSchedule() {
     setSelectedItem(null);
     await refresh();
     setMessage("Schedule item deleted.");
+  }
+
+  async function updateTaskAction(item: ScheduleItem, updates: Partial<SchedulePayload>, messageText: string) {
+    await apiJson<{ item: ScheduleItem }>("/api/admin/production-schedule", {
+      method: "PATCH",
+      body: JSON.stringify({ ...payloadFromItem(item), ...updates }),
+    });
+    setSelectedItem(null);
+    await refresh();
+    setMessage(messageText);
+  }
+
+  async function hideItem(item: ScheduleItem) {
+    await updateTaskAction(item, { hidden_from_schedule: true }, `Hidden "${item.title}" from Scheduled Items and Gantt.`);
+  }
+
+  async function cancelItem(item: ScheduleItem) {
+    await updateTaskAction(item, { status: "on_hold", progress_percent: 0, is_blocked: false }, `Canceled "${item.title}".`);
+  }
+
+  async function completeItem(item: ScheduleItem) {
+    await updateTaskAction(item, { status: "completed", progress_percent: 100, is_blocked: false }, `Completed "${item.title}".`);
   }
 
   async function createDependency(input: {
@@ -714,6 +739,9 @@ export function AdminProductionSchedule() {
                         setExpandedProjectKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
                       }}
                       onSelect={setSelectedItem}
+                      onHide={hideItem}
+                      onCancel={cancelItem}
+                      onComplete={completeItem}
                       onDelete={deleteItem}
                     />
                   </div>
@@ -1326,6 +1354,9 @@ function ScheduleProjects({
   onToggleVisible,
   onToggleExpanded,
   onSelect,
+  onHide,
+  onCancel,
+  onComplete,
   onDelete,
 }: {
   groups: ScheduleProjectGroup[];
@@ -1339,6 +1370,9 @@ function ScheduleProjects({
   onToggleVisible: (key: string) => void;
   onToggleExpanded: (key: string) => void;
   onSelect: (item: ScheduleItem) => void;
+  onHide: (item: ScheduleItem) => void;
+  onCancel: (item: ScheduleItem) => void;
+  onComplete: (item: ScheduleItem) => void;
   onDelete: (item: ScheduleItem) => void;
 }) {
   const visibleSet = new Set(visibleKeys);
@@ -1380,7 +1414,7 @@ function ScheduleProjects({
                 </div>
                 <Button variant={visible ? "default" : "outline"} size="sm" onClick={() => onToggleVisible(group.key)}>
                   {visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  {visible ? "Shown on Gantt" : "Show on Gantt"}
+                  {visible ? "Hide from Gantt" : "Show on Gantt"}
                 </Button>
               </div>
               {expanded && (
@@ -1426,18 +1460,60 @@ function ScheduleProjects({
                   <TableCell>{assignee?.full_name || assignee?.email || item.assignee?.full_name || "Unassigned"}</TableCell>
                   <TableCell>{formatDate(item.due_date || item.end_date)}</TableCell>
                   <TableCell className="pr-4 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Delete schedule item"
-                      className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onDelete(item);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Hide schedule item"
+                        title="Hide from Scheduled Items and Gantt"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onHide(item);
+                        }}
+                      >
+                        <EyeOff className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Cancel schedule item"
+                        title="Cancel task"
+                        className="h-8 w-8 text-muted-foreground hover:text-amber-600"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onCancel(item);
+                        }}
+                      >
+                        <Ban className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Complete schedule item"
+                        title="Complete task"
+                        className="h-8 w-8 text-muted-foreground hover:text-emerald-600"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onComplete(item);
+                        }}
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Remove schedule item"
+                        title="Remove task"
+                        className="h-8 w-8 text-muted-foreground hover:text-red-600"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDelete(item);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -2001,6 +2077,7 @@ function emptyPayload(): SchedulePayload {
     project_name: "",
     workflow_template_slug: null,
     workflow_template_name: null,
+    hidden_from_schedule: false,
     parent_item_id: null,
     title: "",
     description: "",
@@ -2043,6 +2120,7 @@ function payloadFromItem(item?: ScheduleItem | null): SchedulePayload {
     project_name: item.project_name || "",
     workflow_template_slug: item.workflow_template_slug,
     workflow_template_name: item.workflow_template_name,
+    hidden_from_schedule: Boolean(item.hidden_from_schedule),
     parent_item_id: item.parent_item_id,
     title: item.title,
     description: item.description || "",

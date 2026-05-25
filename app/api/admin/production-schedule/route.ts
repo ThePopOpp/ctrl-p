@@ -77,6 +77,7 @@ type ScheduleBody = {
   project_name?: string | null;
   workflow_template_slug?: string | null;
   workflow_template_name?: string | null;
+  hidden_from_schedule?: boolean;
 };
 
 function scheduleSelect() {
@@ -91,6 +92,7 @@ function scheduleSelect() {
     "project_name",
     "workflow_template_slug",
     "workflow_template_name",
+    "hidden_from_schedule",
     "parent_item_id",
     "title",
     "description",
@@ -186,6 +188,7 @@ function buildPayload(body: ScheduleBody, actorId: string, mode: "create" | "upd
     project_name: nullableText(body.project_name),
     workflow_template_slug: nullableText(body.workflow_template_slug),
     workflow_template_name: nullableText(body.workflow_template_name),
+    hidden_from_schedule: Boolean(body.hidden_from_schedule),
     parent_item_id: nullableText(body.parent_item_id),
     description: nullableText(body.description),
     item_type: itemType,

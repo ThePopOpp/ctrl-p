@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       project_name: projectName,
       workflow_template_slug: template.slug,
       workflow_template_name: template.name,
+      hidden_from_schedule: false,
       title: item.title,
       description: item.description || `${template.name} workflow: ${item.owner_role}${item.requires_payment ? " | payment gate" : ""}${item.requires_approval ? " | approval gate" : ""}${item.requires_deposit ? " | deposit gate" : ""}`,
       item_type: itemType(item.item_type),
