@@ -1,6 +1,7 @@
 import {
   Bot,
   Boxes,
+  CalendarCheck,
   CalendarRange,
   CircleDollarSign,
   FileText,
@@ -31,6 +32,7 @@ export const adminNavGroups: readonly {
       ["Orders", ShoppingBag, "/admin/orders"],
       ["Projects", CalendarRange, "/admin/production-schedule"],
       ["Production", Boxes, "/admin/production"],
+      ["Bookings", CalendarCheck, "/admin/bookings"],
       ["Payments", CircleDollarSign, "/admin/payments"],
       ["Messages", MessageSquare, "/admin/messages"],
       ["Customers", Users, "/admin/customers"],

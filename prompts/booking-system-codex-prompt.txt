@@ -1,0 +1,84 @@
+I added a new planning document for the Controlp.io booking system:
+
+- docs/booking-system.md
+
+Please review this document before making any code changes.
+
+The goal is to add a booking and appointment scheduling system to the existing Controlp.io web app. This should work similarly to Cal.com or Fluent Booking Pro, but adapted to the existing Controlp.io stack: TypeScript, Next.js, ShadCN UI, Supabase, and the Coolify-managed VPS deployment.
+
+This booking system needs:
+
+- a public frontend booking page where customers can select days and times based on availability
+- backend dashboard appointment management
+- customizable schedule and availability rules
+- manual blocked time
+- appointment types
+- customer booking forms
+- notifications for both Controlp.io staff and the customer
+- email notification support
+- SMS notification support
+- future-ready calendar sync with my existing calendar
+- support for additional connected calendars later
+- Kanban, list, calendar, and Gantt views (connect to existing project manager gantt timeline)
+- connection to existing customers, orders, jobs, messages, payments, and production schedule where appropriate
+
+Before editing, inspect the existing repo structure, dashboard architecture, auth model, user roles, Supabase patterns, migration conventions, API route patterns, existing customer/order/payment/message models, notification providers, file structure, and UI component system.
+
+Use docs/booking-system.md as the source-of-truth.
+
+Do not rebuild the app or create a disconnected booking system. Extend the existing Controlp.io web app and reuse current components, routes, database patterns, auth checks, and styling wherever possible.
+
+Start by producing a short implementation plan listing:
+
+- files to change
+- existing models/tables that can be reused
+- new Supabase migrations needed
+- API routes or server actions needed
+- public booking routes needed
+- backend dashboard pages/components needed
+- availability calculation approach
+- notification approach
+- calendar sync approach
+- risks, assumptions, and incompatibilities
+
+After the plan, implement Phase 1 only.
+
+Phase 1 should include:
+
+- Supabase migrations for core booking tables
+- appointment type model/table
+- appointment model/table
+- availability rules table
+- blocked times table
+- future-ready calendar connection table if practical
+- notification tracking table if practical
+- public booking page
+- appointment type selection
+- date/time availability display
+- booking form
+- appointment creation
+- backend dashboard navigation item labeled Bookings
+- backend bookings overview
+- backend list view
+- backend calendar view if feasible
+- basic appointment detail drawer/modal
+- basic appointment status updates
+- basic availability settings
+- manual blocked time support
+- email notification hooks using existing provider if available
+- SMS notification hooks using existing provider if available
+- loading, empty, success, and error states
+
+Do not implement full Google Calendar OAuth, Microsoft Calendar OAuth, two-way calendar sync, full payment/deposit collection, advanced Kanban drag/drop, advanced Gantt rescheduling, recurring appointments, or customer dashboard appointment history in Phase 1 unless the repo already has patterns that make this simple.
+
+When complete, summarize:
+
+- what was added
+- files changed
+- migrations created
+- routes added
+- how to test the public booking page
+- how to test backend booking management
+- how availability is calculated
+- how email/SMS notifications are prepared or sent
+- what should be handled in Phase 2
