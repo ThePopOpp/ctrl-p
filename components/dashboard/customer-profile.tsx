@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Box, CreditCard, FileCheck2, Home, IdCard, LogOut, MessageSquare, Moon, Save, Settings, Sun, Truck, UserCircle, type LucideIcon } from "lucide-react";
+import { BarChart3, Box, Camera, CreditCard, FileCheck2, Home, IdCard, LogOut, MessageSquare, Moon, Save, Settings, Sun, Truck, Upload, UserCircle, type LucideIcon } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ type CustomerProfileData = {
     full_name: string | null;
     phone: string | null;
     company: string | null;
+    profile_photo_url: string | null;
     role: string;
     status: string;
   };
@@ -46,7 +47,8 @@ export function CustomerProfile() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState("");
-  const [form, setForm] = useState({ full_name: "", phone: "", company: "", email: "" });
+  const [uploading, setUploading] = useState(false);
+  const [form, setForm] = useState({ full_name: "", phone: "", company: "", email: "", profile_photo_url: "" });
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("controlp_customer_theme");
@@ -66,6 +68,7 @@ export function CustomerProfile() {
           phone: profile.phone || "",
           company: profile.company || "",
           email: profile.email || "",
+          profile_photo_url: profile.profile_photo_url || "",
         });
         setState("ready");
       } catch (error) {
@@ -101,6 +104,31 @@ export function CustomerProfile() {
     }
   }
 
+  async function uploadPhoto(file?: File) {
+    if (!file) return;
+    try {
+      setUploading(true);
+      setMessage("");
+      const token = await customerToken();
+      const body = new FormData();
+      body.append("file", file);
+      body.append("media_type", "customer-profile-photo");
+      const response = await fetch("/api/dashboard/customer/digital-cards/media", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not upload profile photo.");
+      setForm((current) => ({ ...current, profile_photo_url: String(payload.publicUrl || "") }));
+      setMessage("Profile photo uploaded. Save your profile to keep this change.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not upload profile photo.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function signOut() {
     const db = getSupabaseBrowserClient();
     await db?.auth.signOut();
@@ -130,6 +158,24 @@ export function CustomerProfile() {
                 <CardDescription>This profile feeds your customer dashboard and future product workflows.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <div className="mb-2 text-sm font-medium text-muted-foreground">Profile photo</div>
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-background/35 p-3">
+                    {form.profile_photo_url ? (
+                      <img className="h-16 w-16 rounded-full object-cover" src={form.profile_photo_url} alt="" />
+                    ) : (
+                      <div className="grid h-16 w-16 place-items-center rounded-full bg-primary text-lg font-bold text-primary-foreground">{(form.full_name || form.email || "C").slice(0, 1).toUpperCase()}</div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" asChild disabled={uploading}>
+                        <label className="cursor-pointer"><Upload className="h-4 w-4" /> {uploading ? "Uploading..." : "Upload"}<input type="file" accept="image/*" className="hidden" onChange={(event) => uploadPhoto(event.target.files?.[0])} /></label>
+                      </Button>
+                      <Button variant="outline" asChild disabled={uploading}>
+                        <label className="cursor-pointer"><Camera className="h-4 w-4" /> Camera<input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => uploadPhoto(event.target.files?.[0])} /></label>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
                 <Field label="Full name" value={form.full_name} onChange={(value) => setForm((current) => ({ ...current, full_name: value }))} />
                 <Field label="Company" value={form.company} onChange={(value) => setForm((current) => ({ ...current, company: value }))} />
                 <Field label="Phone" value={form.phone} onChange={(value) => setForm((current) => ({ ...current, phone: value }))} />
@@ -144,7 +190,7 @@ export function CustomerProfile() {
   );
 }
 
-function CustomerSidebar({ active, profile, onSignOut }: { active: string; profile: { full_name: string; company: string; email: string }; onSignOut: () => void }) {
+function CustomerSidebar({ active, profile, onSignOut }: { active: string; profile: { full_name: string; company: string; email: string; profile_photo_url: string }; onSignOut: () => void }) {
   return (
     <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
       <a className="mb-5 flex items-center gap-3 px-2" href="/dashboard/customer">
@@ -160,7 +206,7 @@ function CustomerSidebar({ active, profile, onSignOut }: { active: string; profi
       </nav>
       <div className="absolute bottom-16 left-3 right-3 rounded-xl border bg-background/55 p-2">
         <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(profile.full_name || profile.email || "C").slice(0, 1).toUpperCase()}</div>
+          {profile.profile_photo_url ? <img className="h-9 w-9 shrink-0 rounded-full object-cover" src={profile.profile_photo_url} alt="" /> : <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(profile.full_name || profile.email || "C").slice(0, 1).toUpperCase()}</div>}
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold">{profile.full_name || "Customer"}</div>
             <div className="truncate text-xs text-muted-foreground">{profile.company || profile.email || "ControlP.io"}</div>

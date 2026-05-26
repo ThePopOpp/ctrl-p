@@ -29,7 +29,7 @@ async function verifyCustomerRequest(request: Request) {
 
   const profileResult = await adminClient
     .from("users")
-    .select("id, email, full_name, phone, company, role, status, deleted_at")
+    .select("id, email, full_name, phone, company, profile_photo_url, role, status, deleted_at")
     .eq("id", actorId)
     .maybeSingle();
 

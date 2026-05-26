@@ -91,7 +91,7 @@ type CardData = {
   cards: DigitalCard[];
   products: { id: string; name: string; slug: string | null; category: string | null; tagline: string | null }[];
   publicBase: string;
-  profile: { email: string | null; full_name: string | null; phone: string | null; company: string | null };
+  profile: { email: string | null; full_name: string | null; phone: string | null; company: string | null; profile_photo_url?: string | null };
 };
 
 const linkTypes = ["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"];
@@ -159,6 +159,7 @@ type OpenerContent = {
   digital_product?: string;
   title?: string;
   subtitle?: string;
+  typography?: TypographySettings;
   background_color?: string;
   accent_color?: string;
   text_color?: string;
@@ -190,6 +191,29 @@ type CardThemeSettings = {
   dark: CardThemePalette;
   light: CardThemePalette;
 };
+type TypographySettings = {
+  font_family?: string;
+  font_size?: number;
+  color?: string;
+  alignment?: "left" | "center" | "right" | "justify";
+  font_weight?: number;
+  italic?: boolean;
+  underline?: boolean;
+  letter_spacing?: number;
+  line_height?: number;
+};
+type ImageStyleSettings = {
+  shape?: "circle" | "rounded" | "square";
+  outline?: "none" | "thin" | "medium" | "thick";
+  outline_color?: string;
+  hover_effect?: "none" | "lift" | "zoom" | "glow" | "tilt";
+};
+const googleFontOptions = ["Inter", "DM Sans", "Roboto", "Open Sans", "Montserrat", "Poppins", "Lato", "Merriweather", "Playfair Display", "Oswald", "Raleway", "Nunito", "Source Sans 3"];
+const textAlignments = ["left", "center", "right", "justify"];
+const fontWeights = ["200", "300", "400", "500", "600", "700", "800", "900"];
+const imageShapes = ["circle", "rounded", "square"];
+const imageOutlines = ["none", "thin", "medium", "thick"];
+const imageHoverEffects = ["none", "lift", "zoom", "glow", "tilt"];
 
 function human(value: string | null | undefined) {
   return String(value || "none").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -234,6 +258,71 @@ function applyTheme(card: DigitalCard, mode: CardThemeMode): DigitalCard {
     background_color: palette.background,
     accent_color: palette.accent,
     text_color: palette.text,
+  };
+}
+
+function typographyFrom(value: unknown, fallbackColor = ""): TypographySettings {
+  const source = isObject(value) ? value : {};
+  const alignment = ["left", "center", "right", "justify"].includes(String(source.alignment)) ? String(source.alignment) as TypographySettings["alignment"] : "center";
+  return {
+    font_family: typeof source.font_family === "string" && source.font_family ? source.font_family : "Inter",
+    font_size: Number(source.font_size || 18),
+    color: typeof source.color === "string" && source.color ? source.color : fallbackColor,
+    alignment,
+    font_weight: Number(source.font_weight || 600),
+    italic: Boolean(source.italic),
+    underline: Boolean(source.underline),
+    letter_spacing: Number(source.letter_spacing || 0),
+    line_height: Number(source.line_height || 1.35),
+  };
+}
+
+function typographyStyle(settings: TypographySettings): React.CSSProperties {
+  return {
+    fontFamily: `${settings.font_family || "Inter"}, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+    color: settings.color || undefined,
+    textAlign: settings.alignment || "center",
+    fontWeight: Number(settings.font_weight || 600),
+    fontStyle: settings.italic ? "italic" : "normal",
+    textDecorationLine: settings.underline ? "underline" : "none",
+    letterSpacing: `${Number(settings.letter_spacing || 0)}px`,
+    lineHeight: Number(settings.line_height || 1.35),
+  };
+}
+
+function imageStyleFrom(value: unknown): ImageStyleSettings {
+  const source = isObject(value) ? value : {};
+  const shape = ["circle", "rounded", "square"].includes(String(source.shape)) ? String(source.shape) as ImageStyleSettings["shape"] : "circle";
+  const outline = ["none", "thin", "medium", "thick"].includes(String(source.outline)) ? String(source.outline) as ImageStyleSettings["outline"] : "medium";
+  const hoverEffect = ["none", "lift", "zoom", "glow", "tilt"].includes(String(source.hover_effect)) ? String(source.hover_effect) as ImageStyleSettings["hover_effect"] : "none";
+  return {
+    shape,
+    outline,
+    outline_color: typeof source.outline_color === "string" && source.outline_color ? source.outline_color : "rgba(255,255,255,0.16)",
+    hover_effect: hoverEffect,
+  };
+}
+
+function imageShapeClass(settings: ImageStyleSettings) {
+  if (settings.shape === "square") return "rounded-none";
+  if (settings.shape === "rounded") return "rounded-2xl";
+  return "rounded-full";
+}
+
+function imageHoverClass(settings: ImageStyleSettings) {
+  if (settings.hover_effect === "lift") return "hover:-translate-y-1";
+  if (settings.hover_effect === "zoom") return "hover:scale-105";
+  if (settings.hover_effect === "glow") return "hover:shadow-[0_0_28px_rgba(163,255,18,0.45)]";
+  if (settings.hover_effect === "tilt") return "hover:rotate-2";
+  return "";
+}
+
+function imageBorderStyle(settings: ImageStyleSettings): React.CSSProperties {
+  const width = settings.outline === "thin" ? 2 : settings.outline === "thick" ? 6 : settings.outline === "none" ? 0 : 4;
+  return {
+    borderWidth: width,
+    borderColor: width ? settings.outline_color || "rgba(255,255,255,0.16)" : "transparent",
+    borderStyle: "solid",
   };
 }
 
@@ -378,6 +467,7 @@ function defaultOpenerContent(): OpenerContent {
     digital_product: "opener",
     title: "Welcome",
     subtitle: "Tap to view my digital business card.",
+    typography: { font_family: "Inter", font_size: 44, color: "#f7fff2", alignment: "center", font_weight: 700, italic: false, underline: false, letter_spacing: 0, line_height: 1.05 },
     background_color: "#07130b",
     accent_color: "#a3ff12",
     text_color: "#f7fff2",
@@ -471,6 +561,24 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
     } finally {
       setUploadingMedia(null);
     }
+  }
+
+  function contentTypography() {
+    return typographyFrom(form.media_settings?.content_typography, form.text_color || cardThemeSettings.dark.text);
+  }
+
+  function updateContentTypography(patch: Partial<TypographySettings>) {
+    const next = { ...contentTypography(), ...patch };
+    update("media_settings", { ...(form.media_settings || {}), content_typography: next });
+  }
+
+  function profileImageStyle() {
+    return imageStyleFrom(form.media_settings?.profile_image_style);
+  }
+
+  function updateProfileImageStyle(patch: Partial<ImageStyleSettings>) {
+    const next = { ...profileImageStyle(), ...patch };
+    update("media_settings", { ...(form.media_settings || {}), profile_image_style: next });
   }
 
   function updateThemePalette(mode: CardThemeMode, patch: Partial<CardThemePalette>) {
@@ -768,7 +876,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
         </nav>
         {data?.profile && <div className="absolute bottom-3 left-3 right-3 rounded-xl border bg-background/55 p-2">
           <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(data.profile.full_name || data.profile.email || "C").slice(0, 1).toUpperCase()}</div>
+            {data.profile.profile_photo_url ? <img className="h-9 w-9 shrink-0 rounded-full object-cover" src={data.profile.profile_photo_url} alt="" /> : <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(data.profile.full_name || data.profile.email || "C").slice(0, 1).toUpperCase()}</div>}
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold">{data.profile.full_name || "Customer"}</div>
               <div className="truncate text-xs text-muted-foreground">{data.profile.company || data.profile.email || "ControlP.io"}</div>
@@ -971,6 +1079,18 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   <Field label="Job title" value={form.job_title || ""} onChange={(value) => update("job_title", value)} />
                   <Field label="Department" value={form.department || ""} onChange={(value) => update("department", value)} />
                   <div className="md:col-span-2"><div className="mb-1.5 text-xs font-medium text-muted-foreground">Bio</div><Textarea value={form.bio || ""} onChange={(event) => update("bio", event.target.value)} placeholder="Short customer-facing intro" /></div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Content text style</CardTitle><CardDescription>Control profile text alignment, Google-style font stack, size, weight, spacing, color, bold, italic, and underline.</CardDescription></CardHeader>
+                <CardContent>
+                  <TypographyControls value={contentTypography()} onChange={updateContentTypography} />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-base">Profile image style</CardTitle><CardDescription>Shape the profile image and add outline or hover effects for the public card.</CardDescription></CardHeader>
+                <CardContent>
+                  <ImageStyleControls value={profileImageStyle()} onChange={updateProfileImageStyle} />
                 </CardContent>
               </Card>
               <Card>
@@ -1273,6 +1393,7 @@ function LeadCaptureSectionEditor({ settings, onChange, onFieldChange }: { setti
 
 function OpenerPanel({ content, primaryPhone, onChange }: { content: OpenerContent; primaryPhone: string; onChange: (patch: Partial<OpenerContent>) => void }) {
   const buttons = (content.buttons || []).slice(0, 2);
+  const splashTypography = typographyFrom(content.typography, content.text_color || "#f7fff2");
 
   function updateButton(index: number, patch: Partial<OpenerButton>) {
     const next = [...buttons];
@@ -1290,6 +1411,10 @@ function OpenerPanel({ content, primaryPhone, onChange }: { content: OpenerConte
         <div className="grid gap-3">
           <Field label="Splash title" value={content.title || ""} onChange={(value) => onChange({ title: value })} />
           <Field label="Subtitle" value={content.subtitle || ""} onChange={(value) => onChange({ subtitle: value })} />
+        </div>
+        <div className="rounded-lg border bg-background/35 p-3">
+          <div className="mb-3 text-sm font-semibold">Splash typography</div>
+          <TypographyControls value={splashTypography} onChange={(patch) => onChange({ typography: { ...splashTypography, ...patch } })} />
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           <ColorField label="Background" value={content.background_color || "#07130b"} onChange={(value) => onChange({ background_color: value })} />
@@ -1428,16 +1553,21 @@ function sectionStyle(section: DigitalCardSection): React.CSSProperties {
 
 function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: DigitalCardSection; card: DigitalCard; publicUrl: string; visibleLinks: DigitalCardLink[] }) {
   if (section.section_type === "profile_header") {
+    const textStyle = typographyStyle(typographyFrom(card.media_settings?.content_typography, card.text_color));
+    const nameSize = Number(typographyFrom(card.media_settings?.content_typography, card.text_color).font_size || 18);
+    const imageStyle = imageStyleFrom(card.media_settings?.profile_image_style);
+    const imageClasses = cn("mx-auto h-24 w-24 object-cover shadow-xl transition-transform transition-shadow duration-200", imageShapeClass(imageStyle), imageHoverClass(imageStyle));
+    const fallbackImageClasses = cn("mx-auto grid h-24 w-24 place-items-center bg-white/10 text-2xl font-semibold shadow-xl transition-transform transition-shadow duration-200", imageShapeClass(imageStyle), imageHoverClass(imageStyle));
     return (
       <div>
         <div className="flex items-center justify-between gap-2">
           {card.logo_url ? <img className="max-h-10 max-w-[140px] object-contain" src={card.logo_url} alt="" /> : <div className="text-xs font-semibold opacity-70">controlp.io card</div>}
         </div>
-        <div className="mt-8 text-center">
-          {card.profile_photo_url ? <img className="mx-auto h-24 w-24 rounded-full border-4 border-white/15 object-cover shadow-xl" src={card.profile_photo_url} alt="" /> : <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border-4 border-white/15 bg-white/10 text-2xl font-semibold shadow-xl">{(card.display_name || card.card_name || "CP").slice(0, 2).toUpperCase()}</div>}
-          <div className="mt-4 text-2xl font-semibold leading-tight">{card.display_name || card.card_name || "Your Name"}</div>
-          <div className="mt-1 text-xs opacity-75">{[card.job_title, card.company_name].filter(Boolean).join(" - ") || "Title - Company"}</div>
-          {card.bio ? <p className="mt-4 text-sm leading-5 opacity-85">{card.bio}</p> : <p className="mt-4 text-sm leading-5 opacity-50">Short bio and introduction will appear here.</p>}
+        <div className="mt-8" style={textStyle}>
+          {card.profile_photo_url ? <img className={imageClasses} style={imageBorderStyle(imageStyle)} src={card.profile_photo_url} alt="" /> : <div className={fallbackImageClasses} style={imageBorderStyle(imageStyle)}>{(card.display_name || card.card_name || "CP").slice(0, 2).toUpperCase()}</div>}
+          <div className="mt-4 leading-tight" style={{ fontSize: nameSize, fontWeight: textStyle.fontWeight }}>{card.display_name || card.card_name || "Your Name"}</div>
+          <div className="mt-1 opacity-75" style={{ fontSize: Math.max(11, nameSize * 0.58) }}>{[card.job_title, card.company_name].filter(Boolean).join(" - ") || "Title - Company"}</div>
+          {card.bio ? <p className="mt-4 opacity-85" style={{ fontSize: Math.max(12, nameSize * 0.72), lineHeight: textStyle.lineHeight }}>{card.bio}</p> : <p className="mt-4 opacity-50" style={{ fontSize: Math.max(12, nameSize * 0.72), lineHeight: textStyle.lineHeight }}>Short bio and introduction will appear here.</p>}
         </div>
       </div>
     );
@@ -1512,6 +1642,42 @@ function PreviewPill({ label, accent }: { label: string; accent: string }) {
 
 function PreviewButton({ label, accent, icon, muted }: { label: string; accent: string; icon?: string; muted?: boolean }) {
   return <div className={cn("flex items-center justify-between rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold", muted && "opacity-60")}><span className="flex items-center gap-2"><LinkIcon className="h-3.5 w-3.5" />{label}</span><span style={{ color: accent }}>{icon ? human(icon) : "Open"}</span></div>;
+}
+
+function TypographyControls({ value, onChange }: { value: TypographySettings; onChange: (patch: Partial<TypographySettings>) => void }) {
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-2">
+        <SelectField label="Font" value={value.font_family || "Inter"} values={googleFontOptions} onChange={(font) => onChange({ font_family: font })} />
+        <SelectField label="Alignment" value={value.alignment || "center"} values={textAlignments} onChange={(alignment) => onChange({ alignment: alignment as TypographySettings["alignment"] })} />
+      </div>
+      <div className="grid gap-3 md:grid-cols-4">
+        <NumberField label="Size" value={Number(value.font_size || 18)} onChange={(fontSize) => onChange({ font_size: fontSize })} />
+        <SelectField label="Weight" value={String(value.font_weight || 600)} values={fontWeights} onChange={(weight) => onChange({ font_weight: Number(weight) })} />
+        <NumberField label="Letter spacing" value={Number(value.letter_spacing || 0)} onChange={(spacing) => onChange({ letter_spacing: spacing })} />
+        <NumberField label="Line height" value={Number(value.line_height || 1.35)} onChange={(height) => onChange({ line_height: height || 1 })} />
+      </div>
+      <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+        <ColorField label="Text color" value={value.color || "#f7fff2"} onChange={(color) => onChange({ color })} />
+        <div className="grid grid-cols-3 gap-2">
+          <Button type="button" variant={Number(value.font_weight || 600) >= 700 ? "default" : "outline"} onClick={() => onChange({ font_weight: Number(value.font_weight || 600) >= 700 ? 400 : 700 })}>B</Button>
+          <Button type="button" variant={value.italic ? "default" : "outline"} className="italic" onClick={() => onChange({ italic: !value.italic })}>I</Button>
+          <Button type="button" variant={value.underline ? "default" : "outline"} className="underline" onClick={() => onChange({ underline: !value.underline })}>U</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImageStyleControls({ value, onChange }: { value: ImageStyleSettings; onChange: (patch: Partial<ImageStyleSettings>) => void }) {
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      <SelectField label="Image shape" value={value.shape || "circle"} values={imageShapes} onChange={(shape) => onChange({ shape: shape as ImageStyleSettings["shape"] })} />
+      <SelectField label="Outline" value={value.outline || "medium"} values={imageOutlines} onChange={(outline) => onChange({ outline: outline as ImageStyleSettings["outline"] })} />
+      <ColorField label="Outline color" value={value.outline_color || "#ffffff"} onChange={(outlineColor) => onChange({ outline_color: outlineColor })} />
+      <SelectField label="Hover effect" value={value.hover_effect || "none"} values={imageHoverEffects} onChange={(hoverEffect) => onChange({ hover_effect: hoverEffect as ImageStyleSettings["hover_effect"] })} />
+    </div>
+  );
 }
 
 function SelectField({ label, value, values, onChange }: { label: string; value: string; values: string[]; onChange: (value: string) => void }) {

@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { ExternalLink, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
 
 import { getServerSupabaseConfig } from "@/lib/admin/server-auth";
+import { cn } from "@/lib/utils";
 import { PublicCardActions, PublicThemeToggle } from "./public-card-actions";
 
 type PublicCardLink = {
@@ -45,6 +46,7 @@ type OpenerContent = {
   digital_product?: string;
   title?: string;
   subtitle?: string;
+  typography?: TypographySettings;
   background_color?: string;
   accent_color?: string;
   text_color?: string;
@@ -54,6 +56,23 @@ type OpenerContent = {
   open_animation?: string;
   close_animation?: string;
   buttons?: OpenerButton[];
+};
+type TypographySettings = {
+  font_family?: string;
+  font_size?: number;
+  color?: string;
+  alignment?: "left" | "center" | "right" | "justify";
+  font_weight?: number;
+  italic?: boolean;
+  underline?: boolean;
+  letter_spacing?: number;
+  line_height?: number;
+};
+type ImageStyleSettings = {
+  shape?: "circle" | "rounded" | "square";
+  outline?: "none" | "thin" | "medium" | "thick";
+  outline_color?: string;
+  hover_effect?: "none" | "lift" | "zoom" | "glow" | "tilt";
 };
 
 type PublicCard = {
@@ -118,6 +137,71 @@ function publicThemeSettings(card: PublicCard) {
   };
 }
 
+function typographyFrom(value: unknown, fallbackColor = ""): TypographySettings {
+  const source = isObject(value) ? value : {};
+  const alignment = ["left", "center", "right", "justify"].includes(String(source.alignment)) ? String(source.alignment) as TypographySettings["alignment"] : "center";
+  return {
+    font_family: typeof source.font_family === "string" && source.font_family ? source.font_family : "Inter",
+    font_size: Number(source.font_size || 18),
+    color: typeof source.color === "string" && source.color ? source.color : fallbackColor,
+    alignment,
+    font_weight: Number(source.font_weight || 600),
+    italic: Boolean(source.italic),
+    underline: Boolean(source.underline),
+    letter_spacing: Number(source.letter_spacing || 0),
+    line_height: Number(source.line_height || 1.35),
+  };
+}
+
+function typographyStyle(settings: TypographySettings): CSSProperties {
+  return {
+    fontFamily: `${settings.font_family || "Inter"}, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+    color: settings.color || undefined,
+    textAlign: settings.alignment || "center",
+    fontWeight: Number(settings.font_weight || 600),
+    fontStyle: settings.italic ? "italic" : "normal",
+    textDecorationLine: settings.underline ? "underline" : "none",
+    letterSpacing: `${Number(settings.letter_spacing || 0)}px`,
+    lineHeight: Number(settings.line_height || 1.35),
+  };
+}
+
+function imageStyleFrom(value: unknown): ImageStyleSettings {
+  const source = isObject(value) ? value : {};
+  const shape = ["circle", "rounded", "square"].includes(String(source.shape)) ? String(source.shape) as ImageStyleSettings["shape"] : "circle";
+  const outline = ["none", "thin", "medium", "thick"].includes(String(source.outline)) ? String(source.outline) as ImageStyleSettings["outline"] : "medium";
+  const hoverEffect = ["none", "lift", "zoom", "glow", "tilt"].includes(String(source.hover_effect)) ? String(source.hover_effect) as ImageStyleSettings["hover_effect"] : "none";
+  return {
+    shape,
+    outline,
+    outline_color: typeof source.outline_color === "string" && source.outline_color ? source.outline_color : "rgba(255,255,255,0.16)",
+    hover_effect: hoverEffect,
+  };
+}
+
+function imageShapeClass(settings: ImageStyleSettings) {
+  if (settings.shape === "square") return "rounded-none";
+  if (settings.shape === "rounded") return "rounded-2xl";
+  return "rounded-full";
+}
+
+function imageHoverClass(settings: ImageStyleSettings) {
+  if (settings.hover_effect === "lift") return "hover:-translate-y-1";
+  if (settings.hover_effect === "zoom") return "hover:scale-105";
+  if (settings.hover_effect === "glow") return "hover:shadow-[0_0_28px_rgba(163,255,18,0.45)]";
+  if (settings.hover_effect === "tilt") return "hover:rotate-2";
+  return "";
+}
+
+function imageBorderStyle(settings: ImageStyleSettings): CSSProperties {
+  const width = settings.outline === "thin" ? 2 : settings.outline === "thick" ? 6 : settings.outline === "none" ? 0 : 4;
+  return {
+    borderWidth: width,
+    borderColor: width ? settings.outline_color || "rgba(255,255,255,0.16)" : "transparent",
+    borderStyle: "solid",
+  };
+}
+
 function safeHref(value: string | null | undefined) {
   if (!value) return "";
   if (/^(https?:|mailto:|tel:|sms:)/i.test(value)) return value;
@@ -174,6 +258,7 @@ function defaultOpenerContent(): OpenerContent {
     digital_product: "opener",
     title: "Welcome",
     subtitle: "Tap to view my digital business card.",
+    typography: { font_family: "Inter", font_size: 44, color: "#f7fff2", alignment: "center", font_weight: 700, italic: false, underline: false, letter_spacing: 0, line_height: 1.05 },
     background_color: "#07130b",
     accent_color: "#a3ff12",
     text_color: "#f7fff2",
@@ -277,6 +362,9 @@ function PublicOpener({ section, card, publicUrl }: { section: PublicCardSection
   const content = { ...defaultOpenerContent(), ...(section.content || {}) } as OpenerContent;
   const duration = Math.max(1, Math.min(30, Number(content.duration_seconds || 7)));
   const backgroundImage = content.background_image_url ? `linear-gradient(rgba(0,0,0,.38), rgba(0,0,0,.38)), url(${content.background_image_url})` : undefined;
+  const splashTypography = typographyFrom(content.typography, content.text_color || card.text_color);
+  const splashStyle = typographyStyle(splashTypography);
+  const splashSize = Number(splashTypography.font_size || 44);
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-center px-5"
@@ -301,10 +389,10 @@ function PublicOpener({ section, card, publicUrl }: { section: PublicCardSection
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
-      <div className="relative z-10 mx-auto max-w-lg text-center" style={{ animation: "public-opener-enter 650ms ease both" }}>
+      <div className="relative z-10 mx-auto max-w-lg" style={{ ...splashStyle, animation: "public-opener-enter 650ms ease both" }}>
         <div className="text-xs uppercase tracking-[0.35em] opacity-70">Digital card</div>
-        <h1 className="mt-5 text-5xl font-semibold tracking-tight">{content.title || card.display_name || card.card_name}</h1>
-        <p className="mx-auto mt-4 max-w-md text-lg opacity-80">{content.subtitle || `Connect with ${card.display_name || card.card_name}`}</p>
+        <h1 className="mt-5 tracking-tight" style={{ fontSize: splashSize, fontWeight: splashStyle.fontWeight, lineHeight: splashStyle.lineHeight }}>{content.title || card.display_name || card.card_name}</h1>
+        <p className="mx-auto mt-4 max-w-md opacity-80" style={{ fontSize: Math.max(14, splashSize * 0.38), lineHeight: splashStyle.lineHeight }}>{content.subtitle || `Connect with ${card.display_name || card.card_name}`}</p>
         <div className="mt-8 grid gap-3 sm:grid-cols-2">
           {(content.buttons || []).slice(0, 2).map((button, index) => (
             <a key={index} href={openerButtonHref(button, card)} className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur" style={{ color: content.accent_color || card.accent_color }}>
@@ -340,6 +428,12 @@ function PublicSection({
   lightTheme: { background: string; text: string; accent: string };
 }) {
   if (section.section_type === "profile_header") {
+    const textSettings = typographyFrom(card.media_settings?.content_typography, card.text_color);
+    const textStyle = typographyStyle(textSettings);
+    const nameSize = Number(textSettings.font_size || 18);
+    const imageSettings = imageStyleFrom(card.media_settings?.profile_image_style);
+    const imageClasses = cn("mx-auto h-28 w-28 object-cover shadow-xl transition-transform transition-shadow duration-200", imageShapeClass(imageSettings), imageHoverClass(imageSettings));
+    const fallbackImageClasses = cn("mx-auto grid h-28 w-28 place-items-center bg-white/10 text-3xl font-semibold shadow-xl transition-transform transition-shadow duration-200", imageShapeClass(imageSettings), imageHoverClass(imageSettings));
     return (
       <div style={sectionStyle(section)}>
         <div className="flex items-center justify-between gap-3">
@@ -347,15 +441,15 @@ function PublicSection({
           <PublicThemeToggle mode={themeMode} dark={darkTheme} light={lightTheme} />
         </div>
 
-        <div className="mt-8 text-center">
+        <div className="mt-8" style={textStyle}>
           {card.profile_photo_url ? (
-            <img className="mx-auto h-28 w-28 rounded-full border-4 border-white/15 object-cover shadow-xl" src={card.profile_photo_url} alt={card.display_name || card.card_name} />
+            <img className={imageClasses} style={imageBorderStyle(imageSettings)} src={card.profile_photo_url} alt={card.display_name || card.card_name} />
           ) : (
-            <div className="mx-auto grid h-28 w-28 place-items-center rounded-full border-4 border-white/15 bg-white/10 text-3xl font-semibold shadow-xl">{(card.display_name || card.card_name).slice(0, 2).toUpperCase()}</div>
+            <div className={fallbackImageClasses} style={imageBorderStyle(imageSettings)}>{(card.display_name || card.card_name).slice(0, 2).toUpperCase()}</div>
           )}
-          <h1 className="mt-5 text-3xl font-semibold tracking-tight">{card.display_name || card.card_name}</h1>
-          <p className="mt-1 text-sm opacity-80">{[card.job_title, card.company_name].filter(Boolean).join(" - ")}</p>
-          {card.bio && <p className="mt-4 text-sm leading-6 opacity-85">{card.bio}</p>}
+          <h1 className="mt-5 tracking-tight" style={{ fontSize: nameSize, fontWeight: textStyle.fontWeight, lineHeight: textStyle.lineHeight }}>{card.display_name || card.card_name}</h1>
+          <p className="mt-1 opacity-80" style={{ fontSize: Math.max(12, nameSize * 0.58) }}>{[card.job_title, card.company_name].filter(Boolean).join(" - ")}</p>
+          {card.bio && <p className="mt-4 opacity-85" style={{ fontSize: Math.max(13, nameSize * 0.72), lineHeight: textStyle.lineHeight }}>{card.bio}</p>}
         </div>
       </div>
     );

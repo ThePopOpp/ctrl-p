@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type AnalyticsData = {
-  profile: { full_name: string | null };
+  profile: { full_name: string | null; email?: string | null; company?: string | null; profile_photo_url?: string | null };
   cards: { id: string; card_name: string; slug: string; status: string; is_public: boolean; view_count: number; updated_at: string | null }[];
   events: { id: string; digital_card_id: string; event_type: string; device_type: string | null; source: string | null; created_at: string | null }[];
   leads: { id: string; digital_card_id: string; name: string | null; email: string | null; phone: string | null; company: string | null; message: string | null; status: string; created_at: string | null }[];
@@ -116,10 +116,10 @@ export function CustomerAnalytics() {
         </nav>
         {data?.profile && <div className="absolute bottom-3 left-3 right-3 rounded-xl border bg-background/55 p-2">
           <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(data.profile.full_name || "C").slice(0, 1).toUpperCase()}</div>
+            {data.profile.profile_photo_url ? <img className="h-9 w-9 shrink-0 rounded-full object-cover" src={data.profile.profile_photo_url} alt="" /> : <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(data.profile.full_name || data.profile.email || "C").slice(0, 1).toUpperCase()}</div>}
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold">{data.profile.full_name || "Customer"}</div>
-              <div className="truncate text-xs text-muted-foreground">ControlP.io</div>
+              <div className="truncate text-xs text-muted-foreground">{data.profile.company || data.profile.email || "ControlP.io"}</div>
             </div>
           </div>
         </div>}

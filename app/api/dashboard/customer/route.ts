@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
   const profileResult = await adminClient
     .from("users")
-    .select("id, email, full_name, phone, company, role, status, deleted_at, created_at")
+    .select("id, email, full_name, phone, company, profile_photo_url, role, status, deleted_at, created_at")
     .eq("id", actorId)
     .maybeSingle();
 
@@ -163,6 +163,7 @@ export async function PATCH(request: Request) {
     full_name: text(body.full_name) || null,
     phone: text(body.phone) || null,
     company: text(body.company) || null,
+    profile_photo_url: text(body.profile_photo_url) || null,
   };
 
   const adminClient = createClient(config.supabaseUrl, config.serviceRoleKey, {
@@ -184,7 +185,7 @@ export async function PATCH(request: Request) {
     .from("users")
     .update(updates)
     .eq("id", actorId)
-    .select("id, email, full_name, phone, company, role, status, created_at")
+    .select("id, email, full_name, phone, company, profile_photo_url, role, status, created_at")
     .maybeSingle();
 
   if (profileResult.error || !profileResult.data) return jsonError(profileResult.error?.message || "Could not update profile.", 400);

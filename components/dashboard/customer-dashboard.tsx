@@ -19,6 +19,7 @@ type CustomerProfile = {
   full_name: string | null;
   phone: string | null;
   company: string | null;
+  profile_photo_url?: string | null;
   role: string;
   status: string;
 };
@@ -128,7 +129,6 @@ const navItems: { label: string; icon: LucideIcon; href: string }[] = [
   { label: "Profile", icon: UserCircle, href: "/dashboard/customer/profile" },
   { label: "Orders", icon: Box, href: "#orders" },
   { label: "Invoices", icon: CreditCard, href: "#invoices" },
-  { label: "Saved Designs", icon: IdCard, href: "#designs" },
   { label: "Artwork", icon: FileCheck2, href: "#artwork" },
   { label: "My Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
@@ -244,7 +244,7 @@ export function CustomerDashboard() {
         </nav>
         {data?.profile && <div className="absolute bottom-3 left-3 right-3 rounded-xl border bg-background/55 p-2">
           <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(data.profile.full_name || data.profile.email || "C").slice(0, 1).toUpperCase()}</div>
+            {data.profile.profile_photo_url ? <img className="h-9 w-9 shrink-0 rounded-full object-cover" src={data.profile.profile_photo_url} alt="" /> : <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(data.profile.full_name || data.profile.email || "C").slice(0, 1).toUpperCase()}</div>}
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold">{data.profile.full_name || "Customer"}</div>
               <div className="truncate text-xs text-muted-foreground">{data.profile.company || data.profile.email || "ControlP.io"}</div>
@@ -321,43 +321,53 @@ export function CustomerDashboard() {
             </section>
 
             <section className="mb-5 grid gap-4 xl:grid-cols-[1fr_380px]">
-              <Card id="designs">
+              <Card id="artwork">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <CardTitle className="text-base">Saved designs</CardTitle>
-                      <CardDescription>Online designer drafts saved to your account.</CardDescription>
+                      <CardTitle className="text-base">Artwork</CardTitle>
+                      <CardDescription>Saved designs, proof approvals, and uploaded artwork live together here.</CardDescription>
                     </div>
                     <Button size="sm" asChild><a href="/designer.html">Open designer</a></Button>
                   </div>
                 </CardHeader>
-                <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {designDrafts.slice(0, 6).map((draft) => (
-                    <div key={draft.id} className="rounded-lg border bg-background/35 p-3">
-                      <div className="flex min-w-0 items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="truncate font-medium">{draft.title || "Untitled design"}</div>
-                          <div className="mt-1 truncate text-xs text-muted-foreground">{draft.product_label || draft.products?.name || human(draft.product_key)}</div>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Saved artwork</div>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {designDrafts.slice(0, 6).map((draft) => (
+                        <div key={draft.id} className="rounded-lg border bg-background/35 p-3">
+                          <div className="flex min-w-0 items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate font-medium">{draft.title || "Untitled design"}</div>
+                              <div className="mt-1 truncate text-xs text-muted-foreground">{draft.product_label || draft.products?.name || human(draft.product_key)}</div>
+                            </div>
+                            <Status value={draft.status || "draft"} />
+                          </div>
+                          <div className="mt-3 grid h-28 place-items-center overflow-hidden rounded-md border bg-secondary/40">
+                            {draft.preview_image_url ? (
+                              <img className="h-full w-full object-cover" src={draft.preview_image_url} alt="" />
+                            ) : draft.preview_svg ? (
+                              <div className="h-full w-full [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: draft.preview_svg }} />
+                            ) : (
+                              <div className="text-xs text-muted-foreground">No preview yet</div>
+                            )}
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button size="sm" variant="outline" asChild><a href={`/designer.html?draft=${draft.id}`}>Continue editing</a></Button>
+                            <Button size="sm" variant="outline">Order this design</Button>
+                          </div>
+                          <div className="mt-2 text-[11px] text-muted-foreground">Saved {date(draft.last_saved_at || draft.created_at)}</div>
                         </div>
-                        <Status value={draft.status || "draft"} />
-                      </div>
-                      <div className="mt-3 grid h-28 place-items-center overflow-hidden rounded-md border bg-secondary/40">
-                        {draft.preview_image_url ? (
-                          <img className="h-full w-full object-cover" src={draft.preview_image_url} alt="" />
-                        ) : draft.preview_svg ? (
-                          <div className="h-full w-full [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: draft.preview_svg }} />
-                        ) : (
-                          <div className="text-xs text-muted-foreground">No preview yet</div>
-                        )}
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" asChild><a href={`/designer.html?draft=${draft.id}`}>Continue editing</a></Button>
-                        <Button size="sm" variant="outline">Order this design</Button>
-                      </div>
-                      <div className="mt-2 text-[11px] text-muted-foreground">Saved {date(draft.last_saved_at || draft.created_at)}</div>
+                      ))}
+                      {!designDrafts.length && <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground md:col-span-2 xl:col-span-3">No saved artwork yet. Open the designer and save a draft to see it here.</div>}
                     </div>
-                  ))}
-                  {!designDrafts.length && <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground md:col-span-2 xl:col-span-3">No saved designs yet. Open the designer and save a draft to see it here.</div>}
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {proofs.slice(0, 3).map((proof) => <MiniRow key={proof.id} title={`Proof v${proof.revision_number || 1}`} detail={`${human(proof.status)} - ${date(proof.sent_at || proof.created_at)}`} value={proof.customer_approved_at ? "Approved" : "Review"} href={proof.proof_url || undefined} />)}
+                    {artwork.slice(0, 3).map((file) => <MiniRow key={file.id} title={file.filename} detail={human(file.review_status)} value={`v${file.proof_version || 0}`} />)}
+                    {!proofs.length && !artwork.length && <Empty text="No uploaded artwork or proofs yet." />}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -373,7 +383,6 @@ export function CustomerDashboard() {
 
             <section className="grid gap-4 xl:grid-cols-3">
               <Card id="invoices"><CardHeader className="pb-3"><CardTitle className="text-base">Invoices and payments</CardTitle></CardHeader><CardContent className="space-y-2">{payments.slice(0, 6).map((payment) => <MiniRow key={payment.id} title={payment.invoice_number || human(payment.provider)} detail={`${human(payment.method)} - ${date(payment.created_at)}`} value={amount(payment.amount)} href={payment.payment_link_url || undefined} />)}{!payments.length && <Empty text="No invoices or payments yet." />}</CardContent></Card>
-              <Card id="artwork"><CardHeader className="pb-3"><CardTitle className="text-base">Artwork and proofs</CardTitle></CardHeader><CardContent className="space-y-2">{proofs.slice(0, 3).map((proof) => <MiniRow key={proof.id} title={`Proof v${proof.revision_number || 1}`} detail={`${human(proof.status)} - ${date(proof.sent_at || proof.created_at)}`} value={proof.customer_approved_at ? "Approved" : "Review"} href={proof.proof_url || undefined} />)}{artwork.slice(0, 3).map((file) => <MiniRow key={file.id} title={file.filename} detail={human(file.review_status)} value={`v${file.proof_version || 0}`} />)}{!proofs.length && !artwork.length && <Empty text="No artwork or proofs yet." />}</CardContent></Card>
               <Card id="shipping"><CardHeader className="pb-3"><CardTitle className="text-base">Shipping</CardTitle></CardHeader><CardContent className="space-y-2">{shipments.slice(0, 6).map((shipment) => <MiniRow key={shipment.id} title={`${human(shipment.carrier)} ${shipment.tracking_number || ""}`} detail={`${human(shipment.status)} - ETA ${date(shipment.estimated_delivery_at)}`} value="Track" href={shipment.tracking_url || undefined} />)}{!shipments.length && <Empty text="No shipments yet." />}</CardContent></Card>
             </section>
           </>
