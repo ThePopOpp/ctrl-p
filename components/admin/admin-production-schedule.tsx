@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
-import { Ban, Bell, Calendar, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Flag, GripVertical, Link2, Moon, Plus, Search, Sun, Trash2 } from "lucide-react";
+import { Ban, Bell, Calendar, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Flag, GripVertical, Link2, Moon, Plus, Search, Sun, Trash2 } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 type ScheduleItem = {
+  source_type?: "schedule" | "appointment";
   id: string;
   order_id: string | null;
   order_item_id: string | null;
@@ -80,6 +81,30 @@ type ScheduleItem = {
   users?: { id: string; full_name: string | null; email: string | null; phone?: string | null; company?: string | null } | null;
   assignee?: { id: string; full_name: string | null; email: string | null; role: string | null } | null;
   production_jobs?: { id: string; status: string | null; station: string | null; due_at: string | null } | null;
+  appointment?: BookingAppointment | null;
+};
+
+type BookingAppointment = {
+  id: string;
+  appointment_type_id: string | null;
+  customer_id: string | null;
+  assigned_staff_id: string | null;
+  related_order_id: string | null;
+  related_job_id: string | null;
+  title: string;
+  customer_first_name: string | null;
+  customer_last_name: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+  company_name: string | null;
+  start_time: string;
+  end_time: string;
+  timezone: string | null;
+  status: string;
+  location_type: string;
+  customer_notes: string | null;
+  internal_notes: string | null;
+  booking_appointment_types?: { name: string | null; color: string | null } | null;
 };
 
 type ScheduleDependency = {
@@ -163,6 +188,7 @@ const phases = ["Intake / Quote", "Artwork / Design", "File Review", "Proofing /
 const departments = ["Design", "Prepress", "Production", "Print", "Embroidery", "Screen Printing", "DTF / DTG", "Vinyl", "Fabrication", "QC", "Shipping", "Install", "Customer Support"];
 const views = ["Overview", "Gantt Timeline", "Tasks", "Milestones", "Approvals", "Install / Delivery", "Blocked Items"];
 type ProjectSortMode = "recent" | "oldest";
+type AppointmentTimelineFilter = "include" | "only" | "hide";
 
 type ScheduleProjectGroup = {
   key: string;
@@ -199,6 +225,27 @@ function addDays(date: Date, days: number) {
 
 function dateOnly(value: Date) {
   return value.toISOString().slice(0, 10);
+}
+
+function phoenixDateKey(value: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Phoenix",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+}
+
+function phoenixOffsetMinutes(value: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Phoenix",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(value));
+  const hour = Number(parts.find((part) => part.type === "hour")?.value || 0);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value || 0);
+  return clampOffsetMinutes(hour * 60 + minute);
 }
 
 function daysBetween(start: string, end: string) {
@@ -256,8 +303,81 @@ function priorityTone(priority: string) {
 }
 
 function itemTypeLabel(item: ScheduleItem) {
+  if (item.source_type === "appointment") return "Appointment";
   if (item.item_type === "production_step" && item.assigned_department) return item.assigned_department;
   return human(item.item_type);
+}
+
+function appointmentStatusToScheduleStatus(status: string) {
+  if (status === "completed") return "completed";
+  if (status === "canceled" || status === "no_show") return "on_hold";
+  if (status === "pending") return "needs_internal_review";
+  if (status.startsWith("awaiting_")) return "waiting_on_customer";
+  return "in_progress";
+}
+
+function appointmentToScheduleItem(appointment: BookingAppointment): ScheduleItem {
+  const startDate = phoenixDateKey(appointment.start_time);
+  const endDate = phoenixDateKey(appointment.end_time);
+  const start = new Date(appointment.start_time);
+  const end = new Date(appointment.end_time);
+  const duration = Math.max(0.03, (end.getTime() - start.getTime()) / 86400000);
+  const customerName = [appointment.customer_first_name, appointment.customer_last_name].filter(Boolean).join(" ");
+  return {
+    source_type: "appointment",
+    id: `appointment-${appointment.id}`,
+    order_id: appointment.related_order_id,
+    order_item_id: null,
+    production_job_id: appointment.related_job_id,
+    product_id: null,
+    customer_id: appointment.customer_id,
+    schedule_group_id: `appointments-${startDate}`,
+    project_name: "Appointments",
+    workflow_template_slug: null,
+    workflow_template_name: null,
+    hidden_from_schedule: false,
+    parent_item_id: null,
+    title: appointment.title || appointment.booking_appointment_types?.name || "Appointment",
+    description: customerName || appointment.customer_email || appointment.company_name,
+    item_type: "appointment",
+    phase: "Bookings",
+    status: appointmentStatusToScheduleStatus(appointment.status),
+    priority: appointment.status === "pending" ? "high" : "normal",
+    assigned_to_user_id: appointment.assigned_staff_id,
+    assigned_department: "Bookings",
+    start_date: startDate,
+    start_offset_minutes: phoenixOffsetMinutes(appointment.start_time),
+    end_date: endDate,
+    due_date: endDate,
+    estimated_duration_days: duration,
+    progress_percent: appointment.status === "completed" ? 100 : 0,
+    customer_visible: true,
+    internal_only: false,
+    is_blocked: appointment.status === "pending",
+    blocker_type: null,
+    blocker_reason: null,
+    artwork_review_status: null,
+    proof_status: null,
+    production_status: null,
+    sort_order: phoenixOffsetMinutes(appointment.start_time),
+    internal_notes: appointment.internal_notes,
+    customer_notes: appointment.customer_notes,
+    created_at: appointment.start_time,
+    updated_at: appointment.end_time,
+    orders: null,
+    order_items: null,
+    products: null,
+    users: appointment.customer_id ? null : {
+      id: appointment.id,
+      full_name: customerName || null,
+      email: appointment.customer_email,
+      phone: appointment.customer_phone,
+      company: appointment.company_name,
+    },
+    assignee: null,
+    production_jobs: null,
+    appointment,
+  };
 }
 
 function projectKey(item: ScheduleItem) {
@@ -355,6 +475,7 @@ export function AdminProductionSchedule() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [visibilityFilter, setVisibilityFilter] = useState("all");
+  const [appointmentFilter, setAppointmentFilter] = useState<AppointmentTimelineFilter>("include");
   const [projectSortMode, setProjectSortMode] = useState<ProjectSortMode>("recent");
   const [visibleProjectKeys, setVisibleProjectKeys] = useState<string[]>([]);
   const [expandedProjectKeys, setExpandedProjectKeys] = useState<string[]>([]);
@@ -367,12 +488,12 @@ export function AdminProductionSchedule() {
   async function refresh(openItemId?: string) {
     const [nextData, itemPayload, dependencyPayload, templatePayload] = await Promise.all([
       loadAdminDashboardData(),
-      apiJson<{ items: ScheduleItem[] }>("/api/admin/production-schedule"),
+      apiJson<{ items: ScheduleItem[]; appointments?: BookingAppointment[] }>("/api/admin/production-schedule"),
       apiJson<{ dependencies: ScheduleDependency[] }>("/api/admin/production-schedule/dependencies"),
       apiJson<{ templates: WorkflowTemplate[] }>("/api/admin/production-schedule/templates"),
     ]);
     setData(nextData);
-    setItems(itemPayload.items);
+    setItems([...(itemPayload.items ?? []), ...(itemPayload.appointments ?? []).map(appointmentToScheduleItem)]);
     setDependencies(dependencyPayload.dependencies);
     setWorkflowTemplates(templatePayload.templates);
     if (openItemId) setSelectedItem(itemPayload.items.find((item) => item.id === openItemId) ?? null);
@@ -407,6 +528,9 @@ export function AdminProductionSchedule() {
   const visibleItems = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return items.filter((item) => {
+      if (item.source_type === "appointment" && activeView !== "Overview" && activeView !== "Gantt Timeline") return false;
+      if (appointmentFilter === "hide" && item.source_type === "appointment") return false;
+      if (appointmentFilter === "only" && item.source_type !== "appointment") return false;
       if (statusFilter !== "all" && item.status !== statusFilter) return false;
       if (priorityFilter !== "all" && item.priority !== priorityFilter) return false;
       if (visibilityFilter === "customer" && !item.customer_visible) return false;
@@ -435,7 +559,7 @@ export function AdminProductionSchedule() {
         assignee?.email,
       ].some((value) => String(value || "").toLowerCase().includes(needle));
     });
-  }, [items, orders, priorityFilter, products, query, statusFilter, users, visibilityFilter]);
+  }, [activeView, appointmentFilter, items, orders, priorityFilter, products, query, statusFilter, users, visibilityFilter]);
 
   const sectionItems = useMemo(() => {
     if (activeView === "Tasks") return visibleItems.filter((item) => ["task", "production_step", "artwork_review", "qc_check"].includes(item.item_type));
@@ -446,17 +570,23 @@ export function AdminProductionSchedule() {
     return visibleItems;
   }, [activeView, visibleItems]);
 
-  const activeItems = items.filter((item) => !["completed", "approved"].includes(item.status));
+  const activeItems = items.filter((item) => item.source_type !== "appointment" && !["completed", "approved"].includes(item.status));
   const blockedItems = items.filter((item) => item.is_blocked || item.status === "blocked");
-  const customerVisibleItems = items.filter((item) => item.customer_visible);
   const overdueItems = items.filter((item) => item.due_date && !["completed", "approved"].includes(item.status) && item.due_date < dateOnly(new Date()));
   const approvalItems = items.filter((item) => ["approval", "proof", "artwork_review", "customer_action"].includes(item.item_type));
   const installItems = items.filter((item) => ["delivery", "installation"].includes(item.item_type));
-  const projectGroups = useMemo(() => buildProjectGroups(sectionItems, orders, products, users), [orders, products, sectionItems, users]);
+  const appointmentItems = items.filter((item) => item.source_type === "appointment");
+  const projectGroups = useMemo(() => buildProjectGroups(sectionItems.filter((item) => item.source_type !== "appointment"), orders, products, users), [orders, products, sectionItems, users]);
   const sortedProjectGroups = useMemo(() => sortProjectGroups(projectGroups, projectSortMode), [projectGroups, projectSortMode]);
   const sortedProjectGroupKeys = useMemo(() => sortedProjectGroups.map((group) => group.key), [sortedProjectGroups]);
   const visibleProjectSet = useMemo(() => new Set(visibleProjectKeys), [visibleProjectKeys]);
-  const ganttItems = useMemo(() => sectionItems.filter((item) => visibleProjectSet.has(projectKey(item)) && !item.hidden_from_schedule), [sectionItems, visibleProjectSet]);
+  const ganttItems = useMemo(() => {
+    const scheduleItems = sectionItems.filter((item) => item.source_type !== "appointment" && visibleProjectSet.has(projectKey(item)) && !item.hidden_from_schedule);
+    const timelineAppointments = sectionItems.filter((item) => item.source_type === "appointment");
+    if (appointmentFilter === "hide") return scheduleItems;
+    if (appointmentFilter === "only") return timelineAppointments;
+    return [...scheduleItems, ...timelineAppointments];
+  }, [appointmentFilter, sectionItems, visibleProjectSet]);
   const ganttItemIds = useMemo(() => new Set(ganttItems.map((item) => item.id)), [ganttItems]);
   const ganttDependencies = useMemo(() => dependencies.filter((dependency) => ganttItemIds.has(dependency.parent_item_id) && ganttItemIds.has(dependency.dependent_item_id)), [dependencies, ganttItemIds]);
 
@@ -683,7 +813,7 @@ export function AdminProductionSchedule() {
                 <ScheduleStat label="Overdue" value={String(overdueItems.length)} hint="Past due date" urgent={overdueItems.length > 0} />
                 <ScheduleStat label="Approvals" value={String(approvalItems.length)} hint="Proof and customer action" />
                 <ScheduleStat label="Install / delivery" value={String(installItems.length)} hint="Fulfillment schedule" />
-                <ScheduleStat label="Customer visible" value={String(customerVisibleItems.length)} hint="Shared checkpoints" />
+                <ScheduleStat label="Appointments" value={String(appointmentItems.length)} hint="Booked calendar items" />
               </section>
 
               <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -701,6 +831,14 @@ export function AdminProductionSchedule() {
                       <SelectItem value="all">All visibility</SelectItem>
                       <SelectItem value="customer">Customer visible</SelectItem>
                       <SelectItem value="internal">Internal only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={appointmentFilter} onValueChange={(value) => setAppointmentFilter(value as AppointmentTimelineFilter)}>
+                    <SelectTrigger className="h-9 w-[190px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="include">Include appointments</SelectItem>
+                      <SelectItem value="only">Appointments only</SelectItem>
+                      <SelectItem value="hide">Hide appointments</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1219,6 +1357,7 @@ function GanttTimeline({
                   const displayDuration = preview?.previewDurationDays ?? durationDays(item, start, end);
                   const span = Math.max(0.125, Math.min(ticks.length - offset, displayDuration));
                   const blocked = item.is_blocked || item.status === "blocked";
+                  const readOnlyAppointment = item.source_type === "appointment";
                   const hasDependency = dependencies.some((dependency) => dependency.parent_item_id === item.id || dependency.dependent_item_id === item.id);
                   return (
                     <button
@@ -1227,6 +1366,10 @@ function GanttTimeline({
                       className={cn("grid w-full grid-cols-[260px_minmax(600px,1fr)] py-2 text-left hover:bg-accent/30", draftSource?.itemId === item.id && "bg-primary/10", preview && "bg-primary/15")}
                       onClick={() => {
                         if (suppressNextSelectRef.current) return;
+                        if (readOnlyAppointment) {
+                          window.location.href = "/admin/bookings";
+                          return;
+                        }
                         onSelect(item);
                       }}
                     >
@@ -1234,6 +1377,7 @@ function GanttTimeline({
                         <div className="truncate text-sm font-medium">{item.title}</div>
                         <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
                           <span>{itemTypeLabel(item)}</span>
+                          {readOnlyAppointment && <CalendarClock className="h-3 w-3 text-sky-500" />}
                           {hasDependency && <Link2 className="h-3 w-3" />}
                           {blocked && <Flag className="h-3 w-3 text-red-500" />}
                           {item.customer_visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
@@ -1243,66 +1387,80 @@ function GanttTimeline({
                         {ticks.map((tick) => <div key={tick} className={cn("border-l", tick === today && "bg-primary/10")} />)}
                         <div
                           data-gantt-id={item.id}
-                          className={cn("group absolute top-1 h-7 cursor-grab rounded-md border px-7 text-[11px] font-medium leading-7 shadow-sm active:cursor-grabbing", blocked ? "border-red-500/35 bg-red-500/20 text-red-700 dark:text-red-200" : "border-primary/20 bg-primary/25 text-lime-900 dark:text-lime-100", preview && "ring-2 ring-primary/60")}
+                          className={cn(
+                            "group absolute top-1 h-7 rounded-md border px-7 text-[11px] font-medium leading-7 shadow-sm",
+                            readOnlyAppointment ? "cursor-pointer border-sky-500/35 bg-sky-500/20 text-sky-800 dark:text-sky-100" : "cursor-grab active:cursor-grabbing",
+                            !readOnlyAppointment && (blocked ? "border-red-500/35 bg-red-500/20 text-red-700 dark:text-red-200" : "border-primary/20 bg-primary/25 text-lime-900 dark:text-lime-100"),
+                            preview && "ring-2 ring-primary/60",
+                          )}
                           style={{ left: `${(offset / ticks.length) * 100}%`, width: `${(span / ticks.length) * 100}%` }}
                           onPointerDown={(event) => {
                             event.stopPropagation();
+                            if (readOnlyAppointment) return;
                             startDrag(event, item, "move");
                           }}
                         >
-                          <span
-                            className="absolute inset-y-0 left-0 z-20 flex w-5 cursor-ew-resize items-center justify-center rounded-l-md border-r border-background/35 bg-background/25 text-current opacity-80 transition-opacity hover:bg-primary/40 group-hover:opacity-100"
-                            title="Drag to adjust start date and duration"
-                            onPointerDown={(event) => {
-                              event.stopPropagation();
-                              startDrag(event, item, "resize-start");
-                            }}
-                          >
-                            <span className="h-3.5 w-0.5 rounded-full bg-current opacity-80" />
-                          </span>
-                          <span
-                            className="pointer-events-none absolute left-5 top-1/2 z-10 -translate-y-1/2 text-current opacity-55 transition-opacity group-hover:opacity-90"
-                            title="Drag the bar to move date, time, or row"
-                          >
-                            <GripVertical className="h-3.5 w-3.5" />
-                          </span>
-                          <ConnectorHandle
-                            side="start"
-                            active={draftSource?.itemId === item.id && draftSource.side === "start"}
-                            onStart={(event) => {
-                              event.stopPropagation();
-                              setDraftSource({ itemId: item.id, side: "start" });
-                              setLinkMessage("Drag to another task handle to create a dependency.");
-                            }}
-                            onEnd={(event) => {
-                              event.stopPropagation();
-                              completeConnection(item.id, "start");
-                            }}
-                          />
-                          <span className="block truncate">{item.progress_percent ?? 0}% {human(item.status)} | {formatOffset(startOffsetMinutes)} {displayDuration < 1 ? `| ${Number(displayDuration.toFixed(3))}d` : ""}</span>
-                          <span
-                            className="absolute inset-y-0 right-0 z-20 flex w-5 cursor-ew-resize items-center justify-center rounded-r-md border-l border-background/35 bg-background/25 text-current opacity-80 transition-opacity hover:bg-primary/40 group-hover:opacity-100"
-                            title="Drag to adjust end date and duration"
-                            onPointerDown={(event) => {
-                              event.stopPropagation();
-                              startDrag(event, item, "resize-end");
-                            }}
-                          >
-                            <span className="h-3.5 w-0.5 rounded-full bg-current opacity-80" />
-                          </span>
-                          <ConnectorHandle
-                            side="finish"
-                            active={draftSource?.itemId === item.id && draftSource.side === "finish"}
-                            onStart={(event) => {
-                              event.stopPropagation();
-                              setDraftSource({ itemId: item.id, side: "finish" });
-                              setLinkMessage("Drag to another task handle to create a dependency.");
-                            }}
-                            onEnd={(event) => {
-                              event.stopPropagation();
-                              completeConnection(item.id, "finish");
-                            }}
-                          />
+                          {!readOnlyAppointment && (
+                            <>
+                              <span
+                                className="absolute inset-y-0 left-0 z-20 flex w-5 cursor-ew-resize items-center justify-center rounded-l-md border-r border-background/35 bg-background/25 text-current opacity-80 transition-opacity hover:bg-primary/40 group-hover:opacity-100"
+                                title="Drag to adjust start date and duration"
+                                onPointerDown={(event) => {
+                                  event.stopPropagation();
+                                  startDrag(event, item, "resize-start");
+                                }}
+                              >
+                                <span className="h-3.5 w-0.5 rounded-full bg-current opacity-80" />
+                              </span>
+                              <span
+                                className="pointer-events-none absolute left-5 top-1/2 z-10 -translate-y-1/2 text-current opacity-55 transition-opacity group-hover:opacity-90"
+                                title="Drag the bar to move date, time, or row"
+                              >
+                                <GripVertical className="h-3.5 w-3.5" />
+                              </span>
+                              <ConnectorHandle
+                                side="start"
+                                active={draftSource?.itemId === item.id && draftSource.side === "start"}
+                                onStart={(event) => {
+                                  event.stopPropagation();
+                                  setDraftSource({ itemId: item.id, side: "start" });
+                                  setLinkMessage("Drag to another task handle to create a dependency.");
+                                }}
+                                onEnd={(event) => {
+                                  event.stopPropagation();
+                                  completeConnection(item.id, "start");
+                                }}
+                              />
+                            </>
+                          )}
+                          <span className="block truncate">{readOnlyAppointment ? "Appointment" : `${item.progress_percent ?? 0}% ${human(item.status)}`} | {formatOffset(startOffsetMinutes)} {displayDuration < 1 ? `| ${Number(displayDuration.toFixed(3))}d` : ""}</span>
+                          {!readOnlyAppointment && (
+                            <>
+                              <span
+                                className="absolute inset-y-0 right-0 z-20 flex w-5 cursor-ew-resize items-center justify-center rounded-r-md border-l border-background/35 bg-background/25 text-current opacity-80 transition-opacity hover:bg-primary/40 group-hover:opacity-100"
+                                title="Drag to adjust end date and duration"
+                                onPointerDown={(event) => {
+                                  event.stopPropagation();
+                                  startDrag(event, item, "resize-end");
+                                }}
+                              >
+                                <span className="h-3.5 w-0.5 rounded-full bg-current opacity-80" />
+                              </span>
+                              <ConnectorHandle
+                                side="finish"
+                                active={draftSource?.itemId === item.id && draftSource.side === "finish"}
+                                onStart={(event) => {
+                                  event.stopPropagation();
+                                  setDraftSource({ itemId: item.id, side: "finish" });
+                                  setLinkMessage("Drag to another task handle to create a dependency.");
+                                }}
+                                onEnd={(event) => {
+                                  event.stopPropagation();
+                                  completeConnection(item.id, "finish");
+                                }}
+                              />
+                            </>
+                          )}
                         </div>
                       </div>
                     </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, CheckCircle2, Clock, Loader2, MapPin, MessageSquare, Phone, ShieldCheck } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Loader2, MapPin, MessageSquare, Phone, ShieldCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,67 @@ function longDate(value: string) {
   }).format(new Date(`${value}T12:00:00-07:00`));
 }
 
+function monthKey(value: string) {
+  return value.slice(0, 7);
+}
+
+function formatMonth(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Phoenix",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${value}-01T12:00:00-07:00`));
+}
+
+function shiftMonth(value: string, direction: number) {
+  const date = new Date(`${value}-01T12:00:00-07:00`);
+  date.setUTCMonth(date.getUTCMonth() + direction);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Phoenix",
+    year: "numeric",
+    month: "2-digit",
+  }).format(date);
+}
+
+function buildCalendarDays(value: string) {
+  const [year, month] = value.split("-").map(Number);
+  const firstDay = new Date(Date.UTC(year, month - 1, 1, 19));
+  const firstWeekday = new Date(`${value}-01T12:00:00-07:00`).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const days: Array<{ key: string; day: number; inMonth: boolean }> = [];
+
+  const previousMonthDays = new Date(Date.UTC(year, month - 1, 0)).getUTCDate();
+  for (let index = firstWeekday - 1; index >= 0; index -= 1) {
+    const day = previousMonthDays - index;
+    const date = new Date(firstDay);
+    date.setUTCDate(day - previousMonthDays);
+    days.push({ key: dateKeyFromDate(date), day, inMonth: false });
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(firstDay);
+    date.setUTCDate(day);
+    days.push({ key: dateKeyFromDate(date), day, inMonth: true });
+  }
+
+  while (days.length % 7 !== 0 || days.length < 42) {
+    const date = new Date(firstDay);
+    date.setUTCDate(days.length - firstWeekday + 1);
+    days.push({ key: dateKeyFromDate(date), day: date.getUTCDate(), inMonth: false });
+  }
+
+  return days;
+}
+
+function dateKeyFromDate(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Phoenix",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 function human(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -63,6 +124,8 @@ export function BookingPublicPage() {
   const [types, setTypes] = useState<AppointmentType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState("");
   const [date, setDate] = useState(todayKey());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(monthKey(todayKey()));
   const [slots, setSlots] = useState<BookingSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null);
   const [loadingTypes, setLoadingTypes] = useState(true);
@@ -118,6 +181,7 @@ export function BookingPublicPage() {
   }, [selectedTypeId, date]);
 
   const selectedType = useMemo(() => types.find((type) => type.id === selectedTypeId) ?? null, [types, selectedTypeId]);
+  const calendarDays = useMemo(() => buildCalendarDays(calendarMonth), [calendarMonth]);
   const canSubmit = selectedType && selectedSlot && form.first_name.trim() && form.last_name.trim() && form.email.includes("@") && !submitting;
 
   async function book() {
@@ -208,8 +272,88 @@ export function BookingPublicPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-2 sm:max-w-xs">
-                  <label className="text-sm font-medium" htmlFor="booking-date">Date</label>
-                  <Input id="booking-date" type="date" value={date} min={todayKey()} onChange={(event) => setDate(event.target.value)} />
+                  <label className="text-sm font-medium" htmlFor="booking-date-button">Date</label>
+                  <div className="relative">
+                    <button
+                      id="booking-date-button"
+                      type="button"
+                      onClick={() => setCalendarOpen((open) => !open)}
+                      className="flex h-11 w-full items-center justify-between rounded-lg border border-black/10 bg-white px-3 text-left text-sm shadow-sm transition hover:border-[#a3ff12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a3ff12] dark:border-white/10 dark:bg-[#07130b] dark:text-[#f7fff2]"
+                    >
+                      <span>{date ? longDate(date) : "Select a date"}</span>
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                    {calendarOpen && (
+                      <div className="absolute left-0 top-[calc(100%+0.5rem)] z-20 w-[19rem] rounded-xl border border-black/10 bg-white p-3 text-[#07130b] shadow-xl dark:border-white/10 dark:bg-[#07130b] dark:text-[#f7fff2]">
+                        <div className="mb-3 flex items-center justify-between">
+                          <button
+                            type="button"
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-black/10 hover:border-[#a3ff12] dark:border-white/10"
+                            onClick={() => setCalendarMonth((value) => shiftMonth(value, -1))}
+                            aria-label="Previous month"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <div className="text-sm font-semibold">{formatMonth(calendarMonth)}</div>
+                          <button
+                            type="button"
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-black/10 hover:border-[#a3ff12] dark:border-white/10"
+                            onClick={() => setCalendarMonth((value) => shiftMonth(value, 1))}
+                            aria-label="Next month"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase text-muted-foreground">
+                          {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => <div key={day}>{day}</div>)}
+                        </div>
+                        <div className="mt-2 grid grid-cols-7 gap-1">
+                          {calendarDays.map((day) => {
+                            const isSelected = day.key === date;
+                            const isDisabled = day.key < todayKey();
+                            return (
+                              <button
+                                key={day.key}
+                                type="button"
+                                disabled={isDisabled}
+                                onClick={() => {
+                                  setDate(day.key);
+                                  setCalendarMonth(monthKey(day.key));
+                                  setCalendarOpen(false);
+                                }}
+                                className={cn(
+                                  "grid h-9 place-items-center rounded-lg text-sm transition",
+                                  !day.inMonth && "text-muted-foreground/45",
+                                  isDisabled && "cursor-not-allowed text-muted-foreground/30",
+                                  !isDisabled && "hover:bg-[#a3ff12]/20",
+                                  isSelected && "bg-[#a3ff12] font-bold text-[#07130b] hover:bg-[#a3ff12]",
+                                )}
+                              >
+                                {day.day}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-3 flex items-center justify-between border-t border-black/10 pt-3 text-xs dark:border-white/10">
+                          <button
+                            type="button"
+                            className="font-semibold text-muted-foreground hover:text-[#07130b] dark:hover:text-[#f7fff2]"
+                            onClick={() => {
+                              const today = todayKey();
+                              setDate(today);
+                              setCalendarMonth(monthKey(today));
+                              setCalendarOpen(false);
+                            }}
+                          >
+                            Today
+                          </button>
+                          <button type="button" className="font-semibold text-muted-foreground hover:text-[#07130b] dark:hover:text-[#f7fff2]" onClick={() => setCalendarOpen(false)}>
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="rounded-lg border bg-background/35 p-4">

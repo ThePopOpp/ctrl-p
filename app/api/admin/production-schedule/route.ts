@@ -244,10 +244,21 @@ export async function GET(request: Request) {
   if (priority && PRIORITIES.has(priority)) query = query.eq("priority", priority);
   if (orderId) query = query.eq("order_id", orderId);
 
-  const result = await query;
+  const [result, appointments] = await Promise.all([
+    query,
+    verified.adminClient
+      .from("booking_appointments")
+      .select("id, appointment_type_id, customer_id, assigned_staff_id, related_order_id, related_job_id, title, customer_first_name, customer_last_name, customer_email, customer_phone, company_name, start_time, end_time, timezone, status, location_type, customer_notes, internal_notes, booking_appointment_types(name, color)")
+      .neq("status", "canceled")
+      .gte("start_time", new Date(Date.now() - 14 * 86400000).toISOString())
+      .lte("start_time", new Date(Date.now() + 60 * 86400000).toISOString())
+      .order("start_time", { ascending: true })
+      .limit(200),
+  ]);
   if (result.error) return jsonError(result.error.message, 400);
+  if (appointments.error && appointments.error.code !== "42P01") return jsonError(appointments.error.message, 400);
 
-  return NextResponse.json({ items: result.data ?? [] });
+  return NextResponse.json({ items: result.data ?? [], appointments: appointments.data ?? [] });
 }
 
 export async function POST(request: Request) {
