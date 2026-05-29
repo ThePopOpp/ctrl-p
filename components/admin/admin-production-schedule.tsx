@@ -1497,8 +1497,8 @@ function GanttTimeline({
   const openActionDock = useCallback((item: ScheduleItem, clientX: number, clientY: number) => {
     setActionDock({
       item,
-      x: Math.min(Math.max(clientX + 14, 12), window.innerWidth - 340),
-      y: Math.min(Math.max(clientY + 14, 12), window.innerHeight - 430),
+      x: Math.min(Math.max(clientX + 14, 12), window.innerWidth - 380),
+      y: Math.min(Math.max(clientY + 14, 12), Math.max(12, window.innerHeight - 700)),
     });
     setLinkMessage(item.source_type === "appointment" ? "Appointment selected. Open Bookings to manage calendar details." : `Selected ${item.title}. Choose a quick action.`);
   }, []);
@@ -1818,7 +1818,7 @@ function GanttTimeline({
               {actionDock && (
                 <div
                   data-gantt-action-dock
-                  className="fixed z-[90] w-[340px] rounded-xl border border-primary/20 bg-[#102016] p-3 text-popover-foreground shadow-2xl"
+                  className="fixed z-[90] min-h-[680px] w-[360px] rounded-xl border border-primary/20 bg-[hsl(89_48%_16%)] p-3 text-popover-foreground shadow-2xl"
                   style={{ left: actionDock.x, top: actionDock.y }}
                   onClick={(event) => event.stopPropagation()}
                 >
@@ -1830,12 +1830,12 @@ function GanttTimeline({
                     <Button variant="ghost" size="sm" className="h-7 px-2" onClick={closeActionDock}>Close</Button>
                   </div>
                   {actionDock.item.source_type === "appointment" ? (
-                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-black/20 p-2">
+                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-white/5 p-2">
                       <DockAction icon={CalendarClock} label="View booking" onClick={() => { window.location.href = "/admin/bookings"; }} />
                       <DockAction icon={Download} label="CSV" onClick={() => downloadItemExport(actionDock.item, "csv")} />
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-black/20 p-2">
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-white/5 p-2">
                       <DockAction icon={Link2} label="Connect task" onClick={() => {
                         setDraftSource({ itemId: actionDock.item.id, side: "finish" });
                         setLinkMessage("Select another task handle to connect this task.");
@@ -1880,7 +1880,7 @@ function GanttTimeline({
                       }} />
                     </div>
                   )}
-                  <div className="mt-3 rounded-lg border bg-black/20 px-3 py-2 text-xs text-muted-foreground">
+                  <div className="mt-3 rounded-lg border bg-white/5 px-3 py-2 text-xs text-muted-foreground">
                     Drag the center to move. Use the left or right edge handles to resize duration.
                   </div>
                 </div>
@@ -2731,6 +2731,7 @@ function GanttFabActionSheet({
   const [customerNote, setCustomerNote] = useState("");
   const [uploadMode, setUploadMode] = useState<"artwork" | "proof">("artwork");
   const [uploadStatus, setUploadStatus] = useState("waiting_for_file_review");
+  const [mediaSource, setMediaSource] = useState<"upload" | "camera-front" | "camera-rear">("upload");
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -2746,6 +2747,7 @@ function GanttFabActionSheet({
     setCustomerNote("");
     setUploadMode(kind === "file" ? "proof" : "artwork");
     setUploadStatus(kind === "file" ? "proof_sent" : "waiting_for_file_review");
+    setMediaSource("upload");
     setFile(null);
     setMessage("");
   }, [action, kind]);
@@ -2858,6 +2860,14 @@ function GanttFabActionSheet({
     }
   }
 
+  const mediaCapture = mediaSource === "camera-front" ? "user" : mediaSource === "camera-rear" ? "environment" : undefined;
+  const fileAccept = kind === "photo" ? "image/*" : kind === "video" ? "video/*" : "image/*,video/*,.pdf,.ai,.eps,.svg";
+  const fileInputLabel = kind === "photo"
+    ? mediaSource === "upload" ? "Upload photo" : mediaSource === "camera-front" ? "Take photo with front camera" : "Take photo with rear camera"
+    : kind === "video"
+      ? mediaSource === "upload" ? "Upload video" : mediaSource === "camera-front" ? "Record video with front camera" : "Record video with rear camera"
+      : "Upload file";
+
   return (
     <Sheet open={Boolean(action)} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-[38rem]">
@@ -2914,14 +2924,41 @@ function GanttFabActionSheet({
                   }} items={[{ value: "artwork", label: "Artwork / file" }, { value: "proof", label: "Proof" }]} />
                   <FieldSelect label="Status" value={uploadStatus} onChange={setUploadStatus} items={["waiting_for_file_review", "needs_changes", "proof_sent", "approved", "rejected", "in_production"].map((value) => ({ value, label: human(value) }))} />
                 </div>
+                {(kind === "photo" || kind === "video") && (
+                  <div>
+                    <div className="mb-1.5 text-xs font-medium text-muted-foreground">Source</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: "upload", label: kind === "photo" ? "Upload photo" : "Upload video" },
+                        { value: "camera-front", label: "Front camera" },
+                        { value: "camera-rear", label: "Rear camera" },
+                      ].map((option) => (
+                        <Button
+                          key={option.value}
+                          type="button"
+                          variant={mediaSource === option.value ? "default" : "outline"}
+                          className="h-auto min-h-10 whitespace-normal px-2 py-2 text-xs leading-tight"
+                          onClick={() => {
+                            setMediaSource(option.value as "upload" | "camera-front" | "camera-rear");
+                            setFile(null);
+                          }}
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div>
-                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">File</div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">{fileInputLabel}</div>
                   <Input
+                    key={`${kind}-${mediaSource}`}
                     type="file"
-                    accept={kind === "photo" ? "image/*" : kind === "video" ? "video/*" : "image/*,video/*,.pdf,.ai,.eps,.svg"}
-                    capture={kind === "photo" ? "environment" : kind === "video" ? "environment" : undefined}
+                    accept={fileAccept}
+                    capture={kind === "photo" || kind === "video" ? mediaCapture : undefined}
                     onChange={(event) => setFile(event.target.files?.[0] || null)}
                   />
+                  {file && <div className="mt-2 text-xs text-muted-foreground">{file.name}</div>}
                 </div>
               </div>
             )}
