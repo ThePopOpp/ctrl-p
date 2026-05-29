@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentType } from "react";
 import type { PointerEvent } from "react";
-import { Ban, Bell, Calendar, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Flag, GripVertical, Link2, Moon, Plus, Search, Sun, Trash2 } from "lucide-react";
+import { Ban, Bell, Calendar, CalendarClock, Camera, CheckCircle2, ChevronLeft, ChevronRight, Download, Eye, EyeOff, FileText, Flag, GripVertical, Link2, Moon, Package, Pencil, Plus, Search, StickyNote, Sun, Trash2, UserPlus, Users, Video } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
@@ -206,6 +207,10 @@ type ScheduleProjectGroup = {
 
 function human(value: string | null | undefined) {
   return String(value || "none").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function slugify(value: string | null | undefined) {
+  return String(value || "schedule-item").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "schedule-item";
 }
 
 function formatDate(value: string | null | undefined) {
@@ -482,6 +487,7 @@ export function AdminProductionSchedule() {
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
   const [selectedDependency, setSelectedDependency] = useState<ScheduleDependency | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [createInitialPayload, setCreateInitialPayload] = useState<SchedulePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -589,6 +595,19 @@ export function AdminProductionSchedule() {
   }, [appointmentFilter, sectionItems, visibleProjectSet]);
   const ganttItemIds = useMemo(() => new Set(ganttItems.map((item) => item.id)), [ganttItems]);
   const ganttDependencies = useMemo(() => dependencies.filter((dependency) => ganttItemIds.has(dependency.parent_item_id) && ganttItemIds.has(dependency.dependent_item_id)), [dependencies, ganttItemIds]);
+  const visibleGanttProjectNames = useMemo(
+    () => sortedProjectGroups
+      .filter((group) => visibleProjectSet.has(group.key) && group.items.some((item) => !item.hidden_from_schedule))
+      .map((group) => group.name),
+    [sortedProjectGroups, visibleProjectSet],
+  );
+  const ganttProjectLabel = useMemo(() => {
+    if (appointmentFilter === "only") return appointmentItems.length === 1 ? "Appointments only: 1 appointment" : `Appointments only: ${appointmentItems.length} appointments`;
+    if (visibleGanttProjectNames.length === 0) return appointmentItems.length && appointmentFilter === "include" ? "Appointments only" : "No project selected";
+    if (visibleGanttProjectNames.length === 1) return visibleGanttProjectNames[0];
+    const previewNames = visibleGanttProjectNames.slice(0, 2).join(", ");
+    return `${visibleGanttProjectNames.length} projects visible: ${previewNames}${visibleGanttProjectNames.length > 2 ? "..." : ""}`;
+  }, [appointmentFilter, appointmentItems.length, visibleGanttProjectNames]);
 
   useEffect(() => {
     const sameKeys = (left: string[], right: string[]) => left.length === right.length && left.every((key, index) => key === right[index]);
@@ -617,6 +636,33 @@ export function AdminProductionSchedule() {
     await refresh(payload.item.id);
     setMessage(input.id ? "Schedule item updated." : "Schedule item created.");
     return payload.item;
+  }
+
+  function addRelatedTask(item: ScheduleItem) {
+    const start = dateInput(item.end_date || item.due_date || item.start_date) || dateOnly(new Date());
+    setCreateInitialPayload({
+      ...emptyPayload(),
+      order_id: item.order_id,
+      order_item_id: item.order_item_id,
+      production_job_id: item.production_job_id,
+      product_id: item.product_id,
+      customer_id: item.customer_id,
+      schedule_group_id: item.schedule_group_id,
+      project_name: item.project_name || "",
+      workflow_template_slug: item.workflow_template_slug,
+      workflow_template_name: item.workflow_template_name,
+      parent_item_id: item.id,
+      phase: item.phase || "",
+      start_date: start,
+      end_date: start,
+      due_date: start,
+      sort_order: Number(item.sort_order || 100) + 10,
+      customer_visible: item.customer_visible,
+      internal_only: item.internal_only,
+      title: "",
+      description: item.project_name ? `Related to ${item.project_name}.` : `Related to ${item.title}.`,
+    });
+    setCreateOpen(true);
   }
 
   async function updateItemDates(item: ScheduleItem, updates: { start_date: string | null; start_offset_minutes?: number | null; end_date: string | null; due_date: string | null; estimated_duration_days?: number | null; sort_order?: number | null }) {
@@ -668,6 +714,53 @@ export function AdminProductionSchedule() {
 
   async function completeItem(item: ScheduleItem) {
     await updateTaskAction(item, { status: "completed", progress_percent: 100, is_blocked: false }, `Completed "${item.title}".`);
+  }
+
+  async function updateProjectAction(group: ScheduleProjectGroup, updates: Partial<SchedulePayload>, messageText: string) {
+    const scheduleItems = group.items.filter((item) => item.source_type !== "appointment");
+    if (!scheduleItems.length) {
+      setMessage(`No editable schedule items found for "${group.name}".`);
+      return;
+    }
+    await Promise.all(scheduleItems.map((item) => apiJson<{ item: ScheduleItem }>("/api/admin/production-schedule", {
+      method: "PATCH",
+      body: JSON.stringify({ ...payloadFromItem(item), ...updates }),
+    })));
+    setSelectedItem(null);
+    setVisibleProjectKeys((current) => current.filter((key) => key !== group.key));
+    await refresh();
+    setMessage(messageText);
+  }
+
+  async function cancelProject(group: ScheduleProjectGroup) {
+    const confirmed = window.confirm(`Cancel every task in "${group.name}" and hide the project from the Gantt timeline?`);
+    if (!confirmed) return;
+    await updateProjectAction(group, { status: "on_hold", progress_percent: 0, is_blocked: false, hidden_from_schedule: true }, `Canceled "${group.name}" and hid it from the Gantt timeline.`);
+  }
+
+  async function completeProject(group: ScheduleProjectGroup) {
+    const confirmed = window.confirm(`Mark every task in "${group.name}" complete and hide the project from the Gantt timeline?`);
+    if (!confirmed) return;
+    await updateProjectAction(group, { status: "completed", progress_percent: 100, is_blocked: false, hidden_from_schedule: true }, `Completed "${group.name}" and hid it from the Gantt timeline.`);
+  }
+
+  async function deleteProject(group: ScheduleProjectGroup) {
+    const scheduleItems = group.items.filter((item) => item.source_type !== "appointment");
+    if (!scheduleItems.length) {
+      setMessage(`No editable schedule items found for "${group.name}".`);
+      return;
+    }
+    const confirmed = window.confirm(`Delete "${group.name}" and all ${scheduleItems.length} schedule items? This removes the project from Scheduled Items and the Gantt timeline.`);
+    if (!confirmed) return;
+    await Promise.all(scheduleItems.map((item) => apiJson("/api/admin/production-schedule", {
+      method: "DELETE",
+      body: JSON.stringify({ id: item.id }),
+    })));
+    setSelectedItem(null);
+    setVisibleProjectKeys((current) => current.filter((key) => key !== group.key));
+    setExpandedProjectKeys((current) => current.filter((key) => key !== group.key));
+    await refresh();
+    setMessage(`Deleted "${group.name}" and ${scheduleItems.length} schedule items.`);
   }
 
   async function createDependency(input: {
@@ -804,7 +897,10 @@ export function AdminProductionSchedule() {
                     Schedule design, artwork review, proofing, production, QC, shipping, delivery, installation, blockers, and customer-visible milestones between Orders and Production.
                   </p>
                 </div>
-                <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> Add schedule item</Button>
+                <Button onClick={() => {
+                  setCreateInitialPayload(null);
+                  setCreateOpen(true);
+                }}><Plus className="h-4 w-4" /> Add schedule item</Button>
               </div>
 
               <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
@@ -854,7 +950,13 @@ export function AdminProductionSchedule() {
                       <GanttTimeline
                         items={ganttItems}
                         dependencies={ganttDependencies}
-                        onSelect={setSelectedItem}
+                        projectLabel={ganttProjectLabel}
+                        onEdit={setSelectedItem}
+                        onAddTask={addRelatedTask}
+                        onHide={hideItem}
+                        onCancel={cancelItem}
+                        onComplete={completeItem}
+                        onDelete={deleteItem}
                         onUpdateItemDates={updateItemDates}
                         onCreateDependency={createDependency}
                         onSelectDependency={setSelectedDependency}
@@ -885,6 +987,9 @@ export function AdminProductionSchedule() {
                       onCancel={cancelItem}
                       onComplete={completeItem}
                       onDelete={deleteItem}
+                      onCancelProject={cancelProject}
+                      onCompleteProject={completeProject}
+                      onDeleteProject={deleteProject}
                     />
                   </div>
                   <div className="space-y-4">
@@ -907,12 +1012,17 @@ export function AdminProductionSchedule() {
 
         <ScheduleItemSheet
           open={createOpen}
-          onOpenChange={setCreateOpen}
+          onOpenChange={(open) => {
+            setCreateOpen(open);
+            if (!open) setCreateInitialPayload(null);
+          }}
           data={data}
           staff={staff}
+          initialPayload={createInitialPayload}
           onSave={async (input) => {
             await saveItem(input);
             setCreateOpen(false);
+            setCreateInitialPayload(null);
           }}
         />
         <ScheduleItemSheet
@@ -997,6 +1107,12 @@ type GanttDrag = {
   moved: boolean;
 };
 
+type GanttActionDockState = {
+  item: ScheduleItem;
+  x: number;
+  y: number;
+};
+
 function dependencyTypeFromSides(sourceSide: ConnectorSide, targetSide: ConnectorSide) {
   if (sourceSide === "finish" && targetSide === "start") return "finish_to_start";
   if (sourceSide === "start" && targetSide === "start") return "start_to_start";
@@ -1018,14 +1134,26 @@ function sideFromDependency(type: string, role: "source" | "target"): ConnectorS
 function GanttTimeline({
   items,
   dependencies,
-  onSelect,
+  projectLabel,
+  onEdit,
+  onAddTask,
+  onHide,
+  onCancel,
+  onComplete,
+  onDelete,
   onUpdateItemDates,
   onCreateDependency,
   onSelectDependency,
 }: {
   items: ScheduleItem[];
   dependencies: ScheduleDependency[];
-  onSelect: (item: ScheduleItem) => void;
+  projectLabel: string;
+  onEdit: (item: ScheduleItem) => void;
+  onAddTask: (item: ScheduleItem) => void;
+  onHide: (item: ScheduleItem) => void;
+  onCancel: (item: ScheduleItem) => void;
+  onComplete: (item: ScheduleItem) => void;
+  onDelete: (item: ScheduleItem) => void;
   onUpdateItemDates: (item: ScheduleItem, updates: { start_date: string | null; start_offset_minutes?: number | null; end_date: string | null; due_date: string | null; estimated_duration_days?: number | null; sort_order?: number | null }) => Promise<void>;
   onCreateDependency: (input: {
     parent_item_id: string;
@@ -1045,6 +1173,7 @@ function GanttTimeline({
   const [dragState, setDragState] = useState<GanttDrag | null>(null);
   const dragStateRef = useRef<GanttDrag | null>(null);
   const suppressNextSelectRef = useRef(false);
+  const [actionDock, setActionDock] = useState<GanttActionDockState | null>(null);
   const [linkMessage, setLinkMessage] = useState("");
   const timelineItems = useMemo(() => [...items].sort((a, b) => Number(a.sort_order || 100) - Number(b.sort_order || 100)), [items]);
   const datedItems = items.filter((item) => item.start_date || item.due_date || item.end_date);
@@ -1062,6 +1191,19 @@ function GanttTimeline({
     duration: `${Number(dragState.previewDurationDays.toFixed(3))}d duration`,
     rowDelta: dragState.previewSortOrder - dragState.originalSortOrder,
   } : null;
+
+  const openActionDock = useCallback((item: ScheduleItem, clientX: number, clientY: number) => {
+    setActionDock({
+      item,
+      x: Math.min(Math.max(clientX + 14, 12), window.innerWidth - 340),
+      y: Math.min(Math.max(clientY + 14, 12), window.innerHeight - 430),
+    });
+    setLinkMessage(item.source_type === "appointment" ? "Appointment selected. Open Bookings to manage calendar details." : `Selected ${item.title}. Choose a quick action.`);
+  }, []);
+
+  function closeActionDock() {
+    setActionDock(null);
+  }
 
   const recalculatePaths = useCallback(() => {
     const overlay = overlayRef.current;
@@ -1115,6 +1257,27 @@ function GanttTimeline({
       window.removeEventListener("resize", recalculatePaths);
     };
   }, [recalculatePaths]);
+
+  useEffect(() => {
+    if (!actionDock) return;
+
+    function handlePointerDown(event: globalThis.PointerEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-gantt-action-dock]") || target?.closest("[data-gantt-id]")) return;
+      setActionDock(null);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setActionDock(null);
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [actionDock]);
 
   const dayWidth = useCallback(() => {
     const grid = timelineRef.current?.querySelector<HTMLElement>("[data-timeline-grid]");
@@ -1211,7 +1374,7 @@ function GanttTimeline({
       setDragState(null);
       if (!current.moved) {
         suppressNextSelectRef.current = false;
-        onSelect(current.item);
+        openActionDock(current.item, current.pointerX, current.pointerY);
         setLinkMessage("");
         return;
       }
@@ -1250,7 +1413,7 @@ function GanttTimeline({
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
     };
-  }, [dayWidth, dragState, onUpdateItemDates, recalculatePaths]);
+  }, [dayWidth, dragState, onUpdateItemDates, openActionDock, recalculatePaths]);
 
   async function completeConnection(targetItemId: string, targetSide: ConnectorSide) {
     if (!draftSource) return;
@@ -1284,11 +1447,49 @@ function GanttTimeline({
     }
   }
 
+  function runPlannedAction(label: string, item: ScheduleItem) {
+    setLinkMessage(`${label} is staged for ${item.title}. This will open the related workspace once that attachment flow is connected.`);
+    closeActionDock();
+  }
+
+  function downloadItemExport(item: ScheduleItem, format: "csv" | "pdf") {
+    const rows = [
+      ["Title", item.title],
+      ["Project", item.project_name || "Unlinked"],
+      ["Type", itemTypeLabel(item)],
+      ["Phase", item.phase || "No phase"],
+      ["Status", human(item.status)],
+      ["Priority", human(item.priority)],
+      ["Start", formatDate(item.start_date)],
+      ["Due", formatDate(item.due_date || item.end_date)],
+      ["Progress", `${item.progress_percent ?? 0}%`],
+    ];
+    const content = format === "csv"
+      ? rows.map(([key, value]) => `"${String(key).replace(/"/g, "\"\"")}","${String(value).replace(/"/g, "\"\"")}"`).join("\n")
+      : rows.map(([key, value]) => `${key}: ${value}`).join("\n");
+    const blob = new Blob([content], { type: format === "csv" ? "text/csv" : "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${slugify(item.project_name || item.title)}-${slugify(item.title)}.${format === "csv" ? "csv" : "txt"}`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setLinkMessage(`${format.toUpperCase()} export prepared for ${item.title}.`);
+    closeActionDock();
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Gantt timeline</CardTitle>
-        <CardDescription>First-pass schedule grid for phases, tasks, milestones, blockers, proof approvals, production, delivery, and install.</CardDescription>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Gantt timeline</CardTitle>
+            <CardDescription>First-pass schedule grid for phases, tasks, milestones, blockers, proof approvals, production, delivery, and install.</CardDescription>
+          </div>
+          <Badge variant="outline" className="max-w-full truncate px-2.5 py-1 text-xs md:max-w-[420px]" title={projectLabel}>
+            {projectLabel}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent>
         {!items.length ? (
@@ -1309,6 +1510,76 @@ function GanttTimeline({
                   <div className="mt-0.5 text-muted-foreground">
                     {dragTooltip.duration}
                     {dragTooltip.rowDelta !== 0 ? ` | row ${dragTooltip.rowDelta > 0 ? "+" : ""}${dragTooltip.rowDelta}` : ""}
+                  </div>
+                </div>
+              )}
+              {actionDock && (
+                <div
+                  data-gantt-action-dock
+                  className="fixed z-[90] max-h-[min(82vh,640px)] w-[320px] overflow-y-auto rounded-xl border bg-popover p-3 text-popover-foreground shadow-2xl"
+                  style={{ left: actionDock.x, top: actionDock.y }}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold">{actionDock.item.title}</div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">{itemTypeLabel(actionDock.item)} - {actionDock.item.phase || "No phase"}</div>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-7 px-2" onClick={closeActionDock}>Close</Button>
+                  </div>
+                  {actionDock.item.source_type === "appointment" ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <DockAction icon={CalendarClock} label="View booking" onClick={() => { window.location.href = "/admin/bookings"; }} />
+                      <DockAction icon={Download} label="CSV" onClick={() => downloadItemExport(actionDock.item, "csv")} />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      <DockAction icon={Link2} label="Connect task" onClick={() => {
+                        setDraftSource({ itemId: actionDock.item.id, side: "finish" });
+                        setLinkMessage("Select another task handle to connect this task.");
+                        closeActionDock();
+                      }} />
+                      <DockAction icon={Plus} label="Add task" onClick={() => {
+                        onAddTask(actionDock.item);
+                        closeActionDock();
+                      }} />
+                      <DockAction icon={UserPlus} label="Add user" onClick={() => runPlannedAction("Add user", actionDock.item)} />
+                      <DockAction icon={Users} label="Contact" onClick={() => runPlannedAction("Add customer contact", actionDock.item)} />
+                      <DockAction icon={Camera} label="Photo" onClick={() => runPlannedAction("Add photo", actionDock.item)} />
+                      <DockAction icon={Video} label="Video" onClick={() => runPlannedAction("Add video", actionDock.item)} />
+                      <DockAction icon={FileText} label="File/proof" onClick={() => runPlannedAction("Add file or proof", actionDock.item)} />
+                      <DockAction icon={Package} label="Product" onClick={() => runPlannedAction("Add product", actionDock.item)} />
+                      <DockAction icon={Package} label="Selection" onClick={() => runPlannedAction("Add product selection", actionDock.item)} />
+                      <DockAction icon={Package} label="Material" onClick={() => runPlannedAction("Add material", actionDock.item)} />
+                      <DockAction icon={Users} label="Vendor" onClick={() => runPlannedAction("Add vendor", actionDock.item)} />
+                      <DockAction icon={Users} label="Role" onClick={() => runPlannedAction("Add role type", actionDock.item)} />
+                      <DockAction icon={StickyNote} label="Note" onClick={() => runPlannedAction("Add production note", actionDock.item)} />
+                      <DockAction icon={Pencil} label="Edit" onClick={() => {
+                        onEdit(actionDock.item);
+                        closeActionDock();
+                      }} />
+                      <DockAction icon={EyeOff} label="Hide" onClick={() => {
+                        onHide(actionDock.item);
+                        closeActionDock();
+                      }} />
+                      <DockAction icon={CheckCircle2} label="Complete" onClick={() => {
+                        onComplete(actionDock.item);
+                        closeActionDock();
+                      }} />
+                      <DockAction icon={Ban} label="Cancel" onClick={() => {
+                        onCancel(actionDock.item);
+                        closeActionDock();
+                      }} />
+                      <DockAction icon={Download} label="CSV" onClick={() => downloadItemExport(actionDock.item, "csv")} />
+                      <DockAction icon={FileText} label="PDF" onClick={() => downloadItemExport(actionDock.item, "pdf")} />
+                      <DockAction icon={Trash2} label="Delete" danger onClick={() => {
+                        onDelete(actionDock.item);
+                        closeActionDock();
+                      }} />
+                    </div>
+                  )}
+                  <div className="mt-3 rounded-lg border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                    Drag the center to move. Use the left or right edge handles to resize duration.
                   </div>
                 </div>
               )}
@@ -1364,13 +1635,9 @@ function GanttTimeline({
                       key={item.id}
                       data-gantt-row
                       className={cn("grid w-full grid-cols-[260px_minmax(600px,1fr)] py-2 text-left hover:bg-accent/30", draftSource?.itemId === item.id && "bg-primary/10", preview && "bg-primary/15")}
-                      onClick={() => {
+                      onClick={(event) => {
                         if (suppressNextSelectRef.current) return;
-                        if (readOnlyAppointment) {
-                          window.location.href = "/admin/bookings";
-                          return;
-                        }
-                        onSelect(item);
+                        openActionDock(item, event.clientX, event.clientY);
                       }}
                     >
                       <div className="pr-3">
@@ -1504,6 +1771,29 @@ function ConnectorHandle({
   );
 }
 
+function DockAction({
+  icon: Icon,
+  label,
+  danger,
+  onClick,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  danger?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant="outline"
+      className={cn("h-[76px] flex-col gap-1 rounded-lg px-2 text-xs", danger && "border-red-500/25 text-red-600 hover:text-red-700 dark:text-red-300")}
+      onClick={onClick}
+    >
+      <Icon className="h-4 w-4" />
+      <span className="text-center leading-tight">{label}</span>
+    </Button>
+  );
+}
+
 function ScheduleProjects({
   groups,
   orders,
@@ -1521,6 +1811,9 @@ function ScheduleProjects({
   onCancel,
   onComplete,
   onDelete,
+  onCancelProject,
+  onCompleteProject,
+  onDeleteProject,
 }: {
   groups: ScheduleProjectGroup[];
   orders: Order[];
@@ -1538,6 +1831,9 @@ function ScheduleProjects({
   onCancel: (item: ScheduleItem) => void;
   onComplete: (item: ScheduleItem) => void;
   onDelete: (item: ScheduleItem) => void;
+  onCancelProject: (group: ScheduleProjectGroup) => void;
+  onCompleteProject: (group: ScheduleProjectGroup) => void;
+  onDeleteProject: (group: ScheduleProjectGroup) => void;
 }) {
   const visibleSet = new Set(visibleKeys);
   const expandedSet = new Set(expandedKeys);
@@ -1581,6 +1877,36 @@ function ScheduleProjects({
                   {visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                   {visible ? "Hide from Gantt" : "Show on Gantt"}
                 </Button>
+                <div className="flex flex-wrap gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    title="Cancel every task in this project and hide it from the Gantt"
+                    onClick={() => onCancelProject(group)}
+                  >
+                    <Ban className="h-4 w-4" />
+                    Cancel project
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    title="Complete every task in this project and hide it from the Gantt"
+                    onClick={() => onCompleteProject(group)}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Complete project
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    title="Delete this project and all schedule items"
+                    className="text-red-600 hover:text-red-700 dark:text-red-300"
+                    onClick={() => onDeleteProject(group)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete project
+                  </Button>
+                </div>
               </div>
               {expanded && (
                 <div className="border-t">
@@ -2041,6 +2367,7 @@ function ScheduleItemSheet({
   item,
   data,
   staff,
+  initialPayload,
   onSave,
   onDelete,
 }: {
@@ -2049,6 +2376,7 @@ function ScheduleItemSheet({
   item?: ScheduleItem | null;
   data: AdminDashboardData | null;
   staff: AdminUser[];
+  initialPayload?: SchedulePayload | null;
   onSave: (input: SchedulePayload) => Promise<void>;
   onDelete?: () => void;
 }) {
@@ -2063,9 +2391,9 @@ function ScheduleItemSheet({
 
   useEffect(() => {
     if (!open) return;
-    setForm(payloadFromItem(item));
+    setForm(item ? payloadFromItem(item) : initialPayload || emptyPayload());
     setMessage("");
-  }, [item, open]);
+  }, [initialPayload, item, open]);
 
   const selectedOrder = orders.find((order) => order.id === form.order_id);
   const selectedItems = orderItems.filter((row) => row.order_id === form.order_id);
