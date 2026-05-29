@@ -187,7 +187,7 @@ const statuses = ["not_started", "in_progress", "waiting_on_customer", "waiting_
 const priorities = ["low", "normal", "high", "rush", "critical", "blocking_production", "blocking_delivery_install"];
 const phases = ["Intake / Quote", "Artwork / Design", "File Review", "Proofing / Approval", "Materials / Procurement", "Pre-Production", "Print Production", "Fabrication", "Finishing", "Quality Check", "Packaging", "Pickup / Shipping / Delivery", "Installation", "Customer Sign-Off", "Closeout"];
 const departments = ["Design", "Prepress", "Production", "Print", "Embroidery", "Screen Printing", "DTF / DTG", "Vinyl", "Fabrication", "QC", "Shipping", "Install", "Customer Support"];
-const views = ["Overview", "Gantt Timeline", "Tasks", "Milestones", "Approvals", "Install / Delivery", "Blocked Items"];
+const views = ["Overview", "Gantt Timeline", "List", "Table", "Kanban", "Calendar", "Project Templates", "Tasks", "Milestones", "Approvals", "Install / Delivery", "Blocked Items"];
 type ProjectSortMode = "recent" | "oldest";
 type AppointmentTimelineFilter = "include" | "only" | "hide";
 type GanttFabActionKind = "note" | "user" | "contact" | "photo" | "video" | "file" | "product" | "selection" | "material" | "vendor" | "role";
@@ -739,7 +739,7 @@ export function AdminProductionSchedule() {
   const visibleItems = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return items.filter((item) => {
-      if (item.source_type === "appointment" && activeView !== "Overview" && activeView !== "Gantt Timeline") return false;
+      if (item.source_type === "appointment" && !["Overview", "Gantt Timeline", "Calendar"].includes(activeView)) return false;
       if (appointmentFilter === "hide" && item.source_type === "appointment") return false;
       if (appointmentFilter === "only" && item.source_type !== "appointment") return false;
       if (statusFilter !== "all" && item.status !== statusFilter) return false;
@@ -1229,7 +1229,7 @@ export function AdminProductionSchedule() {
               {loading ? (
                 <Card><CardContent className="p-5 text-sm text-muted-foreground">Loading production schedule...</CardContent></Card>
               ) : (
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className={cn("grid gap-4", activeView === "Project Templates" ? "xl:grid-cols-1" : "xl:grid-cols-[minmax(0,1fr)_360px]")}>
                   <div className="space-y-4">
                     {(activeView === "Overview" || activeView === "Gantt Timeline") && (
                       <GanttTimeline
@@ -1249,38 +1249,56 @@ export function AdminProductionSchedule() {
                         relationSummaries={relationSummaries}
                       />
                     )}
-                    <ScheduleProjects
-                      groups={sortedProjectGroups}
-                      orders={orders}
-                      users={users}
-                      products={products}
-                      visibleKeys={visibleProjectKeys}
-                      expandedKeys={expandedProjectKeys}
-                      sortMode={projectSortMode}
-                      onSortModeChange={(mode) => {
-                        setProjectSortMode(mode);
-                        setVisibleProjectKeys([]);
-                        setExpandedProjectKeys([]);
-                      }}
-                      onToggleVisible={(key) => {
-                        setVisibleProjectKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
-                      }}
-                      onToggleExpanded={(key) => {
-                        setExpandedProjectKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
-                      }}
-                      onSelect={setSelectedItem}
-                      onHide={hideItem}
-                      onShow={showItem}
-                      onCancel={cancelItem}
-                      onComplete={completeItem}
-                      onDelete={deleteItem}
-                      onCancelProject={cancelProject}
-                      onCompleteProject={completeProject}
-                      onDeleteProject={deleteProject}
-                      relationSummaries={relationSummaries}
-                    />
+                    {activeView === "List" && <ScheduleListView items={sectionItems} relationSummaries={relationSummaries} onSelect={setSelectedItem} />}
+                    {activeView === "Table" && <ScheduleTableView items={sectionItems} orders={orders} users={users} products={products} relationSummaries={relationSummaries} onSelect={setSelectedItem} />}
+                    {activeView === "Kanban" && <ScheduleKanbanView items={sectionItems.filter((item) => item.source_type !== "appointment")} relationSummaries={relationSummaries} onSelect={setSelectedItem} />}
+                    {activeView === "Calendar" && <ScheduleCalendarView items={sectionItems} relationSummaries={relationSummaries} onSelect={setSelectedItem} />}
+                    {activeView === "Project Templates" && (
+                      <WorkflowTemplatePanel
+                        templates={workflowTemplates}
+                        orders={orders}
+                        orderItems={orderItems}
+                        users={users}
+                        products={products}
+                        productionJobs={productionJobs}
+                        onApply={applyWorkflowTemplate}
+                        expanded
+                      />
+                    )}
+                    {activeView !== "List" && activeView !== "Table" && activeView !== "Kanban" && activeView !== "Calendar" && activeView !== "Project Templates" && (
+                      <ScheduleProjects
+                        groups={sortedProjectGroups}
+                        orders={orders}
+                        users={users}
+                        products={products}
+                        visibleKeys={visibleProjectKeys}
+                        expandedKeys={expandedProjectKeys}
+                        sortMode={projectSortMode}
+                        onSortModeChange={(mode) => {
+                          setProjectSortMode(mode);
+                          setVisibleProjectKeys([]);
+                          setExpandedProjectKeys([]);
+                        }}
+                        onToggleVisible={(key) => {
+                          setVisibleProjectKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+                        }}
+                        onToggleExpanded={(key) => {
+                          setExpandedProjectKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+                        }}
+                        onSelect={setSelectedItem}
+                        onHide={hideItem}
+                        onShow={showItem}
+                        onCancel={cancelItem}
+                        onComplete={completeItem}
+                        onDelete={deleteItem}
+                        onCancelProject={cancelProject}
+                        onCompleteProject={completeProject}
+                        onDeleteProject={deleteProject}
+                        relationSummaries={relationSummaries}
+                      />
+                    )}
                   </div>
-                  <div className="space-y-4">
+                  {activeView !== "Project Templates" && <div className="space-y-4">
                     <WorkflowTemplatePanel
                       templates={workflowTemplates}
                       orders={orders}
@@ -1291,7 +1309,7 @@ export function AdminProductionSchedule() {
                       onApply={applyWorkflowTemplate}
                     />
                     <DependencyPanel items={items} dependencies={dependencies} onCreate={createDependency} onDelete={deleteDependency} />
-                  </div>
+                  </div>}
                 </div>
               )}
             </>
@@ -2343,6 +2361,171 @@ function ScheduleProjects({
   );
 }
 
+function ScheduleItemMiniCard({ item, relationSummaries, onSelect }: { item: ScheduleItem; relationSummaries: Record<string, ScheduleRelationSummary>; onSelect: (item: ScheduleItem) => void }) {
+  const relationSummary = relationSummaryForItem(item, relationSummaries);
+  return (
+    <button className="w-full rounded-lg border bg-background/45 p-3 text-left transition-colors hover:bg-accent/45" onClick={() => onSelect(item)}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold">{item.title}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{item.project_name || "Unlinked project"} | {itemTypeLabel(item)} | {item.phase || "No phase"}</div>
+        </div>
+        <Badge className={cn("shrink-0 border", statusTone(item.status))}>{human(item.status)}</Badge>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span>{formatDate(item.start_date || item.created_at)}</span>
+        <span>to</span>
+        <span>{formatDate(item.due_date || item.end_date)}</span>
+        {item.source_type === "appointment" && <CalendarClock className="h-3.5 w-3.5 text-sky-500" />}
+        {item.is_blocked && <Flag className="h-3.5 w-3.5 text-red-500" />}
+      </div>
+      <div className="mt-2">
+        <RelationIndicators summary={relationSummary} compact />
+      </div>
+    </button>
+  );
+}
+
+function ScheduleListView({ items, relationSummaries, onSelect }: { items: ScheduleItem[]; relationSummaries: Record<string, ScheduleRelationSummary>; onSelect: (item: ScheduleItem) => void }) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">List view</CardTitle>
+        <CardDescription>Project and task records in a scannable list using the same schedule data as the Gantt timeline.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {!items.length && <EmptyState title="No schedule items" description="Adjust filters or add a schedule item to populate this view." />}
+        {items.map((item) => <ScheduleItemMiniCard key={item.id} item={item} relationSummaries={relationSummaries} onSelect={onSelect} />)}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScheduleTableView({
+  items,
+  orders,
+  users,
+  products,
+  relationSummaries,
+  onSelect,
+}: {
+  items: ScheduleItem[];
+  orders: Order[];
+  users: AdminUser[];
+  products: Product[];
+  relationSummaries: Record<string, ScheduleRelationSummary>;
+  onSelect: (item: ScheduleItem) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Table view</CardTitle>
+        <CardDescription>Detailed rows for comparison, sorting decisions, and relationship scanning.</CardDescription>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Item</TableHead>
+              <TableHead>Project</TableHead>
+              <TableHead>Order / customer</TableHead>
+              <TableHead>Product</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Due</TableHead>
+              <TableHead>Links</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => {
+              const order = orders.find((row) => row.id === item.order_id);
+              const customer = users.find((row) => row.id === item.customer_id);
+              const product = products.find((row) => row.id === item.product_id);
+              return (
+                <TableRow key={item.id} className="cursor-pointer hover:bg-accent/45" onClick={() => onSelect(item)}>
+                  <TableCell>
+                    <div className="font-medium">{item.title}</div>
+                    <div className="text-xs text-muted-foreground">{itemTypeLabel(item)} | {item.phase || "No phase"}</div>
+                  </TableCell>
+                  <TableCell>{item.project_name || "Unlinked"}</TableCell>
+                  <TableCell>
+                    <div className="font-mono text-xs">#{order?.order_number || item.orders?.order_number || item.order_id?.slice(0, 8) || "Unlinked"}</div>
+                    <div className="text-xs text-muted-foreground">{customer?.full_name || customer?.email || order?.company || order?.customer_email || "No customer"}</div>
+                  </TableCell>
+                  <TableCell>{product?.name || item.products?.name || item.order_items?.products?.name || "Not linked"}</TableCell>
+                  <TableCell><Badge className={cn("border", statusTone(item.status))}>{human(item.status)}</Badge></TableCell>
+                  <TableCell>{formatDate(item.due_date || item.end_date)}</TableCell>
+                  <TableCell><RelationIndicators summary={relationSummaryForItem(item, relationSummaries)} compact /></TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScheduleKanbanView({ items, relationSummaries, onSelect }: { items: ScheduleItem[]; relationSummaries: Record<string, ScheduleRelationSummary>; onSelect: (item: ScheduleItem) => void }) {
+  const columns = ["not_started", "in_progress", "waiting_on_customer", "needs_internal_review", "ready_for_production", "in_production", "quality_check", "blocked", "completed"];
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Kanban view</CardTitle>
+        <CardDescription>Status columns for the same project and task records shown on the Gantt timeline.</CardDescription>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <div className="grid min-w-[1100px] grid-cols-9 gap-3">
+          {columns.map((status) => {
+            const columnItems = items.filter((item) => item.status === status || (status === "blocked" && item.is_blocked));
+            return (
+              <div key={status} className="rounded-lg border bg-background/35">
+                <div className="border-b p-3">
+                  <div className="text-sm font-semibold">{human(status)}</div>
+                  <div className="text-xs text-muted-foreground">{columnItems.length} items</div>
+                </div>
+                <div className="space-y-2 p-2">
+                  {columnItems.map((item) => <ScheduleItemMiniCard key={item.id} item={item} relationSummaries={relationSummaries} onSelect={onSelect} />)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScheduleCalendarView({ items, relationSummaries, onSelect }: { items: ScheduleItem[]; relationSummaries: Record<string, ScheduleRelationSummary>; onSelect: (item: ScheduleItem) => void }) {
+  const sorted = [...items].sort((a, b) => String(a.start_date || a.due_date || a.created_at || "").localeCompare(String(b.start_date || b.due_date || b.created_at || "")));
+  const grouped = sorted.reduce<Record<string, ScheduleItem[]>>((acc, item) => {
+    const key = item.start_date || item.due_date || item.end_date || "Unscheduled";
+    acc[key] = [...(acc[key] || []), item];
+    return acc;
+  }, {});
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Calendar view</CardTitle>
+        <CardDescription>Tasks, due dates, installs, deliveries, and booking appointments grouped by schedule date.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {!sorted.length && <EmptyState title="No calendar items" description="Adjust filters or include appointments to populate this view." />}
+        {Object.entries(grouped).map(([date, dateItems]) => (
+          <div key={date} className="rounded-lg border bg-background/35">
+            <div className="border-b p-3">
+              <div className="text-sm font-semibold">{date === "Unscheduled" ? date : formatDate(date)}</div>
+              <div className="text-xs text-muted-foreground">{dateItems.length} items</div>
+            </div>
+            <div className="space-y-2 p-2">
+              {dateItems.map((item) => <ScheduleItemMiniCard key={item.id} item={item} relationSummaries={relationSummaries} onSelect={onSelect} />)}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 function WorkflowTemplatePanel({
   templates,
   orders,
@@ -2351,6 +2534,7 @@ function WorkflowTemplatePanel({
   products,
   productionJobs,
   onApply,
+  expanded,
 }: {
   templates: WorkflowTemplate[];
   orders: Order[];
@@ -2368,6 +2552,7 @@ function WorkflowTemplatePanel({
     product_id: string | null;
     customer_id: string | null;
   }) => Promise<void>;
+  expanded?: boolean;
 }) {
   const [templateSlug, setTemplateSlug] = useState(templates[0]?.slug || "none");
   const [projectName, setProjectName] = useState("");
@@ -2444,9 +2629,9 @@ function WorkflowTemplatePanel({
               <Badge variant="outline">{selectedTemplate.item_count} items</Badge>
               <Badge variant="outline">{selectedTemplate.items.filter((item) => item.customer_visible).length} customer visible</Badge>
             </div>
-            <div className="mt-3 max-h-40 space-y-1 overflow-y-auto pr-1 text-xs text-muted-foreground">
-              {selectedTemplate.items.slice(0, 12).map((item, index) => <div key={item.key}>{index + 1}. {item.title} <span className="opacity-70">({item.phase})</span></div>)}
-              {selectedTemplate.items.length > 12 && <div>+ {selectedTemplate.items.length - 12} more items</div>}
+            <div className={cn("mt-3 space-y-1 text-xs text-muted-foreground", expanded ? "grid gap-1 sm:grid-cols-2 xl:grid-cols-3" : "max-h-40 overflow-y-auto pr-1")}>
+              {selectedTemplate.items.slice(0, expanded ? selectedTemplate.items.length : 12).map((item, index) => <div key={item.key}>{index + 1}. {item.title} <span className="opacity-70">({item.phase})</span></div>)}
+              {!expanded && selectedTemplate.items.length > 12 && <div>+ {selectedTemplate.items.length - 12} more items</div>}
             </div>
           </div>
         )}
