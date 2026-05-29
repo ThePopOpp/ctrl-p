@@ -695,12 +695,13 @@ export function AdminProductionSchedule() {
   const [message, setMessage] = useState("");
 
   async function refresh(openItemId?: string) {
+    const emptyRelations: ScheduleRelationsResponse = { participants: [], vendors: [], attachments: [], materials: [], events: [] };
     const [nextData, itemPayload, dependencyPayload, templatePayload, relationPayload] = await Promise.all([
       loadAdminDashboardData(),
       apiJson<{ items: ScheduleItem[]; appointments?: BookingAppointment[] }>("/api/admin/production-schedule"),
       apiJson<{ dependencies: ScheduleDependency[] }>("/api/admin/production-schedule/dependencies"),
       apiJson<{ templates: WorkflowTemplate[] }>("/api/admin/production-schedule/templates"),
-      apiJson<ScheduleRelationsResponse>("/api/admin/production-schedule/relations"),
+      apiJson<ScheduleRelationsResponse>("/api/admin/production-schedule/relations").catch(() => emptyRelations),
     ]);
     setData(nextData);
     setItems([...(itemPayload.items ?? []), ...(itemPayload.appointments ?? []).map(appointmentToScheduleItem)]);

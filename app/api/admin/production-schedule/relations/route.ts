@@ -176,6 +176,11 @@ function relationSelect(table: string) {
   return "*";
 }
 
+function isMissingRelationTable(error: { code?: string; message?: string } | null | undefined) {
+  const message = String(error?.message || "").toLowerCase();
+  return error?.code === "42P01" || error?.code === "PGRST205" || message.includes("could not find the table") || message.includes("schema cache");
+}
+
 export async function GET(request: Request) {
   const verified = await verifyAdminRequest(request, ALLOWED_ROLES);
   if (verified.error) return verified.error;
@@ -200,15 +205,15 @@ export async function GET(request: Request) {
     applyScope("production_schedule_activity_events"),
   ]);
 
-  const firstError = [participants, vendors, attachments, materials, events].find((result) => result.error)?.error;
+  const firstError = [participants, vendors, attachments, materials, events].find((result) => result.error && !isMissingRelationTable(result.error))?.error;
   if (firstError) return jsonError(firstError.message, 400);
 
   return NextResponse.json({
-    participants: participants.data ?? [],
-    vendors: vendors.data ?? [],
-    attachments: attachments.data ?? [],
-    materials: materials.data ?? [],
-    events: events.data ?? [],
+    participants: isMissingRelationTable(participants.error) ? [] : participants.data ?? [],
+    vendors: isMissingRelationTable(vendors.error) ? [] : vendors.data ?? [],
+    attachments: isMissingRelationTable(attachments.error) ? [] : attachments.data ?? [],
+    materials: isMissingRelationTable(materials.error) ? [] : materials.data ?? [],
+    events: isMissingRelationTable(events.error) ? [] : events.data ?? [],
   });
 }
 
