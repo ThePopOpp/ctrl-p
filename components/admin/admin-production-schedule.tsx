@@ -190,6 +190,47 @@ const departments = ["Design", "Prepress", "Production", "Print", "Embroidery", 
 const views = ["Overview", "Gantt Timeline", "Tasks", "Milestones", "Approvals", "Install / Delivery", "Blocked Items"];
 type ProjectSortMode = "recent" | "oldest";
 type AppointmentTimelineFilter = "include" | "only" | "hide";
+type GanttFabActionKind = "note" | "user" | "contact" | "photo" | "video" | "file" | "product" | "selection" | "material" | "vendor" | "role";
+type GanttFabActionState = { kind: GanttFabActionKind; item: ScheduleItem } | null;
+type ScheduleRelationPayload = Record<string, unknown> & {
+  relation_type: "participant" | "vendor" | "attachment" | "material" | "event";
+};
+type ScheduleRelationSummary = {
+  products: number;
+  selections: number;
+  materials: number;
+  participants: number;
+  clients: number;
+  vendors: number;
+  photos: number;
+  videos: number;
+  documents: number;
+  notes: number;
+};
+type ScheduleRelationsResponse = {
+  participants?: { schedule_item_id?: string | null; schedule_group_id?: string | null; participant_type?: string | null }[];
+  vendors?: { schedule_item_id?: string | null; schedule_group_id?: string | null }[];
+  attachments?: { schedule_item_id?: string | null; schedule_group_id?: string | null; file_type?: string | null }[];
+  materials?: { schedule_item_id?: string | null; schedule_group_id?: string | null; product_id?: string | null; material_type?: string | null; category?: string | null }[];
+  events?: { schedule_item_id?: string | null; schedule_group_id?: string | null; event_type?: string | null }[];
+};
+type ArtworkUploadResponse = {
+  artwork?: {
+    id: string;
+    filename: string | null;
+    storage_path: string | null;
+    bucket: string | null;
+    mime_type: string | null;
+    file_size_bytes: number | string | null;
+  };
+  proof?: {
+    id: string;
+    storage_path: string | null;
+    proof_url: string | null;
+    status: string | null;
+    revision_number: number | string | null;
+  };
+};
 
 type ScheduleProjectGroup = {
   key: string;
@@ -440,6 +481,149 @@ function sortProjectGroups(groups: ScheduleProjectGroup[], mode: ProjectSortMode
   });
 }
 
+function emptyRelationSummary(): ScheduleRelationSummary {
+  return {
+    products: 0,
+    selections: 0,
+    materials: 0,
+    participants: 0,
+    clients: 0,
+    vendors: 0,
+    photos: 0,
+    videos: 0,
+    documents: 0,
+    notes: 0,
+  };
+}
+
+function buildRelationSummaries(payload: ScheduleRelationsResponse): Record<string, ScheduleRelationSummary> {
+  const summaries: Record<string, ScheduleRelationSummary> = {};
+  const ensure = (itemId: string | null | undefined, groupId: string | null | undefined) => {
+    const key = itemId ? `item:${itemId}` : groupId ? `group:${groupId}` : null;
+    if (!key) return null;
+    summaries[key] = summaries[key] || emptyRelationSummary();
+    return summaries[key];
+  };
+
+  for (const participant of payload.participants ?? []) {
+    const summary = ensure(participant.schedule_item_id, participant.schedule_group_id);
+    if (!summary) continue;
+    const type = String(participant.participant_type || "");
+    if (type === "customer" || type === "customer_contact" || type === "contact") summary.clients += 1;
+    else summary.participants += 1;
+  }
+
+  for (const vendor of payload.vendors ?? []) {
+    const summary = ensure(vendor.schedule_item_id, vendor.schedule_group_id);
+    if (summary) summary.vendors += 1;
+  }
+
+  for (const attachment of payload.attachments ?? []) {
+    const summary = ensure(attachment.schedule_item_id, attachment.schedule_group_id);
+    if (!summary) continue;
+    const type = String(attachment.file_type || "");
+    if (type.includes("photo")) summary.photos += 1;
+    else if (type === "video") summary.videos += 1;
+    else summary.documents += 1;
+  }
+
+  for (const material of payload.materials ?? []) {
+    const summary = ensure(material.schedule_item_id, material.schedule_group_id);
+    if (!summary) continue;
+    const type = String(material.material_type || material.category || "").toLowerCase();
+    if (type === "selection") summary.selections += 1;
+    else if (material.product_id || type === "product") summary.products += 1;
+    else summary.materials += 1;
+  }
+
+  for (const event of payload.events ?? []) {
+    const summary = ensure(event.schedule_item_id, event.schedule_group_id);
+    if (summary) summary.notes += 1;
+  }
+
+  return summaries;
+}
+
+function addRelationCounts(target: ScheduleRelationSummary, source?: ScheduleRelationSummary) {
+  if (!source) return target;
+  target.products += source.products;
+  target.selections += source.selections;
+  target.materials += source.materials;
+  target.participants += source.participants;
+  target.clients += source.clients;
+  target.vendors += source.vendors;
+  target.photos += source.photos;
+  target.videos += source.videos;
+  target.documents += source.documents;
+  target.notes += source.notes;
+  return target;
+}
+
+function relationSummaryForItem(item: ScheduleItem, summaries: Record<string, ScheduleRelationSummary>, includeProjectRelations = true) {
+  const summary = { ...emptyRelationSummary(), ...(summaries[`item:${item.id}`] || summaries[item.id] || {}) };
+  if (includeProjectRelations && item.schedule_group_id) addRelationCounts(summary, summaries[`group:${item.schedule_group_id}`]);
+  if (item.product_id) summary.products += 1;
+  if (item.assigned_to_user_id) summary.participants += 1;
+  if (item.customer_id) summary.clients += 1;
+  if (item.internal_notes || item.customer_notes) summary.notes += 1;
+  return summary;
+}
+
+function combineRelationSummaries(items: ScheduleItem[], summaries: Record<string, ScheduleRelationSummary>) {
+  return items.reduce((total, item) => {
+    const summary = relationSummaryForItem(item, summaries, false);
+    addRelationCounts(total, summary);
+    return total;
+  }, emptyRelationSummary());
+}
+
+function relationSummaryEntries(summary: ScheduleRelationSummary) {
+  return [
+    { key: "products", label: "product", plural: "products", count: summary.products, icon: Package, tone: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-200" },
+    { key: "selections", label: "selection", plural: "selections", count: summary.selections, icon: Package, tone: "border-cyan-500/25 bg-cyan-500/10 text-cyan-700 dark:text-cyan-200" },
+    { key: "materials", label: "material", plural: "materials", count: summary.materials, icon: Package, tone: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-200" },
+    { key: "participants", label: "participant", plural: "participants", count: summary.participants, icon: Users, tone: "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-200" },
+    { key: "clients", label: "client", plural: "clients", count: summary.clients, icon: UserPlus, tone: "border-lime-500/25 bg-lime-500/10 text-lime-700 dark:text-lime-200", singleText: "Client linked" },
+    { key: "vendors", label: "vendor", plural: "vendors", count: summary.vendors, icon: Users, tone: "border-orange-500/25 bg-orange-500/10 text-orange-700 dark:text-orange-200" },
+    { key: "photos", label: "photo", plural: "photos", count: summary.photos, icon: Camera, tone: "border-pink-500/25 bg-pink-500/10 text-pink-700 dark:text-pink-200" },
+    { key: "videos", label: "video", plural: "videos", count: summary.videos, icon: Video, tone: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-200" },
+    { key: "documents", label: "document", plural: "documents", count: summary.documents, icon: FileText, tone: "border-blue-500/25 bg-blue-500/10 text-blue-700 dark:text-blue-200" },
+    { key: "notes", label: "note", plural: "notes", count: summary.notes, icon: StickyNote, tone: "border-zinc-500/25 bg-zinc-500/10 text-zinc-700 dark:text-zinc-200" },
+  ].filter((entry) => entry.count > 0);
+}
+
+function relationSummaryText(summary: ScheduleRelationSummary) {
+  return relationSummaryEntries(summary)
+    .map((entry) => entry.count === 1 && "singleText" in entry && entry.singleText ? entry.singleText : `${entry.count} ${entry.count === 1 ? entry.label : entry.plural}`)
+    .join("\n");
+}
+
+function RelationIndicators({ summary, compact = false }: { summary: ScheduleRelationSummary; compact?: boolean }) {
+  const entries = relationSummaryEntries(summary);
+  if (!entries.length) return null;
+  const title = relationSummaryText(summary);
+  return (
+    <span className={cn("inline-flex flex-wrap items-center gap-1", compact && "gap-0.5")} title={title} aria-label={title}>
+      {entries.map((entry) => {
+        const Icon = entry.icon;
+        return (
+          <span
+            key={entry.key}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border font-medium",
+              compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-[11px]",
+              entry.tone,
+            )}
+          >
+            <Icon className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+            <span>{entry.count}</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 async function getAdminToken() {
   const db = getSupabaseBrowserClient();
   if (!db) throw new Error("Supabase is not configured.");
@@ -467,6 +651,23 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
+async function apiFormData<T>(url: string, form: FormData): Promise<T> {
+  const token = await getAdminToken();
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+    body: form,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = payload as { error?: string };
+    throw new Error(error.error || "Upload request failed.");
+  }
+  return payload as T;
+}
+
 export function AdminProductionSchedule() {
   const pathname = usePathname();
   const [theme, setTheme] = useState<"light" | "dark">("dark");
@@ -474,6 +675,7 @@ export function AdminProductionSchedule() {
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [dependencies, setDependencies] = useState<ScheduleDependency[]>([]);
+  const [relationSummaries, setRelationSummaries] = useState<Record<string, ScheduleRelationSummary>>({});
   const [workflowTemplates, setWorkflowTemplates] = useState<WorkflowTemplate[]>([]);
   const [activeView, setActiveView] = useState("Overview");
   const [query, setQuery] = useState("");
@@ -486,21 +688,24 @@ export function AdminProductionSchedule() {
   const [expandedProjectKeys, setExpandedProjectKeys] = useState<string[]>([]);
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
   const [selectedDependency, setSelectedDependency] = useState<ScheduleDependency | null>(null);
+  const [fabAction, setFabAction] = useState<GanttFabActionState>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createInitialPayload, setCreateInitialPayload] = useState<SchedulePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
   async function refresh(openItemId?: string) {
-    const [nextData, itemPayload, dependencyPayload, templatePayload] = await Promise.all([
+    const [nextData, itemPayload, dependencyPayload, templatePayload, relationPayload] = await Promise.all([
       loadAdminDashboardData(),
       apiJson<{ items: ScheduleItem[]; appointments?: BookingAppointment[] }>("/api/admin/production-schedule"),
       apiJson<{ dependencies: ScheduleDependency[] }>("/api/admin/production-schedule/dependencies"),
       apiJson<{ templates: WorkflowTemplate[] }>("/api/admin/production-schedule/templates"),
+      apiJson<ScheduleRelationsResponse>("/api/admin/production-schedule/relations"),
     ]);
     setData(nextData);
     setItems([...(itemPayload.items ?? []), ...(itemPayload.appointments ?? []).map(appointmentToScheduleItem)]);
     setDependencies(dependencyPayload.dependencies);
+    setRelationSummaries(buildRelationSummaries(relationPayload));
     setWorkflowTemplates(templatePayload.templates);
     if (openItemId) setSelectedItem(itemPayload.items.find((item) => item.id === openItemId) ?? null);
   }
@@ -714,6 +919,86 @@ export function AdminProductionSchedule() {
 
   async function completeItem(item: ScheduleItem) {
     await updateTaskAction(item, { status: "completed", progress_percent: 100, is_blocked: false }, `Completed "${item.title}".`);
+  }
+
+  async function createScheduleRelation(item: ScheduleItem, relation: ScheduleRelationPayload) {
+    await apiJson<{ relation: unknown }>("/api/admin/production-schedule/relations", {
+      method: "POST",
+      body: JSON.stringify({
+        schedule_item_id: item.id,
+        schedule_group_id: item.schedule_group_id,
+        project_name: item.project_name,
+        order_id: item.order_id,
+        order_item_id: item.order_item_id,
+        ...relation,
+      }),
+    });
+  }
+
+  async function saveFabAction(item: ScheduleItem, updates: Partial<SchedulePayload>, messageText: string, relation?: ScheduleRelationPayload) {
+    if (relation) await createScheduleRelation(item, relation);
+    if (Object.keys(updates).length) {
+      await updateTaskAction(item, updates, messageText);
+    } else {
+      setSelectedItem(null);
+      await refresh();
+      setMessage(messageText);
+    }
+    setFabAction(null);
+  }
+
+  async function uploadFabAttachment(item: ScheduleItem, input: {
+    file: File;
+    mode: "artwork" | "proof";
+    status: string;
+    admin_comments: string;
+    customer_comments: string;
+  }) {
+    if (!item.order_id || !item.order_item_id) {
+      throw new Error("Attach this task to an order and order item before uploading artwork, proof, photos, videos, or files.");
+    }
+    const form = new FormData();
+    form.append("mode", input.mode);
+    form.append("file", input.file);
+    form.append("order_id", item.order_id);
+    form.append("order_item_id", item.order_item_id);
+    form.append("user_id", item.customer_id || "");
+    form.append("status", input.status);
+    form.append("admin_comments", input.admin_comments);
+    form.append("customer_comments", input.customer_comments);
+    const uploadResult = await apiFormData<ArtworkUploadResponse>("/api/admin/artwork", form);
+    const isProof = input.mode === "proof";
+    const fileType = isProof
+      ? "proof"
+      : input.file.type.startsWith("image/")
+        ? "photo"
+        : input.file.type.startsWith("video/")
+          ? "video"
+          : input.file.type === "application/pdf"
+            ? "pdf"
+            : "document";
+    await createScheduleRelation(item, {
+      relation_type: "attachment",
+      file_type: fileType,
+      file_name: uploadResult.artwork?.filename || input.file.name,
+      file_url: uploadResult.proof?.proof_url || null,
+      storage_path: uploadResult.artwork?.storage_path || uploadResult.proof?.storage_path || null,
+      bucket: uploadResult.artwork?.bucket || "artwork",
+      mime_type: uploadResult.artwork?.mime_type || input.file.type || "application/octet-stream",
+      file_size_bytes: uploadResult.artwork?.file_size_bytes || input.file.size,
+      artwork_file_id: uploadResult.artwork?.id || null,
+      proof_id: uploadResult.proof?.id || null,
+      title: isProof ? "Proof upload" : "Gantt FAB upload",
+      description: input.admin_comments,
+      approval_status: isProof ? input.status : input.status === "approved" ? "approved" : "pending_review",
+      visibility: isProof ? "customer" : "internal",
+      notes: input.customer_comments || input.admin_comments,
+    });
+    await updateTaskAction(item, {
+      artwork_review_status: input.mode === "artwork" ? input.status : item.artwork_review_status || "",
+      proof_status: input.mode === "proof" ? input.status : item.proof_status || "",
+    }, `Uploaded ${input.file.name} and attached it to "${item.title}".`);
+    setFabAction(null);
   }
 
   async function updateProjectAction(group: ScheduleProjectGroup, updates: Partial<SchedulePayload>, messageText: string) {
@@ -957,9 +1242,11 @@ export function AdminProductionSchedule() {
                         onCancel={cancelItem}
                         onComplete={completeItem}
                         onDelete={deleteItem}
+                        onQuickAction={(kind, item) => setFabAction({ kind, item })}
                         onUpdateItemDates={updateItemDates}
                         onCreateDependency={createDependency}
                         onSelectDependency={setSelectedDependency}
+                        relationSummaries={relationSummaries}
                       />
                     )}
                     <ScheduleProjects
@@ -990,6 +1277,7 @@ export function AdminProductionSchedule() {
                       onCancelProject={cancelProject}
                       onCompleteProject={completeProject}
                       onDeleteProject={deleteProject}
+                      relationSummaries={relationSummaries}
                     />
                   </div>
                   <div className="space-y-4">
@@ -1046,6 +1334,16 @@ export function AdminProductionSchedule() {
           }}
           onSave={updateDependency}
           onDelete={deleteDependency}
+        />
+        <GanttFabActionSheet
+          action={fabAction}
+          data={data}
+          staff={staff}
+          onOpenChange={(open) => {
+            if (!open) setFabAction(null);
+          }}
+          onSave={saveFabAction}
+          onUpload={uploadFabAttachment}
         />
       </div>
     </div>
@@ -1141,9 +1439,11 @@ function GanttTimeline({
   onCancel,
   onComplete,
   onDelete,
+  onQuickAction,
   onUpdateItemDates,
   onCreateDependency,
   onSelectDependency,
+  relationSummaries,
 }: {
   items: ScheduleItem[];
   dependencies: ScheduleDependency[];
@@ -1154,6 +1454,7 @@ function GanttTimeline({
   onCancel: (item: ScheduleItem) => void;
   onComplete: (item: ScheduleItem) => void;
   onDelete: (item: ScheduleItem) => void;
+  onQuickAction: (kind: GanttFabActionKind, item: ScheduleItem) => void;
   onUpdateItemDates: (item: ScheduleItem, updates: { start_date: string | null; start_offset_minutes?: number | null; end_date: string | null; due_date: string | null; estimated_duration_days?: number | null; sort_order?: number | null }) => Promise<void>;
   onCreateDependency: (input: {
     parent_item_id: string;
@@ -1165,6 +1466,7 @@ function GanttTimeline({
     auto_shift_schedule: boolean;
   }) => Promise<void>;
   onSelectDependency: (dependency: ScheduleDependency) => void;
+  relationSummaries: Record<string, ScheduleRelationSummary>;
 }) {
   const overlayRef = useRef<SVGSVGElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
@@ -1447,8 +1749,8 @@ function GanttTimeline({
     }
   }
 
-  function runPlannedAction(label: string, item: ScheduleItem) {
-    setLinkMessage(`${label} is staged for ${item.title}. This will open the related workspace once that attachment flow is connected.`);
+  function openQuickAction(kind: GanttFabActionKind, item: ScheduleItem) {
+    onQuickAction(kind, item);
     closeActionDock();
   }
 
@@ -1516,7 +1818,7 @@ function GanttTimeline({
               {actionDock && (
                 <div
                   data-gantt-action-dock
-                  className="fixed z-[90] max-h-[min(82vh,640px)] w-[320px] overflow-y-auto rounded-xl border bg-popover p-3 text-popover-foreground shadow-2xl"
+                  className="fixed z-[90] w-[340px] rounded-xl border border-primary/20 bg-[#102016] p-3 text-popover-foreground shadow-2xl"
                   style={{ left: actionDock.x, top: actionDock.y }}
                   onClick={(event) => event.stopPropagation()}
                 >
@@ -1528,12 +1830,12 @@ function GanttTimeline({
                     <Button variant="ghost" size="sm" className="h-7 px-2" onClick={closeActionDock}>Close</Button>
                   </div>
                   {actionDock.item.source_type === "appointment" ? (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-black/20 p-2">
                       <DockAction icon={CalendarClock} label="View booking" onClick={() => { window.location.href = "/admin/bookings"; }} />
                       <DockAction icon={Download} label="CSV" onClick={() => downloadItemExport(actionDock.item, "csv")} />
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-black/20 p-2">
                       <DockAction icon={Link2} label="Connect task" onClick={() => {
                         setDraftSource({ itemId: actionDock.item.id, side: "finish" });
                         setLinkMessage("Select another task handle to connect this task.");
@@ -1543,17 +1845,17 @@ function GanttTimeline({
                         onAddTask(actionDock.item);
                         closeActionDock();
                       }} />
-                      <DockAction icon={UserPlus} label="Add user" onClick={() => runPlannedAction("Add user", actionDock.item)} />
-                      <DockAction icon={Users} label="Contact" onClick={() => runPlannedAction("Add customer contact", actionDock.item)} />
-                      <DockAction icon={Camera} label="Photo" onClick={() => runPlannedAction("Add photo", actionDock.item)} />
-                      <DockAction icon={Video} label="Video" onClick={() => runPlannedAction("Add video", actionDock.item)} />
-                      <DockAction icon={FileText} label="File/proof" onClick={() => runPlannedAction("Add file or proof", actionDock.item)} />
-                      <DockAction icon={Package} label="Product" onClick={() => runPlannedAction("Add product", actionDock.item)} />
-                      <DockAction icon={Package} label="Selection" onClick={() => runPlannedAction("Add product selection", actionDock.item)} />
-                      <DockAction icon={Package} label="Material" onClick={() => runPlannedAction("Add material", actionDock.item)} />
-                      <DockAction icon={Users} label="Vendor" onClick={() => runPlannedAction("Add vendor", actionDock.item)} />
-                      <DockAction icon={Users} label="Role" onClick={() => runPlannedAction("Add role type", actionDock.item)} />
-                      <DockAction icon={StickyNote} label="Note" onClick={() => runPlannedAction("Add production note", actionDock.item)} />
+                      <DockAction icon={UserPlus} label="Add user" onClick={() => openQuickAction("user", actionDock.item)} />
+                      <DockAction icon={Users} label="Contact" onClick={() => openQuickAction("contact", actionDock.item)} />
+                      <DockAction icon={Camera} label="Photo" onClick={() => openQuickAction("photo", actionDock.item)} />
+                      <DockAction icon={Video} label="Video" onClick={() => openQuickAction("video", actionDock.item)} />
+                      <DockAction icon={FileText} label="File/proof" onClick={() => openQuickAction("file", actionDock.item)} />
+                      <DockAction icon={Package} label="Product" onClick={() => openQuickAction("product", actionDock.item)} />
+                      <DockAction icon={Package} label="Selection" onClick={() => openQuickAction("selection", actionDock.item)} />
+                      <DockAction icon={Package} label="Material" onClick={() => openQuickAction("material", actionDock.item)} />
+                      <DockAction icon={Users} label="Vendor" onClick={() => openQuickAction("vendor", actionDock.item)} />
+                      <DockAction icon={Users} label="Role" onClick={() => openQuickAction("role", actionDock.item)} />
+                      <DockAction icon={StickyNote} label="Note" onClick={() => openQuickAction("note", actionDock.item)} />
                       <DockAction icon={Pencil} label="Edit" onClick={() => {
                         onEdit(actionDock.item);
                         closeActionDock();
@@ -1578,7 +1880,7 @@ function GanttTimeline({
                       }} />
                     </div>
                   )}
-                  <div className="mt-3 rounded-lg border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                  <div className="mt-3 rounded-lg border bg-black/20 px-3 py-2 text-xs text-muted-foreground">
                     Drag the center to move. Use the left or right edge handles to resize duration.
                   </div>
                 </div>
@@ -1621,6 +1923,7 @@ function GanttTimeline({
               <div className="divide-y">
                 {timelineItems.map((item) => {
                   const preview = dragState?.item.id === item.id ? dragState : null;
+                  const relationSummary = relationSummaryForItem(item, relationSummaries);
                   const start = preview?.previewStart || item.start_date || item.due_date || item.end_date || timelineStart;
                   const end = preview?.previewEnd || item.end_date || item.due_date || start;
                   const startOffsetMinutes = preview?.previewOffsetMinutes ?? Number(item.start_offset_minutes || 0);
@@ -1648,6 +1951,9 @@ function GanttTimeline({
                           {hasDependency && <Link2 className="h-3 w-3" />}
                           {blocked && <Flag className="h-3 w-3 text-red-500" />}
                           {item.customer_visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                        </div>
+                        <div className="mt-1">
+                          <RelationIndicators summary={relationSummary} compact />
                         </div>
                       </div>
                       <div className="relative grid min-h-9" style={{ gridTemplateColumns: `repeat(${ticks.length}, minmax(24px, 1fr))` }}>
@@ -1701,6 +2007,9 @@ function GanttTimeline({
                             </>
                           )}
                           <span className="block truncate">{readOnlyAppointment ? "Appointment" : `${item.progress_percent ?? 0}% ${human(item.status)}`} | {formatOffset(startOffsetMinutes)} {displayDuration < 1 ? `| ${Number(displayDuration.toFixed(3))}d` : ""}</span>
+                          <span className="pointer-events-none absolute -top-2 right-5 z-30 max-w-[160px] overflow-hidden">
+                            <RelationIndicators summary={relationSummary} compact />
+                          </span>
                           {!readOnlyAppointment && (
                             <>
                               <span
@@ -1785,7 +2094,7 @@ function DockAction({
   return (
     <Button
       variant="outline"
-      className={cn("h-[76px] flex-col gap-1 rounded-lg px-2 text-xs", danger && "border-red-500/25 text-red-600 hover:text-red-700 dark:text-red-300")}
+      className={cn("h-[64px] flex-col gap-1 rounded-lg bg-background/80 px-2 text-xs hover:bg-background", danger && "border-red-500/25 text-red-600 hover:text-red-700 dark:text-red-300")}
       onClick={onClick}
     >
       <Icon className="h-4 w-4" />
@@ -1814,6 +2123,7 @@ function ScheduleProjects({
   onCancelProject,
   onCompleteProject,
   onDeleteProject,
+  relationSummaries,
 }: {
   groups: ScheduleProjectGroup[];
   orders: Order[];
@@ -1834,6 +2144,7 @@ function ScheduleProjects({
   onCancelProject: (group: ScheduleProjectGroup) => void;
   onCompleteProject: (group: ScheduleProjectGroup) => void;
   onDeleteProject: (group: ScheduleProjectGroup) => void;
+  relationSummaries: Record<string, ScheduleRelationSummary>;
 }) {
   const visibleSet = new Set(visibleKeys);
   const expandedSet = new Set(expandedKeys);
@@ -1859,6 +2170,8 @@ function ScheduleProjects({
         {groups.map((group) => {
           const expanded = expandedSet.has(group.key);
           const visible = visibleSet.has(group.key);
+          const groupSummary = combineRelationSummaries(group.items, relationSummaries);
+          addRelationCounts(groupSummary, relationSummaries[`group:${group.key}`]);
           return (
             <div key={group.key} className={cn("overflow-hidden rounded-lg border bg-background/35", visible && "border-primary/35")}>
               <div className="flex flex-wrap items-center gap-3 p-3">
@@ -1866,6 +2179,9 @@ function ScheduleProjects({
                 <button className="min-w-[260px] flex-1 text-left" onClick={() => onToggleExpanded(group.key)}>
                   <div className="font-semibold">{group.name}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{group.orderLabel} | {group.productLabel} | {group.items.length} schedule items</div>
+                  <div className="mt-2">
+                    <RelationIndicators summary={groupSummary} />
+                  </div>
                 </button>
                 <div className="flex flex-wrap gap-1">
                   <Badge variant="outline">{group.openCount} open</Badge>
@@ -1929,6 +2245,7 @@ function ScheduleProjects({
               const customer = users.find((row) => row.id === item.customer_id);
               const assignee = users.find((row) => row.id === item.assigned_to_user_id);
               const product = products.find((row) => row.id === item.product_id);
+              const relationSummary = relationSummaryForItem(item, relationSummaries);
               return (
                 <TableRow key={item.id} className="cursor-pointer hover:bg-accent/45" onClick={() => onSelect(item)}>
                   <TableCell className="pl-4">
@@ -1940,6 +2257,9 @@ function ScheduleProjects({
                       {item.customer_visible && <span>• Customer visible</span>}
                       {item.is_blocked && <span className="text-red-600 dark:text-red-300">• Blocked</span>}
                       {item.hidden_from_schedule && <span className="text-amber-600 dark:text-amber-300">• Hidden on Gantt</span>}
+                    </div>
+                    <div className="mt-2">
+                      <RelationIndicators summary={relationSummary} compact />
                     </div>
                   </TableCell>
                   <TableCell>
@@ -2356,6 +2676,269 @@ function DependencyInspector({
             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
           </div>
         </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function actionTitle(kind: GanttFabActionKind) {
+  const labels: Record<GanttFabActionKind, string> = {
+    note: "Add production note",
+    user: "Add user / assignee",
+    contact: "Add customer contact",
+    photo: "Add photo",
+    video: "Add video",
+    file: "Add file or proof",
+    product: "Add product",
+    selection: "Add product selection",
+    material: "Add material",
+    vendor: "Add vendor",
+    role: "Add role type",
+  };
+  return labels[kind];
+}
+
+function appendTaskNote(item: ScheduleItem, label: string, note: string) {
+  const line = `${new Date().toLocaleString()}: ${label}${note ? ` - ${note}` : ""}`;
+  return [item.internal_notes || "", line].filter(Boolean).join("\n\n");
+}
+
+function GanttFabActionSheet({
+  action,
+  data,
+  staff,
+  onOpenChange,
+  onSave,
+  onUpload,
+}: {
+  action: GanttFabActionState;
+  data: AdminDashboardData | null;
+  staff: AdminUser[];
+  onOpenChange: (open: boolean) => void;
+  onSave: (item: ScheduleItem, updates: Partial<SchedulePayload>, messageText: string, relation?: ScheduleRelationPayload) => Promise<void>;
+  onUpload: (item: ScheduleItem, input: { file: File; mode: "artwork" | "proof"; status: string; admin_comments: string; customer_comments: string }) => Promise<void>;
+}) {
+  const item = action?.item || null;
+  const kind = action?.kind || "note";
+  const users = data?.users ?? [];
+  const products = data?.products ?? [];
+  const [assigneeId, setAssigneeId] = useState("none");
+  const [customerId, setCustomerId] = useState("none");
+  const [productId, setProductId] = useState("none");
+  const [department, setDepartment] = useState("");
+  const [roleType, setRoleType] = useState("");
+  const [note, setNote] = useState("");
+  const [customerNote, setCustomerNote] = useState("");
+  const [uploadMode, setUploadMode] = useState<"artwork" | "proof">("artwork");
+  const [uploadStatus, setUploadStatus] = useState("waiting_for_file_review");
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!action?.item) return;
+    setAssigneeId(action.item.assigned_to_user_id || "none");
+    setCustomerId(action.item.customer_id || "none");
+    setProductId(action.item.product_id || "none");
+    setDepartment(action.item.assigned_department || "");
+    setRoleType(action.item.assigned_department || "");
+    setNote("");
+    setCustomerNote("");
+    setUploadMode(kind === "file" ? "proof" : "artwork");
+    setUploadStatus(kind === "file" ? "proof_sent" : "waiting_for_file_review");
+    setFile(null);
+    setMessage("");
+  }, [action, kind]);
+
+  async function save() {
+    if (!item) return;
+    setSaving(true);
+    setMessage("Saving action...");
+    try {
+      if (kind === "photo" || kind === "video" || kind === "file") {
+        if (!file) throw new Error("Choose a file before saving this action.");
+        await onUpload(item, {
+          file,
+          mode: uploadMode,
+          status: uploadStatus,
+          admin_comments: note,
+          customer_comments: customerNote,
+        });
+        return;
+      }
+
+      if (kind === "user") {
+        const user = staff.find((row) => row.id === assigneeId);
+        await onSave(item, {
+          assigned_to_user_id: assigneeId === "none" ? null : assigneeId,
+          assigned_department: department,
+        }, `Updated assignment for "${item.title}".`, {
+          relation_type: "participant",
+          participant_type: "staff",
+          user_id: assigneeId === "none" ? null : assigneeId,
+          display_name: user?.full_name || user?.email || null,
+          email: user?.email || null,
+          role_type: department || user?.role || null,
+          permission_level: "editor",
+          notes: note,
+        });
+        return;
+      }
+
+      if (kind === "contact") {
+        const user = users.find((row) => row.id === customerId);
+        await onSave(item, {
+          customer_id: customerId === "none" ? null : customerId,
+          customer_notes: [item.customer_notes || "", customerNote].filter(Boolean).join("\n\n"),
+        }, `Updated customer contact for "${item.title}".`, {
+          relation_type: "participant",
+          participant_type: user?.role === "customer" ? "customer" : "contact",
+          user_id: customerId === "none" ? null : customerId,
+          display_name: user?.full_name || user?.email || null,
+          email: user?.email || null,
+          phone: user?.phone || null,
+          company: user?.company || null,
+          permission_level: "customer",
+          visibility: "customer",
+          notes: [note, customerNote].filter(Boolean).join("\n\n"),
+        });
+        return;
+      }
+
+      if (kind === "product" || kind === "selection" || kind === "material") {
+        const product = products.find((row) => row.id === productId);
+        await onSave(item, {
+          product_id: productId === "none" ? null : productId,
+        }, `Updated ${kind === "material" ? "material" : "product"} context for "${item.title}".`, {
+          relation_type: "material",
+          material_relation_type: kind,
+          product_id: productId === "none" ? null : productId,
+          name: product?.name || (kind === "material" ? "Manual material" : "Product selection"),
+          sku: product?.sku || null,
+          category: product?.category || null,
+          vendor_name: product?.vendor || null,
+          quantity: 1,
+          notes: note,
+        });
+        return;
+      }
+
+      if (kind === "vendor" || kind === "role") {
+        const relation: ScheduleRelationPayload = kind === "vendor" ? {
+          relation_type: "vendor",
+          vendor_name: roleType || "Vendor",
+          role_type: department || null,
+          service_scope: note,
+          notes: note,
+        } : {
+          relation_type: "participant",
+          participant_type: "role",
+          display_name: roleType || department || "Project role",
+          role_type: roleType || department || null,
+          permission_level: "viewer",
+          notes: note,
+        };
+        await onSave(item, {
+          assigned_department: roleType || department,
+        }, `Updated ${kind} context for "${item.title}".`, relation);
+        return;
+      }
+
+      await onSave(item, {}, `Added note to "${item.title}".`, {
+        relation_type: "event",
+        event_type: "note.added",
+        event_title: "Production note",
+        event_description: note,
+        visibility: "internal",
+      });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save this FAB action.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Sheet open={Boolean(action)} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-[38rem]">
+        <SheetHeader>
+          <SheetTitle>{actionTitle(kind)}</SheetTitle>
+          <SheetDescription>{item ? `Quick action for ${item.title}.` : "Select a Gantt item to use quick actions."}</SheetDescription>
+        </SheetHeader>
+
+        {item && (
+          <div className="mt-6 space-y-4">
+            <div className="rounded-lg border bg-secondary/25 p-3 text-sm">
+              <div className="font-medium">{item.project_name || "Unlinked project"}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{itemTypeLabel(item)} - {item.phase || "No phase"} - {human(item.status)}</div>
+            </div>
+
+            {kind === "user" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FieldSelect label="Assigned user" value={assigneeId} onChange={setAssigneeId} items={staff.map((user) => ({ value: user.id, label: `${user.full_name || user.email || "User"} - ${human(user.role)}` }))} placeholder="Unassigned" />
+                <FieldSelect label="Department / role" value={department || "none"} onChange={(value) => setDepartment(value === "none" ? "" : value)} items={departments.map((value) => ({ value, label: value }))} placeholder="No department" />
+              </div>
+            )}
+
+            {kind === "contact" && (
+              <div className="space-y-3">
+                <FieldSelect label="Customer / contact" value={customerId} onChange={setCustomerId} items={users.map((user) => ({ value: user.id, label: `${user.full_name || user.email || "User"} - ${human(user.role)}` }))} placeholder="No contact" />
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">Customer-facing note</div>
+                  <Textarea value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} placeholder="Optional note safe for customer-facing context." />
+                </div>
+              </div>
+            )}
+
+            {(kind === "product" || kind === "selection" || kind === "material") && (
+              <FieldSelect label={kind === "material" ? "Material / product" : "Product"} value={productId} onChange={setProductId} items={products.map((product) => ({ value: product.id, label: `${product.name} - ${product.category}` }))} placeholder="No product" />
+            )}
+
+            {(kind === "vendor" || kind === "role") && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextField label={kind === "vendor" ? "Vendor name" : "Role type"} value={roleType} onChange={setRoleType} placeholder={kind === "vendor" ? "Vendor, subcontractor, supplier..." : "Installer, designer, approver..."} />
+                <FieldSelect label="Operational department" value={department || "none"} onChange={(value) => setDepartment(value === "none" ? "" : value)} items={departments.map((value) => ({ value, label: value }))} placeholder="No department" />
+              </div>
+            )}
+
+            {(kind === "photo" || kind === "video" || kind === "file") && (
+              <div className="space-y-3">
+                <div className="rounded-lg border bg-background/40 p-3 text-xs text-muted-foreground">
+                  Uploads use the existing artwork/proof workflow and require the task to be linked to an order and order item.
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FieldSelect label="Upload type" value={uploadMode} onChange={(value) => {
+                    const mode = value as "artwork" | "proof";
+                    setUploadMode(mode);
+                    setUploadStatus(mode === "proof" ? "proof_sent" : "waiting_for_file_review");
+                  }} items={[{ value: "artwork", label: "Artwork / file" }, { value: "proof", label: "Proof" }]} />
+                  <FieldSelect label="Status" value={uploadStatus} onChange={setUploadStatus} items={["waiting_for_file_review", "needs_changes", "proof_sent", "approved", "rejected", "in_production"].map((value) => ({ value, label: human(value) }))} />
+                </div>
+                <div>
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">File</div>
+                  <Input
+                    type="file"
+                    accept={kind === "photo" ? "image/*" : kind === "video" ? "video/*" : "image/*,video/*,.pdf,.ai,.eps,.svg"}
+                    capture={kind === "photo" ? "environment" : kind === "video" ? "environment" : undefined}
+                    onChange={(event) => setFile(event.target.files?.[0] || null)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">{kind === "note" ? "Production note" : "Internal note"}</div>
+              <Textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add context, instructions, vendor details, product/material notes, or upload notes." />
+            </div>
+
+            {message && <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{message}</div>}
+
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={save} disabled={saving}>{saving ? "Saving..." : "Save action"}</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
