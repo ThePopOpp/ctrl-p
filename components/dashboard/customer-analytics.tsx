@@ -279,26 +279,22 @@ function CopyIcon() {
   return <span className="text-xs font-semibold">URL</span>;
 }
 
-// ── Activity chart ───────────────────────────────────────────────────────────
+// ── Activity bar chart ───────────────────────────────────────────────────────
 
 type DayPoint = { dateKey: string; shortLabel: string; fullLabel: string; views: number; nfc: number; qr: number };
 
-function buildTimeSeries(events: AnalyticsData["events"]): DayPoint[] {
+function buildTimeSeries(events: AnalyticsData["events"], days = 14): DayPoint[] {
   const today = new Date();
-  const points: DayPoint[] = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (29 - i));
+  const points: DayPoint[] = Array.from({ length: days }, (_, i) => {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1 - i));
     return {
       dateKey: d.toISOString().slice(0, 10),
       shortLabel: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d),
       fullLabel: new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(d),
-      views: 0,
-      nfc: 0,
-      qr: 0,
+      views: 0, nfc: 0, qr: 0,
     };
   });
-
   const byDate = new Map(points.map((p, i) => [p.dateKey, i]));
-
   for (const e of events) {
     if (!e.created_at) continue;
     const idx = byDate.get(e.created_at.slice(0, 10));
@@ -307,108 +303,51 @@ function buildTimeSeries(events: AnalyticsData["events"]): DayPoint[] {
     else if (e.event_type === "nfc_tap") points[idx].nfc++;
     else if (e.event_type === "qr_scan") points[idx].qr++;
   }
-
   return points;
 }
 
-function niceMax(v: number) {
-  if (v <= 0) return 4;
-  const mag = Math.pow(10, Math.floor(Math.log10(v)));
-  const step = v / mag <= 2 ? mag / 2 : v / mag <= 5 ? mag : mag * 2;
-  return Math.ceil(v / step) * step;
-}
-
-const SERIES = [
-  { key: "views" as const, label: "Views", stroke: "#94a3b8", fill: "rgba(148,163,184,0.1)" },
-  { key: "nfc" as const, label: "NFC taps", stroke: "#84cc16", fill: "rgba(132,204,22,0.13)" },
-  { key: "qr" as const, label: "QR scans", stroke: "#60a5fa", fill: "rgba(96,165,250,0.12)" },
+const BAR_SERIES = [
+  { key: "views" as const, label: "Views", color: "#94a3b8" },
+  { key: "nfc" as const, label: "NFC taps", color: "#84cc16" },
+  { key: "qr" as const, label: "QR scans", color: "#60a5fa" },
 ];
 
 function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
-  const points = useMemo(() => buildTimeSeries(events), [events]);
+  const points = useMemo(() => buildTimeSeries(events, 14), [events]);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const [visible, setVisible] = useState<Set<string>>(() => new Set(["views", "nfc", "qr"]));
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const VW = 760, VH = 200;
-  const ML = 40, MR = 16, MT = 16, MB = 26;
+  const VW = 560, VH = 110;
+  const ML = 28, MR = 8, MT = 8, MB = 22;
   const PW = VW - ML - MR, PH = VH - MT - MB;
   const n = points.length;
+  const groupW = PW / n;
+  const barW = Math.max(4, groupW * 0.55);
 
-  const maxVal = useMemo(() => {
-    const vals = points.flatMap((p) =>
-      SERIES.filter((s) => visible.has(s.key)).map((s) => p[s.key]),
-    );
-    return niceMax(Math.max(0, ...vals));
-  }, [points, visible]);
+  const maxStack = useMemo(() => Math.max(1, ...points.map((p) => p.views + p.nfc + p.qr)), [points]);
+  const yMax = Math.ceil(maxStack / 2) * 2 || 4;
+  const yTicks = [0, Math.round(yMax / 2), yMax];
 
-  const yTicks = useMemo(() => {
-    const step = maxVal / 4;
-    return [0, 1, 2, 3, 4].map((i) => Math.round(i * step));
-  }, [maxVal]);
+  function toY(v: number) { return MT + PH - (v / yMax) * PH; }
+  function barX(i: number) { return ML + i * groupW + (groupW - barW) / 2; }
 
-  function toX(i: number) { return ML + (i / (n - 1)) * PW; }
-  function toY(v: number) { return MT + PH - (v / maxVal) * PH; }
-
-  function linePath(key: keyof Pick<DayPoint, "views" | "nfc" | "qr">) {
-    return points.map((p, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(p[key]).toFixed(1)}`).join(" ");
-  }
-
-  function areaPath(key: keyof Pick<DayPoint, "views" | "nfc" | "qr">) {
-    const base = (MT + PH).toFixed(1);
-    const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(p[key]).toFixed(1)}`).join(" ");
-    return `${line}L${toX(n - 1).toFixed(1)},${base}L${toX(0).toFixed(1)},${base}Z`;
-  }
-
-  function onMouseMove(e: React.MouseEvent<SVGSVGElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const svgX = ((e.clientX - rect.left) / rect.width) * VW;
-    const frac = (svgX - ML) / PW;
-    setHoverIdx(Math.max(0, Math.min(n - 1, Math.round(frac * (n - 1)))));
-  }
-
-  function toggleSeries(key: string) {
-    setVisible((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) { if (next.size > 1) next.delete(key); }
-      else next.add(key);
-      return next;
-    });
-  }
-
-  const hovered = hoverIdx !== null ? points[hoverIdx] : null;
   const totalEvents = points.reduce((s, p) => s + p.views + p.nfc + p.qr, 0);
-  const peakDay = points.reduce((best, p) => {
-    const t = p.views + p.nfc + p.qr;
-    return t > best.total ? { label: p.shortLabel, total: t } : best;
-  }, { label: "—", total: 0 });
-
-  // X-axis tick indices: first, every 7th, last
-  const xTickIndices = new Set([0, 6, 13, 20, 27, n - 1]);
+  const avgPerDay = (totalEvents / n).toFixed(1);
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base">30-day activity</CardTitle>
-            <CardDescription>Daily event trend over the last 30 days.</CardDescription>
+            <CardTitle className="text-base">14-day activity</CardTitle>
+            <CardDescription>Daily events over the last two weeks.</CardDescription>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {SERIES.map((s) => (
-              <button
-                key={s.key}
-                onClick={() => toggleSeries(s.key)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
-                  visible.has(s.key)
-                    ? "border-transparent bg-foreground/10 text-foreground"
-                    : "border-dashed text-muted-foreground/50",
-                )}
-              >
-                <span className="h-2 w-2 rounded-full" style={{ background: s.stroke }} />
+          <div className="flex items-center gap-3">
+            {BAR_SERIES.map((s) => (
+              <span key={s.key} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="h-2 w-2 rounded-sm" style={{ background: s.color }} />
                 {s.label}
-              </button>
+              </span>
             ))}
           </div>
         </div>
@@ -419,67 +358,76 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
             ref={svgRef}
             viewBox={`0 0 ${VW} ${VH}`}
             width="100%"
-            height="auto"
+            style={{ maxHeight: 130 }}
             className="overflow-visible"
-            onMouseMove={onMouseMove}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const svgX = ((e.clientX - rect.left) / rect.width) * VW;
+              const i = Math.max(0, Math.min(n - 1, Math.floor((svgX - ML) / groupW)));
+              setHoverIdx(i);
+            }}
             onMouseLeave={() => setHoverIdx(null)}
           >
-            {/* Y-axis grid lines and labels */}
+            {/* Y grid */}
             {yTicks.map((tick) => {
               const y = toY(tick).toFixed(1);
               return (
                 <g key={tick}>
                   <line x1={ML} y1={y} x2={ML + PW} y2={y} stroke="currentColor" strokeOpacity={0.07} strokeWidth={1} />
-                  <text x={ML - 6} y={y} textAnchor="end" dominantBaseline="middle" fontSize={10} fill="currentColor" fillOpacity={0.45}>{tick}</text>
+                  <text x={ML - 5} y={y} textAnchor="end" dominantBaseline="middle" fontSize={9} fill="currentColor" fillOpacity={0.4}>{tick}</text>
                 </g>
               );
             })}
 
-            {/* Area fills (drawn first, behind lines) */}
-            {SERIES.filter((s) => visible.has(s.key)).map((s) => (
-              <path key={`area-${s.key}`} d={areaPath(s.key)} fill={s.fill} />
-            ))}
-
-            {/* Lines */}
-            {SERIES.filter((s) => visible.has(s.key)).map((s) => (
-              <path key={`line-${s.key}`} d={linePath(s.key)} fill="none" stroke={s.stroke} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
-            ))}
-
-            {/* Hover crosshair */}
-            {hoverIdx !== null && (
-              <line
-                x1={toX(hoverIdx)}
-                y1={MT}
-                x2={toX(hoverIdx)}
-                y2={MT + PH}
-                stroke="currentColor"
-                strokeOpacity={0.2}
-                strokeWidth={1}
-                strokeDasharray="4 3"
-              />
-            )}
-
-            {/* Hover dots */}
-            {hoverIdx !== null && SERIES.filter((s) => visible.has(s.key)).map((s) => {
-              const p = points[hoverIdx];
+            {/* Stacked bars */}
+            {points.map((p, i) => {
+              const isHovered = hoverIdx === i;
+              const segments: { key: "views" | "nfc" | "qr"; count: number; color: string }[] = [
+                { key: "views", count: p.views, color: "#94a3b8" },
+                { key: "nfc", count: p.nfc, color: "#84cc16" },
+                { key: "qr", count: p.qr, color: "#60a5fa" },
+              ];
+              let yOffset = MT + PH;
               return (
-                <circle
-                  key={`dot-${s.key}`}
-                  cx={toX(hoverIdx)}
-                  cy={toY(p[s.key])}
-                  r={3.5}
-                  fill={s.stroke}
-                  stroke="white"
-                  strokeWidth={1.5}
-                />
+                <g key={p.dateKey}>
+                  {/* hover highlight column */}
+                  {isHovered && (
+                    <rect
+                      x={ML + i * groupW}
+                      y={MT}
+                      width={groupW}
+                      height={PH}
+                      fill="currentColor"
+                      fillOpacity={0.04}
+                      rx={2}
+                    />
+                  )}
+                  {segments.map(({ key, count, color }) => {
+                    if (!count) return null;
+                    const h = (count / yMax) * PH;
+                    yOffset -= h;
+                    return (
+                      <rect
+                        key={key}
+                        x={barX(i)}
+                        y={yOffset}
+                        width={barW}
+                        height={h}
+                        fill={color}
+                        fillOpacity={isHovered ? 1 : 0.75}
+                        rx={i === 0 || key === segments[segments.filter((s) => s.count > 0).length - 1].key ? 2 : 0}
+                      />
+                    );
+                  })}
+                </g>
               );
             })}
 
-            {/* X-axis labels */}
+            {/* X labels — show every other day */}
             {points.map((p, i) => {
-              if (!xTickIndices.has(i)) return null;
+              if (i % 2 !== 0 && i !== n - 1) return null;
               return (
-                <text key={p.dateKey} x={toX(i).toFixed(1)} y={VH - 4} textAnchor="middle" fontSize={10} fill="currentColor" fillOpacity={0.45}>
+                <text key={p.dateKey} x={(barX(i) + barW / 2).toFixed(1)} y={VH - 4} textAnchor="middle" fontSize={9} fill="currentColor" fillOpacity={0.45}>
                   {p.shortLabel}
                 </text>
               );
@@ -487,35 +435,31 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
           </svg>
 
           {/* Hover tooltip */}
-          {hovered && (
-            <div className="pointer-events-none absolute left-0 top-0 flex items-start">
+          {hoverIdx !== null && (() => {
+            const p = points[hoverIdx];
+            const pct = ((hoverIdx + 0.5) / n * 100).toFixed(1);
+            return (
               <div
-                className="ml-[40px] rounded-lg border bg-popover px-3 py-2 text-[11px] shadow-md"
-                style={{
-                  transform: `translateX(calc(${((points.indexOf(hovered) / (n - 1)) * 100).toFixed(1)}% - 50%))`,
-                  maxWidth: 160,
-                }}
+                className="pointer-events-none absolute top-0 z-10 rounded-lg border bg-popover px-3 py-2 text-[11px] shadow-lg"
+                style={{ left: `calc(${pct}% - 60px)`, minWidth: 120 }}
               >
-                <div className="mb-1.5 font-semibold text-foreground">{hovered.fullLabel}</div>
-                {SERIES.filter((s) => visible.has(s.key)).map((s) => (
+                <div className="mb-1.5 font-semibold text-foreground">{p.fullLabel}</div>
+                {BAR_SERIES.map((s) => (
                   <div key={s.key} className="flex items-center justify-between gap-3">
                     <span className="flex items-center gap-1 text-muted-foreground">
-                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.stroke }} />
-                      {s.label}
+                      <span className="h-1.5 w-1.5 rounded-sm" style={{ background: s.color }} />{s.label}
                     </span>
-                    <span className="font-medium text-foreground">{hovered[s.key]}</span>
+                    <span className="font-medium text-foreground">{p[s.key]}</span>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
-        {/* Summary row */}
-        <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 border-t pt-2 text-[11px] text-muted-foreground">
-          <span><span className="font-medium text-foreground">{totalEvents}</span> total events in 30 days</span>
-          {peakDay.total > 0 && <span>Peak: <span className="font-medium text-foreground">{peakDay.label}</span> ({peakDay.total} events)</span>}
-          <span>Avg: <span className="font-medium text-foreground">{(totalEvents / 30).toFixed(1)}</span> / day</span>
+        <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 border-t pt-2 text-[11px] text-muted-foreground">
+          <span><span className="font-medium text-foreground">{totalEvents}</span> events in 14 days</span>
+          <span>Avg <span className="font-medium text-foreground">{avgPerDay}</span> / day</span>
         </div>
       </CardContent>
     </Card>
