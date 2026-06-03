@@ -317,8 +317,8 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const VW = 800, VH = 240;
-  const ML = 32, MR = 12, MT = 12, MB = 28;
+  const VW = 800, VH = 160;
+  const ML = 28, MR = 8, MT = 10, MB = 22;
   const PW = VW - ML - MR, PH = VH - MT - MB;
   const n = points.length;
   const groupW = PW / n;
@@ -358,6 +358,8 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
             ref={svgRef}
             viewBox={`0 0 ${VW} ${VH}`}
             width="100%"
+            height="180"
+            preserveAspectRatio="none"
             className="overflow-visible"
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
@@ -373,7 +375,7 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
               return (
                 <g key={tick}>
                   <line x1={ML} y1={y} x2={ML + PW} y2={y} stroke="currentColor" strokeOpacity={0.07} strokeWidth={1} />
-                  <text x={ML - 5} y={y} textAnchor="end" dominantBaseline="middle" fontSize={7} fill="currentColor" fillOpacity={0.4}>{tick}</text>
+                  <text x={ML - 5} y={y} textAnchor="end" dominantBaseline="middle" fontSize={5} fill="currentColor" fillOpacity={0.4}>{tick}</text>
                 </g>
               );
             })}
@@ -426,7 +428,7 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
             {points.map((p, i) => {
               if (i % 3 !== 0 && i !== n - 1) return null;
               return (
-                <text key={p.dateKey} x={(barX(i) + barW / 2).toFixed(1)} y={VH - 5} textAnchor="middle" fontSize={7} fill="currentColor" fillOpacity={0.45}>
+                <text key={p.dateKey} x={(barX(i) + barW / 2).toFixed(1)} y={VH - 4} textAnchor="middle" fontSize={5} fill="currentColor" fillOpacity={0.45}>
                   {p.shortLabel}
                 </text>
               );
