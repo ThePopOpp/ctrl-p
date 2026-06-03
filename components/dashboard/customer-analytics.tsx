@@ -315,14 +315,27 @@ const BAR_SERIES = [
 function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
   const points = useMemo(() => buildTimeSeries(events, 14), [events]);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [VW, setVW] = useState(800);
 
-  const VW = 800, VH = 160;
-  const ML = 28, MR = 8, MT = 10, MB = 22;
+  // Track actual container width so SVG coordinates match CSS pixels 1:1 — no viewBox scaling.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w > 0) setVW(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const VH = 200;
+  const ML = 36, MR = 12, MT = 12, MB = 28;
   const PW = VW - ML - MR, PH = VH - MT - MB;
   const n = points.length;
   const groupW = PW / n;
-  const barW = Math.max(6, groupW * 0.6);
+  const barW = Math.max(8, groupW * 0.6);
 
   const maxStack = useMemo(() => Math.max(1, ...points.map((p) => p.views + p.nfc + p.qr)), [points]);
   const yMax = Math.ceil(maxStack / 4) * 4 || 4;
@@ -353,18 +366,15 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
         </div>
       </CardHeader>
       <CardContent className="pb-3">
-        <div className="relative">
+        <div ref={containerRef} className="relative">
           <svg
-            ref={svgRef}
-            viewBox={`0 0 ${VW} ${VH}`}
-            width="100%"
-            height="180"
-            preserveAspectRatio="none"
-            className="overflow-visible"
+            width={VW}
+            height={VH}
+            style={{ display: "block", width: "100%", overflow: "visible" }}
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
-              const svgX = ((e.clientX - rect.left) / rect.width) * VW;
-              const i = Math.max(0, Math.min(n - 1, Math.floor((svgX - ML) / groupW)));
+              const x = e.clientX - rect.left;
+              const i = Math.max(0, Math.min(n - 1, Math.floor((x - ML) / groupW)));
               setHoverIdx(i);
             }}
             onMouseLeave={() => setHoverIdx(null)}
@@ -375,7 +385,7 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
               return (
                 <g key={tick}>
                   <line x1={ML} y1={y} x2={ML + PW} y2={y} stroke="currentColor" strokeOpacity={0.07} strokeWidth={1} />
-                  <text x={ML - 5} y={y} textAnchor="end" dominantBaseline="middle" fontSize={5} fill="currentColor" fillOpacity={0.4}>{tick}</text>
+                  <text x={ML - 6} y={y} textAnchor="end" dominantBaseline="middle" fontSize={10} fill="currentColor" fillOpacity={0.4}>{tick}</text>
                 </g>
               );
             })}
@@ -391,44 +401,26 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
               let yOffset = MT + PH;
               return (
                 <g key={p.dateKey}>
-                  {/* hover highlight column */}
                   {isHovered && (
-                    <rect
-                      x={ML + i * groupW}
-                      y={MT}
-                      width={groupW}
-                      height={PH}
-                      fill="currentColor"
-                      fillOpacity={0.04}
-                      rx={2}
-                    />
+                    <rect x={ML + i * groupW} y={MT} width={groupW} height={PH} fill="currentColor" fillOpacity={0.04} rx={2} />
                   )}
                   {segments.map(({ key, count, color }) => {
                     if (!count) return null;
                     const h = (count / yMax) * PH;
                     yOffset -= h;
                     return (
-                      <rect
-                        key={key}
-                        x={barX(i)}
-                        y={yOffset}
-                        width={barW}
-                        height={h}
-                        fill={color}
-                        fillOpacity={isHovered ? 1 : 0.75}
-                        rx={i === 0 || key === segments[segments.filter((s) => s.count > 0).length - 1].key ? 2 : 0}
-                      />
+                      <rect key={key} x={barX(i)} y={yOffset} width={barW} height={h} fill={color} fillOpacity={isHovered ? 1 : 0.75} rx={2} />
                     );
                   })}
                 </g>
               );
             })}
 
-            {/* X labels — show every 3rd day */}
+            {/* X labels — every 3rd day */}
             {points.map((p, i) => {
               if (i % 3 !== 0 && i !== n - 1) return null;
               return (
-                <text key={p.dateKey} x={(barX(i) + barW / 2).toFixed(1)} y={VH - 4} textAnchor="middle" fontSize={5} fill="currentColor" fillOpacity={0.45}>
+                <text key={p.dateKey} x={(barX(i) + barW / 2).toFixed(1)} y={VH - 6} textAnchor="middle" fontSize={10} fill="currentColor" fillOpacity={0.45}>
                   {p.shortLabel}
                 </text>
               );
