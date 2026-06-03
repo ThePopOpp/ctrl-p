@@ -317,16 +317,16 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const VW = 560, VH = 110;
-  const ML = 28, MR = 8, MT = 8, MB = 22;
+  const VW = 800, VH = 240;
+  const ML = 32, MR = 12, MT = 12, MB = 28;
   const PW = VW - ML - MR, PH = VH - MT - MB;
   const n = points.length;
   const groupW = PW / n;
-  const barW = Math.max(4, groupW * 0.55);
+  const barW = Math.max(6, groupW * 0.6);
 
   const maxStack = useMemo(() => Math.max(1, ...points.map((p) => p.views + p.nfc + p.qr)), [points]);
-  const yMax = Math.ceil(maxStack / 2) * 2 || 4;
-  const yTicks = [0, Math.round(yMax / 2), yMax];
+  const yMax = Math.ceil(maxStack / 4) * 4 || 4;
+  const yTicks = [0, Math.round(yMax / 4), Math.round(yMax / 2), Math.round(yMax * 3 / 4), yMax];
 
   function toY(v: number) { return MT + PH - (v / yMax) * PH; }
   function barX(i: number) { return ML + i * groupW + (groupW - barW) / 2; }
@@ -358,7 +358,6 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
             ref={svgRef}
             viewBox={`0 0 ${VW} ${VH}`}
             width="100%"
-            style={{ maxHeight: 130 }}
             className="overflow-visible"
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
