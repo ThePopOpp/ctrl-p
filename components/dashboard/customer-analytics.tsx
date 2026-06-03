@@ -416,9 +416,8 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
               );
             })}
 
-            {/* X labels — every 3rd day */}
+            {/* X labels — all days */}
             {points.map((p, i) => {
-              if (i % 3 !== 0) return null;
               return (
                 <text key={p.dateKey} x={(barX(i) + barW / 2).toFixed(1)} y={VH - 6} textAnchor="middle" fontSize={10} fill="currentColor" fillOpacity={0.45}>
                   {p.shortLabel}
