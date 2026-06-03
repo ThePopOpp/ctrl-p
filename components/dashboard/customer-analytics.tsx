@@ -373,7 +373,7 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
               return (
                 <g key={tick}>
                   <line x1={ML} y1={y} x2={ML + PW} y2={y} stroke="currentColor" strokeOpacity={0.07} strokeWidth={1} />
-                  <text x={ML - 5} y={y} textAnchor="end" dominantBaseline="middle" fontSize={9} fill="currentColor" fillOpacity={0.4}>{tick}</text>
+                  <text x={ML - 5} y={y} textAnchor="end" dominantBaseline="middle" fontSize={7} fill="currentColor" fillOpacity={0.4}>{tick}</text>
                 </g>
               );
             })}
@@ -422,11 +422,11 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
               );
             })}
 
-            {/* X labels — show every other day */}
+            {/* X labels — show every 3rd day */}
             {points.map((p, i) => {
-              if (i % 2 !== 0 && i !== n - 1) return null;
+              if (i % 3 !== 0 && i !== n - 1) return null;
               return (
-                <text key={p.dateKey} x={(barX(i) + barW / 2).toFixed(1)} y={VH - 4} textAnchor="middle" fontSize={9} fill="currentColor" fillOpacity={0.45}>
+                <text key={p.dateKey} x={(barX(i) + barW / 2).toFixed(1)} y={VH - 5} textAnchor="middle" fontSize={7} fill="currentColor" fillOpacity={0.45}>
                   {p.shortLabel}
                 </text>
               );
