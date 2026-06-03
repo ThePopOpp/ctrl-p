@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bell, Box, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CreditCard, ExternalLink, FileCheck2, FileText, Home, IdCard, LogOut, Mail, MessageSquare, Moon, Package, PackageCheck, Phone, RotateCcw, Search, Send, Settings, Sun, Truck, UserCircle, X, type LucideIcon } from "lucide-react";
+import { AlertCircle, BarChart3, Bell, Box, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CreditCard, Download, ExternalLink, FileCheck2, FileText, Home, IdCard, LogOut, Mail, MessageSquare, Moon, Package, PackageCheck, Phone, RotateCcw, Search, Send, Settings, Sun, Truck, Upload, UserCircle, X, type LucideIcon } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type CustomerProfile = {
   id: string;
@@ -214,6 +215,8 @@ export function CustomerDashboard() {
   const [composeSubject, setComposeSubject] = useState("");
   const [composeBody, setComposeBody] = useState("");
   const [composeSending, setComposeSending] = useState(false);
+  const [composeOrderId, setComposeOrderId] = useState<string | null>(null);
+  const [artworkUploading, setArtworkUploading] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -342,7 +345,7 @@ export function CustomerDashboard() {
       const res = await fetch("/api/dashboard/customer/messages/send", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject: composeSubject.trim() || null, body }),
+        body: JSON.stringify({ subject: composeSubject.trim() || null, body, order_id: composeOrderId }),
       });
       const payload = await res.json().catch(() => ({})) as { message?: CustomerMessage; error?: string };
       if (!res.ok) { alert(payload.error || "Could not send message."); return; }
@@ -351,9 +354,41 @@ export function CustomerDashboard() {
       }
       setComposeBody("");
       setComposeSubject("");
+      setComposeOrderId(null);
       setComposeOpen(false);
     } finally {
       setComposeSending(false);
+    }
+  }
+
+  function openComposeForOrder(orderId: string, subject: string, prefill?: string) {
+    setComposeOrderId(orderId);
+    setComposeSubject(subject);
+    setComposeBody(prefill || "");
+    setComposeOpen(true);
+    setTimeout(() => document.getElementById("messages")?.scrollIntoView({ behavior: "smooth" }), 100);
+  }
+
+  async function uploadArtwork(file: File, orderId?: string) {
+    setArtworkUploading(true);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const form = new FormData();
+      form.append("file", file);
+      if (orderId) form.append("order_id", orderId);
+      const res = await fetch("/api/dashboard/customer/artwork/upload", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const payload = await res.json().catch(() => ({})) as { artworkFile?: CustomerArtwork; error?: string };
+      if (!res.ok) { alert(payload.error || "Could not upload artwork."); return; }
+      if (payload.artworkFile) {
+        setData((prev) => prev ? { ...prev, artworkFiles: [payload.artworkFile!, ...prev.artworkFiles] } : prev);
+      }
+    } finally {
+      setArtworkUploading(false);
     }
   }
 
@@ -373,7 +408,8 @@ export function CustomerDashboard() {
     }
     return map;
   }, [orderItems]);
-  const outstandingPayments = payments.filter((p) => !["paid", "refunded", "canceled"].includes(String(p.status ?? "")));
+  const outstandingPayments = payments.filter((p) => !["paid", "refunded", "canceled"].includes(String(p.status ?? "")) && String(p.status ?? "") !== "failed");
+  const failedPayments = payments.filter((p) => String(p.status ?? "") === "failed");
   const paidPayments = payments.filter((p) => ["paid", "refunded"].includes(String(p.status ?? "")));
   const openOrders = orders.filter((order) => !["completed", "delivered", "cancelled", "refunded"].includes(order.status));
   const unpaidPayments = payments.filter((payment) => !["paid", "refunded"].includes(payment.status));
@@ -564,8 +600,9 @@ export function CustomerDashboard() {
                                       <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Order details</div>
                                       <div className="space-y-1 text-sm">
                                         <div className="flex justify-between"><span className="text-muted-foreground">Placed</span><span>{date(order.created_at)}</span></div>
-                                        <div className="flex justify-between"><span className="text-muted-foreground">Due</span><span>{date(order.due_at)}</span></div>
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Est. completion</span><span>{date(order.due_at)}</span></div>
                                         <div className="flex justify-between"><span className="text-muted-foreground">Production</span><span>{human(order.production_status)}</span></div>
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span>{shipments.find((s) => s.order_id === order.id) ? human(shipments.find((s) => s.order_id === order.id)!.status || "pending") : "Not shipped"}</span></div>
                                       </div>
                                     </div>
                                     {order.customer_notes && (
@@ -574,6 +611,15 @@ export function CustomerDashboard() {
                                         <div className="rounded-md border bg-background/60 px-3 py-2 text-sm text-muted-foreground">{order.customer_notes}</div>
                                       </div>
                                     )}
+                                  </div>
+                                  <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openComposeForOrder(order.id, `Question about order #${order.order_number || order.id.slice(0, 8)}`)}>
+                                      <MessageSquare className="h-3.5 w-3.5" />Message support
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openComposeForOrder(order.id, `Reorder request — #${order.order_number || order.id.slice(0, 8)}`, `Hi, I'd like to reorder #${order.order_number || order.id.slice(0, 8)}. Please confirm availability and pricing.`)}>
+                                      <RotateCcw className="h-3.5 w-3.5" />Request reorder
+                                    </Button>
+                                    {(() => { const pmt = payments.find((p) => p.order_id === order.id && p.payment_link_url); return pmt ? (<Button size="sm" variant="outline" className="gap-1.5" asChild><a href={pmt.payment_link_url!} target="_blank" rel="noreferrer"><Download className="h-3.5 w-3.5" />Receipt</a></Button>) : null; })()}
                                   </div>
                                 </TableCell>
                               </TableRow>
@@ -763,39 +809,56 @@ export function CustomerDashboard() {
                   </div>
 
                   <div>
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Uploaded files</div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Uploaded files</div>
+                      <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" disabled={artworkUploading} asChild>
+                        <label className="cursor-pointer">
+                          <Upload className="h-3.5 w-3.5" />{artworkUploading ? "Uploading..." : "Upload artwork"}
+                          <input type="file" className="hidden" accept="image/*,.pdf,.ai,.eps,.psd,.svg" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadArtwork(f); }} />
+                        </label>
+                      </Button>
+                    </div>
                     {artwork.length > 0 ? (
                       <div className="grid gap-2 md:grid-cols-2">
-                        {artwork.slice(0, 6).map((file) => (
-                          <div key={file.id} className="flex items-start gap-3 rounded-lg border bg-background/35 p-3">
-                            {file.thumbnail_url ? (
-                              <img src={file.thumbnail_url} alt="" className="h-10 w-10 shrink-0 rounded-md border object-cover" />
-                            ) : (
-                              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border bg-muted">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-medium">{file.filename}</div>
-                              <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                                <Status value={file.review_status || "pending"} />
-                                {file.file_size_bytes && (
-                                  <span className="text-[11px] text-muted-foreground">{(file.file_size_bytes / 1024 / 1024).toFixed(1)} MB</span>
-                                )}
-                                {file.proof_version && <span className="text-[11px] text-muted-foreground">v{file.proof_version}</span>}
-                              </div>
-                              {file.admin_comments && (
-                                <div className="mt-1.5 rounded border bg-background/50 px-2 py-1 text-[11px] text-muted-foreground">
-                                  <span className="font-medium text-foreground">Note: </span>{file.admin_comments}
+                        {artwork.slice(0, 6).map((file) => {
+                          const linkedOrder = file.order_id ? orders.find((o) => o.id === file.order_id) : null;
+                          return (
+                            <div key={file.id} className="flex items-start gap-3 rounded-lg border bg-background/35 p-3">
+                              {file.thumbnail_url ? (
+                                <img src={file.thumbnail_url} alt="" className="h-10 w-10 shrink-0 rounded-md border object-cover" />
+                              ) : (
+                                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border bg-muted">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
                                 </div>
                               )}
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-medium">{file.filename}</div>
+                                <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                                  <Status value={file.review_status || "pending"} />
+                                  {file.mime_type && <span className="text-[11px] text-muted-foreground">{file.mime_type.split("/")[1]?.toUpperCase()}</span>}
+                                  {file.file_size_bytes != null && (
+                                    <span className="text-[11px] text-muted-foreground">{(file.file_size_bytes / 1024 / 1024).toFixed(1)} MB</span>
+                                  )}
+                                  {file.proof_version != null && <span className="text-[11px] text-muted-foreground">v{file.proof_version}</span>}
+                                  {linkedOrder && <span className="text-[11px] text-muted-foreground">Order #{linkedOrder.order_number || linkedOrder.id.slice(0, 8)}</span>}
+                                </div>
+                                {file.admin_comments && (
+                                  <div className="mt-1.5 rounded border bg-background/50 px-2 py-1 text-[11px] text-muted-foreground">
+                                    <span className="font-medium text-foreground">Design team: </span>{file.admin_comments}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
-                      <Empty text="No artwork files uploaded yet. Files will appear here once your order artwork is submitted." />
+                      <Empty text="No artwork files yet. Use the upload button above to submit artwork for your order." />
                     )}
+                    <div className="mt-3 rounded-lg border border-dashed bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">File requirements: </span>
+                      Accepted: PDF, AI, EPS, PSD, SVG, PNG, JPEG · Min 300 DPI for print · Max 50 MB · CMYK color mode preferred
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -873,7 +936,7 @@ export function CustomerDashboard() {
                       <CardTitle className="flex items-center gap-2 text-base"><MessageSquare className="h-4 w-4 text-primary" /> Messages</CardTitle>
                       <CardDescription>Your conversation history with the Ctrl+P team.</CardDescription>
                     </div>
-                    <Button size="sm" variant={composeOpen ? "outline" : "default"} onClick={() => setComposeOpen((v) => !v)}>
+                    <Button size="sm" variant={composeOpen ? "outline" : "default"} onClick={() => { setComposeOpen((v) => !v); if (composeOpen) { setComposeOrderId(null); setComposeSubject(""); setComposeBody(""); } }}>
                       {composeOpen ? "Cancel" : <><Send className="h-3.5 w-3.5" /> New message</>}
                     </Button>
                   </div>
@@ -881,6 +944,19 @@ export function CustomerDashboard() {
                 <CardContent className="space-y-3">
                   {composeOpen && (
                     <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                      {orders.length > 0 && (
+                        <Select value={composeOrderId ?? "none"} onValueChange={(v) => setComposeOrderId(v === "none" ? null : v)}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Link to an order (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No order linked</SelectItem>
+                            {orders.slice(0, 30).map((o) => (
+                              <SelectItem key={o.id} value={o.id}>Order #{o.order_number || o.id.slice(0, 8)}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                       <input
                         className="w-full rounded-md border bg-background px-3 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-primary"
                         placeholder="Subject (optional)"
@@ -914,6 +990,7 @@ export function CustomerDashboard() {
                                   <span className="text-sm font-medium">{msg.subject || (isOutbound ? "From Ctrl+P" : "Your message")}</span>
                                   <Badge variant="outline" className="text-[10px]">{human(msg.channel)}</Badge>
                                   {!isOutbound && <Badge className="border-primary/20 bg-primary/10 text-[10px] text-primary">Sent</Badge>}
+                                  {msg.order_id && (() => { const o = orders.find((x) => x.id === msg.order_id); return o ? <Badge variant="outline" className="text-[10px]">Order #{o.order_number || o.id.slice(0, 8)}</Badge> : null; })()}
                                 </div>
                                 <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{msg.body || "No message body."}</p>
                               </div>
@@ -938,6 +1015,15 @@ export function CustomerDashboard() {
                   <CardDescription>Outstanding invoices and payment history for your orders.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {failedPayments.length > 0 && (
+                    <div className="flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/5 p-3">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                      <div className="text-sm">
+                        <div className="font-semibold text-red-600 dark:text-red-300">Failed payment{failedPayments.length > 1 ? "s" : ""}</div>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{failedPayments.map((p) => `${p.invoice_number || "Invoice"} — ${amount(p.amount)}`).join(" · ")} · Please update your payment method or contact support.</p>
+                      </div>
+                    </div>
+                  )}
                   {outstandingPayments.length > 0 && (
                     <div>
                       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Outstanding ({outstandingPayments.length})</div>
@@ -1000,10 +1086,25 @@ export function CustomerDashboard() {
             <section id="shipping" className="mb-5">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base"><Truck className="h-4 w-4 text-primary" /> Shipping</CardTitle>
-                  <CardDescription>Tracking and delivery status for all shipments on your orders.</CardDescription>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base"><Truck className="h-4 w-4 text-primary" /> Shipping</CardTitle>
+                      <CardDescription>Tracking and delivery status for all shipments on your orders.</CardDescription>
+                    </div>
+                    <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => { setComposeOpen(true); setComposeSubject("Shipping issue"); }}>
+                      <MessageSquare className="h-3.5 w-3.5" />Report issue
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg border bg-background/35 p-3">
+                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Shipping contact</div>
+                    <div className="grid gap-1 text-sm md:grid-cols-2">
+                      <div className="flex items-center gap-2 text-muted-foreground"><Mail className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{data.profile.email || "No email on file"}</span></div>
+                      <div className="flex items-center gap-2 text-muted-foreground"><Phone className="h-3.5 w-3.5 shrink-0" /><span>{data.profile.phone || "No phone on file"}</span></div>
+                    </div>
+                    <p className="mt-2 text-[11px] text-muted-foreground">To update your shipping address or contact details, visit <a href="/dashboard/customer/profile" className="text-primary hover:underline">your profile</a>.</p>
+                  </div>
                   {shipments.length > 0 ? (
                     <div className="grid gap-3 md:grid-cols-2">
                       {shipments.map((shipment) => {
