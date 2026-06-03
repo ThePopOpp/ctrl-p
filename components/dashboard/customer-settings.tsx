@@ -228,64 +228,67 @@ export function CustomerSettings() {
           </div>
         )}
 
-        <div className="mx-auto max-w-3xl space-y-6">
-          <div>
-            <h1 className="text-[25px] font-semibold tracking-tight">Settings</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Manage your account preferences, notifications, and security settings.</p>
-          </div>
+        <div className="space-y-5">
+          <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-[25px] font-semibold tracking-tight">Settings</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Manage your account preferences, notifications, and security settings.</p>
+            </div>
+          </section>
 
-          {/* Profile summary */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-base"><UserCircle className="h-4 w-4 text-primary" />Profile & Identity</CardTitle>
-                  <CardDescription>Your name, contact details, and profile photo used across orders, invoices, and proofs.</CardDescription>
+          {/* Profile + Appearance side-by-side */}
+          <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base"><UserCircle className="h-4 w-4 text-primary" />Profile & Identity</CardTitle>
+                    <CardDescription>Your name, contact details, and profile photo used across orders, invoices, and proofs.</CardDescription>
+                  </div>
+                  <Button size="sm" asChild><a href="/dashboard/customer/profile">Edit profile</a></Button>
                 </div>
-                <Button size="sm" asChild><a href="/dashboard/customer/profile">Edit profile</a></Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {profile ? (
-                <div className="flex items-center gap-4">
-                  {profile.profile_photo_url
-                    ? <img className="h-14 w-14 shrink-0 rounded-2xl border object-cover" src={profile.profile_photo_url} alt="" />
-                    : <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground">{(profile.full_name || profile.email || "C").slice(0, 1).toUpperCase()}</div>
-                  }
-                  <div className="min-w-0 space-y-1">
-                    <div className="font-semibold">{profile.full_name || "Name not set"}</div>
-                    <div className="text-sm text-muted-foreground">{profile.company || "No company"}</div>
-                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{profile.email || "No email"}</span>
-                      <span className="flex items-center gap-1"><Package className="h-3 w-3" />{profile.phone || "No phone"}</span>
+              </CardHeader>
+              <CardContent>
+                {profile ? (
+                  <div className="flex items-center gap-4">
+                    {profile.profile_photo_url
+                      ? <img className="h-14 w-14 shrink-0 rounded-2xl border object-cover" src={profile.profile_photo_url} alt="" />
+                      : <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground">{(profile.full_name || profile.email || "C").slice(0, 1).toUpperCase()}</div>
+                    }
+                    <div className="min-w-0 space-y-1">
+                      <div className="font-semibold">{profile.full_name || "Name not set"}</div>
+                      <div className="text-sm text-muted-foreground">{profile.company || "No company"}</div>
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{profile.email || "No email"}</span>
+                        <span className="flex items-center gap-1"><Package className="h-3 w-3" />{profile.phone || "No phone"}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">Loading profile...</div>
-              )}
-            </CardContent>
-          </Card>
+                ) : (
+                  <div className="text-sm text-muted-foreground">Loading profile...</div>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Appearance */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Dashboard Appearance</CardTitle>
-              <CardDescription>Controls how the customer dashboard looks on this device.</CardDescription>
-            </CardHeader>
-            <CardContent className="max-w-xs">
-              <label className="space-y-1 text-sm font-medium">
-                <span className="text-muted-foreground">Theme</span>
-                <Select value={theme} onValueChange={(v) => changeTheme(v as "light" | "dark")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="light">Light</SelectItem>
-                  </SelectContent>
-                </Select>
-              </label>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Appearance</CardTitle>
+                <CardDescription>Controls how the dashboard looks on this device.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <label className="space-y-1 text-sm font-medium">
+                  <span className="text-muted-foreground">Theme</span>
+                  <Select value={theme} onValueChange={(v) => changeTheme(v as "light" | "dark")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dark">Dark</SelectItem>
+                      <SelectItem value="light">Light</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </label>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Notification preferences */}
           <Card>
