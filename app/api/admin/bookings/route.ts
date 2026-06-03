@@ -258,7 +258,9 @@ export async function DELETE(request: Request) {
     ? "booking_blocked_times"
     : resource === "availability_rule"
       ? "booking_availability_rules"
-      : "";
+      : resource === "appointment_type"
+        ? "booking_appointment_types"
+        : "";
   if (!table) return jsonError("Unsupported delete resource.");
 
   const result = await verified.adminClient.from(table).delete().eq("id", id).select("id").single();

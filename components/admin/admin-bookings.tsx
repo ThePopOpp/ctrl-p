@@ -12,10 +12,12 @@ import {
   Clock,
   Loader2,
   Moon,
+  Pencil,
   Plus,
   Search,
   ShieldCheck,
   Sun,
+  Trash2,
 } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
@@ -162,6 +164,7 @@ export function AdminBookings() {
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editingType, setEditingType] = useState<AppointmentType | null>(null);
   const [typeForm, setTypeForm] = useState({ name: "", slug: "", description: "", duration_minutes: "30", location_type: "phone_call" });
   const [ruleForm, setRuleForm] = useState({ day_of_week: "1", start_time: "09:00", end_time: "17:00", appointment_type_id: "all" });
   const [blockForm, setBlockForm] = useState({ title: "", start_time: "", end_time: "", reason: "" });
@@ -223,6 +226,29 @@ export function AdminBookings() {
     });
     setSelected(payload.appointment);
     await refreshWithMessage("Appointment updated.");
+  }
+
+  async function updateAppointmentType(id: string, updates: Record<string, unknown>) {
+    try {
+      await adminFetch("/api/admin/bookings", {
+        method: "PATCH",
+        body: JSON.stringify({ resource: "appointment_type", id, ...updates }),
+      });
+      setEditingType(null);
+      await refreshWithMessage("Appointment type updated.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not update appointment type.");
+    }
+  }
+
+  async function deleteAppointmentType(id: string, name: string) {
+    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+      await adminFetch(`/api/admin/bookings?resource=appointment_type&id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      await refreshWithMessage("Appointment type deleted.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not delete appointment type.");
+    }
   }
 
   async function createAppointmentType() {
@@ -356,7 +382,7 @@ export function AdminBookings() {
                 </Select>
               </div>
 
-              {view === "overview" && <Overview appointments={appointments} types={types} notifications={bookingData?.notifications ?? []} onSelect={setSelected} />}
+              {view === "overview" && <Overview appointments={appointments} types={types} notifications={bookingData?.notifications ?? []} onSelect={setSelected} onEditType={setEditingType} onDeleteType={deleteAppointmentType} />}
               {view === "list" && <AppointmentList appointments={filteredAppointments} types={types} onSelect={setSelected} />}
               {view === "calendar" && <CalendarView appointments={filteredAppointments.filter((appointment) => {
                 const date = new Date(appointment.start_time);
@@ -388,6 +414,11 @@ export function AdminBookings() {
                 onOpenChange={(open) => !open && setSelected(null)}
                 onSave={updateAppointment}
               />
+              <TypeSheet
+                type={editingType}
+                onOpenChange={(open) => !open && setEditingType(null)}
+                onSave={updateAppointmentType}
+              />
             </>
           )}
         </main>
@@ -408,7 +439,7 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint: 
   );
 }
 
-function Overview({ appointments, types, notifications, onSelect }: { appointments: Appointment[]; types: AppointmentType[]; notifications: BookingData["notifications"]; onSelect: (appointment: Appointment) => void }) {
+function Overview({ appointments, types, notifications, onSelect, onEditType, onDeleteType }: { appointments: Appointment[]; types: AppointmentType[]; notifications: BookingData["notifications"]; onSelect: (appointment: Appointment) => void; onEditType: (type: AppointmentType) => void; onDeleteType: (id: string, name: string) => void }) {
   const upcoming = appointments.filter((appointment) => new Date(appointment.start_time) >= new Date()).slice(0, 8);
   return (
     <section className="grid gap-4 xl:grid-cols-[1fr_380px]">
@@ -419,7 +450,26 @@ function Overview({ appointments, types, notifications, onSelect }: { appointmen
       <div className="space-y-4">
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base">Appointment types</CardTitle></CardHeader>
-          <CardContent className="space-y-2">{types.map((type) => <div key={type.id} className="flex items-center justify-between rounded-lg border bg-background/35 p-3 text-sm"><div><div className="font-medium">{type.name}</div><div className="text-xs text-muted-foreground">{type.duration_minutes} min - {human(type.location_type)}</div></div><Badge variant="outline">{type.is_active ? "Active" : "Hidden"}</Badge></div>)}</CardContent>
+          <CardContent className="space-y-2">
+            {types.map((type) => (
+              <div key={type.id} className="flex items-center justify-between gap-2 rounded-lg border bg-background/35 p-3 text-sm">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{type.name}</div>
+                  <div className="text-xs text-muted-foreground">{type.duration_minutes} min · {human(type.location_type)}</div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Badge variant="outline" className="text-[10px]">{type.is_active ? "Active" : "Hidden"}</Badge>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditType(type)} aria-label={`Edit ${type.name}`}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600" onClick={() => onDeleteType(type.id, type.name)} aria-label={`Delete ${type.name}`}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {!types.length && <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">No appointment types yet. Go to Availability to create one.</div>}
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base">Notifications</CardTitle><CardDescription>Email/SMS hooks are tracked here.</CardDescription></CardHeader>
@@ -642,5 +692,120 @@ function SummaryTile({ label, children }: { label: string; children: ReactNode }
       <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-1 text-sm font-medium">{children}</div>
     </div>
+  );
+}
+
+function TypeSheet(props: {
+  type: AppointmentType | null;
+  onOpenChange: (open: boolean) => void;
+  onSave: (id: string, updates: Record<string, unknown>) => void;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [duration, setDuration] = useState("30");
+  const [locationType, setLocationType] = useState("phone_call");
+  const [bufferBefore, setBufferBefore] = useState("0");
+  const [bufferAfter, setBufferAfter] = useState("0");
+  const [minNotice, setMinNotice] = useState("120");
+  const [maxDays, setMaxDays] = useState("30");
+  const [meetingUrl, setMeetingUrl] = useState("");
+  const [isActive, setIsActive] = useState("true");
+
+  useEffect(() => {
+    if (!props.type) return;
+    setName(props.type.name);
+    setDescription(props.type.description || "");
+    setDuration(String(props.type.duration_minutes));
+    setLocationType(props.type.location_type);
+    setBufferBefore(String(props.type.buffer_before_minutes));
+    setBufferAfter(String(props.type.buffer_after_minutes));
+    setMinNotice(String(props.type.min_notice_minutes));
+    setMaxDays(String(props.type.max_days_in_advance));
+    setMeetingUrl(props.type.meeting_url || "");
+    setIsActive(props.type.is_active ? "true" : "false");
+  }, [props.type]);
+
+  return (
+    <Sheet open={Boolean(props.type)} onOpenChange={props.onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-lg">
+        {props.type && (
+          <>
+            <SheetHeader>
+              <SheetTitle>Edit appointment type</SheetTitle>
+              <SheetDescription>{props.type.slug}</SheetDescription>
+            </SheetHeader>
+            <div className="mt-6 space-y-4">
+              <div className="grid gap-2">
+                <label className="text-xs font-medium text-muted-foreground">Name</label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs font-medium text-muted-foreground">Description</label>
+                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description shown to customers" className="resize-none" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <label className="text-xs font-medium text-muted-foreground">Duration (minutes)</label>
+                  <Input type="number" min="5" value={duration} onChange={(e) => setDuration(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-xs font-medium text-muted-foreground">Location type</label>
+                  <Select value={locationType} onValueChange={setLocationType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{LOCATION_OPTIONS.map((opt) => <SelectItem key={opt} value={opt}>{human(opt)}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-xs font-medium text-muted-foreground">Buffer before (min)</label>
+                  <Input type="number" min="0" value={bufferBefore} onChange={(e) => setBufferBefore(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-xs font-medium text-muted-foreground">Buffer after (min)</label>
+                  <Input type="number" min="0" value={bufferAfter} onChange={(e) => setBufferAfter(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-xs font-medium text-muted-foreground">Min notice (min)</label>
+                  <Input type="number" min="0" value={minNotice} onChange={(e) => setMinNotice(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-xs font-medium text-muted-foreground">Max days in advance</label>
+                  <Input type="number" min="1" value={maxDays} onChange={(e) => setMaxDays(e.target.value)} />
+                </div>
+              </div>
+              {(locationType === "video_meeting" || locationType === "custom_location") && (
+                <div className="grid gap-2">
+                  <label className="text-xs font-medium text-muted-foreground">Meeting URL</label>
+                  <Input type="url" value={meetingUrl} onChange={(e) => setMeetingUrl(e.target.value)} placeholder="https://..." />
+                </div>
+              )}
+              <div className="grid gap-2">
+                <label className="text-xs font-medium text-muted-foreground">Visibility</label>
+                <Select value={isActive} onValueChange={setIsActive}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Active — visible to customers</SelectItem>
+                    <SelectItem value="false">Hidden — not bookable</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button className="w-full" onClick={() => props.onSave(props.type!.id, {
+                name,
+                description,
+                duration_minutes: Number(duration) || 30,
+                location_type: locationType,
+                buffer_before_minutes: Number(bufferBefore) || 0,
+                buffer_after_minutes: Number(bufferAfter) || 0,
+                min_notice_minutes: Number(minNotice) || 0,
+                max_days_in_advance: Number(maxDays) || 30,
+                meeting_url: meetingUrl || null,
+                is_active: isActive === "true",
+              })}>
+                <ShieldCheck className="mr-2 h-4 w-4" />Save changes
+              </Button>
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
