@@ -1241,15 +1241,50 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
               </Card>}
 
               {activePanel === "nfc" && <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-base">NFC</CardTitle><CardDescription>Prepare tap-to-share URLs, physical NFC product status, and future activation flows.</CardDescription></CardHeader>
-                <CardContent className="grid gap-3 md:grid-cols-3">
-                  <SelectField label="Access status" value={form.access_status || "trial"} values={["trial", "active", "past_due", "paused", "expired", "none"]} onChange={(value) => update("access_status", value)} />
-                  <Field label="Access plan" value={form.access_plan || ""} onChange={(value) => update("access_plan", value)} />
-                  <SelectField label="Subscription provider" value={form.subscription_provider || "none"} values={["none", "square", "stripe", "manual"]} onChange={(value) => update("subscription_provider", value === "none" ? "" : value)} />
-                  <Field label="Subscription reference" value={form.subscription_reference || ""} onChange={(value) => update("subscription_reference", value)} />
-                  <SelectField label="NFC status" value={form.nfc_status || "not_ordered"} values={["not_ordered", "ordered", "assigned", "programmed", "shipped"]} onChange={(value) => update("nfc_status", value)} />
-                  <div className="md:col-span-3 rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">
-                    Products ready for future bundles: {(data?.products || []).map((product) => product.name).join(", ") || "NFC cards, QR stickers, ID badges, and other managed products."}
+                <CardHeader className="pb-3"><CardTitle className="text-base">NFC &amp; QR Tracking</CardTitle><CardDescription>Program your NFC tag and QR code with tracked URLs so every tap and scan shows up in analytics.</CardDescription></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">NFC tap URL</div>
+                      <div className="flex items-center gap-2 rounded-lg border bg-background/35 px-3 py-2">
+                        <span className="min-w-0 flex-1 truncate font-mono text-xs">{publicUrl}?source=nfc</span>
+                        <Button size="sm" variant="ghost" className="h-6 shrink-0 px-2 text-xs" onClick={() => copy(`${publicUrl}?source=nfc`)}>Copy</Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">Program this into any NFC tag writer app (NFC Tools, Tasker, etc.). Every tap fires an <strong>nfc_tap</strong> event in analytics.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">QR scan URL</div>
+                      <div className="flex items-center gap-2 rounded-lg border bg-background/35 px-3 py-2">
+                        <span className="min-w-0 flex-1 truncate font-mono text-xs">{publicUrl}?source=qr</span>
+                        <Button size="sm" variant="ghost" className="h-6 shrink-0 px-2 text-xs" onClick={() => copy(`${publicUrl}?source=qr`)}>Copy</Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">Use when printing a custom QR code outside the card. The built-in QR section already uses this automatically.</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border bg-primary/5 p-4 space-y-2">
+                    <div className="text-sm font-semibold">How to program an NFC tag</div>
+                    <ol className="space-y-1.5 text-xs text-muted-foreground list-none">
+                      {[
+                        ["Download NFC Tools", "Free app on iOS and Android — search “NFC Tools” by wakdev."],
+                        ["Tap Write → Add a record → URL/URI", "Paste the NFC tap URL above as the URL value."],
+                        ["Write to tag", "Hold your phone over the NFC chip in your card or product for 1–2 seconds."],
+                        ["Test it", "Tap any NFC-enabled phone to your card — it should open your digital card instantly."],
+                      ].map(([step, desc], i) => (
+                        <li key={step} className="flex gap-2">
+                          <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">{i + 1}</span>
+                          <span><strong className="text-foreground">{step}</strong> — {desc}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <SelectField label="NFC status" value={form.nfc_status || "not_ordered"} values={["not_ordered", "ordered", "assigned", "programmed", "shipped"]} onChange={(value) => update("nfc_status", value)} />
+                    <SelectField label="Access status" value={form.access_status || "trial"} values={["trial", "active", "past_due", "paused", "expired", "none"]} onChange={(value) => update("access_status", value)} />
+                    <SelectField label="Subscription provider" value={form.subscription_provider || "none"} values={["none", "square", "stripe", "manual"]} onChange={(value) => update("subscription_provider", value === "none" ? "" : value)} />
+                    <Field label="Access plan" value={form.access_plan || ""} onChange={(value) => update("access_plan", value)} />
+                    <Field label="Subscription reference" value={form.subscription_reference || ""} onChange={(value) => update("subscription_reference", value)} />
                   </div>
                 </CardContent>
               </Card>}

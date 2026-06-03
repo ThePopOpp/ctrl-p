@@ -922,6 +922,10 @@ export function AdminProductionSchedule() {
     await updateTaskAction(item, { status: "completed", progress_percent: 100, is_blocked: false }, `Completed "${item.title}".`);
   }
 
+  async function updateItemStatus(item: ScheduleItem, status: string) {
+    await updateTaskAction(item, { status, is_blocked: status === "blocked" }, `Moved "${item.title}" to ${human(status)}.`);
+  }
+
   async function createScheduleRelation(item: ScheduleItem, relation: ScheduleRelationPayload) {
     await apiJson<{ relation: unknown }>("/api/admin/production-schedule/relations", {
       method: "POST",
@@ -1252,7 +1256,7 @@ export function AdminProductionSchedule() {
                     )}
                     {activeView === "List" && <ScheduleListView items={sectionItems} relationSummaries={relationSummaries} onSelect={setSelectedItem} />}
                     {activeView === "Table" && <ScheduleTableView items={sectionItems} orders={orders} users={users} products={products} relationSummaries={relationSummaries} onSelect={setSelectedItem} />}
-                    {activeView === "Kanban" && <ScheduleKanbanView items={sectionItems.filter((item) => item.source_type !== "appointment")} relationSummaries={relationSummaries} onSelect={setSelectedItem} />}
+                    {activeView === "Kanban" && <ScheduleKanbanView items={sectionItems.filter((item) => item.source_type !== "appointment")} relationSummaries={relationSummaries} onSelect={setSelectedItem} onUpdateStatus={updateItemStatus} />}
                     {activeView === "Calendar" && <ScheduleCalendarView items={sectionItems} relationSummaries={relationSummaries} onSelect={setSelectedItem} />}
                     {activeView === "Project Templates" && (
                       <WorkflowTemplatePanel
@@ -2388,15 +2392,103 @@ function ScheduleItemMiniCard({ item, relationSummaries, onSelect }: { item: Sch
 }
 
 function ScheduleListView({ items, relationSummaries, onSelect }: { items: ScheduleItem[]; relationSummaries: Record<string, ScheduleRelationSummary>; onSelect: (item: ScheduleItem) => void }) {
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, { name: string; items: ScheduleItem[] }>();
+    for (const item of items) {
+      const key = item.schedule_group_id || item.order_id || item.project_name || `solo-${item.id}`;
+      const name = item.project_name || (item.order_id ? `Order ${item.orders?.order_number ? `#${item.orders.order_number}` : item.order_id.slice(0, 8)}` : item.title);
+      if (!map.has(key)) map.set(key, { name, items: [] });
+      map.get(key)!.items.push(item);
+    }
+    return map;
+  }, [items]);
+
+  function toggle(key: string) {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  const statusDot = (item: ScheduleItem) => cn(
+    "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+    ["completed", "approved"].includes(item.status) ? "bg-emerald-500" :
+    (item.is_blocked || item.status === "blocked") ? "bg-red-500" :
+    item.status === "in_progress" || item.status === "in_production" ? "bg-primary" :
+    item.status.startsWith("waiting_") ? "bg-amber-500" :
+    "bg-muted-foreground/35",
+  );
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">List view</CardTitle>
-        <CardDescription>Project and task records in a scannable list using the same schedule data as the Gantt timeline.</CardDescription>
+        <CardDescription>Project-grouped list. Expand a project to see its tasks, milestones, phases, and approvals.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {!items.length && <EmptyState title="No schedule items" description="Adjust filters or add a schedule item to populate this view." />}
-        {items.map((item) => <ScheduleItemMiniCard key={item.id} item={item} relationSummaries={relationSummaries} onSelect={onSelect} />)}
+        {[...grouped.entries()].map(([key, group]) => {
+          const expanded = expandedKeys.has(key);
+          const open = group.items.filter((i) => !["completed", "approved"].includes(i.status)).length;
+          const blocked = group.items.filter((i) => i.is_blocked || i.status === "blocked").length;
+          const done = group.items.filter((i) => ["completed", "approved"].includes(i.status)).length;
+          return (
+            <div key={key} className="overflow-hidden rounded-lg border">
+              <button
+                className="flex w-full items-center gap-3 p-3 text-left hover:bg-accent/30"
+                onClick={() => toggle(key)}
+              >
+                <ChevronRight className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", expanded && "rotate-90")} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold">{group.name}</div>
+                  <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span>{group.items.length} items</span>
+                    {open > 0 && <span>{open} open</span>}
+                    {done > 0 && <span className="text-emerald-600 dark:text-emerald-400">{done} done</span>}
+                    {blocked > 0 && <span className="text-red-600 dark:text-red-400">{blocked} blocked</span>}
+                  </div>
+                </div>
+                {done === group.items.length && group.items.length > 0 && (
+                  <Badge className="border border-emerald-500/20 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-300">Complete</Badge>
+                )}
+              </button>
+              {expanded && (
+                <div className="divide-y border-t">
+                  {group.items.map((item) => {
+                    const rel = relationSummaryForItem(item, relationSummaries);
+                    return (
+                      <button
+                        key={item.id}
+                        className="flex w-full items-start gap-3 p-3 text-left hover:bg-accent/20"
+                        onClick={() => onSelect(item)}
+                      >
+                        <div className={statusDot(item)} />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">{item.title}</div>
+                          <div className="mt-0.5 text-xs text-muted-foreground">
+                            {itemTypeLabel(item)}
+                            {item.phase ? ` · ${item.phase}` : ""}
+                            {item.assigned_department ? ` · ${item.assigned_department}` : ""}
+                          </div>
+                          {(rel.participants + rel.photos + rel.documents + rel.notes + rel.products + rel.vendors) > 0 && (
+                            <div className="mt-1.5"><RelationIndicators summary={rel} compact /></div>
+                          )}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <Badge className={cn("border text-[10px]", statusTone(item.status))}>{human(item.status)}</Badge>
+                          <div className="mt-1 text-[11px] text-muted-foreground">{formatDate(item.due_date || item.end_date)}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );
@@ -2421,71 +2513,153 @@ function ScheduleTableView({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Table view</CardTitle>
-        <CardDescription>Detailed rows for comparison, sorting decisions, and relationship scanning.</CardDescription>
+        <CardDescription>{items.length} schedule items — full detail rows for sorting, comparison, and bulk review.</CardDescription>
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Item</TableHead>
-              <TableHead>Project</TableHead>
-              <TableHead>Order / customer</TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Due</TableHead>
-              <TableHead>Links</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => {
-              const order = orders.find((row) => row.id === item.order_id);
-              const customer = users.find((row) => row.id === item.customer_id);
-              const product = products.find((row) => row.id === item.product_id);
-              return (
-                <TableRow key={item.id} className="cursor-pointer hover:bg-accent/45" onClick={() => onSelect(item)}>
-                  <TableCell>
-                    <div className="font-medium">{item.title}</div>
-                    <div className="text-xs text-muted-foreground">{itemTypeLabel(item)} | {item.phase || "No phase"}</div>
-                  </TableCell>
-                  <TableCell>{item.project_name || "Unlinked"}</TableCell>
-                  <TableCell>
-                    <div className="font-mono text-xs">#{order?.order_number || item.orders?.order_number || item.order_id?.slice(0, 8) || "Unlinked"}</div>
-                    <div className="text-xs text-muted-foreground">{customer?.full_name || customer?.email || order?.company || order?.customer_email || "No customer"}</div>
-                  </TableCell>
-                  <TableCell>{product?.name || item.products?.name || item.order_items?.products?.name || "Not linked"}</TableCell>
-                  <TableCell><Badge className={cn("border", statusTone(item.status))}>{human(item.status)}</Badge></TableCell>
-                  <TableCell>{formatDate(item.due_date || item.end_date)}</TableCell>
-                  <TableCell><RelationIndicators summary={relationSummaryForItem(item, relationSummaries)} compact /></TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+        {!items.length && <EmptyState title="No schedule items" description="Adjust filters or add a schedule item to populate this view." />}
+        {items.length > 0 && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[200px]">Item</TableHead>
+                <TableHead>Project</TableHead>
+                <TableHead>Phase</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Assignee</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead>Start</TableHead>
+                <TableHead>Due</TableHead>
+                <TableHead className="text-right">Progress</TableHead>
+                <TableHead>Links</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => {
+                const order = orders.find((row) => row.id === item.order_id);
+                const customer = users.find((row) => row.id === item.customer_id);
+                const assignee = users.find((row) => row.id === item.assigned_to_user_id);
+                const product = products.find((row) => row.id === item.product_id);
+                const rel = relationSummaryForItem(item, relationSummaries);
+                return (
+                  <TableRow key={item.id} className="cursor-pointer hover:bg-accent/45" onClick={() => onSelect(item)}>
+                    <TableCell>
+                      <div className="font-medium leading-tight">{item.title}</div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">{itemTypeLabel(item)}{item.is_blocked ? " · Blocked" : ""}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-[140px] truncate text-sm">{item.project_name || "Unlinked"}</div>
+                      {order?.order_number && <div className="font-mono text-[11px] text-muted-foreground">#{order.order_number}</div>}
+                    </TableCell>
+                    <TableCell><div className="text-xs">{item.phase || "—"}</div></TableCell>
+                    <TableCell><Badge className={cn("border text-[10px]", statusTone(item.status))}>{human(item.status)}</Badge></TableCell>
+                    <TableCell><Badge className={cn("border text-[10px]", priorityTone(item.priority))}>{human(item.priority)}</Badge></TableCell>
+                    <TableCell><div className="text-xs">{assignee?.full_name || assignee?.email || item.assignee?.full_name || "—"}</div></TableCell>
+                    <TableCell><div className="max-w-[120px] truncate text-xs">{customer?.full_name || customer?.email || order?.company || order?.customer_email || "—"}</div></TableCell>
+                    <TableCell><div className="max-w-[120px] truncate text-xs">{product?.name || item.products?.name || item.order_items?.products?.name || "—"}</div></TableCell>
+                    <TableCell><div className="text-xs">{formatDate(item.start_date)}</div></TableCell>
+                    <TableCell><div className="text-xs">{formatDate(item.due_date || item.end_date)}</div></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${item.progress_percent ?? 0}%` }} />
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">{item.progress_percent ?? 0}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell><RelationIndicators summary={rel} compact /></TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function ScheduleKanbanView({ items, relationSummaries, onSelect }: { items: ScheduleItem[]; relationSummaries: Record<string, ScheduleRelationSummary>; onSelect: (item: ScheduleItem) => void }) {
+function ScheduleKanbanView({
+  items,
+  relationSummaries,
+  onSelect,
+  onUpdateStatus,
+}: {
+  items: ScheduleItem[];
+  relationSummaries: Record<string, ScheduleRelationSummary>;
+  onSelect: (item: ScheduleItem) => void;
+  onUpdateStatus: (item: ScheduleItem, status: string) => Promise<void>;
+}) {
   const columns = ["not_started", "in_progress", "waiting_on_customer", "needs_internal_review", "ready_for_production", "in_production", "quality_check", "blocked", "completed"];
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const draggedItem = draggedItemId ? items.find((i) => i.id === draggedItemId) : null;
+
+  async function handleDrop(targetStatus: string) {
+    const item = draggedItem;
+    setDraggedItemId(null);
+    setDragOverColumn(null);
+    if (!item || item.status === targetStatus) return;
+    await onUpdateStatus(item, targetStatus);
+  }
+
+  const columnColors: Record<string, string> = {
+    blocked: "border-red-500/30 dark:border-red-500/20",
+    completed: "border-emerald-500/30 dark:border-emerald-500/20",
+    in_production: "border-primary/30",
+    quality_check: "border-amber-500/30",
+  };
+
+  const columnHeaderColors: Record<string, string> = {
+    blocked: "text-red-600 dark:text-red-300",
+    completed: "text-emerald-600 dark:text-emerald-300",
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Kanban view</CardTitle>
-        <CardDescription>Status columns for the same project and task records shown on the Gantt timeline.</CardDescription>
+        <CardDescription>Drag cards between columns to update status. Same data as the Gantt timeline and all other views.</CardDescription>
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <div className="grid min-w-[1100px] grid-cols-9 gap-3">
+        <div className="flex min-w-[1200px] gap-3">
           {columns.map((status) => {
-            const columnItems = items.filter((item) => item.status === status || (status === "blocked" && item.is_blocked));
+            const columnItems = items.filter((item) => item.status === status || (status === "blocked" && item.is_blocked && item.status !== "blocked"));
+            const isDragOver = dragOverColumn === status;
             return (
-              <div key={status} className="rounded-lg border bg-background/35">
-                <div className="border-b p-3">
-                  <div className="text-sm font-semibold">{human(status)}</div>
-                  <div className="text-xs text-muted-foreground">{columnItems.length} items</div>
+              <div
+                key={status}
+                className={cn(
+                  "flex w-[160px] shrink-0 flex-col rounded-lg border bg-background/35 transition-colors",
+                  columnColors[status] ?? "border-border",
+                  isDragOver && "border-primary bg-primary/5",
+                )}
+                onDragOver={(e) => { e.preventDefault(); setDragOverColumn(status); }}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverColumn(null); }}
+                onDrop={(e) => { e.preventDefault(); handleDrop(status); }}
+              >
+                <div className="border-b p-2.5">
+                  <div className={cn("text-xs font-semibold", columnHeaderColors[status] ?? "text-foreground")}>{human(status)}</div>
+                  <div className="text-[11px] text-muted-foreground">{columnItems.length}</div>
                 </div>
-                <div className="space-y-2 p-2">
-                  {columnItems.map((item) => <ScheduleItemMiniCard key={item.id} item={item} relationSummaries={relationSummaries} onSelect={onSelect} />)}
+                <div className="min-h-[60px] flex-1 space-y-1.5 p-2">
+                  {columnItems.map((item) => (
+                    <div
+                      key={item.id}
+                      draggable
+                      onDragStart={() => setDraggedItemId(item.id)}
+                      onDragEnd={() => { setDraggedItemId(null); setDragOverColumn(null); }}
+                      className={cn("cursor-grab active:cursor-grabbing", draggedItemId === item.id && "opacity-40")}
+                    >
+                      <ScheduleItemMiniCard item={item} relationSummaries={relationSummaries} onSelect={onSelect} />
+                    </div>
+                  ))}
+                  {columnItems.length === 0 && isDragOver && (
+                    <div className="rounded-md border-2 border-dashed border-primary/40 p-2 text-center text-[11px] text-muted-foreground">
+                      Drop here
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -2497,31 +2671,218 @@ function ScheduleKanbanView({ items, relationSummaries, onSelect }: { items: Sch
 }
 
 function ScheduleCalendarView({ items, relationSummaries, onSelect }: { items: ScheduleItem[]; relationSummaries: Record<string, ScheduleRelationSummary>; onSelect: (item: ScheduleItem) => void }) {
-  const sorted = [...items].sort((a, b) => String(a.start_date || a.due_date || a.created_at || "").localeCompare(String(b.start_date || b.due_date || b.created_at || "")));
-  const grouped = sorted.reduce<Record<string, ScheduleItem[]>>((acc, item) => {
-    const key = item.start_date || item.due_date || item.end_date || "Unscheduled";
-    acc[key] = [...(acc[key] || []), item];
-    return acc;
-  }, {});
+  const todayStr = dateOnly(new Date());
+  const [viewDate, setViewDate] = useState<Date>(() => new Date());
+  const [calMode, setCalMode] = useState<"month" | "week">("month");
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(viewDate);
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const calDays: (Date | null)[] = [];
+  for (let i = 0; i < firstDow; i++) calDays.push(null);
+  for (let d = 1; d <= daysInMonth; d++) calDays.push(new Date(year, month, d));
+
+  // Week view: anchor to Sunday of the week containing viewDate
+  const weekStart = useMemo(() => {
+    const d = new Date(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate());
+    d.setDate(d.getDate() - d.getDay());
+    return d;
+  }, [viewDate]);
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i)),
+    [weekStart],
+  );
+  const weekLabel = `${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(weekDays[0])} – ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(weekDays[6])}`;
+
+  function minutesToTime(mins: number | null) {
+    if (mins === null) return null;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const period = h >= 12 ? "p" : "a";
+    const hour = h % 12 || 12;
+    return m === 0 ? `${hour}${period}` : `${hour}:${m.toString().padStart(2, "0")}${period}`;
+  }
+
+  function itemsForDay(day: Date): ScheduleItem[] {
+    const key = dateOnly(day);
+    const dayItems = items.filter((item) => item.start_date === key || item.due_date === key || item.end_date === key);
+    return dayItems.sort((a, b) => {
+      // Appointments rise to top, sorted by start time; tasks follow
+      if (a.source_type === "appointment" && b.source_type !== "appointment") return -1;
+      if (a.source_type !== "appointment" && b.source_type === "appointment") return 1;
+      if (a.source_type === "appointment" && b.source_type === "appointment") {
+        return (a.start_offset_minutes ?? 0) - (b.start_offset_minutes ?? 0);
+      }
+      return 0;
+    });
+  }
+
+  const unscheduled = items.filter((item) => !item.start_date && !item.due_date && !item.end_date && item.source_type !== "appointment");
+
+  function barClass(item: ScheduleItem) {
+    if (item.source_type === "appointment") return "bg-sky-500/20 text-sky-800 dark:text-sky-200 border-sky-500/30";
+    if (item.is_blocked || item.status === "blocked") return "bg-red-500/20 text-red-700 dark:text-red-200 border-red-500/30";
+    if (["completed", "approved"].includes(item.status)) return "bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border-emerald-500/30";
+    return "bg-primary/20 text-lime-900 dark:text-lime-100 border-primary/30";
+  }
+
+  function prevPeriod() {
+    if (calMode === "month") setViewDate(new Date(year, month - 1, 1));
+    else setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7));
+  }
+  function nextPeriod() {
+    if (calMode === "month") setViewDate(new Date(year, month + 1, 1));
+    else setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 7));
+  }
+
+  const calLegend = [
+    { label: "Appointment", cls: "bg-sky-500/20 border-sky-500/30" },
+    { label: "Task / Milestone", cls: "bg-primary/20 border-primary/30" },
+    { label: "Completed", cls: "bg-emerald-500/20 border-emerald-500/30" },
+    { label: "Blocked", cls: "bg-red-500/20 border-red-500/30" },
+  ];
+
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Calendar view</CardTitle>
-        <CardDescription>Tasks, due dates, installs, deliveries, and booking appointments grouped by schedule date.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {!sorted.length && <EmptyState title="No calendar items" description="Adjust filters or include appointments to populate this view." />}
-        {Object.entries(grouped).map(([date, dateItems]) => (
-          <div key={date} className="rounded-lg border bg-background/35">
-            <div className="border-b p-3">
-              <div className="text-sm font-semibold">{date === "Unscheduled" ? date : formatDate(date)}</div>
-              <div className="text-xs text-muted-foreground">{dateItems.length} items</div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Calendar view</CardTitle>
+            <CardDescription>Tasks, milestones, due dates, installs, deliveries, and appointments.</CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex overflow-hidden rounded-md border">
+              <button
+                className={cn("px-3 py-1.5 text-xs font-medium transition-colors", calMode === "month" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent")}
+                onClick={() => setCalMode("month")}
+              >Month</button>
+              <button
+                className={cn("border-l px-3 py-1.5 text-xs font-medium transition-colors", calMode === "week" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent")}
+                onClick={() => setCalMode("week")}
+              >Week</button>
             </div>
-            <div className="space-y-2 p-2">
-              {dateItems.map((item) => <ScheduleItemMiniCard key={item.id} item={item} relationSummaries={relationSummaries} onSelect={onSelect} />)}
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevPeriod}><ChevronLeft className="h-4 w-4" /></Button>
+            <span className="min-w-[160px] text-center text-sm font-semibold">{calMode === "month" ? monthLabel : weekLabel}</span>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextPeriod}><ChevronRight className="h-4 w-4" /></Button>
+            <Button variant="outline" size="sm" className="h-8" onClick={() => setViewDate(new Date())}>Today</Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+
+        {calMode === "month" ? (
+          <div className="grid grid-cols-7 gap-px rounded-lg border bg-border overflow-hidden">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+              <div key={d} className="bg-muted/60 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{d}</div>
+            ))}
+            {calDays.map((day, i) => {
+              if (!day) return <div key={`empty-${i}`} className="min-h-[90px] bg-muted/20" />;
+              const dayStr = dateOnly(day);
+              const dayItems = itemsForDay(day);
+              const isToday = dayStr === todayStr;
+              return (
+                <div key={dayStr} className={cn("min-h-[90px] bg-background p-1.5 transition-colors hover:bg-accent/20", isToday && "bg-primary/5 ring-1 ring-inset ring-primary/40")}>
+                  <div className={cn("mb-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-medium", isToday && "bg-primary text-primary-foreground font-bold")}>
+                    {day.getDate()}
+                  </div>
+                  <div className="space-y-0.5">
+                    {dayItems.slice(0, 3).map((item) => (
+                      <button
+                        key={item.id}
+                        title={item.title}
+                        className={cn("block w-full truncate rounded border px-1.5 py-0.5 text-left text-[10px] font-medium leading-4 transition-opacity hover:opacity-80", barClass(item))}
+                        onClick={() => onSelect(item)}
+                      >
+                        {item.source_type === "appointment" && item.start_offset_minutes != null
+                          ? `${minutesToTime(item.start_offset_minutes)} · ${item.title}`
+                          : item.title}
+                      </button>
+                    ))}
+                    {dayItems.length > 3 && (
+                      <div className="px-1 text-[10px] text-muted-foreground">+{dayItems.length - 3} more</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border bg-border" style={{ minWidth: 560 }}>
+              {weekDays.map((day) => {
+                const dayStr = dateOnly(day);
+                const isToday = dayStr === todayStr;
+                const dayItems = itemsForDay(day);
+                const appts = dayItems.filter((item) => item.source_type === "appointment");
+                const tasks = dayItems.filter((item) => item.source_type !== "appointment");
+                return (
+                  <div key={dayStr} className={cn("flex min-h-[200px] flex-col bg-background", isToday && "bg-primary/5")}>
+                    <div className={cn("border-b px-2 py-1.5 text-center", isToday && "bg-primary/10")}>
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(day)}
+                      </div>
+                      <div className={cn("mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold", isToday ? "bg-primary text-primary-foreground" : "text-foreground")}>
+                        {day.getDate()}
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-0.5 p-1">
+                      {appts.map((item) => (
+                        <button
+                          key={item.id}
+                          className={cn("block w-full rounded border px-1.5 py-1 text-left transition-opacity hover:opacity-80", barClass(item))}
+                          onClick={() => onSelect(item)}
+                        >
+                          {item.start_offset_minutes != null && (
+                            <div className="text-[9px] font-semibold leading-3 opacity-80">{minutesToTime(item.start_offset_minutes)}</div>
+                          )}
+                          <div className="truncate text-[10px] font-medium leading-4">{item.title}</div>
+                        </button>
+                      ))}
+                      {tasks.map((item) => (
+                        <button
+                          key={item.id}
+                          className={cn("block w-full truncate rounded border px-1.5 py-0.5 text-left text-[10px] font-medium leading-4 transition-opacity hover:opacity-80", barClass(item))}
+                          onClick={() => onSelect(item)}
+                        >
+                          {item.title}
+                        </button>
+                      ))}
+                      {dayItems.length === 0 && (
+                        <div className="pt-4 text-center text-[10px] text-muted-foreground/40">—</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        ))}
+        )}
+
+        {/* Legend */}
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t pt-3">
+          {calLegend.map(({ label, cls }) => (
+            <span key={label} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className={cn("h-2.5 w-2.5 rounded-sm border", cls)} />
+              {label}
+            </span>
+          ))}
+        </div>
+
+        {unscheduled.length > 0 && (
+          <div className="mt-4">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unscheduled ({unscheduled.length})</div>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {unscheduled.map((item) => (
+                <ScheduleItemMiniCard key={item.id} item={item} relationSummaries={relationSummaries} onSelect={onSelect} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!items.length && <EmptyState title="No calendar items" description="Adjust filters or include appointments to populate the calendar." />}
       </CardContent>
     </Card>
   );

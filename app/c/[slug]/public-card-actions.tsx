@@ -149,6 +149,29 @@ export function PublicThemeToggle({ mode = "dark", dark, light }: PublicThemeTog
   );
 }
 
+type TrackedLink = { id: string; href: string; label: string };
+
+export function PublicTrackedLinks({ cardId, links, accent }: { cardId: string; links: TrackedLink[]; accent: string }) {
+  if (!links.length) return null;
+  return (
+    <div className="space-y-2">
+      {links.map((link) => (
+        <a
+          key={link.id}
+          href={link.href}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-between rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold"
+          onClick={() => track(cardId, "link_click", { link_id: link.id, label: link.label })}
+        >
+          <span>{link.label}</span>
+          <svg className="h-4 w-4" style={{ color: accent }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6m0 0v6m0-6L10 14" /></svg>
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export function PublicLeadCapture({ cardId, slug, accent, settings }: ActionProps & { accent: string; settings?: LeadFormSettings | null }) {
   const leadSettings = {
     enabled: true,

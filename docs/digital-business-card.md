@@ -1,3 +1,28 @@
+For the digital business card sections we should make each section collapsible/ expandable tabs like the online product designer. 
+
+For the Margins and Padding this should be a expand and collapse tab within the tabbed section. If a user wants more margin or padding they will need to click the tab to expose, then adjust or modify. 
+The goal is to clean things up to make it more user friendly and simplify the process. 
+Also maybe there is a better way to enable or showcase the margin or padding options. Right now it takes up to much room. 
+
+I like the layer control with the down and up arrows. Is there a way to make the sections draggable, like a Kanban board? 
+
+Also, we still need to add the other features we discussed before the Gantt chart. I want to make sure the background colors can be customized with a color picker (maybe template color options) including, add graident, images, videos etc. 
+
+Give customer the ability to add a light and dark mode option using a toggle like we have on the website.  
+
+Multi-page business cards - Slider based cards - Add video or animation openers to your cards based on the users selection and then they upload their content. 
+
+Add a digital product wizard - this will help users understand the features and answer questions. 
+
+NFC card feature. Share card features. QR Code customizer
+
+I really like how the Online Product Designer we created has the side tabs and then multiple expandable tabs within the selected section. This keeps the UI super clean and easy to understand. 
+
+I added screenshots of both the vision art chart builder and the online product designer to use as examples for the digital business card designer. 
+
+
+---------------------------------------------------------------------
+
 Next, it is time to build the Controlp.io Customer Dashboard and the Digital Business Card Manager / Builder feature.
 
 I want to add a customer-facing digital business card builder tool inside the Controlp.io customer dashboard.

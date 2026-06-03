@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { Bell, Bot, BrainCircuit, ChevronRight, KeyRound, Moon, PlugZap, Search, ShieldCheck, Sun, Workflow } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Bell, Bot, BrainCircuit, ChevronRight, Clock, Copy, KeyRound, Loader2, Moon, PlugZap, Search, Send, ShieldCheck, Sun, Workflow } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { AdminDashboardData, AdminProfile } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const integrations = [
   {
@@ -39,12 +41,96 @@ function human(value: string | null | undefined) {
   return String(value || "unknown").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+type ChatMessage = { role: "user" | "assistant"; content: string };
+
+const QUICK_PROMPTS = [
+  { label: "Daily summary", prompt: "Give me a daily operations summary: what's due today, what's overdue, upcoming appointments, and the top 3 things that need immediate attention." },
+  { label: "Overdue items", prompt: "List all overdue production tasks and overdue orders. For each, include the customer, how many days late, and a recommended next action." },
+  { label: "Draft customer update", prompt: "Draft a professional customer update message for the order that most urgently needs customer communication. Use <draft>...</draft> tags around the message." },
+  { label: "Blocked items", prompt: "What's currently blocking production? List all blocked items with their blocker type and suggested resolution steps." },
+];
+
+function DraftBlock({ content }: { content: string }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(content).catch(() => null);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+  return (
+    <div className="my-2 rounded-lg border border-primary/30 bg-primary/5">
+      <div className="flex items-center justify-between gap-2 border-b border-primary/20 px-3 py-1.5">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-primary">Draft message</span>
+        <button
+          onClick={copy}
+          className="flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+        >
+          <Copy className="h-3 w-3" />
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+      <pre className="whitespace-pre-wrap px-3 py-2 text-[12px] leading-relaxed text-foreground">{content}</pre>
+    </div>
+  );
+}
+
+function renderMessageContent(content: string) {
+  const parts = content.split(/(<draft>[\s\S]*?<\/draft>)/g);
+  return parts.map((part, i) => {
+    const match = part.match(/^<draft>([\s\S]*?)<\/draft>$/);
+    if (match) return <DraftBlock key={i} content={match[1].trim()} />;
+    return (
+      <span key={i}>
+        {part.split("\n").map((line, j, arr) => (
+          <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
+        ))}
+      </span>
+    );
+  });
+}
+
 export function AdminAgent() {
   const pathname = usePathname();
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [authState, setAuthState] = useState<"checking" | "allowed" | "denied">("checking");
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [data, setData] = useState<AdminDashboardData | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [thinking, setThinking] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, thinking]);
+
+  async function sendMessage() {
+    const text = chatInput.trim();
+    if (!text || thinking) return;
+    setChatInput("");
+    const nextHistory: ChatMessage[] = [...chatMessages, { role: "user", content: text }];
+    setChatMessages(nextHistory);
+    setThinking(true);
+    try {
+      const db = getSupabaseBrowserClient();
+      const token = (await db?.auth.getSession())?.data.session?.access_token;
+      const res = await fetch("/api/admin/agent", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          message: text,
+          history: chatMessages.slice(-10),
+        }),
+      });
+      const payload = await res.json().catch(() => ({})) as { response?: string; error?: string };
+      if (!res.ok) throw new Error(payload.error || "Agent request failed.");
+      setChatMessages([...nextHistory, { role: "assistant", content: payload.response ?? "(no response)" }]);
+    } catch (error) {
+      setChatMessages([...nextHistory, { role: "assistant", content: error instanceof Error ? `Error: ${error.message}` : "Could not reach the agent." }]);
+    } finally {
+      setThinking(false);
+    }
+  }
 
   useEffect(() => {
     async function boot() {
@@ -69,11 +155,16 @@ export function AdminAgent() {
   const messages = data?.messages ?? [];
   const users = data?.users ?? [];
   const agentSignals = useMemo(() => {
+    const now = new Date().toISOString();
     const unpaid = orders.filter((order) => ["unpaid", "pending", "partially_paid"].includes(order.payment_status)).length;
     const proofing = orders.filter((order) => ["file_review", "proofing", "awaiting_approval"].includes(order.status)).length;
     const unread = messages.filter((message) => !message.read_at && message.direction === "inbound").length;
     const missingContact = users.filter((user) => !user.phone || !user.email).length;
-    return { unpaid, proofing, unread, missingContact };
+    const overdueOrders = orders.filter((order) =>
+      order.due_at && order.due_at < now &&
+      !["completed", "shipped", "canceled", "archived"].includes(String(order.status ?? "")),
+    ).length;
+    return { unpaid, proofing, unread, missingContact, overdueOrders };
   }, [messages, orders, users]);
 
   return (
@@ -150,11 +241,12 @@ export function AdminAgent() {
                 </div>
               </div>
 
-              <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <Stat label="Integrations" value="0/3" hint="Ready after credentials" />
-                <Stat label="Payment follow-up" value={String(agentSignals.unpaid)} hint="Potential billing automations" />
-                <Stat label="Proof workflows" value={String(agentSignals.proofing)} hint="Review and reminder candidates" />
-                <Stat label="Contact gaps" value={String(agentSignals.missingContact)} hint="Users missing email or SMS" />
+              <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <Stat label="Overdue orders" value={String(agentSignals.overdueOrders)} hint="Orders past their due date" urgent={agentSignals.overdueOrders > 0} />
+                <Stat label="Payment follow-up" value={String(agentSignals.unpaid)} hint="Orders unpaid or partially paid" urgent={agentSignals.unpaid > 0} />
+                <Stat label="Proof workflows" value={String(agentSignals.proofing)} hint="Orders waiting on proof approval" />
+                <Stat label="Unread messages" value={String(agentSignals.unread)} hint="Inbound messages from customers" urgent={agentSignals.unread > 0} />
+                <Stat label="Contact gaps" value={String(agentSignals.missingContact)} hint="Users missing email or phone" />
               </section>
 
               <section className="mb-5 grid gap-4 xl:grid-cols-3">
@@ -212,6 +304,94 @@ export function AdminAgent() {
                   </CardHeader>
                 </Card>
               </section>
+
+              <section className="mt-5">
+                <Card className="flex flex-col" style={{ height: "580px" }}>
+                  <CardHeader className="flex-none pb-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <CardTitle className="flex items-center gap-2 text-base"><Bot className="h-4 w-4 text-primary" /> Operations agent</CardTitle>
+                      {chatMessages.length > 0 && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => setChatMessages([])}>
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <CardDescription>Ask about orders, overdue tasks, proofs, appointments, or draft customer messages. Read-only analysis only.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex min-h-0 flex-1 flex-col gap-3 pb-4">
+                    {/* Quick-prompt shortcuts */}
+                    <div className="flex flex-none flex-wrap gap-1.5">
+                      {QUICK_PROMPTS.map((qp) => (
+                        <button
+                          key={qp.label}
+                          disabled={thinking}
+                          onClick={() => { setChatInput(qp.prompt); }}
+                          className="flex items-center gap-1 rounded-full border bg-background/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:opacity-40"
+                        >
+                          <Clock className="h-3 w-3" />
+                          {qp.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex-1 overflow-y-auto rounded-lg border bg-background/35 p-3">
+                      {chatMessages.length === 0 && !thinking && (
+                        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                          Ask the agent anything about your current operations.
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        {chatMessages.map((msg, i) => (
+                          <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                            <div
+                              className={cn(
+                                "max-w-[82%] rounded-xl px-3.5 py-2 text-sm leading-relaxed",
+                                msg.role === "user"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted text-foreground",
+                              )}
+                            >
+                              {msg.role === "assistant" ? renderMessageContent(msg.content) : msg.content.split("\n").map((line, j) => (
+                                <span key={j}>{line}{j < msg.content.split("\n").length - 1 && <br />}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        {thinking && (
+                          <div className="flex justify-start">
+                            <div className="flex items-center gap-2 rounded-xl bg-muted px-3.5 py-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Thinking...
+                            </div>
+                          </div>
+                        )}
+                        <div ref={chatEndRef} />
+                      </div>
+                    </div>
+                    <div className="flex flex-none gap-2">
+                      <Textarea
+                        className="min-h-[60px] resize-none text-sm"
+                        placeholder="Ask about orders, blockers, proofs, appointments..."
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            sendMessage();
+                          }
+                        }}
+                        disabled={thinking}
+                      />
+                      <Button
+                        className="h-auto self-stretch px-3"
+                        onClick={sendMessage}
+                        disabled={thinking || !chatInput.trim()}
+                        aria-label="Send message"
+                      >
+                        {thinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </section>
             </>
           )}
         </main>
@@ -220,8 +400,16 @@ export function AdminAgent() {
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return <Card><CardContent className="p-4"><div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div><div className="mt-2 text-[22px] font-semibold leading-none">{value}</div><div className="mt-2 text-[11px] text-muted-foreground">{hint}</div></CardContent></Card>;
+function Stat({ label, value, hint, urgent }: { label: string; value: string; hint: string; urgent?: boolean }) {
+  return (
+    <Card className={cn(urgent && value !== "0" && "border-red-500/30")}>
+      <CardContent className="p-4">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className={cn("mt-2 text-[22px] font-semibold leading-none", urgent && value !== "0" && "text-red-600 dark:text-red-400")}>{value}</div>
+        <div className="mt-2 text-[11px] text-muted-foreground">{hint}</div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function AgentTask({ title, detail }: { title: string; detail: string }) {

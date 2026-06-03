@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError } from "@/lib/admin/server-auth";
 
-const EVENT_TYPES = new Set(["view", "share", "like", "qr_scan", "link_click", "copy_link", "save_contact", "lead_submit"]);
+const EVENT_TYPES = new Set(["view", "share", "like", "qr_scan", "nfc_tap", "link_click", "copy_link", "save_contact", "lead_submit"]);
 
 function clean(value: unknown) {
   return String(value || "").trim();

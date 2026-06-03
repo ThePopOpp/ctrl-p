@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
+import { headers } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import { ExternalLink, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
 
 import { getServerSupabaseConfig } from "@/lib/admin/server-auth";
 import { cn } from "@/lib/utils";
-import { PublicCardActions, PublicThemeToggle } from "./public-card-actions";
+import { PublicCardActions, PublicThemeToggle, PublicTrackedLinks } from "./public-card-actions";
 
 type PublicCardLink = {
   id: string;
@@ -75,8 +76,16 @@ type ImageStyleSettings = {
   hover_effect?: "none" | "lift" | "zoom" | "glow" | "tilt";
 };
 
+function uaDeviceType(ua: string) {
+  const s = ua.toLowerCase();
+  if (/ipad|tablet/.test(s)) return "tablet";
+  if (/mobi|iphone|android/.test(s)) return "mobile";
+  return "desktop";
+}
+
 type PublicCard = {
   id: string;
+  user_id: string | null;
   card_name: string;
   slug: string;
   public_url: string | null;
@@ -289,8 +298,9 @@ function sectionStyle(item: PublicCardSection): React.CSSProperties {
   };
 }
 
-export default async function PublicDigitalCardPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function PublicDigitalCardPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams?: Promise<Record<string, string>> }) {
   const { slug } = await params;
+  const resolvedSearch = searchParams ? await searchParams : {};
   const config = getServerSupabaseConfig();
   if (config.error) notFound();
 
@@ -300,7 +310,7 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
 
   const result = await adminClient
     .from("digital_cards")
-    .select("id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, theme_mode, media_settings, lead_form_settings, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
+    .select("id, user_id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, theme_mode, media_settings, lead_form_settings, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
     .eq("slug", slug)
     .eq("status", "published")
     .eq("is_public", true)
@@ -309,10 +319,27 @@ export default async function PublicDigitalCardPage({ params }: { params: Promis
   if (result.error || !result.data) notFound();
   const card = result.data as PublicCard;
 
-  await adminClient
-    .from("digital_cards")
-    .update({ view_count: Number(card.view_count || 0) + 1 })
-    .eq("id", card.id);
+  const reqHeaders = await headers();
+  const ua = reqHeaders.get("user-agent") || "";
+  const rawSource = resolvedSearch.source ?? "";
+  const source = rawSource === "qr" ? "qr" : rawSource === "nfc" ? "nfc" : "organic";
+  const eventType = source === "qr" ? "qr_scan" : source === "nfc" ? "nfc_tap" : "view";
+
+  await Promise.all([
+    adminClient.from("digital_cards").update({ view_count: Number(card.view_count || 0) + 1 }).eq("id", card.id),
+    Promise.resolve(
+      adminClient.from("digital_card_events").insert({
+        digital_card_id: card.id,
+        user_id: card.user_id ?? null,
+        event_type: eventType,
+        source,
+        device_type: uaDeviceType(ua),
+        referrer: reqHeaders.get("referer") || null,
+        user_agent: ua || null,
+        metadata: {},
+      })
+    ).catch(() => null),
+  ]);
 
   const links = (card.digital_card_links || [])
     .filter((link) => link.is_visible)
@@ -467,10 +494,13 @@ function PublicSection({
   }
 
   if (section.section_type === "links") {
+    const trackedLinks = [
+      ...(card.website_url ? [{ id: "website", href: safeHref(card.website_url), label: "Website" }] : []),
+      ...links.map((link) => ({ id: link.id, href: linkHref(link), label: link.label })),
+    ];
     return (
-      <div className="space-y-2" style={sectionStyle(section)}>
-        {card.website_url && <ButtonLink href={safeHref(card.website_url)} label="Website" accent={card.accent_color} />}
-        {links.map((link) => <ButtonLink key={link.id} href={linkHref(link)} label={link.label} accent={card.accent_color} />)}
+      <div style={sectionStyle(section)}>
+        <PublicTrackedLinks cardId={card.id} links={trackedLinks} accent={card.accent_color} />
       </div>
     );
   }
@@ -508,7 +538,8 @@ function PublicSection({
   }
 
   if (section.section_type === "qr_code") {
-    const src = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(publicUrl)}`;
+    const qrUrl = publicUrl.includes("?") ? `${publicUrl}&source=qr` : `${publicUrl}?source=qr`;
+    const src = `/api/digital-cards/qr?url=${encodeURIComponent(qrUrl)}&size=256`;
     return (
       <div className="grid place-items-center" style={sectionStyle(section)}>
         <img className="h-[132px] w-[132px] rounded-lg border bg-white p-2" src={src} alt="Digital card QR code" />

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { jsonError, verifyAdminRequest } from "@/lib/admin/server-auth";
+import { triggerStatusNotification } from "@/lib/notifications/status-triggers";
+import type { NotifiableItem } from "@/lib/notifications/status-triggers";
 
 const ALLOWED_ROLES = ["super_admin", "admin", "employee", "staff", "production_manager", "designer", "installer", "customer_support"];
 
@@ -303,6 +305,14 @@ export async function PATCH(request: Request) {
   if (built.error) return jsonError(built.error);
   if (!built.payload) return jsonError("Schedule item payload could not be built.");
 
+  // Fetch the current status before updating so we can detect changes
+  const prevResult = await verified.adminClient
+    .from("production_schedule_items")
+    .select("status")
+    .eq("id", body.id)
+    .maybeSingle();
+  const prevStatus = (prevResult.data as { status?: string } | null)?.status ?? "";
+
   const result = await verified.adminClient
     .from("production_schedule_items")
     .update(built.payload)
@@ -319,6 +329,18 @@ export async function PATCH(request: Request) {
     entity_id: body.id,
     details: { status: built.payload?.status, priority: built.payload?.priority },
   });
+
+  // Fire customer notification if status changed to a customer-facing trigger
+  const newStatus = String(built.payload?.status || "");
+  if (newStatus && prevStatus !== newStatus) {
+    triggerStatusNotification(
+      verified.adminClient,
+      result.data as unknown as NotifiableItem,
+      prevStatus,
+      newStatus,
+      verified.actorId,
+    ).catch(() => null); // non-blocking — don't hold up the response
+  }
 
   return NextResponse.json({ item: result.data });
 }

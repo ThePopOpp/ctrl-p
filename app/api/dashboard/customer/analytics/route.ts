@@ -73,8 +73,16 @@ export async function GET(request: Request) {
       ])
     : [{ data: [], error: null }, { data: [], error: null }];
 
-  if (eventsResult.error) return jsonError(eventsResult.error.message, 400);
-  if (leadsResult.error) return jsonError(leadsResult.error.message, 400);
+  // Treat schema-cache / missing-table errors as empty — tables may not be migrated yet
+  const isTableMissing = (msg: string | null | undefined) =>
+    typeof msg === "string" && (msg.includes("schema cache") || msg.includes("does not exist") || msg.includes("relation") || msg.includes("Could not find"));
+
+  if (eventsResult.error && !isTableMissing(eventsResult.error.message)) {
+    return jsonError(eventsResult.error.message, 400);
+  }
+  if (leadsResult.error && !isTableMissing(leadsResult.error.message)) {
+    return jsonError(leadsResult.error.message, 400);
+  }
 
   const events = eventsResult.data ?? [];
   const totals = events.reduce<Record<string, number>>((acc, event) => {
@@ -86,6 +94,11 @@ export async function GET(request: Request) {
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
+  const sources = events.reduce<Record<string, number>>((acc, event) => {
+    const key = (event as { source?: string | null }).source || "organic";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
 
   return NextResponse.json({
     profile: verified.profile,
@@ -93,15 +106,18 @@ export async function GET(request: Request) {
     events,
     leads: leadsResult.data ?? [],
     totals: {
-      views: cards.reduce((sum, card) => sum + Number(card.view_count || 0), 0) + Number(totals.view || 0),
+      views: cards.reduce((sum, card) => sum + Number(card.view_count || 0), 0),
+      organicViews: Number(totals.view || 0),
       shares: Number(totals.share || 0),
       likes: Number(totals.like || 0),
       qrScans: Number(totals.qr_scan || 0),
+      nfcTaps: Number(totals.nfc_tap || 0),
       linkClicks: Number(totals.link_click || 0),
       copyLinks: Number(totals.copy_link || 0),
       savedContacts: Number(totals.save_contact || 0),
       leads: (leadsResult.data ?? []).length,
     },
     devices,
+    sources,
   });
 }

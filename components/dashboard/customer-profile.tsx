@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Box, Camera, CreditCard, FileCheck2, Home, IdCard, LogOut, Mail, MessageSquare, Moon, Phone, Save, Settings, ShieldCheck, Sun, Truck, Upload, UserCircle, type LucideIcon } from "lucide-react";
+import { BarChart3, Box, CalendarClock, Camera, CreditCard, FileCheck2, Home, IdCard, LogOut, Mail, MessageSquare, Moon, Phone, Save, Settings, ShieldCheck, Sun, Truck, Upload, UserCircle, type LucideIcon } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ const navItems: { label: string; icon: LucideIcon; href: string; active?: boolea
   { label: "Orders", icon: Box, href: "/dashboard/customer#orders" },
   { label: "Invoices", icon: CreditCard, href: "/dashboard/customer#invoices" },
   { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
+  { label: "Bookings", icon: CalendarClock, href: "/dashboard/customer#bookings" },
   { label: "My Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics" },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bell, Box, CreditCard, Eye, FileCheck2, Heart, Home, IdCard, Link as LinkIcon, LogOut, MessageSquare, Moon, Settings, Share2, Sun, Truck, UserCircle, UserPlus, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, Box, CalendarClock, CreditCard, Eye, FileCheck2, Heart, Home, IdCard, Link as LinkIcon, LogOut, MessageSquare, Moon, QrCode, Settings, Share2, Smartphone, Sun, Truck, UserCircle, UserPlus, type LucideIcon } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -17,8 +17,9 @@ type AnalyticsData = {
   cards: { id: string; card_name: string; slug: string; status: string; is_public: boolean; view_count: number; updated_at: string | null }[];
   events: { id: string; digital_card_id: string; event_type: string; device_type: string | null; source: string | null; created_at: string | null }[];
   leads: { id: string; digital_card_id: string; name: string | null; email: string | null; phone: string | null; company: string | null; message: string | null; status: string; created_at: string | null }[];
-  totals: { views: number; shares: number; likes: number; qrScans: number; linkClicks: number; copyLinks: number; savedContacts: number; leads: number };
+  totals: { views: number; organicViews: number; shares: number; likes: number; qrScans: number; nfcTaps: number; linkClicks: number; copyLinks: number; savedContacts: number; leads: number };
   devices: Record<string, number>;
+  sources: Record<string, number>;
 };
 
 const navItems: { label: string; icon: LucideIcon; href: string; active?: boolean }[] = [
@@ -27,6 +28,7 @@ const navItems: { label: string; icon: LucideIcon; href: string; active?: boolea
   { label: "Orders", icon: Box, href: "/dashboard/customer#orders" },
   { label: "Invoices", icon: CreditCard, href: "/dashboard/customer#invoices" },
   { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
+  { label: "Bookings", icon: CalendarClock, href: "/dashboard/customer#bookings" },
   { label: "My Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
   { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics", active: true },
   { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },
@@ -147,14 +149,18 @@ export function CustomerAnalytics() {
             </section>
 
             <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <Stat icon={<Eye className="h-4 w-4" />} label="Total views" value={data.totals.views} hint="Public card loads" />
-              <Stat icon={<Share2 className="h-4 w-4" />} label="Shares" value={data.totals.shares} hint="Share sheet and copy actions" />
-              <Stat icon={<Heart className="h-4 w-4" />} label="Likes" value={data.totals.likes} hint="Visitor interest signal" />
+              <Stat icon={<Eye className="h-4 w-4" />} label="Total views" value={data.totals.views} hint="All-time card loads" />
+              <Stat icon={<Smartphone className="h-4 w-4" />} label="NFC taps" value={data.totals.nfcTaps} hint="Physical tap-to-share events" accent />
+              <Stat icon={<QrCode className="h-4 w-4" />} label="QR scans" value={data.totals.qrScans} hint="QR code scan events" />
               <Stat icon={<UserPlus className="h-4 w-4" />} label="Leads" value={data.totals.leads} hint="Send me your info submissions" />
               <Stat icon={<LinkIcon className="h-4 w-4" />} label="Link clicks" value={data.totals.linkClicks} hint="Tracked link engagement" />
               <Stat icon={<IdCard className="h-4 w-4" />} label="Contacts saved" value={data.totals.savedContacts} hint=".vcf downloads" />
-              <Stat icon={<BarChart3 className="h-4 w-4" />} label="QR scans" value={data.totals.qrScans} hint="QR scan events" />
-              <Stat icon={<CopyIcon />} label="Copied links" value={data.totals.copyLinks} hint="Copy URL actions" />
+              <Stat icon={<Share2 className="h-4 w-4" />} label="Shares" value={data.totals.shares} hint="Share sheet and copy actions" />
+              <Stat icon={<Heart className="h-4 w-4" />} label="Likes" value={data.totals.likes} hint="Visitor interest signal" />
+            </section>
+
+            <section className="mb-5">
+              <ActivityChart events={data.events} />
             </section>
 
             <section className="mb-5 grid gap-4 xl:grid-cols-[1fr_420px]">
@@ -162,22 +168,43 @@ export function CustomerAnalytics() {
                 <CardHeader className="pb-3"><CardTitle className="text-base">Recent activity</CardTitle><CardDescription>Latest card engagement events.</CardDescription></CardHeader>
                 <CardContent className="p-0">
                   <Table>
-                    <TableHeader><TableRow><TableHead className="pl-4">Card</TableHead><TableHead>Event</TableHead><TableHead>Device</TableHead><TableHead className="pr-4 text-right">When</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead className="pl-4">Card</TableHead><TableHead>Event</TableHead><TableHead>Source</TableHead><TableHead>Device</TableHead><TableHead className="pr-4 text-right">When</TableHead></TableRow></TableHeader>
                     <TableBody>
-                      {recentEvents.map((event) => <TableRow key={event.id}><TableCell className="pl-4 font-medium">{cardsById.get(event.digital_card_id)?.card_name || "Digital card"}</TableCell><TableCell><Badge variant="outline">{human(event.event_type)}</Badge></TableCell><TableCell>{human(event.device_type)}</TableCell><TableCell className="pr-4 text-right text-muted-foreground">{date(event.created_at)}</TableCell></TableRow>)}
-                      {!recentEvents.length && <TableRow><TableCell colSpan={4} className="p-6 text-center text-muted-foreground">No tracked events yet.</TableCell></TableRow>}
+                      {recentEvents.map((event) => (
+                        <TableRow key={event.id}>
+                          <TableCell className="pl-4 font-medium">{cardsById.get(event.digital_card_id)?.card_name || "Digital card"}</TableCell>
+                          <TableCell><SourceBadge type={event.event_type} /></TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{event.source || "organic"}</TableCell>
+                          <TableCell>{human(event.device_type)}</TableCell>
+                          <TableCell className="pr-4 text-right text-muted-foreground">{date(event.created_at)}</TableCell>
+                        </TableRow>
+                      ))}
+                      {!recentEvents.length && <TableRow><TableCell colSpan={5} className="p-6 text-center text-muted-foreground">No tracked events yet. Share your card link to start seeing data.</TableCell></TableRow>}
                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-base">Device mix</CardTitle><CardDescription>Where visitors are viewing cards.</CardDescription></CardHeader>
-                <CardContent className="space-y-3">
-                  {Object.entries(data.devices).map(([device, count]) => <Meter key={device} label={human(device)} value={count} total={Math.max(1, data.events.length)} />)}
-                  {!Object.keys(data.devices).length && <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Device data appears after public events are tracked.</div>}
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader className="pb-3"><CardTitle className="text-base">Traffic sources</CardTitle><CardDescription>How visitors are finding your card.</CardDescription></CardHeader>
+                  <CardContent className="space-y-3">
+                    {Object.entries(data.sources).length > 0
+                      ? Object.entries(data.sources).sort((a, b) => b[1] - a[1]).map(([source, count]) => (
+                          <Meter key={source} label={sourceLabel(source)} value={count} total={Math.max(1, data.events.length)} />
+                        ))
+                      : <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Source data appears after events are tracked.</div>
+                    }
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3"><CardTitle className="text-base">Device mix</CardTitle><CardDescription>Where visitors are viewing cards.</CardDescription></CardHeader>
+                  <CardContent className="space-y-3">
+                    {Object.entries(data.devices).map(([device, count]) => <Meter key={device} label={human(device)} value={count} total={Math.max(1, data.events.length)} />)}
+                    {!Object.keys(data.devices).length && <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Device data appears after public events are tracked.</div>}
+                  </CardContent>
+                </Card>
+              </div>
             </section>
 
             <Card>
@@ -205,8 +232,42 @@ export function CustomerAnalytics() {
   );
 }
 
-function Stat({ icon, label, value, hint }: { icon: ReactNode; label: string; value: number; hint: string }) {
-  return <Card><CardContent className="p-4"><div className="flex items-center justify-between gap-3"><div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div><div className="text-primary">{icon}</div></div><div className="mt-2 text-[24px] font-semibold leading-none">{value}</div><div className="mt-2 text-[11px] text-muted-foreground">{hint}</div></CardContent></Card>;
+function sourceLabel(source: string) {
+  if (source === "nfc") return "NFC tap";
+  if (source === "qr") return "QR scan";
+  if (source === "organic") return "Direct / organic";
+  return human(source);
+}
+
+const eventColors: Record<string, string> = {
+  nfc_tap: "border-primary/30 bg-primary/15 text-lime-800 dark:text-lime-200",
+  qr_scan: "border-blue-500/25 bg-blue-500/10 text-blue-700 dark:text-blue-300",
+  view: "border-border bg-muted/50 text-muted-foreground",
+  link_click: "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+  lead_submit: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  save_contact: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  share: "border-orange-500/25 bg-orange-500/10 text-orange-700 dark:text-orange-300",
+  like: "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-300",
+  copy_link: "border-border bg-muted/50 text-muted-foreground",
+};
+
+function SourceBadge({ type }: { type: string }) {
+  return <Badge className={`border text-[11px] ${eventColors[type] || "border-border bg-muted/50 text-muted-foreground"}`}>{human(type)}</Badge>;
+}
+
+function Stat({ icon, label, value, hint, accent }: { icon: ReactNode; label: string; value: number; hint: string; accent?: boolean }) {
+  return (
+    <Card className={accent && value > 0 ? "border-primary/30" : ""}>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+          <div className={accent && value > 0 ? "text-primary" : "text-muted-foreground"}>{icon}</div>
+        </div>
+        <div className={`mt-2 text-[24px] font-semibold leading-none ${accent && value > 0 ? "text-primary" : ""}`}>{value}</div>
+        <div className="mt-2 text-[11px] text-muted-foreground">{hint}</div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function Meter({ label, value, total }: { label: string; value: number; total: number }) {
@@ -216,4 +277,247 @@ function Meter({ label, value, total }: { label: string; value: number; total: n
 
 function CopyIcon() {
   return <span className="text-xs font-semibold">URL</span>;
+}
+
+// ── Activity chart ───────────────────────────────────────────────────────────
+
+type DayPoint = { dateKey: string; shortLabel: string; fullLabel: string; views: number; nfc: number; qr: number };
+
+function buildTimeSeries(events: AnalyticsData["events"]): DayPoint[] {
+  const today = new Date();
+  const points: DayPoint[] = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (29 - i));
+    return {
+      dateKey: d.toISOString().slice(0, 10),
+      shortLabel: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d),
+      fullLabel: new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(d),
+      views: 0,
+      nfc: 0,
+      qr: 0,
+    };
+  });
+
+  const byDate = new Map(points.map((p, i) => [p.dateKey, i]));
+
+  for (const e of events) {
+    if (!e.created_at) continue;
+    const idx = byDate.get(e.created_at.slice(0, 10));
+    if (idx === undefined) continue;
+    if (e.event_type === "view") points[idx].views++;
+    else if (e.event_type === "nfc_tap") points[idx].nfc++;
+    else if (e.event_type === "qr_scan") points[idx].qr++;
+  }
+
+  return points;
+}
+
+function niceMax(v: number) {
+  if (v <= 0) return 4;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  const step = v / mag <= 2 ? mag / 2 : v / mag <= 5 ? mag : mag * 2;
+  return Math.ceil(v / step) * step;
+}
+
+const SERIES = [
+  { key: "views" as const, label: "Views", stroke: "#94a3b8", fill: "rgba(148,163,184,0.1)" },
+  { key: "nfc" as const, label: "NFC taps", stroke: "#84cc16", fill: "rgba(132,204,22,0.13)" },
+  { key: "qr" as const, label: "QR scans", stroke: "#60a5fa", fill: "rgba(96,165,250,0.12)" },
+];
+
+function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
+  const points = useMemo(() => buildTimeSeries(events), [events]);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [visible, setVisible] = useState<Set<string>>(() => new Set(["views", "nfc", "qr"]));
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const VW = 760, VH = 200;
+  const ML = 40, MR = 16, MT = 16, MB = 26;
+  const PW = VW - ML - MR, PH = VH - MT - MB;
+  const n = points.length;
+
+  const maxVal = useMemo(() => {
+    const vals = points.flatMap((p) =>
+      SERIES.filter((s) => visible.has(s.key)).map((s) => p[s.key]),
+    );
+    return niceMax(Math.max(0, ...vals));
+  }, [points, visible]);
+
+  const yTicks = useMemo(() => {
+    const step = maxVal / 4;
+    return [0, 1, 2, 3, 4].map((i) => Math.round(i * step));
+  }, [maxVal]);
+
+  function toX(i: number) { return ML + (i / (n - 1)) * PW; }
+  function toY(v: number) { return MT + PH - (v / maxVal) * PH; }
+
+  function linePath(key: keyof Pick<DayPoint, "views" | "nfc" | "qr">) {
+    return points.map((p, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(p[key]).toFixed(1)}`).join(" ");
+  }
+
+  function areaPath(key: keyof Pick<DayPoint, "views" | "nfc" | "qr">) {
+    const base = (MT + PH).toFixed(1);
+    const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(p[key]).toFixed(1)}`).join(" ");
+    return `${line}L${toX(n - 1).toFixed(1)},${base}L${toX(0).toFixed(1)},${base}Z`;
+  }
+
+  function onMouseMove(e: React.MouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * VW;
+    const frac = (svgX - ML) / PW;
+    setHoverIdx(Math.max(0, Math.min(n - 1, Math.round(frac * (n - 1)))));
+  }
+
+  function toggleSeries(key: string) {
+    setVisible((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) { if (next.size > 1) next.delete(key); }
+      else next.add(key);
+      return next;
+    });
+  }
+
+  const hovered = hoverIdx !== null ? points[hoverIdx] : null;
+  const totalEvents = points.reduce((s, p) => s + p.views + p.nfc + p.qr, 0);
+  const peakDay = points.reduce((best, p) => {
+    const t = p.views + p.nfc + p.qr;
+    return t > best.total ? { label: p.shortLabel, total: t } : best;
+  }, { label: "—", total: 0 });
+
+  // X-axis tick indices: first, every 7th, last
+  const xTickIndices = new Set([0, 6, 13, 20, 27, n - 1]);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">30-day activity</CardTitle>
+            <CardDescription>Daily event trend over the last 30 days.</CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {SERIES.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => toggleSeries(s.key)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  visible.has(s.key)
+                    ? "border-transparent bg-foreground/10 text-foreground"
+                    : "border-dashed text-muted-foreground/50",
+                )}
+              >
+                <span className="h-2 w-2 rounded-full" style={{ background: s.stroke }} />
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pb-3">
+        <div className="relative">
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${VW} ${VH}`}
+            width="100%"
+            height="auto"
+            className="overflow-visible"
+            onMouseMove={onMouseMove}
+            onMouseLeave={() => setHoverIdx(null)}
+          >
+            {/* Y-axis grid lines and labels */}
+            {yTicks.map((tick) => {
+              const y = toY(tick).toFixed(1);
+              return (
+                <g key={tick}>
+                  <line x1={ML} y1={y} x2={ML + PW} y2={y} stroke="currentColor" strokeOpacity={0.07} strokeWidth={1} />
+                  <text x={ML - 6} y={y} textAnchor="end" dominantBaseline="middle" fontSize={10} fill="currentColor" fillOpacity={0.45}>{tick}</text>
+                </g>
+              );
+            })}
+
+            {/* Area fills (drawn first, behind lines) */}
+            {SERIES.filter((s) => visible.has(s.key)).map((s) => (
+              <path key={`area-${s.key}`} d={areaPath(s.key)} fill={s.fill} />
+            ))}
+
+            {/* Lines */}
+            {SERIES.filter((s) => visible.has(s.key)).map((s) => (
+              <path key={`line-${s.key}`} d={linePath(s.key)} fill="none" stroke={s.stroke} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
+            ))}
+
+            {/* Hover crosshair */}
+            {hoverIdx !== null && (
+              <line
+                x1={toX(hoverIdx)}
+                y1={MT}
+                x2={toX(hoverIdx)}
+                y2={MT + PH}
+                stroke="currentColor"
+                strokeOpacity={0.2}
+                strokeWidth={1}
+                strokeDasharray="4 3"
+              />
+            )}
+
+            {/* Hover dots */}
+            {hoverIdx !== null && SERIES.filter((s) => visible.has(s.key)).map((s) => {
+              const p = points[hoverIdx];
+              return (
+                <circle
+                  key={`dot-${s.key}`}
+                  cx={toX(hoverIdx)}
+                  cy={toY(p[s.key])}
+                  r={3.5}
+                  fill={s.stroke}
+                  stroke="white"
+                  strokeWidth={1.5}
+                />
+              );
+            })}
+
+            {/* X-axis labels */}
+            {points.map((p, i) => {
+              if (!xTickIndices.has(i)) return null;
+              return (
+                <text key={p.dateKey} x={toX(i).toFixed(1)} y={VH - 4} textAnchor="middle" fontSize={10} fill="currentColor" fillOpacity={0.45}>
+                  {p.shortLabel}
+                </text>
+              );
+            })}
+          </svg>
+
+          {/* Hover tooltip */}
+          {hovered && (
+            <div className="pointer-events-none absolute left-0 top-0 flex items-start">
+              <div
+                className="ml-[40px] rounded-lg border bg-popover px-3 py-2 text-[11px] shadow-md"
+                style={{
+                  transform: `translateX(calc(${((points.indexOf(hovered) / (n - 1)) * 100).toFixed(1)}% - 50%))`,
+                  maxWidth: 160,
+                }}
+              >
+                <div className="mb-1.5 font-semibold text-foreground">{hovered.fullLabel}</div>
+                {SERIES.filter((s) => visible.has(s.key)).map((s) => (
+                  <div key={s.key} className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.stroke }} />
+                      {s.label}
+                    </span>
+                    <span className="font-medium text-foreground">{hovered[s.key]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Summary row */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 border-t pt-2 text-[11px] text-muted-foreground">
+          <span><span className="font-medium text-foreground">{totalEvents}</span> total events in 30 days</span>
+          {peakDay.total > 0 && <span>Peak: <span className="font-medium text-foreground">{peakDay.label}</span> ({peakDay.total} events)</span>}
+          <span>Avg: <span className="font-medium text-foreground">{(totalEvents / 30).toFixed(1)}</span> / day</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
