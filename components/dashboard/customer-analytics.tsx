@@ -2,15 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { BarChart3, Bell, Box, CalendarClock, CreditCard, Eye, FileCheck2, Heart, Home, IdCard, Link as LinkIcon, LogOut, MessageSquare, Moon, QrCode, Settings, Share2, Smartphone, Sun, Truck, UserCircle, UserPlus, type LucideIcon } from "lucide-react";
+import { Eye, Heart, IdCard, Link as LinkIcon, QrCode, Share2, Smartphone, UserPlus } from "lucide-react";
 
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+import {
+  CustomerShell,
+  human,
+  useCustomerSession,
+} from "@/components/dashboard/customer-shell";
 
 type AnalyticsData = {
   profile: { full_name: string | null; email?: string | null; company?: string | null; profile_photo_url?: string | null };
@@ -22,213 +26,214 @@ type AnalyticsData = {
   sources: Record<string, number>;
 };
 
-const navItems: { label: string; icon: LucideIcon; href: string; active?: boolean }[] = [
-  { label: "Overview", icon: Home, href: "/dashboard/customer" },
-  { label: "Profile", icon: UserCircle, href: "/dashboard/customer/profile" },
-  { label: "Orders", icon: Box, href: "/dashboard/customer#orders" },
-  { label: "Invoices", icon: CreditCard, href: "/dashboard/customer#invoices" },
-  { label: "Artwork", icon: FileCheck2, href: "/dashboard/customer#artwork" },
-  { label: "Bookings", icon: CalendarClock, href: "/dashboard/customer#bookings" },
-  { label: "My Products", icon: IdCard, href: "/dashboard/customer/manage-products" },
-  { label: "Analytics", icon: BarChart3, href: "/dashboard/customer/analytics", active: true },
-  { label: "Messages", icon: MessageSquare, href: "/dashboard/customer#messages" },
-  { label: "Shipping", icon: Truck, href: "/dashboard/customer#shipping" },
-  { label: "Settings", icon: Settings, href: "/dashboard/customer/settings" },
-];
-
-function human(value: string | null | undefined) {
-  return String(value || "unknown").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function date(value: string | null | undefined) {
-  if (!value) return "Not set";
+function fmtEventDate(value: string | null | undefined) {
+  if (!value) return "—";
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
-async function customerToken() {
-  const db = getSupabaseBrowserClient();
-  const session = db ? (await db.auth.getSession()).data.session : null;
-  if (!session?.access_token) throw new Error("Sign in again before viewing analytics.");
-  return session.access_token;
-}
-
 export function CustomerAnalytics() {
-  const router = useRouter();
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [message, setMessage] = useState("");
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const { data: sessionData, state: sessionState, errorMessage, theme, setTheme, messages, setMessages, bookings, getToken, signOut } = useCustomerSession();
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [analyticsState, setAnalyticsState] = useState<"loading" | "ready" | "error">("loading");
+  const [analyticsError, setAnalyticsError] = useState("");
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem("controlp_customer_theme");
-    if (storedTheme === "light" || storedTheme === "dark") setTheme(storedTheme);
-  }, []);
+    function handleClick(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+    }
+    if (notifOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [notifOpen]);
 
+  // Load analytics data once the session is ready
   useEffect(() => {
+    if (sessionState !== "ready") return;
     async function load() {
       try {
-        const token = await customerToken();
-        const response = await fetch("/api/dashboard/customer/analytics", { headers: { authorization: `Bearer ${token}` } });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || "Could not load analytics.");
-        setData(payload as AnalyticsData);
-        setState("ready");
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Could not load analytics.");
-        setState("error");
+        const token = await getToken();
+        if (!token) throw new Error("Not authenticated.");
+        const res = await fetch("/api/dashboard/customer/analytics", { headers: { authorization: `Bearer ${token}` } });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(payload.error || "Could not load analytics.");
+        setAnalyticsData(payload as AnalyticsData);
+        setAnalyticsState("ready");
+      } catch (err) {
+        setAnalyticsError(err instanceof Error ? err.message : "Could not load analytics.");
+        setAnalyticsState("error");
       }
     }
     load();
-  }, []);
+  }, [sessionState, getToken]);
 
-  async function signOut() {
-    const db = getSupabaseBrowserClient();
-    await db?.auth.signOut();
-    router.replace("/login");
+  async function openNotifications() {
+    setNotifOpen((o) => !o);
+    const unread = messages.filter((m) => !m.read_at && m.direction === "outbound");
+    if (!unread.length) return;
+    setMessages((prev) => prev.map((m) => (!m.read_at && m.direction === "outbound" ? { ...m, read_at: new Date().toISOString() } : m)));
+    const token = await getToken();
+    if (!token) return;
+    await fetch("/api/dashboard/customer/notifications/read", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ids: unread.map((m) => m.id) }),
+    }).catch(() => null);
   }
 
-  function toggleTheme() {
-    setTheme((current) => {
-      const next = current === "dark" ? "light" : "dark";
-      window.localStorage.setItem("controlp_customer_theme", next);
-      return next;
-    });
-  }
+  const upcomingBookings = bookings.filter((b) => new Date(b.start_time) >= new Date());
+  const unreadMessages = messages.filter((m) => !m.read_at && m.direction === "outbound");
+  const recentEvents = analyticsData?.events.slice(0, 20) ?? [];
+  const cardsById = useMemo(() => new Map((analyticsData?.cards ?? []).map((c) => [c.id, c])), [analyticsData]);
 
-  const recentEvents = data?.events.slice(0, 20) ?? [];
-  const cardsById = useMemo(() => new Map((data?.cards ?? []).map((card) => [card.id, card])), [data?.cards]);
+  // Map analytics load state into shell state
+  const shellState = sessionState === "loading" ? "loading" : sessionState === "denied" ? "denied" : "ready";
 
   return (
-    <div className={cn(theme === "dark" && "dark", "min-h-screen bg-background text-foreground")}>
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
-        <a className="mb-5 flex items-center gap-3 px-2" href="/">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-[11px] font-black text-primary-foreground">cp</div>
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.32em] text-muted-foreground">controlp.io</div>
-            <div className="text-sm font-semibold">Customer</div>
-          </div>
-        </a>
-        <nav className="space-y-1">
-          {navItems.map(({ label, icon: Icon, href, active }) => (
-            <a key={label} href={href} className={cn("flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-accent-foreground", active && "bg-accent font-medium text-accent-foreground")}>
-              <Icon className="h-4 w-4" />
-              {label}
-            </a>
-          ))}
-        </nav>
-        {data?.profile && <div className="absolute bottom-3 left-3 right-3 rounded-xl border bg-background/55 p-2">
-          <div className="flex items-center gap-2">
-            {data.profile.profile_photo_url ? <img className="h-9 w-9 shrink-0 rounded-full object-cover" src={data.profile.profile_photo_url} alt="" /> : <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(data.profile.full_name || data.profile.email || "C").slice(0, 1).toUpperCase()}</div>}
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">{data.profile.full_name || "Customer"}</div>
-              <div className="truncate text-xs text-muted-foreground">{data.profile.company || data.profile.email || "ControlP.io"}</div>
-            </div>
-          </div>
-        </div>}
-      </aside>
+    <CustomerShell
+      profile={sessionData?.profile}
+      unreadCount={unreadMessages.length}
+      upcomingBookingsCount={upcomingBookings.length}
+      theme={theme}
+      onThemeChange={() => setTheme(theme === "dark" ? "light" : "dark")}
+      onSignOut={signOut}
+      activePage="Analytics"
+      state={shellState}
+      errorMessage={errorMessage}
+      messages={messages}
+      onOpenNotifications={openNotifications}
+      notifOpen={notifOpen}
+      notifRef={notifRef}
+      onCloseNotif={() => setNotifOpen(false)}
+    >
+      {analyticsState === "loading" && (
+        <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Loading analytics...</div>
+      )}
+      {analyticsState === "error" && (
+        <div className="rounded-xl border border-red-500/30 bg-card p-6 text-sm text-red-600 dark:text-red-300">{analyticsError}</div>
+      )}
+      {analyticsState === "ready" && analyticsData && (
+        <>
+          <section className="mb-5">
+            <h1 className="text-[25px] font-semibold tracking-tight">Analytics</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Track digital card views, shares, likes, contact saves, link clicks, and leads.</p>
+          </section>
 
-      <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">
-        <div className="flex h-12 items-center gap-3 px-5">
-          <div className="text-xs text-muted-foreground">Customer <span className="mx-2">/</span><span className="font-medium text-foreground">Analytics</span></div>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Notifications"><Bell className="h-4 w-4" /></Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Toggle theme" onClick={toggleTheme}>{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
-            <Button variant="outline" className="h-8 text-xs" onClick={signOut}><LogOut className="h-4 w-4" /> Sign out</Button>
-          </div>
-        </div>
-      </header>
+          <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <Stat icon={<Eye className="h-4 w-4" />} label="Total views" value={analyticsData.totals.views} hint="All-time card loads" />
+            <Stat icon={<Smartphone className="h-4 w-4" />} label="NFC taps" value={analyticsData.totals.nfcTaps} hint="Physical tap-to-share events" accent />
+            <Stat icon={<QrCode className="h-4 w-4" />} label="QR scans" value={analyticsData.totals.qrScans} hint="QR code scan events" />
+            <Stat icon={<UserPlus className="h-4 w-4" />} label="Leads" value={analyticsData.totals.leads} hint="Send me your info submissions" />
+            <Stat icon={<LinkIcon className="h-4 w-4" />} label="Link clicks" value={analyticsData.totals.linkClicks} hint="Tracked link engagement" />
+            <Stat icon={<IdCard className="h-4 w-4" />} label="Contacts saved" value={analyticsData.totals.savedContacts} hint=".vcf downloads" />
+            <Stat icon={<Share2 className="h-4 w-4" />} label="Shares" value={analyticsData.totals.shares} hint="Share sheet and copy actions" />
+            <Stat icon={<Heart className="h-4 w-4" />} label="Likes" value={analyticsData.totals.likes} hint="Visitor interest signal" />
+          </section>
 
-      <main className="px-4 py-5 lg:pl-[258px] lg:pr-6">
-        {state === "loading" && <Card><CardContent className="p-5 text-sm text-muted-foreground">Loading analytics...</CardContent></Card>}
-        {state === "error" && <Card className="border-red-500/30"><CardContent className="p-5 text-sm text-red-600 dark:text-red-300">{message}</CardContent></Card>}
-        {state === "ready" && data && (
-          <>
-            <section className="mb-5">
-              <h1 className="text-[25px] font-semibold tracking-tight">Analytics</h1>
-              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Track digital card views, shares, likes, contact saves, link clicks, and leads.</p>
-            </section>
+          <section className="mb-5">
+            <ActivityChart events={analyticsData.events} />
+          </section>
 
-            <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <Stat icon={<Eye className="h-4 w-4" />} label="Total views" value={data.totals.views} hint="All-time card loads" />
-              <Stat icon={<Smartphone className="h-4 w-4" />} label="NFC taps" value={data.totals.nfcTaps} hint="Physical tap-to-share events" accent />
-              <Stat icon={<QrCode className="h-4 w-4" />} label="QR scans" value={data.totals.qrScans} hint="QR code scan events" />
-              <Stat icon={<UserPlus className="h-4 w-4" />} label="Leads" value={data.totals.leads} hint="Send me your info submissions" />
-              <Stat icon={<LinkIcon className="h-4 w-4" />} label="Link clicks" value={data.totals.linkClicks} hint="Tracked link engagement" />
-              <Stat icon={<IdCard className="h-4 w-4" />} label="Contacts saved" value={data.totals.savedContacts} hint=".vcf downloads" />
-              <Stat icon={<Share2 className="h-4 w-4" />} label="Shares" value={data.totals.shares} hint="Share sheet and copy actions" />
-              <Stat icon={<Heart className="h-4 w-4" />} label="Likes" value={data.totals.likes} hint="Visitor interest signal" />
-            </section>
-
-            <section className="mb-5">
-              <ActivityChart events={data.events} />
-            </section>
-
-            <section className="mb-5 grid gap-4 xl:grid-cols-[1fr_420px]">
-              <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-base">Recent activity</CardTitle><CardDescription>Latest card engagement events.</CardDescription></CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader><TableRow><TableHead className="pl-4">Card</TableHead><TableHead>Event</TableHead><TableHead>Source</TableHead><TableHead>Device</TableHead><TableHead className="pr-4 text-right">When</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {recentEvents.map((event) => (
-                        <TableRow key={event.id}>
-                          <TableCell className="pl-4 font-medium">{cardsById.get(event.digital_card_id)?.card_name || "Digital card"}</TableCell>
-                          <TableCell><SourceBadge type={event.event_type} /></TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{event.source || "organic"}</TableCell>
-                          <TableCell>{human(event.device_type)}</TableCell>
-                          <TableCell className="pr-4 text-right text-muted-foreground">{date(event.created_at)}</TableCell>
-                        </TableRow>
-                      ))}
-                      {!recentEvents.length && <TableRow><TableCell colSpan={5} className="p-6 text-center text-muted-foreground">No tracked events yet. Share your card link to start seeing data.</TableCell></TableRow>}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader className="pb-3"><CardTitle className="text-base">Traffic sources</CardTitle><CardDescription>How visitors are finding your card.</CardDescription></CardHeader>
-                  <CardContent className="space-y-3">
-                    {Object.entries(data.sources).length > 0
-                      ? Object.entries(data.sources).sort((a, b) => b[1] - a[1]).map(([source, count]) => (
-                          <Meter key={source} label={sourceLabel(source)} value={count} total={Math.max(1, data.events.length)} />
-                        ))
-                      : <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Source data appears after events are tracked.</div>
-                    }
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-3"><CardTitle className="text-base">Device mix</CardTitle><CardDescription>Where visitors are viewing cards.</CardDescription></CardHeader>
-                  <CardContent className="space-y-3">
-                    {Object.entries(data.devices).map(([device, count]) => <Meter key={device} label={human(device)} value={count} total={Math.max(1, data.events.length)} />)}
-                    {!Object.keys(data.devices).length && <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Device data appears after public events are tracked.</div>}
-                  </CardContent>
-                </Card>
-              </div>
-            </section>
-
+          <section className="mb-5 grid gap-4 xl:grid-cols-[1fr_420px]">
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-base">Lead capture</CardTitle><CardDescription>People who used the public “Send me your info” form.</CardDescription></CardHeader>
-              <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {data.leads.map((lead) => (
-                  <div key={lead.id} className="rounded-lg border bg-background/35 p-3">
-                    <div className="flex items-start justify-between gap-3"><div className="font-medium">{lead.name || "New lead"}</div><Badge variant="outline">{human(lead.status)}</Badge></div>
-                    <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                      {lead.email && <div>{lead.email}</div>}
-                      {lead.phone && <div>{lead.phone}</div>}
-                      {lead.company && <div>{lead.company}</div>}
-                      {lead.message && <div className="pt-1 text-foreground">{lead.message}</div>}
-                    </div>
-                    <div className="mt-2 text-[11px] text-muted-foreground">{date(lead.created_at)}</div>
-                  </div>
-                ))}
-                {!data.leads.length && <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground md:col-span-2 xl:col-span-3">No leads yet. Public card lead forms will land here.</div>}
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Recent activity</CardTitle>
+                <CardDescription>Latest card engagement events.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="pl-4">Card</TableHead>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Device</TableHead>
+                      <TableHead className="pr-4 text-right">When</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentEvents.map((event) => (
+                      <TableRow key={event.id}>
+                        <TableCell className="pl-4 font-medium">{cardsById.get(event.digital_card_id)?.card_name || "Digital card"}</TableCell>
+                        <TableCell><SourceBadge type={event.event_type} /></TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{event.source || "organic"}</TableCell>
+                        <TableCell>{human(event.device_type)}</TableCell>
+                        <TableCell className="pr-4 text-right text-muted-foreground">{fmtEventDate(event.created_at)}</TableCell>
+                      </TableRow>
+                    ))}
+                    {!recentEvents.length && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="p-6 text-center text-muted-foreground">No tracked events yet. Share your card link to start seeing data.</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
-          </>
-        )}
-      </main>
-    </div>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Traffic sources</CardTitle>
+                  <CardDescription>How visitors are finding your card.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {Object.entries(analyticsData.sources).length > 0
+                    ? Object.entries(analyticsData.sources).sort((a, b) => b[1] - a[1]).map(([source, count]) => (
+                        <Meter key={source} label={sourceLabel(source)} value={count} total={Math.max(1, analyticsData.events.length)} />
+                      ))
+                    : <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Source data appears after events are tracked.</div>
+                  }
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Device mix</CardTitle>
+                  <CardDescription>Where visitors are viewing cards.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {Object.entries(analyticsData.devices).map(([device, count]) => (
+                    <Meter key={device} label={human(device)} value={count} total={Math.max(1, analyticsData.events.length)} />
+                  ))}
+                  {!Object.keys(analyticsData.devices).length && (
+                    <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Device data appears after public events are tracked.</div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Lead capture</CardTitle>
+              <CardDescription>People who used the public "Send me your info" form.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {analyticsData.leads.map((lead) => (
+                <div key={lead.id} className="rounded-lg border bg-background/35 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="font-medium">{lead.name || "New lead"}</div>
+                    <Badge variant="outline">{human(lead.status)}</Badge>
+                  </div>
+                  <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                    {lead.email && <div>{lead.email}</div>}
+                    {lead.phone && <div>{lead.phone}</div>}
+                    {lead.company && <div>{lead.company}</div>}
+                    {lead.message && <div className="pt-1 text-foreground">{lead.message}</div>}
+                  </div>
+                  <div className="mt-2 text-[11px] text-muted-foreground">{fmtEventDate(lead.created_at)}</div>
+                </div>
+              ))}
+              {!analyticsData.leads.length && (
+                <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground md:col-span-2 xl:col-span-3">
+                  No leads yet. Public card lead forms will land here.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </CustomerShell>
   );
 }
 
@@ -272,11 +277,12 @@ function Stat({ icon, label, value, hint, accent }: { icon: ReactNode; label: st
 
 function Meter({ label, value, total }: { label: string; value: number; total: number }) {
   const percent = Math.round((value / total) * 100);
-  return <div><div className="mb-1 flex justify-between text-sm"><span>{label}</span><span className="text-muted-foreground">{value}</span></div><div className="h-2 rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} /></div></div>;
-}
-
-function CopyIcon() {
-  return <span className="text-xs font-semibold">URL</span>;
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-sm"><span>{label}</span><span className="text-muted-foreground">{value}</span></div>
+      <div className="h-2 rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} /></div>
+    </div>
+  );
 }
 
 // ── Activity bar chart ───────────────────────────────────────────────────────
@@ -318,7 +324,6 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [VW, setVW] = useState(800);
 
-  // Track actual container width so SVG coordinates match CSS pixels 1:1 — no viewBox scaling.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -379,7 +384,6 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
             }}
             onMouseLeave={() => setHoverIdx(null)}
           >
-            {/* Y grid */}
             {yTicks.map((tick) => {
               const y = toY(tick).toFixed(1);
               return (
@@ -390,7 +394,6 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
               );
             })}
 
-            {/* Stacked bars */}
             {points.map((p, i) => {
               const isHovered = hoverIdx === i;
               const segments: { key: "views" | "nfc" | "qr"; count: number; color: string }[] = [
@@ -408,25 +411,19 @@ function ActivityChart({ events }: { events: AnalyticsData["events"] }) {
                     if (!count) return null;
                     const h = (count / yMax) * PH;
                     yOffset -= h;
-                    return (
-                      <rect key={key} x={barX(i)} y={yOffset} width={barW} height={h} fill={color} fillOpacity={isHovered ? 1 : 0.75} rx={2} />
-                    );
+                    return <rect key={key} x={barX(i)} y={yOffset} width={barW} height={h} fill={color} fillOpacity={isHovered ? 1 : 0.75} rx={2} />;
                   })}
                 </g>
               );
             })}
 
-            {/* X labels — all days */}
-            {points.map((p, i) => {
-              return (
-                <text key={p.dateKey} x={(barX(i) + barW / 2).toFixed(1)} y={VH - 6} textAnchor="middle" fontSize={10} fill="currentColor" fillOpacity={0.45}>
-                  {p.shortLabel}
-                </text>
-              );
-            })}
+            {points.map((p, i) => (
+              <text key={p.dateKey} x={(barX(i) + barW / 2).toFixed(1)} y={VH - 6} textAnchor="middle" fontSize={10} fill="currentColor" fillOpacity={0.45}>
+                {p.shortLabel}
+              </text>
+            ))}
           </svg>
 
-          {/* Hover tooltip */}
           {hoverIdx !== null && (() => {
             const p = points[hoverIdx];
             const pct = ((hoverIdx + 0.5) / n * 100).toFixed(1);
