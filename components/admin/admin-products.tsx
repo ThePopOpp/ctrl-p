@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   Sun,
 } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData, saveAdminProduct } from "@/lib/admin/admin-api";
 import type { ProductPayload } from "@/lib/admin/admin-api";
@@ -47,6 +48,12 @@ function jsonCount(value: unknown) {
 function jsonText(value: unknown, fallback: string) {
   if (value === null || value === undefined || value === "") return fallback;
   return JSON.stringify(value, null, 2);
+}
+
+async function handleSignOut() {
+  const db = getSupabaseBrowserClient();
+  if (db) await db.auth.signOut();
+  window.location.href = "/login";
 }
 
 export function AdminProducts() {
@@ -127,12 +134,11 @@ export function AdminProducts() {
     <div className={cn(theme === "dark" && "dark")}>
       <div className="min-h-screen bg-background text-foreground">
         <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
-          <div className="mb-5 px-2">
+          <div className="mb-5 px-2 pt-[5px]">
             <a href="/admin">
-              <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[140px] dark:hidden" />
-              <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[140px] dark:block" />
+              <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[125px] dark:hidden" />
+              <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[125px] dark:block" />
             </a>
-            <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Super Admin</div>
           </div>
 
           <nav className="space-y-4">
@@ -160,6 +166,18 @@ export function AdminProducts() {
               </div>
             ))}
           </nav>
+
+          <div className="absolute bottom-3 left-3 right-3">
+            <div className="mb-3 border-t border-border" />
+            <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2">
+              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold">JW</div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-medium">Jeremy Waters</div>
+                <div className="truncate text-[10px] text-muted-foreground">Owner - Super Admin</div>
+              </div>
+              <button onClick={handleSignOut} aria-label="Sign out" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button>
+            </div>
+          </div>
         </aside>
 
         <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">

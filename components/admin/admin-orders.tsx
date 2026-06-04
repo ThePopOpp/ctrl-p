@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Bell, CalendarDays, ChevronRight, Columns3, List, Moon, Plus, Search, Sun } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 import { createAdminOrder, getCurrentAdminProfile, loadAdminDashboardData, updateAdminOrder } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
@@ -54,6 +56,12 @@ function statusTone(status: string) {
 
 function dateKey(value: string | null | undefined) {
   return value ? new Date(value).toISOString().slice(0, 10) : "No due date";
+}
+
+async function handleSignOut() {
+  const db = getSupabaseBrowserClient();
+  if (db) await db.auth.signOut();
+  window.location.href = "/login";
 }
 
 export function AdminOrders() {
@@ -136,8 +144,20 @@ export function AdminOrders() {
     <div className={cn(theme === "dark" && "dark")}>
       <div className="min-h-screen bg-background text-foreground">
         <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
-          <div className="mb-5 px-2"><a href="/admin"><img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[140px] dark:hidden" /><img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[140px] dark:block" /></a><div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Super Admin</div></div>
+          <div className="mb-5 px-2 pt-[5px]"><a href="/admin"><img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[125px] dark:hidden" /><img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[125px] dark:block" /></a></div>
           <nav className="space-y-4">{adminNavGroups.map((group) => <div key={group.label}><div className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</div><div className="space-y-0.5">{group.items.map(([label, Icon, href]) => <Link href={href} key={label} className={cn("flex h-8 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] text-muted-foreground hover:bg-accent hover:text-accent-foreground", isAdminNavActive(label, pathname) && "bg-accent font-medium text-accent-foreground")}><Icon className="h-4 w-4" />{label}{label === "Orders" && <Badge className="ml-auto h-5 bg-primary/20 px-1.5 text-[10px] text-foreground">{orders.length}</Badge>}{label === "Payments" && <Badge className="ml-auto h-5 bg-primary/20 px-1.5 text-[10px] text-foreground">{payments.length}</Badge>}{label === "Messages" && <Badge className="ml-auto h-5 bg-red-500/10 px-1.5 text-[10px] text-red-600 dark:text-red-300">{messages.length}</Badge>}{label === "Users" && <Badge className="ml-auto h-5 bg-primary/20 px-1.5 text-[10px] text-foreground">{users.length}</Badge>}</Link>)}</div></div>)}</nav>
+
+          <div className="absolute bottom-3 left-3 right-3">
+            <div className="mb-3 border-t border-border" />
+            <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2">
+              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold">JW</div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-medium">Jeremy Waters</div>
+                <div className="truncate text-[10px] text-muted-foreground">Owner - Super Admin</div>
+              </div>
+              <button onClick={handleSignOut} aria-label="Sign out" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button>
+            </div>
+          </div>
         </aside>
 
         <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">

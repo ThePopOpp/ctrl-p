@@ -15,6 +15,8 @@ import {
   Sun,
   WalletCards,
 } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 import { createAdminInvoice, createSquareCardPayment, createSquarePaymentLink, deliverPaymentDocument, getCurrentAdminProfile, loadAdminDashboardData, loadSquarePaymentConfig } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
@@ -43,6 +45,12 @@ function statusTone(status: string) {
   if (["pending", "partially_paid"].includes(status)) return "border-primary/20 bg-primary/15 text-lime-800 dark:text-lime-200";
   if (["failed", "unpaid", "refunded", "partially_refunded"].includes(status)) return "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300";
   return "border-border bg-secondary text-secondary-foreground";
+}
+
+async function handleSignOut() {
+  const db = getSupabaseBrowserClient();
+  if (db) await db.auth.signOut();
+  window.location.href = "/login";
 }
 
 export function AdminPayments() {
@@ -103,12 +111,11 @@ export function AdminPayments() {
     <div className={cn(theme === "dark" && "dark")}>
       <div className="min-h-screen bg-background text-foreground">
         <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
-          <div className="mb-5 px-2">
+          <div className="mb-5 px-2 pt-[5px]">
             <a href="/admin">
-              <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[140px] dark:hidden" />
-              <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[140px] dark:block" />
+              <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[125px] dark:hidden" />
+              <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[125px] dark:block" />
             </a>
-            <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Super Admin</div>
           </div>
 
           <nav className="space-y-4">
@@ -136,6 +143,18 @@ export function AdminPayments() {
               </div>
             ))}
           </nav>
+
+          <div className="absolute bottom-3 left-3 right-3">
+            <div className="mb-3 border-t border-border" />
+            <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2">
+              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold">JW</div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-medium">Jeremy Waters</div>
+                <div className="truncate text-[10px] text-muted-foreground">Owner - Super Admin</div>
+              </div>
+              <button onClick={handleSignOut} aria-label="Sign out" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button>
+            </div>
+          </div>
         </aside>
 
         <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">

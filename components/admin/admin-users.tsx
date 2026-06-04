@@ -18,6 +18,7 @@ import {
   UserRoundPlus,
   UserPlus,
 } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData, removeAdminUser, updateAdminUser } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
@@ -62,6 +63,12 @@ function roleGroup(user: AdminUser) {
   if (["super_admin", "admin", "employee", "staff", "production_manager", "installer", "customer_support"].includes(user.role)) return "Internal";
   if (["vendor", "designer", "referral", "reseller"].includes(user.role)) return "Partner";
   return "Customer";
+}
+
+async function handleSignOut() {
+  const db = getSupabaseBrowserClient();
+  if (db) await db.auth.signOut();
+  window.location.href = "/login";
 }
 
 export function AdminUsers() {
@@ -141,12 +148,11 @@ export function AdminUsers() {
     <div className={cn(theme === "dark" && "dark")}>
       <div className="min-h-screen bg-background text-foreground">
         <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
-          <div className="mb-5 px-2">
+          <div className="mb-5 px-2 pt-[5px]">
             <a href="/admin">
-              <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[140px] dark:hidden" />
-              <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[140px] dark:block" />
+              <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[125px] dark:hidden" />
+              <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[125px] dark:block" />
             </a>
-            <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Super Admin</div>
           </div>
 
           <nav className="space-y-4">
@@ -174,6 +180,18 @@ export function AdminUsers() {
               </div>
             ))}
           </nav>
+
+          <div className="absolute bottom-3 left-3 right-3">
+            <div className="mb-3 border-t border-border" />
+            <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2">
+              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold">JW</div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-medium">Jeremy Waters</div>
+                <div className="truncate text-[10px] text-muted-foreground">Owner - Super Admin</div>
+              </div>
+              <button onClick={handleSignOut} aria-label="Sign out" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button>
+            </div>
+          </div>
         </aside>
 
         <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">
@@ -252,7 +270,7 @@ export function AdminUsers() {
                           </SelectContent>
                         </Select>
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                          <SelectTrigger className="h-8 min-w-[140px] text-xs">
+                          <SelectTrigger className="h-8 min-w-[125px] text-xs">
                             <SelectValue placeholder="Status" />
                           </SelectTrigger>
                           <SelectContent>
