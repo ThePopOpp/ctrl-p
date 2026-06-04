@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   ChevronRight,
@@ -11,7 +11,9 @@ import {
   Moon,
   Phone,
   Search,
+  Send,
   ShieldCheck,
+  Smartphone,
   Sun,
   UserRoundPlus,
   UserPlus,
@@ -26,10 +28,12 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 
 const userStatuses = ["active", "pending", "inactive", "suspended"] as const;
 const editableRoles = Object.values(ROLES);
@@ -73,6 +77,14 @@ export function AdminUsers() {
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [inviteUserOpen, setInviteUserOpen] = useState(false);
   const [roleReviewOpen, setRoleReviewOpen] = useState(false);
+  const [quickSendUser, setQuickSendUser] = useState<AdminUser | null>(null);
+  const [quickSendChannel, setQuickSendChannel] = useState<"sms" | "email" | "dashboard">("dashboard");
+
+  function openQuickSend(user: AdminUser, channel: "sms" | "email" | "dashboard", e: React.MouseEvent) {
+    e.stopPropagation();
+    setQuickSendUser(user);
+    setQuickSendChannel(channel);
+  }
 
   useEffect(() => {
     async function boot() {
@@ -261,6 +273,7 @@ export function AdminUsers() {
                           <TableHead>Role</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Group</TableHead>
+                          <TableHead className="w-[100px] text-right pr-4">Message</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -280,11 +293,47 @@ export function AdminUsers() {
                             <TableCell><Badge variant="outline">{human(user.role)}</Badge></TableCell>
                             <TableCell><Badge className={cn("border", statusTone(user.status))}>{human(user.status)}</Badge></TableCell>
                             <TableCell>{roleGroup(user)}</TableCell>
+                            <TableCell className="pr-4 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  aria-label="Send SMS"
+                                  title={user.phone ? `SMS ${user.phone}` : "No phone number"}
+                                  disabled={!user.phone}
+                                  onClick={(e) => openQuickSend(user, "sms", e)}
+                                >
+                                  <Smartphone className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  aria-label="Send email"
+                                  title={user.email ? `Email ${user.email}` : "No email"}
+                                  disabled={!user.email}
+                                  onClick={(e) => openQuickSend(user, "email", e)}
+                                >
+                                  <Mail className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  aria-label="Send notification"
+                                  title="Send dashboard notification"
+                                  onClick={(e) => openQuickSend(user, "dashboard", e)}
+                                >
+                                  <Bell className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))}
                         {!visibleUsers.length && (
                           <TableRow>
-                            <TableCell className="p-6 text-center text-muted-foreground" colSpan={6}>No matching users.</TableCell>
+                            <TableCell className="p-6 text-center text-muted-foreground" colSpan={7}>No matching users.</TableCell>
                           </TableRow>
                         )}
                       </TableBody>
@@ -334,8 +383,156 @@ export function AdminUsers() {
         <AddUserSheet currentProfile={profile} open={addUserOpen} onOpenChange={setAddUserOpen} onCreated={refreshUsers} assignableRoles={assignableRoles} mode="add" />
         <AddUserSheet currentProfile={profile} open={inviteUserOpen} onOpenChange={setInviteUserOpen} onCreated={refreshUsers} assignableRoles={assignableRoles} mode="invite" />
         <RoleReviewSheet open={roleReviewOpen} onOpenChange={setRoleReviewOpen} users={users} assignableRoles={assignableRoles} />
+        <QuickSendModal user={quickSendUser} channel={quickSendChannel} onChannelChange={setQuickSendChannel} onClose={() => setQuickSendUser(null)} />
       </div>
     </div>
+  );
+}
+
+async function getAdminToken() {
+  const db = getSupabaseBrowserClient();
+  const session = db ? (await db.auth.getSession()).data.session : null;
+  return session?.access_token ?? null;
+}
+
+type QuickSendChannel = "sms" | "email" | "dashboard";
+
+const CHANNEL_META: Record<QuickSendChannel, { label: string; icon: React.ElementType; recipientKey: "phone" | "email" | "email"; needsSubject: boolean }> = {
+  sms:       { label: "SMS",          icon: Smartphone, recipientKey: "phone",  needsSubject: false },
+  email:     { label: "Email",        icon: Mail,       recipientKey: "email",  needsSubject: true  },
+  dashboard: { label: "Notification", icon: Bell,       recipientKey: "email",  needsSubject: true  },
+};
+
+function QuickSendModal({
+  user,
+  channel,
+  onChannelChange,
+  onClose,
+}: {
+  user: AdminUser | null;
+  channel: QuickSendChannel;
+  onChannelChange: (c: QuickSendChannel) => void;
+  onClose: () => void;
+}) {
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [status, setStatus] = useState("");
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  const meta = CHANNEL_META[channel];
+  const recipient = user ? (channel === "sms" ? user.phone : user.email) ?? "" : "";
+  const canSend = body.trim().length > 0 && recipient.length > 0 && !sending;
+
+  useEffect(() => {
+    if (user) {
+      setSubject("");
+      setBody("");
+      setStatus("");
+      setSending(false);
+      setTimeout(() => (meta.needsSubject ? subjectRef.current : bodyRef.current)?.focus(), 50);
+    }
+  }, [user, channel]);
+
+  async function send() {
+    if (!canSend || !user) return;
+    setSending(true);
+    setStatus("Sending…");
+    try {
+      const token = await getAdminToken();
+      const res = await fetch("/api/admin/messaging/send", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ channel, mode: "single", recipient, subject: subject || undefined, body }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload.error || "Could not send.");
+      setStatus(`Sent successfully.`);
+      setBody("");
+      setSubject("");
+      setTimeout(onClose, 1200);
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Could not send.");
+      setSending(false);
+    }
+  }
+
+  return (
+    <Dialog open={Boolean(user)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[440px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <meta.icon className="h-4 w-4 text-primary" />
+            {meta.label} to {user?.full_name || user?.email || "user"}
+          </DialogTitle>
+          <DialogDescription className="truncate text-xs">
+            {channel === "sms" ? user?.phone || "No phone number" : user?.email || "No email"}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Channel switcher */}
+        <div className="flex gap-1 rounded-lg border bg-secondary/30 p-1">
+          {(["dashboard", "email", "sms"] as QuickSendChannel[]).map((ch) => {
+            const { label, icon: Icon } = CHANNEL_META[ch];
+            const disabled = ch === "sms" && !user?.phone;
+            return (
+              <button
+                key={ch}
+                disabled={disabled}
+                onClick={() => onChannelChange(ch)}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  channel === ch ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground disabled:opacity-40",
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="space-y-3">
+          {meta.needsSubject && (
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Subject</div>
+              <Input ref={subjectRef} placeholder="e.g. Your order is ready" value={subject} onChange={(e) => setSubject(e.target.value)} />
+            </div>
+          )}
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Message</div>
+            <Textarea
+              ref={bodyRef}
+              rows={4}
+              placeholder={channel === "sms" ? "Keep it brief — SMS has a 160 char limit." : "Write your message here…"}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send(); }}
+            />
+            {channel === "sms" && (
+              <div className={cn("mt-1 text-right text-[10px]", body.length > 160 ? "text-red-500" : "text-muted-foreground")}>
+                {body.length}/160
+              </div>
+            )}
+          </div>
+
+          {status && (
+            <div className={cn("rounded-lg border p-2.5 text-xs", status.startsWith("Sent") ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "border-border bg-secondary/30 text-muted-foreground")}>
+              {status}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button className="flex-1" disabled={!canSend} onClick={send}>
+              <Send className="h-3.5 w-3.5" />
+              {sending ? "Sending…" : "Send"}
+            </Button>
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
