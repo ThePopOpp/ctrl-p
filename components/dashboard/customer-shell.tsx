@@ -314,7 +314,7 @@ export function CustomerShell({
   return (
     <div className={cn(theme === "dark" && "dark", "min-h-screen bg-background text-foreground")}>
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
-        <a className="mb-6 block px-2 pt-[5px]" href="/dashboard/customer">
+        <a className="mb-[45px] block px-2 pt-[5px]" href="/dashboard/customer">
           <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[125px] dark:hidden" />
           <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[125px] dark:block" />
         </a>

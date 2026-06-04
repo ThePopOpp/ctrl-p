@@ -153,7 +153,7 @@ export function AdminMessages() {
     <div className={cn(theme === "dark" && "dark")}>
       <div className="min-h-screen bg-background text-foreground">
         <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
-          <div className="mb-5 px-2 pt-[5px]">
+          <div className="mb-[45px] px-2 pt-[5px]">
             <a href="/admin">
               <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[125px] dark:hidden" />
               <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[125px] dark:block" />
