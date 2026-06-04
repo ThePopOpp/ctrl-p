@@ -284,8 +284,8 @@ export function CustomerDigitalCards() {
     <div className={cn(theme === "dark" && "dark", "min-h-screen bg-background text-foreground")}>
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
         <a className="mb-5 block px-2" href="/dashboard/customer">
-          <img src="/logos/logo-lime-light.svg" alt="ControlP.io" className="h-auto w-[140px] dark:hidden" />
-          <img src="/logos/logo-lime-dark.svg" alt="ControlP.io" className="hidden h-auto w-[140px] dark:block" />
+          <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[140px] dark:hidden" />
+          <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[140px] dark:block" />
           <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Customer</div>
         </a>
         <nav className="space-y-1">
