@@ -6,6 +6,7 @@ import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, Camera, ChevronDow
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1349,232 +1350,243 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
               </Card>}
 
               {activePanel === "wizard" && (
-                <div className="space-y-3">
-                  <div className="rounded-xl border bg-card p-4">
-                    <div className="flex items-center gap-2">
-                      <UserCircle className="h-4 w-4 text-primary" />
-                      <span className="font-semibold">Setup Wizard</span>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">Follow these steps to build, customize, and launch your digital business card. Click any &ldquo;Open&rdquo; button to jump directly to that panel.</p>
-                  </div>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base"><UserCircle className="h-4 w-4" /> Setup Wizard</CardTitle>
+                    <CardDescription>Follow these steps to build, customize, and launch your digital business card. Expand any step to see what&apos;s inside and jump directly to that panel.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-2 pb-2">
+                    <Accordion type="single" collapsible className="w-full">
 
-                  {/* Step 1 */}
-                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">1</span>
-                        <div>
-                          <div className="font-semibold">Add your content</div>
-                          <p className="mt-1 text-xs text-muted-foreground">This is the foundation of your card — your name, title, company, and how people contact you.</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("content")}>Open</Button>
-                    </div>
-                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
-                      <li><strong className="text-foreground">Display name & title</strong> — What visitors see as your headline (e.g. "Jeremy Waters – Co-Founder")</li>
-                      <li><strong className="text-foreground">Company & department</strong> — Shown under your name on the profile header</li>
-                      <li><strong className="text-foreground">Bio</strong> — A short paragraph describing who you are and what you do</li>
-                      <li><strong className="text-foreground">Primary phone & SMS</strong> — Powers the Call and Text quick-action chips on the card</li>
-                      <li><strong className="text-foreground">Email & website</strong> — Powers the Email chip and adds a Website link to the links section</li>
-                      <li><strong className="text-foreground">Maps URL</strong> — Adds a Map chip so visitors can get directions with one tap</li>
-                    </ul>
-                  </div>
+                      <AccordionItem value="step-1">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">1</span>
+                            <span className="font-semibold text-sm">Add your content</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          <div className="space-y-4 pt-1 pb-2">
+                            <p className="text-xs text-muted-foreground">This is the foundation of your card — your name, title, company, and how people contact you.</p>
+                            <ul className="space-y-3 text-xs text-muted-foreground">
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Display name & title</strong><span>What visitors see as your headline, e.g. &ldquo;Jeremy Waters – Co-Founder&rdquo;</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Company & department</strong><span>Shown under your name on the profile header</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Bio</strong><span>A short paragraph describing who you are and what you do</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Primary phone & SMS</strong><span>Powers the Call and Text quick-action chips on the card</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Email & website</strong><span>Powers the Email chip and adds a Website button to the links section</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Maps URL</strong><span>Adds a Map chip so visitors can get directions with one tap</span></li>
+                            </ul>
+                            <Button size="sm" variant="outline" onClick={() => setActivePanel("content")}>Open Content panel</Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
 
-                  {/* Step 2 */}
-                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">2</span>
-                        <div>
-                          <div className="font-semibold">Upload your media</div>
-                          <p className="mt-1 text-xs text-muted-foreground">Upload photos and videos directly from your device — no external URLs needed.</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("media")}>Open</Button>
-                    </div>
-                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
-                      <li><strong className="text-foreground">Profile photo</strong> — Your headshot or professional photo shown prominently on the card</li>
-                      <li><strong className="text-foreground">Logo</strong> — Company or brand mark shown in the top-left corner</li>
-                      <li><strong className="text-foreground">Background image</strong> — Full-card backdrop with automatic dark overlay for readability</li>
-                      <li><strong className="text-foreground">Background video</strong> — Looping muted video for the splash/opener screen (MP4 recommended)</li>
-                      <li><strong className="text-foreground">Intro video</strong> — A short pitch or intro reel shown as a tappable link on the card</li>
-                      <li><strong className="text-foreground">QR logo center</strong> — Small icon or logo overlaid in the center of your QR code</li>
-                    </ul>
-                  </div>
+                      <AccordionItem value="step-2">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">2</span>
+                            <span className="font-semibold text-sm">Upload your media</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          <div className="space-y-4 pt-1 pb-2">
+                            <p className="text-xs text-muted-foreground">Upload photos and videos directly from your device — no external URLs needed.</p>
+                            <ul className="space-y-3 text-xs text-muted-foreground">
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Profile photo</strong><span>Your headshot or professional photo shown prominently on the card</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Logo</strong><span>Company or brand mark shown in the top-left corner of the card</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Background image</strong><span>Full-card backdrop with automatic dark overlay so text stays readable</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Background video</strong><span>Looping muted video for the splash/opener screen — MP4 recommended</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Intro video</strong><span>A short pitch or reel shown as a tappable link on the card</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">QR logo center</strong><span>Small icon or logo overlaid in the center of your QR code</span></li>
+                            </ul>
+                            <Button size="sm" variant="outline" onClick={() => setActivePanel("media")}>Open Media panel</Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
 
-                  {/* Step 3 */}
-                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">3</span>
-                        <div>
-                          <div className="font-semibold">Add links & social profiles</div>
-                          <p className="mt-1 text-xs text-muted-foreground">Build a list of tappable links that appear on your card — social handles, extra phones, booking pages, and more.</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("links")}>Open</Button>
-                    </div>
-                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
-                      <li><strong className="text-foreground">Social profiles</strong> — Instagram, LinkedIn, TikTok, X/Twitter, Facebook, YouTube, and more</li>
-                      <li><strong className="text-foreground">Phone & SMS</strong> — Additional numbers beyond your primary (e.g. office, after-hours)</li>
-                      <li><strong className="text-foreground">Email</strong> — Additional email addresses</li>
-                      <li><strong className="text-foreground">Booking & payments</strong> — Calendly, Square, Venmo, Cash App, PayPal, and similar service links</li>
-                      <li><strong className="text-foreground">Downloads</strong> — PDFs, menus, brochures, or portfolios</li>
-                      <li><strong className="text-foreground">Custom</strong> — Any URL with a custom label for anything that doesn&apos;t fit a preset type</li>
-                    </ul>
-                  </div>
+                      <AccordionItem value="step-3">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">3</span>
+                            <span className="font-semibold text-sm">Add links & social profiles</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          <div className="space-y-4 pt-1 pb-2">
+                            <p className="text-xs text-muted-foreground">Build a list of tappable links that appear on your card — social handles, extra phones, booking pages, and more.</p>
+                            <ul className="space-y-3 text-xs text-muted-foreground">
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Social profiles</strong><span>Instagram, LinkedIn, TikTok, X/Twitter, Facebook, YouTube, and more</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Phone & SMS</strong><span>Additional numbers beyond your primary, e.g. office or after-hours</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Email</strong><span>Additional email addresses beyond your primary</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Booking & payments</strong><span>Calendly, Square, Venmo, Cash App, PayPal, and similar service links</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Downloads</strong><span>PDFs, menus, brochures, or portfolios hosted anywhere</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Custom</strong><span>Any URL with a custom label for anything that doesn&apos;t fit a preset type</span></li>
+                            </ul>
+                            <Button size="sm" variant="outline" onClick={() => setActivePanel("links")}>Open Links panel</Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
 
-                  {/* Step 4 */}
-                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">4</span>
-                        <div>
-                          <div className="font-semibold">Customize colors & appearance</div>
-                          <p className="mt-1 text-xs text-muted-foreground">Set your brand colors, typography, and profile image style. Visitors can switch between dark and light mode on the card.</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("color_modes")}>Open</Button>
-                    </div>
-                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
-                      <li><strong className="text-foreground">Background color</strong> — The main card background (default: deep green #07130b)</li>
-                      <li><strong className="text-foreground">Accent color</strong> — Button highlights, link colors, and QR code foreground (default: lime #a3ff12)</li>
-                      <li><strong className="text-foreground">Text color</strong> — Primary text on the card</li>
-                      <li><strong className="text-foreground">Light mode palette</strong> — Separate colors for when a visitor switches to light mode</li>
-                      <li><strong className="text-foreground">Typography</strong> — Font, size, weight, alignment, and line spacing for your name and bio</li>
-                      <li><strong className="text-foreground">Profile image style</strong> — Circle, rounded square, or square; border thickness and hover effects</li>
-                    </ul>
-                  </div>
+                      <AccordionItem value="step-4">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">4</span>
+                            <span className="font-semibold text-sm">Customize colors & appearance</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          <div className="space-y-4 pt-1 pb-2">
+                            <p className="text-xs text-muted-foreground">Set your brand colors, typography, and profile image style. Visitors can switch between dark and light mode on the card.</p>
+                            <ul className="space-y-3 text-xs text-muted-foreground">
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Background color</strong><span>The main card background (default: deep green #07130b)</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Accent color</strong><span>Button highlights, link colors, and QR foreground (default: lime #a3ff12)</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Text color</strong><span>Primary text color on the card</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Light mode palette</strong><span>Separate set of colors for when a visitor switches to light mode</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Typography</strong><span>Font, size, weight, alignment, and line spacing for your name and bio</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Profile image style</strong><span>Circle, rounded square, or square; border thickness and hover effects</span></li>
+                            </ul>
+                            <Button size="sm" variant="outline" onClick={() => setActivePanel("color_modes")}>Open Color Modes panel</Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
 
-                  {/* Step 5 */}
-                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">5</span>
-                        <div>
-                          <div className="font-semibold">Manage sections & layers</div>
-                          <p className="mt-1 text-xs text-muted-foreground">Control which content blocks appear on your card, their order, and spacing. Every section can be shown, hidden, or reordered.</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("layers")}>Open</Button>
-                    </div>
-                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
-                      <li><strong className="text-foreground">Profile header</strong> — Your photo, name, title, company, and bio</li>
-                      <li><strong className="text-foreground">Quick actions</strong> — Call, SMS, Email, and Map chips shown as icon buttons</li>
-                      <li><strong className="text-foreground">Links & socials</strong> — The list of links you configured in the Links panel</li>
-                      <li><strong className="text-foreground">Lead capture button</strong> — Tap-to-open contact form (configure in the Forms panel)</li>
-                      <li><strong className="text-foreground">Intro video</strong> — Tappable link to watch your video</li>
-                      <li><strong className="text-foreground">QR code</strong> — Your scannable QR code displayed on the card itself</li>
-                      <li><strong className="text-foreground">NFC</strong> — Placeholder for NFC-enabled physical products</li>
-                      <li><strong className="text-foreground">Margin & padding</strong> — Fine-tune spacing above and below each section</li>
-                    </ul>
-                  </div>
+                      <AccordionItem value="step-5">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">5</span>
+                            <span className="font-semibold text-sm">Manage sections & layers</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          <div className="space-y-4 pt-1 pb-2">
+                            <p className="text-xs text-muted-foreground">Control which content blocks appear on your card, their order, and spacing. Every section can be shown, hidden, or reordered.</p>
+                            <ul className="space-y-3 text-xs text-muted-foreground">
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Profile header</strong><span>Your photo, name, title, company, and bio</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Quick actions</strong><span>Call, SMS, Email, and Map icon chips shown at the top of the card</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Links & socials</strong><span>The full list of links you configured in the Links panel</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Lead capture button</strong><span>Tap-to-open contact form (configure it in the Forms panel)</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Intro video</strong><span>Tappable link to watch your short pitch video</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">QR code</strong><span>Your scannable QR code displayed directly on the card</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Margin & padding</strong><span>Fine-tune spacing above and below each section independently</span></li>
+                            </ul>
+                            <Button size="sm" variant="outline" onClick={() => setActivePanel("layers")}>Open Layers panel</Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
 
-                  {/* Step 6 */}
-                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">6</span>
-                        <div>
-                          <div className="font-semibold">Set up lead capture</div>
-                          <p className="mt-1 text-xs text-muted-foreground">Add a &ldquo;Send me your info&rdquo; button to your card that opens a contact form — perfect for events and networking.</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => { setActivePanel("forms"); ensureLeadCaptureSection(); }}>Open</Button>
-                    </div>
-                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
-                      <li><strong className="text-foreground">Button label</strong> — Customize what the button says (e.g. &ldquo;Connect with me&rdquo;)</li>
-                      <li><strong className="text-foreground">Form title & description</strong> — Shown at the top of the form page visitors fill out</li>
-                      <li><strong className="text-foreground">Collect name, email, phone, company, message</strong> — Toggle each field on or off</li>
-                      <li><strong className="text-foreground">Required fields</strong> — Mark specific fields as required before the form can be submitted</li>
-                      <li><strong className="text-foreground">Submit button label</strong> — Customize the form submit text</li>
-                    </ul>
-                  </div>
+                      <AccordionItem value="step-6">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">6</span>
+                            <span className="font-semibold text-sm">Set up lead capture</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          <div className="space-y-4 pt-1 pb-2">
+                            <p className="text-xs text-muted-foreground">Add a &ldquo;Send me your info&rdquo; button to your card that opens a contact form — perfect for events and networking.</p>
+                            <ul className="space-y-3 text-xs text-muted-foreground">
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Button label</strong><span>Customize what the button says, e.g. &ldquo;Connect with me&rdquo; or &ldquo;Let&apos;s talk&rdquo;</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Form title & description</strong><span>Shown at the top of the form page your visitors fill out</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Collect name, email, phone, company, message</strong><span>Toggle each field on or off to match what you need</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Required fields</strong><span>Mark specific fields required before the form can be submitted</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Submit button label</strong><span>Customize the text on the form&apos;s submit button</span></li>
+                            </ul>
+                            <Button size="sm" variant="outline" onClick={() => { setActivePanel("forms"); ensureLeadCaptureSection(); }}>Open Forms panel</Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
 
-                  {/* Step 7 */}
-                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">7</span>
-                        <div>
-                          <div className="font-semibold">Add a splash / opener screen</div>
-                          <p className="mt-1 text-xs text-muted-foreground">An animated intro that plays before your card is revealed — great for making a strong first impression.</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => { setActivePanel("splash"); ensureOpenerSection(); }}>Open</Button>
-                    </div>
-                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
-                      <li><strong className="text-foreground">Title & subtitle</strong> — Headline and tagline shown on the opener (e.g. &ldquo;Welcome&rdquo; / &ldquo;Tap to view my card&rdquo;)</li>
-                      <li><strong className="text-foreground">Background color & video</strong> — Full-screen branded intro with optional looping video</li>
-                      <li><strong className="text-foreground">Buttons</strong> — Up to 2 action buttons (View Card, Call me, or a custom URL)</li>
-                      <li><strong className="text-foreground">Auto-dismiss duration</strong> — How long the opener stays before automatically sliding away (1–30 seconds)</li>
-                      <li><strong className="text-foreground">Typography & animations</strong> — Font size, weight, enter/exit animation style</li>
-                    </ul>
-                  </div>
+                      <AccordionItem value="step-7">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">7</span>
+                            <span className="font-semibold text-sm">Add a splash / opener screen</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          <div className="space-y-4 pt-1 pb-2">
+                            <p className="text-xs text-muted-foreground">An animated intro that plays before your card is revealed — great for making a strong first impression.</p>
+                            <ul className="space-y-3 text-xs text-muted-foreground">
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Title & subtitle</strong><span>Headline and tagline on the opener, e.g. &ldquo;Welcome&rdquo; / &ldquo;Tap to view my card&rdquo;</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Background color & video</strong><span>Full-screen branded intro with an optional looping background video</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Buttons</strong><span>Up to 2 action buttons — View Card, Call me, or a custom URL</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Auto-dismiss duration</strong><span>How long the opener stays before automatically sliding away (1–30 seconds)</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Typography & animations</strong><span>Font size, weight, and enter/exit animation style</span></li>
+                            </ul>
+                            <Button size="sm" variant="outline" onClick={() => { setActivePanel("splash"); ensureOpenerSection(); }}>Open Splash Page panel</Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
 
-                  {/* Step 8 */}
-                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">8</span>
-                        <div>
-                          <div className="font-semibold">Configure your QR code</div>
-                          <p className="mt-1 text-xs text-muted-foreground">Customize the QR code that links to your card. Change colors, add a logo center, and download for print.</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("qr_code")}>Open</Button>
-                    </div>
-                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
-                      <li><strong className="text-foreground">QR code URL</strong> — Defaults to your card URL; override to point to any website, menu, or landing page</li>
-                      <li><strong className="text-foreground">Foreground & background color</strong> — Match your brand colors (keep high contrast for reliable scanning)</li>
-                      <li><strong className="text-foreground">Center logo</strong> — Embed a small icon or logo in the center of the QR code</li>
-                      <li><strong className="text-foreground">Corner & dot style</strong> — Square or rounded styling options</li>
-                      <li><strong className="text-foreground">Download PNG or SVG</strong> — Export for business cards, flyers, signage, and print</li>
-                    </ul>
-                  </div>
+                      <AccordionItem value="step-8">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">8</span>
+                            <span className="font-semibold text-sm">Configure your QR code</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          <div className="space-y-4 pt-1 pb-2">
+                            <p className="text-xs text-muted-foreground">Customize the QR code that links to your card. Change colors, add a logo center, and download for print or signage.</p>
+                            <ul className="space-y-3 text-xs text-muted-foreground">
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">QR code URL</strong><span>Defaults to your card URL — override to point to any website, menu, or landing page</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Foreground & background color</strong><span>Match your brand colors — keep high contrast for reliable scanning</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Center logo</strong><span>Embed a small icon or logo inside the QR code</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Corner & dot style</strong><span>Square or rounded styling options</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Download PNG or SVG</strong><span>Export for business cards, flyers, signage, or print orders</span></li>
+                            </ul>
+                            <Button size="sm" variant="outline" onClick={() => setActivePanel("qr_code")}>Open QR Code panel</Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
 
-                  {/* Step 9 */}
-                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">9</span>
-                        <div>
-                          <div className="font-semibold">Program your NFC tag</div>
-                          <p className="mt-1 text-xs text-muted-foreground">If your order includes an NFC-enabled product, program the chip to open your card with a single tap — no scanning needed.</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("nfc")}>Open</Button>
-                    </div>
-                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
-                      <li><strong className="text-foreground">NFC tap URL</strong> — Copy and program into any NFC tag writer app (NFC Tools is free on iOS & Android)</li>
-                      <li><strong className="text-foreground">QR scan URL</strong> — The tracked URL to use if you print your own external QR code</li>
-                      <li><strong className="text-foreground">Analytics</strong> — Every NFC tap and QR scan is logged so you can see how people are finding your card</li>
-                      <li><strong className="text-foreground">Step-by-step instructions</strong> — Tap the NFC panel for a walkthrough on writing the tag with a free app</li>
-                    </ul>
-                  </div>
+                      <AccordionItem value="step-9">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">9</span>
+                            <span className="font-semibold text-sm">Program your NFC tag</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          <div className="space-y-4 pt-1 pb-2">
+                            <p className="text-xs text-muted-foreground">If your order includes an NFC-enabled product, program the chip to open your card with a single tap — no scanning needed.</p>
+                            <ul className="space-y-3 text-xs text-muted-foreground">
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">NFC tap URL</strong><span>Copy and program into any NFC tag writer app — NFC Tools is free on iOS & Android</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">QR scan URL</strong><span>The tracked URL to use if you print your own external QR code</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Analytics</strong><span>Every NFC tap and QR scan is logged so you can see how people find your card</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Step-by-step instructions</strong><span>The NFC panel includes a full walkthrough for writing the tag with a free app</span></li>
+                            </ul>
+                            <Button size="sm" variant="outline" onClick={() => setActivePanel("nfc")}>Open NFC panel</Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
 
-                  {/* Step 10 */}
-                  <div className="rounded-xl border bg-primary/10 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">10</span>
-                        <div>
-                          <div className="font-semibold">Publish and test your card</div>
-                          <p className="mt-1 text-xs text-muted-foreground">Set your card live, copy the public URL, and verify everything looks right on a real mobile device.</p>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("sections")}>Open</Button>
-                    </div>
-                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
-                      <li><strong className="text-foreground">Set status to Published</strong> — Use the Status dropdown at the top of any panel to go live</li>
-                      <li><strong className="text-foreground">Make card public</strong> — Toggle &ldquo;Public&rdquo; on so anyone with the URL or QR code can view it</li>
-                      <li><strong className="text-foreground">Copy your public URL</strong> — Share it via text, email, or social — it works like a mobile-optimized website</li>
-                      <li><strong className="text-foreground">Scan your QR code</strong> — Open the QR Code panel and test scanning it with your phone camera</li>
-                      <li><strong className="text-foreground">Test on mobile</strong> — Open your card URL on a phone to confirm layout, quick-action chips, and links all work</li>
-                      <li><strong className="text-foreground">Save before sharing</strong> — Always click &ldquo;Save card&rdquo; after any changes so updates go live immediately</li>
-                    </ul>
-                  </div>
-                </div>
+                      <AccordionItem value="step-10" className="border-b-0">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">10</span>
+                            <span className="font-semibold text-sm">Publish and test your card</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          <div className="space-y-4 pt-1 pb-2">
+                            <p className="text-xs text-muted-foreground">Set your card live, copy the public URL, and verify everything looks right on a real mobile device before sharing.</p>
+                            <ul className="space-y-3 text-xs text-muted-foreground">
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Set status to Published</strong><span>Use the Status dropdown at the top of the Sections panel to go live</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Make card public</strong><span>Toggle &ldquo;Public&rdquo; on so anyone with the URL or QR code can view it</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Copy your public URL</strong><span>Share it via text, email, or social — it works like a mobile-optimized website</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Scan your QR code</strong><span>Open the QR Code panel and test scanning it with your phone camera</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Test on mobile</strong><span>Open your card URL on a phone to confirm layout, chips, and links all work</span></li>
+                              <li className="flex flex-col gap-0.5"><strong className="text-foreground text-[13px]">Save before sharing</strong><span>Always click &ldquo;Save card&rdquo; after changes so updates go live immediately</span></li>
+                            </ul>
+                            <Button size="sm" variant="outline" onClick={() => setActivePanel("sections")}>Open Sections panel</Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+
+                    </Accordion>
+                  </CardContent>
+                </Card>
               )}
             </section>
 
