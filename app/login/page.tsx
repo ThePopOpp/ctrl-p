@@ -112,7 +112,7 @@ function LoginForm() {
             <label className="block text-xs font-semibold text-zinc-200">
               Password <span className="text-primary">*</span>
             </label>
-            <a className="text-xs font-medium text-primary hover:text-primary/80" href="/forgot-password.html">
+            <a className="text-xs font-medium text-primary hover:text-primary/80" href="/forgot-password">
               Forgot password?
             </a>
           </div>
