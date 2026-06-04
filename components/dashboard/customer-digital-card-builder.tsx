@@ -1137,13 +1137,31 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   <CardTitle className="flex items-center gap-2 text-base"><Camera className="h-4 w-4" /> Media</CardTitle>
                   <CardDescription>Upload or capture card photos, logos, backgrounds, and video media without needing URL fields.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-3 md:grid-cols-2">
-                  <MediaUploadField label="Profile photo" mediaType="profile-photo" accept="image/*" value={form.profile_photo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("profile_photo_url", url)} />
-                  <MediaUploadField label="Logo" mediaType="logo" accept="image/*" value={form.logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("logo_url", url)} />
-                  <MediaUploadField label="Background image" mediaType="background-image" accept="image/*" value={form.background_image_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("background_image_url", url)} />
-                  <MediaUploadField label="Background video" mediaType="background-video" accept="video/*" value={String((form.media_settings?.background_video_url as string) || "")} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("media_settings", { ...(form.media_settings || {}), background_video_url: url })} />
-                  <MediaUploadField label="Intro video" mediaType="intro-video" accept="video/*" value={form.intro_video_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("intro_video_url", url)} />
-                  <MediaUploadField label="QR logo center" mediaType="qr-logo" accept="image/*" value={form.qr_logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("qr_logo_url", url)} />
+                <CardContent className="grid gap-4">
+                  <div>
+                    <p className="mb-2 text-xs text-muted-foreground">Your headshot or professional photo shown at the top of your card.</p>
+                    <MediaUploadField label="Profile photo" mediaType="profile-photo" accept="image/*" value={form.profile_photo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("profile_photo_url", url)} />
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs text-muted-foreground">Your company or brand logo shown in the top-left corner of the card.</p>
+                    <MediaUploadField label="Logo" mediaType="logo" accept="image/*" value={form.logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("logo_url", url)} />
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs text-muted-foreground">A full-card background image. A dark overlay is applied automatically so text stays readable.</p>
+                    <MediaUploadField label="Background image" mediaType="background-image" accept="image/*" value={form.background_image_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("background_image_url", url)} />
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs text-muted-foreground">A looping video that plays behind the splash/opener screen (muted autoplay). MP4 recommended.</p>
+                    <MediaUploadField label="Background video" mediaType="background-video" accept="video/*" value={String((form.media_settings?.background_video_url as string) || "")} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("media_settings", { ...(form.media_settings || {}), background_video_url: url })} />
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs text-muted-foreground">A short intro reel or pitch video. Shown as a tappable link in the Intro Video section of the card.</p>
+                    <MediaUploadField label="Intro video" mediaType="intro-video" accept="video/*" value={form.intro_video_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("intro_video_url", url)} />
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs text-muted-foreground">A small image (logo or icon) overlaid in the center of your QR code. Configure colors in the QR Code panel.</p>
+                    <MediaUploadField label="QR logo center" mediaType="qr-logo" accept="image/*" value={form.qr_logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("qr_logo_url", url)} />
+                  </div>
                 </CardContent>
               </Card>}
 
@@ -1330,25 +1348,234 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 </CardContent>
               </Card>}
 
-              {activePanel === "wizard" && <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base"><UserCircle className="h-4 w-4" /> Setup Wizard</CardTitle>
-                  <CardDescription>Guided setup for customers who want help choosing features and understanding what each section does.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {[
-                    ["Start with content", "Add name, title, bio, primary contact actions, and media."],
-                    ["Choose color modes", "Set dark and light palettes so visitors can switch modes on their device."],
-                    ["Add conversion tools", "Enable forms, links, chips, QR, NFC, and splash page features as upsells."],
-                    ["Publish and test", "Copy the public URL, scan the QR code, and verify the card on mobile."],
-                  ].map(([title, description]) => (
-                    <div key={title} className="rounded-lg border bg-background/35 p-3">
-                      <div className="font-medium">{title}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">{description}</div>
+              {activePanel === "wizard" && (
+                <div className="space-y-3">
+                  <div className="rounded-xl border bg-card p-4">
+                    <div className="flex items-center gap-2">
+                      <UserCircle className="h-4 w-4 text-primary" />
+                      <span className="font-semibold">Setup Wizard</span>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>}
+                    <p className="mt-1 text-xs text-muted-foreground">Follow these steps to build, customize, and launch your digital business card. Click any &ldquo;Open&rdquo; button to jump directly to that panel.</p>
+                  </div>
+
+                  {/* Step 1 */}
+                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">1</span>
+                        <div>
+                          <div className="font-semibold">Add your content</div>
+                          <p className="mt-1 text-xs text-muted-foreground">This is the foundation of your card — your name, title, company, and how people contact you.</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("content")}>Open</Button>
+                    </div>
+                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
+                      <li><strong className="text-foreground">Display name & title</strong> — What visitors see as your headline (e.g. "Jeremy Waters – Co-Founder")</li>
+                      <li><strong className="text-foreground">Company & department</strong> — Shown under your name on the profile header</li>
+                      <li><strong className="text-foreground">Bio</strong> — A short paragraph describing who you are and what you do</li>
+                      <li><strong className="text-foreground">Primary phone & SMS</strong> — Powers the Call and Text quick-action chips on the card</li>
+                      <li><strong className="text-foreground">Email & website</strong> — Powers the Email chip and adds a Website link to the links section</li>
+                      <li><strong className="text-foreground">Maps URL</strong> — Adds a Map chip so visitors can get directions with one tap</li>
+                    </ul>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">2</span>
+                        <div>
+                          <div className="font-semibold">Upload your media</div>
+                          <p className="mt-1 text-xs text-muted-foreground">Upload photos and videos directly from your device — no external URLs needed.</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("media")}>Open</Button>
+                    </div>
+                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
+                      <li><strong className="text-foreground">Profile photo</strong> — Your headshot or professional photo shown prominently on the card</li>
+                      <li><strong className="text-foreground">Logo</strong> — Company or brand mark shown in the top-left corner</li>
+                      <li><strong className="text-foreground">Background image</strong> — Full-card backdrop with automatic dark overlay for readability</li>
+                      <li><strong className="text-foreground">Background video</strong> — Looping muted video for the splash/opener screen (MP4 recommended)</li>
+                      <li><strong className="text-foreground">Intro video</strong> — A short pitch or intro reel shown as a tappable link on the card</li>
+                      <li><strong className="text-foreground">QR logo center</strong> — Small icon or logo overlaid in the center of your QR code</li>
+                    </ul>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">3</span>
+                        <div>
+                          <div className="font-semibold">Add links & social profiles</div>
+                          <p className="mt-1 text-xs text-muted-foreground">Build a list of tappable links that appear on your card — social handles, extra phones, booking pages, and more.</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("links")}>Open</Button>
+                    </div>
+                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
+                      <li><strong className="text-foreground">Social profiles</strong> — Instagram, LinkedIn, TikTok, X/Twitter, Facebook, YouTube, and more</li>
+                      <li><strong className="text-foreground">Phone & SMS</strong> — Additional numbers beyond your primary (e.g. office, after-hours)</li>
+                      <li><strong className="text-foreground">Email</strong> — Additional email addresses</li>
+                      <li><strong className="text-foreground">Booking & payments</strong> — Calendly, Square, Venmo, Cash App, PayPal, and similar service links</li>
+                      <li><strong className="text-foreground">Downloads</strong> — PDFs, menus, brochures, or portfolios</li>
+                      <li><strong className="text-foreground">Custom</strong> — Any URL with a custom label for anything that doesn&apos;t fit a preset type</li>
+                    </ul>
+                  </div>
+
+                  {/* Step 4 */}
+                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">4</span>
+                        <div>
+                          <div className="font-semibold">Customize colors & appearance</div>
+                          <p className="mt-1 text-xs text-muted-foreground">Set your brand colors, typography, and profile image style. Visitors can switch between dark and light mode on the card.</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("color_modes")}>Open</Button>
+                    </div>
+                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
+                      <li><strong className="text-foreground">Background color</strong> — The main card background (default: deep green #07130b)</li>
+                      <li><strong className="text-foreground">Accent color</strong> — Button highlights, link colors, and QR code foreground (default: lime #a3ff12)</li>
+                      <li><strong className="text-foreground">Text color</strong> — Primary text on the card</li>
+                      <li><strong className="text-foreground">Light mode palette</strong> — Separate colors for when a visitor switches to light mode</li>
+                      <li><strong className="text-foreground">Typography</strong> — Font, size, weight, alignment, and line spacing for your name and bio</li>
+                      <li><strong className="text-foreground">Profile image style</strong> — Circle, rounded square, or square; border thickness and hover effects</li>
+                    </ul>
+                  </div>
+
+                  {/* Step 5 */}
+                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">5</span>
+                        <div>
+                          <div className="font-semibold">Manage sections & layers</div>
+                          <p className="mt-1 text-xs text-muted-foreground">Control which content blocks appear on your card, their order, and spacing. Every section can be shown, hidden, or reordered.</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("layers")}>Open</Button>
+                    </div>
+                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
+                      <li><strong className="text-foreground">Profile header</strong> — Your photo, name, title, company, and bio</li>
+                      <li><strong className="text-foreground">Quick actions</strong> — Call, SMS, Email, and Map chips shown as icon buttons</li>
+                      <li><strong className="text-foreground">Links & socials</strong> — The list of links you configured in the Links panel</li>
+                      <li><strong className="text-foreground">Lead capture button</strong> — Tap-to-open contact form (configure in the Forms panel)</li>
+                      <li><strong className="text-foreground">Intro video</strong> — Tappable link to watch your video</li>
+                      <li><strong className="text-foreground">QR code</strong> — Your scannable QR code displayed on the card itself</li>
+                      <li><strong className="text-foreground">NFC</strong> — Placeholder for NFC-enabled physical products</li>
+                      <li><strong className="text-foreground">Margin & padding</strong> — Fine-tune spacing above and below each section</li>
+                    </ul>
+                  </div>
+
+                  {/* Step 6 */}
+                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">6</span>
+                        <div>
+                          <div className="font-semibold">Set up lead capture</div>
+                          <p className="mt-1 text-xs text-muted-foreground">Add a &ldquo;Send me your info&rdquo; button to your card that opens a contact form — perfect for events and networking.</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => { setActivePanel("forms"); ensureLeadCaptureSection(); }}>Open</Button>
+                    </div>
+                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
+                      <li><strong className="text-foreground">Button label</strong> — Customize what the button says (e.g. &ldquo;Connect with me&rdquo;)</li>
+                      <li><strong className="text-foreground">Form title & description</strong> — Shown at the top of the form page visitors fill out</li>
+                      <li><strong className="text-foreground">Collect name, email, phone, company, message</strong> — Toggle each field on or off</li>
+                      <li><strong className="text-foreground">Required fields</strong> — Mark specific fields as required before the form can be submitted</li>
+                      <li><strong className="text-foreground">Submit button label</strong> — Customize the form submit text</li>
+                    </ul>
+                  </div>
+
+                  {/* Step 7 */}
+                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">7</span>
+                        <div>
+                          <div className="font-semibold">Add a splash / opener screen</div>
+                          <p className="mt-1 text-xs text-muted-foreground">An animated intro that plays before your card is revealed — great for making a strong first impression.</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => { setActivePanel("splash"); ensureOpenerSection(); }}>Open</Button>
+                    </div>
+                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
+                      <li><strong className="text-foreground">Title & subtitle</strong> — Headline and tagline shown on the opener (e.g. &ldquo;Welcome&rdquo; / &ldquo;Tap to view my card&rdquo;)</li>
+                      <li><strong className="text-foreground">Background color & video</strong> — Full-screen branded intro with optional looping video</li>
+                      <li><strong className="text-foreground">Buttons</strong> — Up to 2 action buttons (View Card, Call me, or a custom URL)</li>
+                      <li><strong className="text-foreground">Auto-dismiss duration</strong> — How long the opener stays before automatically sliding away (1–30 seconds)</li>
+                      <li><strong className="text-foreground">Typography & animations</strong> — Font size, weight, enter/exit animation style</li>
+                    </ul>
+                  </div>
+
+                  {/* Step 8 */}
+                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">8</span>
+                        <div>
+                          <div className="font-semibold">Configure your QR code</div>
+                          <p className="mt-1 text-xs text-muted-foreground">Customize the QR code that links to your card. Change colors, add a logo center, and download for print.</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("qr_code")}>Open</Button>
+                    </div>
+                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
+                      <li><strong className="text-foreground">QR code URL</strong> — Defaults to your card URL; override to point to any website, menu, or landing page</li>
+                      <li><strong className="text-foreground">Foreground & background color</strong> — Match your brand colors (keep high contrast for reliable scanning)</li>
+                      <li><strong className="text-foreground">Center logo</strong> — Embed a small icon or logo in the center of the QR code</li>
+                      <li><strong className="text-foreground">Corner & dot style</strong> — Square or rounded styling options</li>
+                      <li><strong className="text-foreground">Download PNG or SVG</strong> — Export for business cards, flyers, signage, and print</li>
+                    </ul>
+                  </div>
+
+                  {/* Step 9 */}
+                  <div className="rounded-xl border bg-card/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">9</span>
+                        <div>
+                          <div className="font-semibold">Program your NFC tag</div>
+                          <p className="mt-1 text-xs text-muted-foreground">If your order includes an NFC-enabled product, program the chip to open your card with a single tap — no scanning needed.</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("nfc")}>Open</Button>
+                    </div>
+                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
+                      <li><strong className="text-foreground">NFC tap URL</strong> — Copy and program into any NFC tag writer app (NFC Tools is free on iOS & Android)</li>
+                      <li><strong className="text-foreground">QR scan URL</strong> — The tracked URL to use if you print your own external QR code</li>
+                      <li><strong className="text-foreground">Analytics</strong> — Every NFC tap and QR scan is logged so you can see how people are finding your card</li>
+                      <li><strong className="text-foreground">Step-by-step instructions</strong> — Tap the NFC panel for a walkthrough on writing the tag with a free app</li>
+                    </ul>
+                  </div>
+
+                  {/* Step 10 */}
+                  <div className="rounded-xl border bg-primary/10 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">10</span>
+                        <div>
+                          <div className="font-semibold">Publish and test your card</div>
+                          <p className="mt-1 text-xs text-muted-foreground">Set your card live, copy the public URL, and verify everything looks right on a real mobile device.</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setActivePanel("sections")}>Open</Button>
+                    </div>
+                    <ul className="space-y-1 text-xs text-muted-foreground pl-9">
+                      <li><strong className="text-foreground">Set status to Published</strong> — Use the Status dropdown at the top of any panel to go live</li>
+                      <li><strong className="text-foreground">Make card public</strong> — Toggle &ldquo;Public&rdquo; on so anyone with the URL or QR code can view it</li>
+                      <li><strong className="text-foreground">Copy your public URL</strong> — Share it via text, email, or social — it works like a mobile-optimized website</li>
+                      <li><strong className="text-foreground">Scan your QR code</strong> — Open the QR Code panel and test scanning it with your phone camera</li>
+                      <li><strong className="text-foreground">Test on mobile</strong> — Open your card URL on a phone to confirm layout, quick-action chips, and links all work</li>
+                      <li><strong className="text-foreground">Save before sharing</strong> — Always click &ldquo;Save card&rdquo; after any changes so updates go live immediately</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
             </section>
 
             <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} themeMode={previewThemeMode} onThemeModeChange={setPreviewThemeMode} zoom={previewZoom} onZoomChange={setPreviewZoom} />
