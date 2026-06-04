@@ -142,7 +142,7 @@ export function AdminUsers() {
       <div className="min-h-screen bg-background text-foreground">
         <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
           <div className="mb-4 flex items-center gap-3 px-2">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-[11px] font-black text-primary-foreground">cp</div>
+            <img src="/logos/app-icon.svg" alt="ctrl+p" className="h-9 w-9 rounded-lg" />
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-[0.32em] text-muted-foreground">controlp.io</div>
               <div className="text-sm font-semibold">Super Admin</div>

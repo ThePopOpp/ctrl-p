@@ -213,9 +213,8 @@ function AuthShell({ children }: { children?: React.ReactNode }) {
         {/* Form side */}
         <div className="flex flex-col justify-center px-8 py-16 md:px-12 lg:px-16">
           <div className="mx-auto w-full max-w-sm">
-            <a href="/" className="mb-12 flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-900 text-[13px] font-bold text-white">cp</div>
-              <span className="text-[16px] font-bold tracking-tight">controlp<span className="text-zinc-400">.io</span></span>
+            <a href="/" className="mb-12 block">
+              <img src="/logos/logo-lime-light.svg" alt="ControlP.io" className="h-9 w-auto" />
             </a>
             <h1 className="mb-2 text-[32px] font-bold tracking-tight">Welcome back</h1>
             <p className="mb-8 text-[14px] text-zinc-500">Sign in to your account to view orders, saved designs, and more.</p>
