@@ -180,7 +180,7 @@ function Shell({ children }: { children?: React.ReactNode }) {
     <main className="min-h-screen bg-zinc-950 text-white">
       <header className="fixed left-0 right-0 top-0 z-20 flex h-16 items-center px-6 md:px-10">
         <a className="inline-flex items-center" href="/">
-          <img src="/logos/ctrl-p-logo-light.svg" alt="ControlP.io" className="h-auto w-36" />
+          <img src="/logos/ctrl-p-logo-light.svg" alt="ControlP.io" className="h-16 w-auto" />
         </a>
       </header>
       <div className="flex min-h-screen items-center justify-center px-5 py-24">

@@ -214,7 +214,7 @@ function AuthShell({ children }: { children?: React.ReactNode }) {
         <div className="flex flex-col justify-center px-8 py-16 md:px-12 lg:px-16">
           <div className="mx-auto w-full max-w-sm">
             <a href="/" className="mb-12 block">
-              <img src="/logos/logo-lime-light.svg" alt="ControlP.io" className="h-9 w-auto" />
+              <img src="/logos/logo-lime-light.svg" alt="ControlP.io" className="h-16 w-auto" />
             </a>
             <h1 className="mb-2 text-[32px] font-bold tracking-tight">Welcome back</h1>
             <p className="mb-8 text-[14px] text-zinc-500">Sign in to your account to view orders, saved designs, and more.</p>

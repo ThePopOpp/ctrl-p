@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
       <header className="border-b border-zinc-800">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
           <a href="/" className="flex items-center">
-            <img src="/logos/ctrl-p-logo-light.svg" alt="ControlP.io" className="h-9 w-auto" />
+            <img src="/logos/ctrl-p-logo-light.svg" alt="ControlP.io" className="h-16 w-auto" />
           </a>
           <a href="tel:+14809999906" className="hidden text-[13.5px] font-medium text-zinc-400 hover:text-zinc-200 sm:inline">
             Need help? (480) 999-9906
