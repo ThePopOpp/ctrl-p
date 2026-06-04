@@ -163,7 +163,7 @@ export function AdminMessages() {
           <nav className="space-y-4">
             {adminNavGroups.map((group) => (
               <div key={group.label}>
-                <div className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</div>
+                {group.label !== "Main" && <div className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</div>}
                 <div className="space-y-0.5">
                   {group.items.map(([label, Icon, href]) => (
                     <Link

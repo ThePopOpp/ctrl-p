@@ -222,10 +222,9 @@ export function CustomerProfile() {
 function CustomerSidebar({ active, profile, onSignOut }: { active: string; profile: { full_name: string; company: string; email: string; profile_photo_url: string }; onSignOut: () => void }) {
   return (
     <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
-      <a className="mb-5 block px-2" href="/dashboard/customer">
-        <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[140px] dark:hidden" />
-        <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[140px] dark:block" />
-        <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Customer</div>
+      <a className="mb-6 block px-2 pt-[5px]" href="/dashboard/customer">
+        <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[125px] dark:hidden" />
+        <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[125px] dark:block" />
       </a>
       <nav className="space-y-1">
         {navItems.map(({ label, icon: Icon, href }) => (
@@ -234,16 +233,17 @@ function CustomerSidebar({ active, profile, onSignOut }: { active: string; profi
           </a>
         ))}
       </nav>
-      <div className="absolute bottom-16 left-3 right-3 rounded-xl border bg-background/55 p-2">
-        <div className="flex items-center gap-2">
-          {profile.profile_photo_url ? <img className="h-9 w-9 shrink-0 rounded-full object-cover" src={profile.profile_photo_url} alt="" /> : <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(profile.full_name || profile.email || "C").slice(0, 1).toUpperCase()}</div>}
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">{profile.full_name || "Customer"}</div>
-            <div className="truncate text-xs text-muted-foreground">{profile.company || profile.email || "ControlP.io"}</div>
+      <div className="absolute bottom-3 left-3 right-3">
+        <div className="mb-3 border-t border-border" />
+        <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2">
+          {profile.profile_photo_url ? <img className="h-7 w-7 shrink-0 rounded-full object-cover" src={profile.profile_photo_url} alt="" /> : <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">{(profile.full_name || profile.email || "C").slice(0, 1).toUpperCase()}</div>}
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-xs font-medium">{profile.full_name || "Customer"}</div>
+            <div className="truncate text-[10px] text-muted-foreground">Customer</div>
           </div>
+          <button onClick={onSignOut} aria-label="Sign out" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button>
         </div>
       </div>
-      <Button className="absolute bottom-3 left-3 right-3 justify-start" variant="ghost" onClick={onSignOut}><LogOut className="h-4 w-4" /> Sign out</Button>
     </aside>
   );
 }
