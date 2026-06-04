@@ -8,12 +8,14 @@ import {
   Bell,
   ChevronRight,
   CircleDollarSign,
+  LogOut,
   Moon,
   Search,
   Sun,
   Trophy,
   Zap,
 } from "lucide-react";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 import {
   getCurrentAdminProfile,
@@ -103,6 +105,12 @@ export function AdminDashboard() {
     boot();
   }, []);
 
+  async function handleSignOut() {
+    const db = getSupabaseBrowserClient();
+    if (db) await db.auth.signOut();
+    window.location.href = "/login";
+  }
+
   async function refresh(openOrderId?: string) {
     const nextData = await loadAdminDashboardData();
     setData(nextData);
@@ -158,12 +166,12 @@ export function AdminDashboard() {
     <div className={cn(theme === "dark" && "dark")}>
       <div className="min-h-screen bg-background text-foreground">
         <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
-          <div className="mb-4 flex items-center gap-3 px-2">
-            <img src="/logos/app-icon.svg" alt="ctrl+p" className="h-9 w-9 rounded-lg" />
-            <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.32em] text-muted-foreground">controlp.io</div>
-              <div className="text-sm font-semibold">Super Admin</div>
-            </div>
+          <div className="mb-5 px-2">
+            <a href="/admin">
+              <img src="/logos/logo-lime-light.svg" alt="ControlP.io" className="h-auto w-[140px] dark:hidden" />
+              <img src="/logos/logo-lime-dark.svg" alt="ControlP.io" className="hidden h-auto w-[140px] dark:block" />
+            </a>
+            <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">Super Admin</div>
           </div>
 
           <nav className="space-y-4">
@@ -195,11 +203,18 @@ export function AdminDashboard() {
           <div className="absolute bottom-3 left-3 right-3">
             <Separator className="mb-3" />
             <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2">
-              <div className="grid h-7 w-7 place-items-center rounded-full bg-secondary text-[11px] font-semibold">JW</div>
-              <div className="min-w-0">
+              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold">JW</div>
+              <div className="min-w-0 flex-1">
                 <div className="truncate text-xs font-medium">Jeremy Waters</div>
                 <div className="truncate text-[10px] text-muted-foreground">Owner - Super Admin</div>
               </div>
+              <button
+                onClick={handleSignOut}
+                aria-label="Sign out"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
         </aside>
