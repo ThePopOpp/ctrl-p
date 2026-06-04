@@ -66,7 +66,7 @@ type DigitalCard = {
   website_url?: string | null;
   maps_url?: string | null;
   intro_video_url?: string | null;
-  qr_settings: { foreground?: string; background?: string; size?: number };
+  qr_settings: { foreground?: string; background?: string; size?: number; url?: string };
   card_mode?: string | null;
   theme_mode?: string | null;
   layout_template?: string | null;
@@ -438,7 +438,8 @@ function qrUrl(cardUrl: string, card: DigitalCard) {
   const foreground = String(card.qr_settings?.foreground || "#07130b").replace("#", "");
   const background = String(card.qr_settings?.background || "#ffffff").replace("#", "");
   const size = Number(card.qr_settings?.size || 512);
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&color=${foreground}&bgcolor=${background}&data=${encodeURIComponent(cardUrl)}`;
+  const target = card.qr_settings?.url?.trim() || cardUrl;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&color=${foreground}&bgcolor=${background}&data=${encodeURIComponent(target)}`;
 }
 
 async function customerToken() {
@@ -1210,17 +1211,26 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
               {activePanel === "qr_code" && <Card>
                 <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><QrCode className="h-4 w-4" /> QR Code</CardTitle><CardDescription>Customize QR colors, center logo, corner style, dot style, and exports.</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-[180px_1fr]">
+                  <div className="flex justify-center">
                     <img className="h-[180px] w-[180px] rounded-lg border bg-white p-2" src={qrUrl(publicUrl, form)} alt="QR code preview" />
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <MediaUploadField label="QR logo center" mediaType="qr-logo" accept="image/*" value={form.qr_logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("qr_logo_url", url)} />
-                      <ColorField label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} />
-                      <ColorField label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} />
-                      <SelectField label="QR corner style" value={form.qr_corner_style || "square"} values={qrCornerStyles} onChange={(value) => update("qr_corner_style", value)} />
-                      <SelectField label="QR dot style" value={form.qr_dot_style || "square"} values={qrDotStyles} onChange={(value) => update("qr_dot_style", value)} />
-                      <Button className="self-end" variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download QR PNG</a></Button>
-                      <Button className="self-end" variant="outline" asChild><a href={`${qrUrl(publicUrl, form)}&format=svg`} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /> Open QR SVG</a></Button>
+                  </div>
+                  <div className="grid gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">QR code URL</label>
+                      <Input
+                        value={form.qr_settings?.url || ""}
+                        placeholder={publicUrl}
+                        onChange={(e) => update("qr_settings", { ...form.qr_settings, url: e.target.value })}
+                      />
+                      <p className="text-[11px] text-muted-foreground">Defaults to your card&apos;s public URL. Enter any URL to point this QR code elsewhere.</p>
                     </div>
+                    <MediaUploadField label="QR logo center" mediaType="qr-logo" accept="image/*" value={form.qr_logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("qr_logo_url", url)} />
+                    <ColorField label="QR foreground" value={String(form.qr_settings?.foreground || "#07130b")} onChange={(value) => update("qr_settings", { ...form.qr_settings, foreground: value })} />
+                    <ColorField label="QR background" value={String(form.qr_settings?.background || "#ffffff")} onChange={(value) => update("qr_settings", { ...form.qr_settings, background: value })} />
+                    <SelectField label="QR corner style" value={form.qr_corner_style || "square"} values={qrCornerStyles} onChange={(value) => update("qr_corner_style", value)} />
+                    <SelectField label="QR dot style" value={form.qr_dot_style || "square"} values={qrDotStyles} onChange={(value) => update("qr_dot_style", value)} />
+                    <Button variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download QR PNG</a></Button>
+                    <Button variant="outline" asChild><a href={`${qrUrl(publicUrl, form)}&format=svg`} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /> Open QR SVG</a></Button>
                   </div>
                 </CardContent>
               </Card>}
@@ -1652,10 +1662,11 @@ function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: D
   }
 
   if (section.section_type === "qr_code") {
+    const qrTarget = card.qr_settings?.url?.trim() || publicUrl;
     return (
       <div className="grid gap-3 md:grid-cols-[120px_1fr] md:items-center">
         <img className="h-[120px] w-[120px] rounded-lg border bg-white p-2" src={qrUrl(publicUrl, card)} alt="QR code preview" />
-        <div className="rounded-xl border border-white/10 bg-white/10 p-3 text-[10px] opacity-70">{publicUrl}</div>
+        <div className="rounded-xl border border-white/10 bg-white/10 p-3 text-[10px] opacity-70">{qrTarget}</div>
       </div>
     );
   }

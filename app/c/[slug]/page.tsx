@@ -102,6 +102,7 @@ type PublicCard = {
   theme_mode?: string | null;
   media_settings?: Record<string, unknown> | null;
   lead_form_settings?: PublicLeadFormSettings | null;
+  qr_settings?: { foreground?: string; background?: string; size?: number; url?: string } | null;
   primary_phone: string | null;
   sms_phone: string | null;
   primary_email: string | null;
@@ -310,7 +311,7 @@ export default async function PublicDigitalCardPage({ params, searchParams }: { 
 
   const result = await adminClient
     .from("digital_cards")
-    .select("id, user_id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, theme_mode, media_settings, lead_form_settings, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
+    .select("id, user_id, card_name, slug, public_url, display_name, job_title, company_name, bio, profile_photo_url, logo_url, background_image_url, background_color, accent_color, text_color, theme_mode, media_settings, lead_form_settings, qr_settings, primary_phone, sms_phone, primary_email, website_url, maps_url, intro_video_url, view_count, digital_card_links(id, label, url, link_type, display_order, is_visible, open_in_new_tab), digital_card_sections(id, section_type, label, content, display_order, is_visible, margin_top, margin_right, margin_bottom, margin_left, padding_top, padding_right, padding_bottom, padding_left)")
     .eq("slug", slug)
     .eq("status", "published")
     .eq("is_public", true)
@@ -538,8 +539,11 @@ function PublicSection({
   }
 
   if (section.section_type === "qr_code") {
-    const qrUrl = publicUrl.includes("?") ? `${publicUrl}&source=qr` : `${publicUrl}?source=qr`;
-    const src = `/api/digital-cards/qr?url=${encodeURIComponent(qrUrl)}&size=256`;
+    const customUrl = card.qr_settings?.url?.trim();
+    const qrTarget = customUrl || (publicUrl.includes("?") ? `${publicUrl}&source=qr` : `${publicUrl}?source=qr`);
+    const fg = String(card.qr_settings?.foreground || "#07130b").replace("#", "");
+    const bg = String(card.qr_settings?.background || "#ffffff").replace("#", "");
+    const src = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&color=${fg}&bgcolor=${bg}&data=${encodeURIComponent(qrTarget)}`;
     return (
       <div className="grid place-items-center" style={sectionStyle(section)}>
         <img className="h-[132px] w-[132px] rounded-lg border bg-white p-2" src={src} alt="Digital card QR code" />
