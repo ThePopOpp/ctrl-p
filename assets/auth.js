@@ -33,7 +33,7 @@
 
   function nextUrlForRole(role) {
     if (window.ControlP && window.ControlP.rbac) return window.ControlP.rbac.nextUrlForRole(role);
-    return FALLBACK_ADMIN_ROLES.indexOf(role) !== -1 ? 'admin-dashboard.html' : 'dashboard.html';
+    return FALLBACK_ADMIN_ROLES.indexOf(role) !== -1 ? '/admin' : '/dashboard/customer';
   }
 
   async function profileForUser(db, userId) {
@@ -55,13 +55,13 @@
     var sessionResult = await db.auth.getSession();
     var session = sessionResult.data && sessionResult.data.session;
     if (!session) {
-      window.location.href = 'login.html?redirect=admin-dashboard.html';
+      window.location.href = '/login?redirect=/admin';
       return;
     }
 
     var profile = await profileForUser(db, session.user.id);
     if (!canAccessAdmin(profile)) {
-      window.location.href = 'dashboard.html';
+      window.location.href = '/dashboard/customer';
       return;
     }
 
@@ -93,7 +93,7 @@
     if (!db) return setMessage(root, 'Supabase is not configured on this page yet.', 'error');
     var email = field(root, 'email', 0).value.trim();
     if (!email) return setMessage(root, 'Enter your email first.', 'error');
-    var redirectTo = window.location.href.replace(/login\.html.*/, 'dashboard.html');
+    var redirectTo = window.location.origin + '/login';
     var auth = await db.auth.signInWithOtp({ email: email, options: { emailRedirectTo: redirectTo } });
     if (auth.error) return setMessage(root, auth.error.message, 'error');
     setMessage(root, 'Magic link sent. Check your inbox.', 'success');
@@ -138,7 +138,7 @@
   async function handleLogout() {
     var db = client();
     if (db) await db.auth.signOut();
-    window.location.href = 'login.html';
+    window.location.href = '/login';
   }
 
   async function signOutQuietly() {
@@ -166,7 +166,7 @@
     }
 
     protectAdminPage().catch(function () {
-      window.location.href = 'login.html?redirect=admin-dashboard.html';
+      window.location.href = '/login?redirect=/admin';
     });
   });
 })();

@@ -29,17 +29,57 @@ function ResetPasswordForm() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function exchange() {
-      const db = getSupabaseBrowserClient();
-      if (!db) { setExchangeError("Auth is not configured."); setExchanging(false); return; }
-      const code = searchParams.get("code");
-      if (!code) { setExchangeError("No reset code found. Please request a new link."); setExchanging(false); return; }
-      const { error: err } = await db.auth.exchangeCodeForSession(code);
-      if (err) { setExchangeError(err.message); }
+    const db = getSupabaseBrowserClient();
+    if (!db) {
+      setExchangeError("Auth is not configured.");
       setExchanging(false);
+      return;
     }
-    exchange();
-  }, [searchParams]);
+
+    // PKCE flow: code is a query param
+    const code = searchParams.get("code");
+    if (code) {
+      db.auth.exchangeCodeForSession(code).then(({ error: err }: { error: { message: string } | null }) => {
+        if (err) setExchangeError(err.message);
+        setExchanging(false);
+      });
+      return;
+    }
+
+    // Implicit flow: Supabase auto-processes the hash fragment (#access_token=...&type=recovery)
+    // and fires onAuthStateChange with PASSWORD_RECOVERY. Also check if session already exists.
+    let done = false;
+    function succeed() {
+      if (done) return;
+      done = true;
+      setExchanging(false);
+      clearTimeout(timer);
+      subscription.unsubscribe();
+    }
+
+    const { data: { subscription } } = db.auth.onAuthStateChange((event: string) => {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") succeed();
+    });
+
+    // Session might already be set if the hash was processed before this effect ran
+    db.auth.getSession().then(({ data }: { data: { session: unknown } }) => {
+      if (data.session) succeed();
+    });
+
+    const timer = setTimeout(() => {
+      if (!done) {
+        subscription.unsubscribe();
+        setExchangeError("No reset code found. Please request a new link.");
+        setExchanging(false);
+      }
+    }, 5000);
+
+    return () => {
+      clearTimeout(timer);
+      subscription.unsubscribe();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -52,7 +92,6 @@ function ResetPasswordForm() {
     const { error: updateError, data } = await db.auth.updateUser({ password });
     if (updateError) { setError(updateError.message); setSaving(false); return; }
     setDone(true);
-    // Navigate to their dashboard after a brief pause
     setTimeout(async () => {
       const profile = await db.from("users").select("role").eq("id", data.user.id).maybeSingle();
       router.replace(defaultDashboardPathForRole(profile.data?.role ?? "customer"));
@@ -68,9 +107,12 @@ function ResetPasswordForm() {
           <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
             {exchangeError}
           </div>
-          <Button asChild className="w-full" variant="outline">
-            <a href="/forgot-password">Request a new link</a>
-          </Button>
+          <a
+            href="/forgot-password"
+            className="block w-full rounded-lg border border-zinc-700 bg-transparent py-2.5 text-center text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+          >
+            Request a new link
+          </a>
         </div>
       ) : done ? (
         <div className="space-y-4 text-center">
@@ -136,7 +178,7 @@ function ResetPasswordForm() {
 function Shell({ children }: { children?: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
-      <header className="fixed left-0 right-0 top-0 z-20 flex h-16 items-center justify-between px-6 md:px-10">
+      <header className="fixed left-0 right-0 top-0 z-20 flex h-16 items-center px-6 md:px-10">
         <a className="inline-flex items-center" href="/">
           <img src="/logos/ctrl-p-logo-light.svg" alt="ControlP.io" className="h-auto w-36" />
         </a>
