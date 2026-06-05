@@ -6,15 +6,18 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
+  Calendar,
   ChevronRight,
   Inbox,
   Mail,
-  MessageSquare,
   Moon,
+  Pencil,
   Phone,
+  Plus,
   Search,
   Send,
   Sun,
+  Trash2,
 } from "lucide-react";
 import { LogOut } from "lucide-react";
 
@@ -31,6 +34,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+
+type BookingTemplate = {
+  id: string;
+  name: string;
+  channel: "email" | "sms";
+  notification_type: string;
+  subject?: string | null;
+  body: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
 
 type MessagingConfig = {
   twilio?: { configured: boolean; phoneNumber: string; hasAccountSid: boolean; hasAuthToken: boolean; validateWebhook?: boolean; webhookUrl?: string };
@@ -65,6 +80,11 @@ export function AdminMessages() {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [notice, setNotice] = useState("");
+  const [activeSection, setActiveSection] = useState<"inbox" | "templates">("inbox");
+  const [templates, setTemplates] = useState<BookingTemplate[]>([]);
+  const [templateFormOpen, setTemplateFormOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<BookingTemplate | null>(null);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
 
   useEffect(() => {
     async function boot() {
@@ -75,17 +95,47 @@ export function AdminMessages() {
       }
 
       setAuthState("allowed");
-      setData(await loadAdminDashboardData());
-      setConfig(await loadMessagingConfig());
+      const [dashData, msgConfig, templateData] = await Promise.all([
+        loadAdminDashboardData(),
+        loadMessagingConfig(),
+        loadBookingTemplates(),
+      ]);
+      setData(dashData);
+      setConfig(msgConfig);
+      setTemplates(templateData);
     }
 
     boot();
   }, []);
 
   async function refreshData() {
-    const [nextData, nextConfig] = await Promise.all([loadAdminDashboardData(), loadMessagingConfig()]);
+    const [nextData, nextConfig, nextTemplates] = await Promise.all([
+      loadAdminDashboardData(),
+      loadMessagingConfig(),
+      loadBookingTemplates(),
+    ]);
     setData(nextData);
     setConfig(nextConfig);
+    setTemplates(nextTemplates);
+  }
+
+  async function deleteTemplate(id: string) {
+    try {
+      const token = await getAdminToken();
+      const res = await fetch(`/api/admin/booking-templates?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        setNotice(payload.error || "Could not delete template.");
+        return;
+      }
+      setTemplates((current) => current.filter((t) => t.id !== id));
+      setDeletingTemplateId(null);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not delete template.");
+    }
   }
 
   async function syncEmailInbox() {
@@ -242,11 +292,44 @@ export function AdminMessages() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={() => setComposeOpen(true)}><Send className="h-4 w-4" /> New message</Button>
-                  <Button variant="outline" onClick={syncEmailInbox} disabled={syncing || !config?.imap?.configured}>
-                    <Inbox className="h-4 w-4" /> {syncing ? "Syncing..." : "Sync email"}
-                  </Button>
+                  {activeSection === "inbox" ? (
+                    <>
+                      <Button onClick={() => setComposeOpen(true)}><Send className="h-4 w-4" /> New message</Button>
+                      <Button variant="outline" onClick={syncEmailInbox} disabled={syncing || !config?.imap?.configured}>
+                        <Inbox className="h-4 w-4" /> {syncing ? "Syncing..." : "Sync email"}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button onClick={() => { setEditingTemplate(null); setTemplateFormOpen(true); }}>
+                      <Plus className="h-4 w-4" /> New template
+                    </Button>
+                  )}
                 </div>
+              </div>
+
+              <div className="mb-5 flex border-b border-border">
+                <button
+                  onClick={() => setActiveSection("inbox")}
+                  className={cn(
+                    "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium -mb-px transition-colors",
+                    activeSection === "inbox"
+                      ? "border-primary text-foreground"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Inbox className="h-4 w-4" /> Messages
+                </button>
+                <button
+                  onClick={() => setActiveSection("templates")}
+                  className={cn(
+                    "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium -mb-px transition-colors",
+                    activeSection === "templates"
+                      ? "border-primary text-foreground"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Calendar className="h-4 w-4" /> Booking Templates
+                </button>
               </div>
 
               {notice && (
@@ -255,96 +338,200 @@ export function AdminMessages() {
                 </div>
               )}
 
-              <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                <MessageStat label="Unread" value={String(unread.length)} hint="Visible unread records" />
-                <MessageStat label="Inbound" value={String(inbound.length)} hint="Customer replies" />
-                <MessageStat label="Outbound" value={String(outbound.length)} hint="Admin/system sent" />
-                <MessageStat label="Channels" value={`${configuredChannels}/3`} hint="SMS, SMTP, IMAP ready" />
-                <MessageStat label="Contacts" value={String(users.length)} hint="Reachable accounts" />
-              </section>
+              {activeSection === "inbox" && (
+                <>
+                  <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                    <MessageStat label="Unread" value={String(unread.length)} hint="Visible unread records" />
+                    <MessageStat label="Inbound" value={String(inbound.length)} hint="Customer replies" />
+                    <MessageStat label="Outbound" value={String(outbound.length)} hint="Admin/system sent" />
+                    <MessageStat label="Channels" value={`${configuredChannels}/3`} hint="SMS, SMTP, IMAP ready" />
+                    <MessageStat label="Contacts" value={String(users.length)} hint="Reachable accounts" />
+                  </section>
 
-              <section className="mb-4 grid gap-4 xl:grid-cols-[1fr_380px]">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Inbox</CardTitle>
-                    <CardDescription>Unread dashboard, email, SMS, and internal messages</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="pl-4">Message</TableHead>
-                          <TableHead>Channel</TableHead>
-                          <TableHead>Direction</TableHead>
-                          <TableHead>Order</TableHead>
-                          <TableHead className="w-[150px] min-w-[150px] whitespace-nowrap">Created</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {visibleMessages.map((message) => (
-                          <TableRow
-                            key={message.id}
-                            className="cursor-pointer hover:bg-accent/45"
-                            tabIndex={0}
-                            onClick={() => openMessage(message)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                openMessage(message);
-                              }
-                            }}
-                          >
-                            <TableCell className="pl-4">
-                              <div className="flex items-center gap-2 font-medium">
-                                {!message.read_at && <span className="h-2 w-2 rounded-full bg-primary" aria-label="Unread" />}
-                                <span>{message.subject || "Untitled message"}</span>
-                              </div>
-                              <div className="line-clamp-1 text-xs text-muted-foreground">{message.body || "No body preview"}</div>
-                            </TableCell>
-                            <TableCell><ChannelBadge channel={message.channel} /></TableCell>
-                            <TableCell>{human(message.direction)}</TableCell>
-                            <TableCell className="font-mono text-xs">{message.order_id ? message.order_id.slice(0, 8) : "None"}</TableCell>
-                            <TableCell className="w-[150px] min-w-[150px] whitespace-nowrap text-sm">{formatDate(message.created_at)}</TableCell>
+                  <section className="mb-4 grid gap-4 xl:grid-cols-[1fr_380px]">
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Inbox</CardTitle>
+                        <CardDescription>Unread dashboard, email, SMS, and internal messages</CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="pl-4">Message</TableHead>
+                              <TableHead>Channel</TableHead>
+                              <TableHead>Direction</TableHead>
+                              <TableHead>Order</TableHead>
+                              <TableHead className="w-[150px] min-w-[150px] whitespace-nowrap">Created</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {visibleMessages.map((message) => (
+                              <TableRow
+                                key={message.id}
+                                className="cursor-pointer hover:bg-accent/45"
+                                tabIndex={0}
+                                onClick={() => openMessage(message)}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault();
+                                    openMessage(message);
+                                  }
+                                }}
+                              >
+                                <TableCell className="pl-4">
+                                  <div className="flex items-center gap-2 font-medium">
+                                    {!message.read_at && <span className="h-2 w-2 rounded-full bg-primary" aria-label="Unread" />}
+                                    <span>{message.subject || "Untitled message"}</span>
+                                  </div>
+                                  <div className="line-clamp-1 text-xs text-muted-foreground">{message.body || "No body preview"}</div>
+                                </TableCell>
+                                <TableCell><ChannelBadge channel={message.channel} /></TableCell>
+                                <TableCell>{human(message.direction)}</TableCell>
+                                <TableCell className="font-mono text-xs">{message.order_id ? message.order_id.slice(0, 8) : "None"}</TableCell>
+                                <TableCell className="w-[150px] min-w-[150px] whitespace-nowrap text-sm">{formatDate(message.created_at)}</TableCell>
+                              </TableRow>
+                            ))}
+                            {!visibleMessages.length && (
+                              <TableRow><TableCell className="p-6 text-center text-muted-foreground" colSpan={5}>No messages found.</TableCell></TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+
+                    <div className="space-y-4">
+                      <ChannelCard icon={<Phone />} title="Twilio SMS" ready={Boolean(config?.twilio?.configured)} rows={[
+                        ["Phone", config?.twilio?.phoneNumber || "Not set"],
+                        ["Account SID", config?.twilio?.hasAccountSid ? "Configured" : "Missing"],
+                        ["Auth token", config?.twilio?.hasAuthToken ? "Configured" : "Missing"],
+                        ["Webhook", config?.twilio?.webhookUrl || "Set PUBLIC_APP_URL"],
+                      ]} />
+                      <ChannelCard icon={<Mail />} title="SMTP email" ready={Boolean(config?.smtp?.configured)} rows={[
+                        ["From", config?.smtp?.from || "Not set"],
+                        ["Server", [config?.smtp?.host, config?.smtp?.port].filter(Boolean).join(":") || "Missing"],
+                        ["Password", config?.smtp?.hasPassword ? "Configured" : "Missing"],
+                      ]} />
+                      <ChannelCard icon={<Inbox />} title="IMAP inbox" ready={Boolean(config?.imap?.configured)} rows={[
+                        ["User", config?.imap?.user || "Not set"],
+                        ["Server", [config?.imap?.host, config?.imap?.port].filter(Boolean).join(":") || "Missing"],
+                        ["Mailbox", config?.imap?.mailbox || "INBOX"],
+                        ["Password", config?.imap?.hasPassword ? "Configured" : "Missing"],
+                      ]} />
+                    </div>
+                  </section>
+
+                  <section className="grid gap-4 xl:grid-cols-3">
+                    <TemplateCard title="Order updates" items={["Proof ready", "Order in production", "Ready for pickup", "Order shipped"]} />
+                    <TemplateCard title="Billing notices" items={["Invoice sent", "Payment reminder", "Payment received", "Refund processed"]} />
+                    <TemplateCard title="Support replies" items={["Artwork issue", "Quote follow-up", "Customer question", "Internal note"]} />
+                  </section>
+                </>
+              )}
+
+              {activeSection === "templates" && (
+                <>
+                  <div className="mb-4 grid gap-3 md:grid-cols-3">
+                    <MessageStat label="Total" value={String(templates.length)} hint="All booking templates" />
+                    <MessageStat label="Email" value={String(templates.filter((t) => t.channel === "email").length)} hint="Email templates" />
+                    <MessageStat label="SMS" value={String(templates.filter((t) => t.channel === "sms").length)} hint="SMS templates" />
+                  </div>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Booking &amp; Appointment Templates</CardTitle>
+                      <CardDescription>Manage automated email and SMS message templates for booking confirmations, reminders, and updates.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="pl-4">Template name</TableHead>
+                            <TableHead>Channel</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="w-[140px] min-w-[140px]">Updated</TableHead>
+                            <TableHead className="w-[90px]" />
                           </TableRow>
-                        ))}
-                        {!visibleMessages.length && (
-                          <TableRow><TableCell className="p-6 text-center text-muted-foreground" colSpan={5}>No messages found.</TableCell></TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-
-                <div className="space-y-4">
-                  <ChannelCard icon={<Phone />} title="Twilio SMS" ready={Boolean(config?.twilio?.configured)} rows={[
-                    ["Phone", config?.twilio?.phoneNumber || "Not set"],
-                    ["Account SID", config?.twilio?.hasAccountSid ? "Configured" : "Missing"],
-                    ["Auth token", config?.twilio?.hasAuthToken ? "Configured" : "Missing"],
-                    ["Webhook", config?.twilio?.webhookUrl || "Set PUBLIC_APP_URL"],
-                  ]} />
-                  <ChannelCard icon={<Mail />} title="SMTP email" ready={Boolean(config?.smtp?.configured)} rows={[
-                    ["From", config?.smtp?.from || "Not set"],
-                    ["Server", [config?.smtp?.host, config?.smtp?.port].filter(Boolean).join(":") || "Missing"],
-                    ["Password", config?.smtp?.hasPassword ? "Configured" : "Missing"],
-                  ]} />
-                  <ChannelCard icon={<Inbox />} title="IMAP inbox" ready={Boolean(config?.imap?.configured)} rows={[
-                    ["User", config?.imap?.user || "Not set"],
-                    ["Server", [config?.imap?.host, config?.imap?.port].filter(Boolean).join(":") || "Missing"],
-                    ["Mailbox", config?.imap?.mailbox || "INBOX"],
-                    ["Password", config?.imap?.hasPassword ? "Configured" : "Missing"],
-                  ]} />
-                </div>
-              </section>
-
-              <section className="grid gap-4 xl:grid-cols-3">
-                <TemplateCard title="Order updates" items={["Proof ready", "Order in production", "Ready for pickup", "Order shipped"]} />
-                <TemplateCard title="Billing notices" items={["Invoice sent", "Payment reminder", "Payment received", "Refund processed"]} />
-                <TemplateCard title="Support replies" items={["Artwork issue", "Quote follow-up", "Customer question", "Internal note"]} />
-              </section>
+                        </TableHeader>
+                        <TableBody>
+                          {templates.map((template) => (
+                            <TableRow key={template.id}>
+                              <TableCell className="pl-4">
+                                <div className="font-medium">{template.name}</div>
+                                <div className="line-clamp-1 text-xs text-muted-foreground">
+                                  {template.channel === "email" && template.subject ? template.subject : template.body}
+                                </div>
+                              </TableCell>
+                              <TableCell><ChannelBadge channel={template.channel} /></TableCell>
+                              <TableCell className="text-sm">{human(template.notification_type)}</TableCell>
+                              <TableCell>
+                                <Badge className={template.is_active ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-secondary text-secondary-foreground"}>
+                                  {template.is_active ? "Active" : "Inactive"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-sm">{formatDate(template.updated_at)}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    aria-label="Edit template"
+                                    onClick={() => { setEditingTemplate(template); setTemplateFormOpen(true); }}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  {deletingTemplateId === template.id ? (
+                                    <div className="flex items-center gap-1">
+                                      <Button variant="destructive" size="sm" className="h-7 px-2 text-xs" onClick={() => deleteTemplate(template.id)}>Confirm</Button>
+                                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setDeletingTemplateId(null)}>Cancel</Button>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-destructive hover:text-destructive"
+                                      aria-label="Delete template"
+                                      onClick={() => setDeletingTemplateId(template.id)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {!templates.length && (
+                            <TableRow>
+                              <TableCell className="p-8 text-center text-muted-foreground" colSpan={6}>
+                                No templates yet. Click <strong>New template</strong> to create your first.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
             </>
           )}
         </main>
 
+        <BookingTemplateSheet
+          open={templateFormOpen}
+          onOpenChange={setTemplateFormOpen}
+          template={editingTemplate}
+          onSaved={(saved) => {
+            setTemplates((current) => {
+              const idx = current.findIndex((t) => t.id === saved.id);
+              return idx >= 0 ? current.map((t) => t.id === saved.id ? saved : t) : [saved, ...current];
+            });
+            setTemplateFormOpen(false);
+            setEditingTemplate(null);
+          }}
+        />
         <ComposeMessageSheet open={composeOpen} onOpenChange={setComposeOpen} orders={orders} users={users} config={config} onMessageSent={refreshData} />
         <MessageDetailSheet
           message={selectedMessage}
@@ -383,6 +570,20 @@ async function loadMessagingConfig(): Promise<MessagingConfig | null> {
 
   if (!response.ok) return null;
   return response.json();
+}
+
+async function loadBookingTemplates(): Promise<BookingTemplate[]> {
+  try {
+    const token = await getAdminToken();
+    const response = await fetch("/api/admin/booking-templates", {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return [];
+    const payload = await response.json();
+    return payload.templates ?? [];
+  } catch {
+    return [];
+  }
 }
 
 function MessageStat({ label, value, hint }: { label: string; value: string; hint: string }) {
@@ -719,6 +920,172 @@ function ComposeMessageSheet({
           <div className="flex gap-2">
             <Button className="flex-1" onClick={sendMessage} disabled={sending || !channelReady || !body.trim()}>
               {sending ? "Sending..." : mode === "bulk" ? "Send bulk message" : "Send message"}
+            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+const NOTIFICATION_TYPES = [
+  { value: "booking_confirmation", label: "Booking Confirmation" },
+  { value: "appointment_reminder", label: "Appointment Reminder" },
+  { value: "appointment_rescheduled", label: "Appointment Rescheduled" },
+  { value: "appointment_cancelled", label: "Appointment Cancelled" },
+  { value: "appointment_follow_up", label: "Follow-up" },
+  { value: "custom", label: "Custom" },
+];
+
+function BookingTemplateSheet({
+  open,
+  onOpenChange,
+  template,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  template: BookingTemplate | null;
+  onSaved: (template: BookingTemplate) => void;
+}) {
+  const isEdit = Boolean(template);
+  const [name, setName] = useState("");
+  const [channel, setChannel] = useState<"email" | "sms">("email");
+  const [notificationType, setNotificationType] = useState("booking_confirmation");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    if (template) {
+      setName(template.name);
+      setChannel(template.channel);
+      setNotificationType(template.notification_type);
+      setSubject(template.subject || "");
+      setBody(template.body);
+      setIsActive(template.is_active);
+    } else {
+      setName("");
+      setChannel("email");
+      setNotificationType("booking_confirmation");
+      setSubject("");
+      setBody("");
+      setIsActive(true);
+    }
+    setStatus("");
+  }, [template, open]);
+
+  async function save() {
+    setSaving(true);
+    setStatus("");
+    try {
+      const token = await getAdminToken();
+      const method = isEdit ? "PATCH" : "POST";
+      const payload = {
+        ...(isEdit ? { id: template!.id } : {}),
+        name,
+        channel,
+        notification_type: notificationType,
+        subject: channel === "email" ? subject : undefined,
+        body,
+        is_active: isActive,
+      };
+      const response = await fetch("/api/admin/booking-templates", {
+        method,
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Could not save template.");
+      onSaved(result.template);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not save template.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-[56rem]">
+        <SheetHeader>
+          <SheetTitle>{isEdit ? "Edit template" : "New booking template"}</SheetTitle>
+          <SheetDescription>
+            {isEdit ? "Update the content and settings for this template." : "Create an email or SMS template for booking notifications."}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-5">
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Template name</div>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Booking Confirmation Email" />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Channel</div>
+              <Select value={channel} onValueChange={(v) => setChannel(v as "email" | "sms")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="sms">SMS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Notification type</div>
+              <Select value={notificationType} onValueChange={setNotificationType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {NOTIFICATION_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {channel === "email" && (
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Subject line</div>
+              <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Your appointment is confirmed" />
+            </div>
+          )}
+
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">
+              {channel === "email" ? "Email body" : "SMS message"}
+            </div>
+            <Textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              className="min-h-[180px]"
+              placeholder={channel === "sms"
+                ? "ControlP.io: Your {{typeName}} is confirmed for {{date}} at {{time}}. Reply STOP to opt out."
+                : "Hi {{firstName}},\n\nYour {{typeName}} appointment is confirmed for {{date}} at {{time}}.\n\nSee you soon!"}
+            />
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Available placeholders: {"{{firstName}}"}, {"{{lastName}}"}, {"{{typeName}}"}, {"{{date}}"}, {"{{time}}"}, {"{{location}}"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-lg border bg-secondary/30 px-4 py-3">
+            <input
+              id="template-active"
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            <label htmlFor="template-active" className="text-sm">Active — use this template for automated notifications</label>
+          </div>
+
+          {status && <div className="rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground">{status}</div>}
+
+          <div className="flex gap-2">
+            <Button className="flex-1" onClick={save} disabled={saving || !name.trim() || !body.trim()}>
+              {saving ? "Saving..." : isEdit ? "Save changes" : "Create template"}
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           </div>

@@ -13,6 +13,196 @@ import {
 } from "@/lib/booking/availability";
 import { getServerSupabaseConfig, jsonError, serverEnv } from "@/lib/admin/server-auth";
 
+// ─── Calendar helpers ───────────────────────────────────────────────────────
+
+function toGcalDate(iso: string) {
+  return iso.replace(/[:\-]/g, "").replace(/\.\d{3}/, "");
+}
+
+function buildGoogleCalUrl(input: { typeName: string; location: string; dateLabel: string; timeLabel: string; startIso: string; endIso: string }) {
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `${input.typeName} with ControlP.io`,
+    dates: `${toGcalDate(input.startIso)}/${toGcalDate(input.endIso)}`,
+    details: `Appointment: ${input.typeName}\nDate: ${input.dateLabel} at ${input.timeLabel} MST`,
+    location: input.location,
+  });
+  return `https://www.google.com/calendar/render?${params.toString()}`;
+}
+
+function buildOutlookUrl(input: { typeName: string; location: string; dateLabel: string; timeLabel: string; startIso: string; endIso: string }) {
+  const params = new URLSearchParams({
+    path: "/calendar/action/compose",
+    rru: "addevent",
+    subject: `${input.typeName} with ControlP.io`,
+    startdt: input.startIso,
+    enddt: input.endIso,
+    location: input.location,
+    body: `Appointment: ${input.typeName}\nDate: ${input.dateLabel} at ${input.timeLabel} MST`,
+  });
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
+}
+
+// ─── HTML email ─────────────────────────────────────────────────────────────
+
+function customerEmailHtml(input: {
+  firstName: string;
+  typeName: string;
+  typeDescription: string;
+  dateLabel: string;
+  timeLabel: string;
+  location: string;
+  appointmentId: string;
+  startIso: string;
+  endIso: string;
+  baseUrl: string;
+}) {
+  const googleUrl = buildGoogleCalUrl(input);
+  const outlookUrl = buildOutlookUrl(input);
+  const icsUrl = `${input.baseUrl}/api/booking/ics?id=${encodeURIComponent(input.appointmentId)}`;
+  const logoUrl = `${input.baseUrl}/logos/logo-light-lime.svg`;
+  const faviconUrl = `${input.baseUrl}/logos/favicon.png`;
+  const settingsUrl = `${input.baseUrl}/settings/notifications`;
+  const descRow = input.typeDescription
+    ? `<tr><td style="padding:6px 0 0;font-size:13px;color:#9ca38f;line-height:1.5;">${input.typeDescription}</td></tr>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Your appointment is confirmed</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f0;font-family:Inter,system-ui,-apple-system,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f1f5f0;padding:32px 16px;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background:#07130b;padding:22px 32px;">
+      <img src="${logoUrl}" alt="ControlP.io" height="34" style="display:block;height:34px;width:auto;border:0;" />
+    </td>
+  </tr>
+
+  <!-- HERO -->
+  <tr>
+    <td style="background:#0d1f10;padding:40px 32px 36px;text-align:center;">
+      <div style="display:inline-block;background:#a3ff1220;border:1px solid #a3ff1240;border-radius:50%;width:64px;height:64px;line-height:64px;font-size:32px;margin-bottom:18px;">📅</div>
+      <h1 style="margin:0 0 10px;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.4px;line-height:1.2;">Appointment Confirmed</h1>
+      <p style="margin:0;color:#9db89a;font-size:15px;line-height:1.5;">Hi ${input.firstName}, your booking is all set. We look forward to seeing you!</p>
+    </td>
+  </tr>
+
+  <!-- DATE & TIME CARDS -->
+  <tr>
+    <td style="padding:28px 32px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+          <td style="width:50%;padding-right:8px;vertical-align:top;">
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+              <tr><td style="padding:18px 22px;">
+                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#16a34a;margin-bottom:5px;">Date</div>
+                <div style="font-size:18px;font-weight:700;color:#111827;line-height:1.2;">${input.dateLabel}</div>
+              </td></tr>
+            </table>
+          </td>
+          <td style="width:50%;padding-left:8px;vertical-align:top;">
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+              <tr><td style="padding:18px 22px;">
+                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#16a34a;margin-bottom:5px;">Time</div>
+                <div style="font-size:18px;font-weight:700;color:#111827;line-height:1.2;">${input.timeLabel} <span style="font-size:13px;font-weight:500;color:#6b7280;">MST</span></div>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- APPOINTMENT TYPE CARD -->
+  <tr>
+    <td style="padding:16px 32px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#07130b;border-radius:10px;">
+        <tr><td style="padding:22px 26px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#a3ff12;margin-bottom:6px;">Appointment Type</div>
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+            <tr><td style="font-size:17px;font-weight:700;color:#ffffff;">${input.typeName}</td></tr>
+            ${descRow}
+            <tr><td style="padding-top:10px;font-size:13px;color:#7a9a78;">📍 ${input.location}</td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ADD TO CALENDAR -->
+  <tr>
+    <td style="padding:24px 32px 0;">
+      <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">Add to your calendar</p>
+      <table cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+          <td style="padding-right:8px;">
+            <a href="${googleUrl}" style="display:inline-block;padding:9px 16px;background:#4285f4;color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;border-radius:6px;">Google</a>
+          </td>
+          <td style="padding-right:8px;">
+            <a href="${outlookUrl}" style="display:inline-block;padding:9px 16px;background:#0078d4;color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;border-radius:6px;">Outlook</a>
+          </td>
+          <td style="padding-right:8px;">
+            <a href="${icsUrl}" style="display:inline-block;padding:9px 16px;background:#555555;color:#ffffff;font-size:12px;font-weight:600;text-decoration:none;border-radius:6px;">Apple</a>
+          </td>
+          <td>
+            <a href="${icsUrl}" style="display:inline-block;padding:9px 16px;background:#f3f4f6;color:#374151;font-size:12px;font-weight:600;text-decoration:none;border-radius:6px;border:1px solid #d1d5db;">Download .ics</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- DIVIDER -->
+  <tr><td style="padding:28px 32px 0;"><div style="height:1px;background:#e5e7eb;"></div></td></tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="padding:22px 32px;">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+          <td style="vertical-align:top;">
+            <img src="${faviconUrl}" alt="" width="28" height="28" style="display:block;width:28px;height:28px;border-radius:6px;margin-bottom:10px;border:0;" />
+            <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:8px;">ControlP.io</div>
+            <table cellpadding="0" cellspacing="4" role="presentation">
+              <tr><td style="font-size:12px;color:#6b7280;padding-bottom:3px;">📞 (602) 888-5678</td></tr>
+              <tr><td style="font-size:12px;color:#6b7280;padding-bottom:3px;">🕒 Mon–Fri 9 am – 5 pm MST</td></tr>
+              <tr><td style="font-size:12px;color:#6b7280;padding-bottom:3px;">🌐 <a href="https://my.controlp.io" style="color:#16a34a;text-decoration:none;">my.controlp.io</a></td></tr>
+              <tr><td style="font-size:12px;color:#6b7280;">✉️ <a href="mailto:hello@controlp.io" style="color:#16a34a;text-decoration:none;">hello@controlp.io</a></td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- OPT-OUT -->
+  <tr>
+    <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;">
+      <p style="margin:0;font-size:11px;color:#9ca3af;text-align:center;line-height:1.7;">
+        You received this email because you booked an appointment with ControlP.io.
+        <br />
+        <a href="${settingsUrl}" style="color:#6b7280;text-decoration:underline;">Manage email preferences</a>
+        &nbsp;&middot;&nbsp;
+        <a href="${settingsUrl}" style="color:#6b7280;text-decoration:underline;">SMS opt-out settings</a>
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 const ACTIVE_BUSY_STATUSES = [
   "pending",
   "confirmed",
@@ -28,7 +218,7 @@ function asBoolean(value: string) {
   return value.toLowerCase() === "true" || value === "1";
 }
 
-async function sendEmail(to: string, subject: string, body: string) {
+async function sendEmail(to: string, subject: string, body: string, html?: string) {
   if (!serverEnv("SMTP_HOST") || !serverEnv("SMTP_PORT") || !serverEnv("SMTP_USER") || !serverEnv("SMTP_PASSWORD")) {
     throw new Error("SMTP is not configured.");
   }
@@ -41,7 +231,7 @@ async function sendEmail(to: string, subject: string, body: string) {
   });
 
   const from = serverEnv("EMAIL_FROM") || serverEnv("SMTP_USER");
-  await transporter.sendMail({ from, replyTo: serverEnv("EMAIL_REPLY_TO") || from, to, subject, text: body });
+  await transporter.sendMail({ from, replyTo: serverEnv("EMAIL_REPLY_TO") || from, to, subject, text: body, ...(html ? { html } : {}) });
 }
 
 async function sendSms(to: string, body: string) {
@@ -224,6 +414,19 @@ export async function POST(request: Request) {
   const timeLabel = new Intl.DateTimeFormat("en-US", { timeZone: "America/Phoenix", hour: "numeric", minute: "2-digit" }).format(requestedDate);
   const location = typeResult.data.meeting_url || typeResult.data.location_type.replace(/_/g, " ");
   const customer = customerMessage({ typeName: typeResult.data.name, dateLabel, timeLabel, location });
+  const baseUrl = serverEnv("NEXT_PUBLIC_APP_URL") || "https://my.controlp.io";
+  const customerHtml = customerEmailHtml({
+    firstName,
+    typeName: typeResult.data.name,
+    typeDescription: typeResult.data.description || "",
+    dateLabel,
+    timeLabel,
+    location,
+    appointmentId: appointmentResult.data.id,
+    startIso: selectedSlot.start,
+    endIso: selectedSlot.end,
+    baseUrl,
+  });
   const admin = adminMessage({
     typeName: typeResult.data.name,
     customer: `${firstName} ${lastName}`,
@@ -273,12 +476,13 @@ export async function POST(request: Request) {
   }
 
   if (notifications.length) {
-    const queued = await db.from("booking_notifications").insert(notifications).select("id, channel, recipient_email, recipient_phone, subject, body");
+    const queued = await db.from("booking_notifications").insert(notifications).select("id, channel, recipient_type, recipient_email, recipient_phone, subject, body");
     if (!queued.error) {
       await Promise.all((queued.data ?? []).map(async (notification) => {
         try {
           if (notification.channel === "email" && notification.recipient_email) {
-            await sendEmail(notification.recipient_email, notification.subject || customer.subject, notification.body || "");
+            const html = notification.recipient_type === "customer" ? customerHtml : undefined;
+            await sendEmail(notification.recipient_email, notification.subject || customer.subject, notification.body || "", html);
           }
           if (notification.channel === "sms" && notification.recipient_phone) {
             await sendSms(notification.recipient_phone, notification.body || "");
