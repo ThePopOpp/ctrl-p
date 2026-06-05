@@ -213,13 +213,13 @@ export function BookingPublicPage() {
     <main className="min-h-screen bg-[#f7f7f2] text-[#07130b] dark:bg-[#07130b] dark:text-[#f7fff2]">
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 md:px-6">
         <header className="mb-5 flex items-center justify-between border-b border-black/10 pb-4 dark:border-white/10">
-          <a className="flex items-center gap-3" href="/">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-[#a3ff12] text-sm font-black text-[#07130b]">cp</div>
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.32em] text-black/45 dark:text-white/45">controlp.io</div>
-              <div className="text-lg font-semibold">Book an appointment</div>
-            </div>
-          </a>
+          <div className="flex items-center gap-4">
+            <a href="/" className="shrink-0">
+              <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-10 w-auto dark:hidden" />
+              <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-10 w-auto dark:block" />
+            </a>
+            <div className="text-lg font-semibold">Book an appointment</div>
+          </div>
           <Badge className="hidden bg-[#a3ff12] text-[#07130b] md:inline-flex">Arizona time</Badge>
         </header>
 
@@ -426,8 +426,8 @@ export function BookingPublicPage() {
                   <span>Email me my appointment confirmation.</span>
                 </label>
                 <label className="flex items-start gap-2 text-sm">
-                  <input className="mt-1 h-4 w-4 accent-[#a3ff12]" type="checkbox" checked={form.sms_consent} onChange={(event) => setForm({ ...form, sms_consent: event.target.checked })} />
-                  <span>Text me appointment updates. Message/data rates may apply.</span>
+                  <input className="mt-1 h-4 w-4 shrink-0 accent-[#a3ff12]" type="checkbox" checked={form.sms_consent} onChange={(event) => setForm({ ...form, sms_consent: event.target.checked })} />
+                  <span className="leading-relaxed text-muted-foreground">I agree to receive SMS appointment updates from ControlP.io, including appointment confirmations, reminders, schedule changes, and related service updates. Message frequency may vary. Message and data rates may apply. Reply STOP to unsubscribe or HELP for help. Consent is not a condition of purchase.</span>
                 </label>
 
                 <Button className="w-full" disabled={!canSubmit} onClick={book}>
