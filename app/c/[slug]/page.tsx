@@ -322,6 +322,7 @@ export default async function PublicDigitalCardPage({ params, searchParams }: { 
 
   const reqHeaders = await headers();
   const ua = reqHeaders.get("user-agent") || "";
+  const isEmbed = resolvedSearch.embed === "1";
   const rawSource = resolvedSearch.source ?? "";
   const source = rawSource === "qr" ? "qr" : rawSource === "nfc" ? "nfc" : "organic";
   const eventType = source === "qr" ? "qr_scan" : source === "nfc" ? "nfc_tap" : "view";
@@ -366,8 +367,8 @@ export default async function PublicDigitalCardPage({ params, searchParams }: { 
 
   return (
     <main id="public-card-page" className="min-h-screen px-4 py-6" style={pageStyle}>
-      {opener && <PublicOpener section={opener} card={card} publicUrl={publicUrl} />}
-      <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} position={fabPosition} accent="var(--public-accent)" background="var(--public-bg)" />
+      {!isEmbed && opener && <PublicOpener section={opener} card={card} publicUrl={publicUrl} />}
+      {!isEmbed && <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} position={fabPosition} accent="var(--public-accent)" background="var(--public-bg)" />}
       <section className="mx-auto max-w-md">
         <div id="card" className="rounded-[2rem] border border-white/15 bg-black/25 p-5 shadow-2xl backdrop-blur">
           {sections.filter((item) => item.id !== opener?.id).map((item) => <PublicSection key={item.id} section={item} card={themedCard} links={links} publicUrl={publicUrl} themeMode={card.theme_mode || "dark"} darkTheme={darkTheme} lightTheme={lightTheme} />)}

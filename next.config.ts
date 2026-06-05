@@ -3,6 +3,17 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: __dirname,
+  async headers() {
+    return [
+      {
+        source: "/c/:slug*",
+        headers: [
+          { key: "X-Frame-Options", value: "ALLOWALL" },
+          { key: "Content-Security-Policy", value: "frame-ancestors *;" },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       { source: "/login.html", destination: "/login", permanent: true },

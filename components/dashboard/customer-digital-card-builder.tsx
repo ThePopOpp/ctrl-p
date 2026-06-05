@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, Camera, ChevronDown, ChevronRight, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck, Upload, UserCircle, Zap } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, Camera, Check, ChevronDown, ChevronRight, Code2, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck, Upload, UserCircle, X, Zap } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -115,7 +115,7 @@ const previewModes = [
   { value: "desktop", label: "Desktop", width: 920, icon: Monitor },
 ] as const;
 type PreviewMode = typeof previewModes[number]["value"];
-type BuilderPanel = "sections" | "layers" | "content" | "links" | "color_modes" | "splash" | "qr_code" | "nfc" | "media" | "forms" | "slideshow" | "steps" | "automate" | "settings" | "wizard";
+type BuilderPanel = "sections" | "layers" | "content" | "links" | "color_modes" | "splash" | "qr_code" | "nfc" | "media" | "forms" | "slideshow" | "steps" | "automate" | "settings" | "wizard" | "embed";
 const builderPanels: { value: BuilderPanel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: "sections", label: "Sections", icon: Layers },
   { value: "layers", label: "Layers", icon: Layers },
@@ -132,6 +132,7 @@ const builderPanels: { value: BuilderPanel; label: string; icon: React.Component
   { value: "automate", label: "Automate", icon: Zap },
   { value: "settings", label: "Settings", icon: Settings },
   { value: "wizard", label: "Setup Wizard", icon: UserCircle },
+  { value: "embed", label: "Embed", icon: Code2 },
 ];
 const cardModes = ["standard", "opener_slider", "qr_only", "nfc_landing"];
 const layoutTemplates = ["classic", "split_profile", "link_hub", "sales_intro", "portfolio", "appointment_first"];
@@ -501,6 +502,8 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>(["profile_header-0"]);
   const [expandedSpacingKeys, setExpandedSpacingKeys] = useState<string[]>([]);
   const [dragSectionIndex, setDragSectionIndex] = useState<number | null>(null);
+  const isPro = true; // TODO: wire to subscription tier when billing is ready
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("controlp_customer_theme");
@@ -1588,12 +1591,19 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   </CardContent>
                 </Card>
               )}
+
+              {activePanel === "embed" && (
+                isPro
+                  ? <EmbedPanel publicUrl={publicUrl} isPublished={form.status === "published"} />
+                  : <LockedEmbedPanel onUnlock={() => setUpgradeOpen(true)} />
+              )}
             </section>
 
             <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} themeMode={previewThemeMode} onThemeModeChange={setPreviewThemeMode} zoom={previewZoom} onZoomChange={setPreviewZoom} />
           </div>
         )}
       </main>
+      <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     </div>
   );
 }
@@ -2058,4 +2068,152 @@ function SpacingGroup({ title, section, prefix, onChange }: { title: string; sec
 
 function Nav({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
   return <a href={href} className={cn("flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-accent-foreground", active && "bg-accent font-medium text-accent-foreground")}>{icon}{label}</a>;
+}
+
+// ─── Embed panel ──────────────────────────────────────────────────────────────
+
+type EmbedPreset = "mobile" | "compact" | "large";
+const embedPresets: Record<EmbedPreset, { width: number; height: number; label: string }> = {
+  mobile:  { width: 390, height: 700, label: "Mobile (390 × 700)" },
+  compact: { width: 360, height: 640, label: "Compact (360 × 640)" },
+  large:   { width: 430, height: 800, label: "Large (430 × 800)" },
+};
+
+function EmbedPanel({ publicUrl, isPublished }: { publicUrl: string; isPublished: boolean }) {
+  const [preset, setPreset] = useState<EmbedPreset>("mobile");
+  const [copied, setCopied] = useState(false);
+  const embedUrl = `${publicUrl}?embed=1`;
+  const { width, height } = embedPresets[preset];
+  const snippet = `<iframe\n  src="${embedUrl}"\n  width="${width}"\n  height="${height}"\n  frameborder="0"\n  style="border-radius:16px;overflow:hidden;border:none;"\n  title="Digital Business Card"\n  loading="lazy"\n></iframe>`;
+
+  async function copy() {
+    await navigator.clipboard.writeText(snippet).catch(() => null);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base"><Code2 className="h-4 w-4" /> Embed on your website</CardTitle>
+          <CardDescription>Copy this snippet and paste it into any page on your website. Your digital card will render exactly as it appears on ControlP.io.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Size preset</p>
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(embedPresets) as EmbedPreset[]).map((p) => (
+                <Button key={p} variant={preset === p ? "default" : "outline"} size="sm" onClick={() => setPreset(p)}>
+                  {embedPresets[p].label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative">
+            <pre className="overflow-x-auto rounded-lg border bg-background/50 p-3 font-mono text-xs leading-relaxed">{snippet}</pre>
+            <Button size="sm" className="absolute right-2 top-2" onClick={copy}>
+              {copied ? <><Check className="mr-1.5 h-3.5 w-3.5" />Copied!</> : <><Copy className="mr-1.5 h-3.5 w-3.5" />Copy</>}
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Adjust <code className="rounded bg-secondary px-1 py-0.5">width</code> and <code className="rounded bg-secondary px-1 py-0.5">height</code> attributes to fit your layout. The card is fully responsive inside the iframe.
+          </p>
+
+          {!isPublished && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs text-yellow-700 dark:text-yellow-300">
+              Your card is not published yet. Visitors will see a &ldquo;card not found&rdquo; page until you set the status to <strong>Published</strong>.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {isPublished && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Live preview</CardTitle>
+            <CardDescription>How your card looks when embedded on an external site.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-hidden rounded-b-xl border-t bg-muted/30" style={{ height: Math.min(height, 520) }}>
+              <iframe
+                src={embedUrl}
+                width="100%"
+                height={Math.min(height, 520)}
+                style={{ border: "none", display: "block" }}
+                title="Embed preview"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function LockedEmbedPanel({ onUnlock }: { onUnlock: () => void }) {
+  const mockSnippet = `<iframe\n  src="https://my.controlp.io/c/your-card?embed=1"\n  width="390"\n  height="700"\n  frameborder="0"\n  style="border-radius:16px;overflow:hidden;border:none;"\n  title="Digital Business Card"\n  loading="lazy"\n></iframe>`;
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base"><Code2 className="h-4 w-4" /> Embed on your website</CardTitle>
+        <CardDescription>Add your digital business card directly to any page on your website.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="relative">
+          <pre className="pointer-events-none select-none overflow-x-auto rounded-lg border bg-background/50 p-3 font-mono text-xs leading-relaxed blur-[3px]">{mockSnippet}</pre>
+          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg bg-background/80 backdrop-blur-[2px]">
+            <div className="text-center">
+              <div className="mb-1 font-semibold">Pro feature</div>
+              <p className="mb-4 text-xs text-muted-foreground">Upgrade to embed your card on any website</p>
+              <Button size="sm" onClick={onUnlock} className="bg-[#a3ff12] text-[#07130b] hover:bg-[#8fe000]">
+                Upgrade to Pro
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+  const proFeatures = [
+    "Embed your card on any website",
+    "Advanced analytics and lead tracking",
+    "Custom domain for your card URL",
+    "Priority support and early access to new features",
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="mx-4 w-full max-w-md rounded-2xl border bg-card p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Upgrade Your Account</h2>
+          <button type="button" onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mb-5 text-sm text-muted-foreground">
+          Website embed is a Pro feature. Upgrade to unlock embed codes, advanced analytics, custom domains, and more.
+        </p>
+        <div className="mb-5 space-y-2 rounded-xl border border-[#a3ff12]/30 bg-[#a3ff12]/5 p-4">
+          {proFeatures.map((f) => (
+            <div key={f} className="flex items-center gap-2 text-sm">
+              <Check className="h-4 w-4 shrink-0 text-[#72b000] dark:text-[#a3ff12]" />
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Button className="w-full bg-[#a3ff12] text-[#07130b] hover:bg-[#8fe000]" asChild>
+            <a href="/pricing">Get Started</a>
+          </Button>
+          <Button variant="outline" className="w-full" onClick={onClose}>Maybe Later</Button>
+        </div>
+      </div>
+    </div>
+  );
 }
