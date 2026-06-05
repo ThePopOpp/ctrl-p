@@ -143,8 +143,15 @@ export type CustomerBooking = {
   appointment_type_id: string | null;
   customer_first_name: string | null;
   customer_last_name: string | null;
-  notes: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+  customer_notes: string | null;
+  location_type: string | null;
+  meeting_url: string | null;
+  phone_number: string | null;
+  cancellation_reason: string | null;
   created_at: string | null;
+  booking_appointment_types: { name: string; color: string | null } | null;
 };
 
 export type CustomerData = {
@@ -265,7 +272,7 @@ export function useCustomerSession() {
     router.replace("/login");
   }
 
-  return { data, setData, state, errorMessage, theme, setTheme, messages, setMessages, bookings, getToken, signOut };
+  return { data, setData, state, errorMessage, theme, setTheme, messages, setMessages, bookings, setBookings, getToken, signOut };
 }
 
 // ─── CustomerShell layout ────────────────────────────────────────────────────

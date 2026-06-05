@@ -3,9 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError } from "@/lib/admin/server-auth";
 
-export async function GET(request: Request) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const config = getServerSupabaseConfig();
   if (config.error) return config.error;
+
+  const { id } = await params;
+  if (!id) return jsonError("Appointment ID is required.", 400);
 
   const authHeader = request.headers.get("authorization") || "";
   const accessToken = authHeader.replace(/^Bearer\s+/i, "");
@@ -36,20 +39,37 @@ export async function GET(request: Request) {
   }
 
   const email = String(profile.email || "").toLowerCase().trim();
-  if (!email) return NextResponse.json({ bookings: [] });
 
-  // 30 days back so recent past appointments are visible
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
-  const bookingsResult = await adminClient
+  const apptResult = await adminClient
     .from("booking_appointments")
-    .select("id, title, start_time, end_time, status, appointment_type_id, customer_first_name, customer_last_name, customer_email, customer_phone, customer_notes, location_type, meeting_url, phone_number, cancellation_reason, created_at, booking_appointment_types(name, color)")
-    .gte("start_time", since)
-    .eq("customer_email", email)
-    .order("start_time", { ascending: false })
-    .limit(50);
+    .select("id, status, start_time, customer_email")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (bookingsResult.error) return jsonError(bookingsResult.error.message, 400);
+  if (apptResult.error || !apptResult.data) return jsonError("Appointment not found.", 404);
+  const appt = apptResult.data;
 
-  return NextResponse.json({ bookings: bookingsResult.data ?? [] });
+  if (String(appt.customer_email || "").toLowerCase().trim() !== email) {
+    return jsonError("You do not have permission to cancel this appointment.", 403);
+  }
+
+  const nonCancelable = ["canceled", "completed", "no_show"];
+  if (nonCancelable.includes(String(appt.status || ""))) {
+    return jsonError("This appointment cannot be canceled.", 409);
+  }
+
+  if (new Date(appt.start_time) < new Date()) {
+    return jsonError("Past appointments cannot be canceled.", 409);
+  }
+
+  const updateResult = await adminClient
+    .from("booking_appointments")
+    .update({ status: "canceled", canceled_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("id, status")
+    .single();
+
+  if (updateResult.error) return jsonError(updateResult.error.message, 400);
+
+  return NextResponse.json({ appointment: updateResult.data });
 }
