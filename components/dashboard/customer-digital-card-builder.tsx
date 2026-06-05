@@ -227,10 +227,12 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function safeThemePalette(value: unknown, fallback: CardThemePalette): CardThemePalette {
   const source = isObject(value) ? value : {};
+  const hexOrFallback = (v: unknown, fb: string) =>
+    typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : fb;
   return {
-    background: typeof source.background === "string" && source.background ? source.background : fallback.background,
-    accent: typeof source.accent === "string" && source.accent ? source.accent : fallback.accent,
-    text: typeof source.text === "string" && source.text ? source.text : fallback.text,
+    background: hexOrFallback(source.background, fallback.background),
+    accent: hexOrFallback(source.accent, fallback.accent),
+    text: hexOrFallback(source.text, fallback.text),
   };
 }
 
@@ -241,7 +243,7 @@ function themeSettings(card: DigitalCard): CardThemeSettings {
     text: card.text_color || "#f7fff2",
   };
   const fallbackLight = {
-    background: "#f7fff2",
+    background: "#ffffff",
     accent: card.accent_color || "#4d7c0f",
     text: "#07130b",
   };
@@ -2035,7 +2037,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
 }
 
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  const safeValue = /^#[0-9a-fA-F]{6}$/.test(value || "") ? value : "#000000";
+  const safeValue = /^#[0-9a-fA-F]{6}$/.test(value || "") ? value.toLowerCase() : "#000000";
   return (
     <div>
       <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
