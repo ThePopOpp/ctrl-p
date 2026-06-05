@@ -550,8 +550,8 @@ function CalendarLinks({ booking }: { booking: ConfirmedBooking }) {
   const icsUrl = `/api/booking/ics?id=${encodeURIComponent(booking.appointmentId)}`;
 
   return (
-    <div className="mt-6">
-      <p className="mb-3 text-sm font-semibold text-muted-foreground">Add to your calendar</p>
+    <div className="mt-8 border-t border-black/10 pt-7 dark:border-white/10">
+      <p className="mb-4 text-sm font-semibold text-muted-foreground">Add to your calendar</p>
       <div className="flex flex-wrap justify-center gap-2">
         <a
           href={buildGoogleCalUrl(booking)}
@@ -775,7 +775,7 @@ export function BookingPublicPage() {
               <div className="w-full rounded-2xl border border-[#a3ff12]/40 bg-white/90 p-8 text-center shadow-sm dark:bg-white/5 sm:p-10">
                 <CheckCircle2 className="mx-auto h-14 w-14 text-[#72b000]" />
                 <h1 className="mt-5 text-2xl font-semibold">Appointment confirmed!</h1>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-3 text-sm leading-relaxed text-foreground/70 dark:text-[#f7fff2]/70">
                   {confirmed.title} is booked for{" "}
                   {new Intl.DateTimeFormat("en-US", {
                     timeZone: "America/Phoenix",
@@ -785,10 +785,7 @@ export function BookingPublicPage() {
                     hour: "numeric",
                     minute: "2-digit",
                   }).format(new Date(confirmed.start))}
-                  .
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  A confirmation email is on its way.
+                  {". "}A confirmation email is on its way.
                 </p>
 
                 {/* Add to calendar */}
