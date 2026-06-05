@@ -82,14 +82,14 @@ function customerEmailHtml(input: {
   <!-- HEADER -->
   <tr>
     <td style="background:#07130b;padding:22px 32px;">
-      <img src="${logoUrl}" alt="ControlP.io" height="34" style="display:block;height:34px;width:auto;border:0;" />
+      <img src="${logoUrl}" alt="ControlP.io" height="42" style="display:block;height:42px;width:auto;border:0;" />
     </td>
   </tr>
 
   <!-- HERO -->
   <tr>
     <td style="background:#0d1f10;padding:40px 32px 36px;text-align:center;">
-      <div style="display:inline-block;background:#a3ff1220;border:1px solid #a3ff1240;border-radius:50%;width:64px;height:64px;line-height:64px;font-size:32px;margin-bottom:18px;">📅</div>
+      <div style="display:inline-block;background:#a3ff1220;border:1px solid #a3ff1240;border-radius:50%;width:64px;height:64px;margin-bottom:18px;text-align:center;line-height:64px;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#a3ff12" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
       <h1 style="margin:0 0 10px;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.4px;line-height:1.2;">Appointment Confirmed</h1>
       <p style="margin:0;color:#9db89a;font-size:15px;line-height:1.5;">Hi ${input.firstName}, your booking is all set. We look forward to seeing you!</p>
     </td>
@@ -130,7 +130,7 @@ function customerEmailHtml(input: {
           <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
             <tr><td style="font-size:17px;font-weight:700;color:#ffffff;">${input.typeName}</td></tr>
             ${descRow}
-            <tr><td style="padding-top:10px;font-size:13px;color:#7a9a78;">📍 ${input.location}</td></tr>
+            <tr><td style="padding-top:10px;"><table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7a9a78" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="display:block;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></td><td style="font-size:13px;color:#7a9a78;">${input.location}</td></tr></table></td></tr>
           </table>
         </td></tr>
       </table>
@@ -169,13 +169,13 @@ function customerEmailHtml(input: {
       <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
         <tr>
           <td style="vertical-align:top;">
-            <img src="${faviconUrl}" alt="" width="28" height="28" style="display:block;width:28px;height:28px;border-radius:6px;margin-bottom:10px;border:0;" />
+            <img src="${faviconUrl}" alt="" width="75" height="75" style="display:block;width:75px;height:75px;border-radius:10px;margin-bottom:10px;border:0;" />
             <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:8px;">ControlP.io</div>
-            <table cellpadding="0" cellspacing="4" role="presentation">
-              <tr><td style="font-size:12px;color:#6b7280;padding-bottom:3px;">📞 (602) 888-5678</td></tr>
-              <tr><td style="font-size:12px;color:#6b7280;padding-bottom:3px;">🕒 Mon–Fri 9 am – 5 pm MST</td></tr>
-              <tr><td style="font-size:12px;color:#6b7280;padding-bottom:3px;">🌐 <a href="https://my.controlp.io" style="color:#16a34a;text-decoration:none;">my.controlp.io</a></td></tr>
-              <tr><td style="font-size:12px;color:#6b7280;">✉️ <a href="mailto:hello@controlp.io" style="color:#16a34a;text-decoration:none;">hello@controlp.io</a></td></tr>
+            <table cellpadding="0" cellspacing="0" role="presentation">
+              <tr><td style="padding-bottom:5px;"><table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="display:block;"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.69 12a19.79 19.79 0 01-3.07-8.67A2 2 0 013.6 1.27h3a2 2 0 012 1.72c.127.96.36 1.903.7 2.81a2 2 0 01-.45 2.11L7.91 8.96a16 16 0 006.13 6.13l.96-.95a2 2 0 012.11-.45c.907.34 1.85.573 2.81.7a2 2 0 011.72 2.03z"></path></svg></td><td style="font-size:12px;color:#6b7280;">(480) 999-9906</td></tr></table></td></tr>
+              <tr><td style="padding-bottom:5px;"><table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="display:block;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></td><td style="font-size:12px;color:#6b7280;">Mon–Fri 9 am – 5 pm MST</td></tr></table></td></tr>
+              <tr><td style="padding-bottom:5px;"><table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="display:block;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"></path></svg></td><td style="font-size:12px;color:#6b7280;"><a href="https://my.controlp.io" style="color:#16a34a;text-decoration:none;">my.controlp.io</a></td></tr></table></td></tr>
+              <tr><td><table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="display:block;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></td><td style="font-size:12px;color:#6b7280;"><a href="mailto:hello@controlp.io" style="color:#16a34a;text-decoration:none;">hello@controlp.io</a></td></tr></table></td></tr>
             </table>
           </td>
         </tr>
