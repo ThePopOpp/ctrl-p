@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarClock,
   CalendarPlus,
@@ -13,6 +13,10 @@ import {
   MapPin,
   XCircle,
   AlertTriangle,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 import {
   CustomerShell,
@@ -34,6 +39,10 @@ import {
   fmtDateTime,
   useCustomerSession,
 } from "@/components/dashboard/customer-shell";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type AvailabilitySlot = { start: string; end: string; label: string };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -56,6 +65,15 @@ function LocationIcon({ type }: { type: string | null }) {
   if (type === "video_meeting") return <Video className="h-3.5 w-3.5 shrink-0" />;
   if (type === "phone_call") return <Phone className="h-3.5 w-3.5 shrink-0" />;
   return <MapPin className="h-3.5 w-3.5 shrink-0" />;
+}
+
+function toDateKey(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Phoenix",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 }
 
 function buildGoogleCalUrl(booking: CustomerBooking): string {
@@ -84,14 +102,223 @@ function buildOutlookUrl(booking: CustomerBooking): string {
   return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
 }
 
+// ─── Reschedule Dialog ───────────────────────────────────────────────────────
+
+function RescheduleDialog({
+  booking,
+  open,
+  onClose,
+  onConfirm,
+}: {
+  booking: CustomerBooking | null;
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (newStart: string, reason: string) => Promise<void>;
+}) {
+  const today = new Date();
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
+  const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [slotsError, setSlotsError] = useState("");
+
+  // Reset when dialog opens/closes
+  useEffect(() => {
+    if (!open) {
+      setSelectedDate(null);
+      setSlots([]);
+      setSelectedSlot(null);
+      setReason("");
+      setSlotsError("");
+    }
+  }, [open]);
+
+  // Fetch slots when date selected
+  useEffect(() => {
+    if (!selectedDate || !booking?.appointment_type_id) return;
+    const dateKey = toDateKey(selectedDate);
+    setLoadingSlots(true);
+    setSlotsError("");
+    setSlots([]);
+    setSelectedSlot(null);
+    fetch(`/api/booking/availability?appointment_type_id=${encodeURIComponent(booking.appointment_type_id)}&date=${dateKey}`)
+      .then((r) => r.json())
+      .then((data: { slots?: AvailabilitySlot[]; error?: string }) => {
+        if (data.error) { setSlotsError(data.error); return; }
+        setSlots(data.slots ?? []);
+        if (!data.slots?.length) setSlotsError("No available times on this day.");
+      })
+      .catch(() => setSlotsError("Could not load available times."))
+      .finally(() => setLoadingSlots(false));
+  }, [selectedDate, booking?.appointment_type_id]);
+
+  async function submit() {
+    if (!selectedSlot) return;
+    setSaving(true);
+    try {
+      await onConfirm(selectedSlot, reason);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Calendar rendering helpers
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const maxDate = new Date(today);
+  maxDate.setDate(maxDate.getDate() + 90);
+
+  function prevMonth() {
+    setCalendarMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  }
+  function nextMonth() {
+    setCalendarMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  }
+
+  const monthLabel = calendarMonth.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reschedule appointment</DialogTitle>
+          <DialogDescription>
+            {booking ? (
+              <>Current: <strong>{fmtDateTime(booking.start_time)}</strong></>
+            ) : null}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Month calendar */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={prevMonth}
+                disabled={calendarMonth <= new Date(today.getFullYear(), today.getMonth(), 1)}
+                className="rounded p-1 hover:bg-muted disabled:opacity-30"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm font-medium">{monthLabel}</span>
+              <button type="button" onClick={nextMonth} className="rounded p-1 hover:bg-muted">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-7 gap-0.5 text-center">
+              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+                <div key={d} className="py-1 text-[10px] font-semibold text-muted-foreground">{d}</div>
+              ))}
+              {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const date = new Date(year, month, day);
+                const dateKey = toDateKey(date);
+                const isSelected = selectedDate ? toDateKey(selectedDate) === dateKey : false;
+                const isPast = date < new Date(toDateKey(today) + "T00:00:00");
+                const isFuture = date > maxDate;
+                const disabled = isPast || isFuture;
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => setSelectedDate(date)}
+                    className={`rounded py-1.5 text-xs transition-colors ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground font-semibold"
+                        : disabled
+                        ? "cursor-not-allowed text-muted-foreground/40"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Time slots */}
+          {selectedDate && (
+            <div>
+              <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                Available times —{" "}
+                {selectedDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+              </div>
+              {loadingSlots ? (
+                <div className="py-4 text-center text-xs text-muted-foreground">Loading times…</div>
+              ) : slotsError ? (
+                <div className="rounded-md bg-muted/40 px-3 py-2 text-center text-xs text-muted-foreground">{slotsError}</div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {slots.map((slot) => (
+                    <button
+                      key={slot.start}
+                      type="button"
+                      onClick={() => setSelectedSlot(slot.start)}
+                      className={`rounded-md border py-2 text-xs font-medium transition-colors ${
+                        selectedSlot === slot.start
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border hover:border-primary/60 hover:bg-muted"
+                      }`}
+                    >
+                      {slot.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Reason */}
+          {selectedSlot && (
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                Reason for rescheduling <span className="text-muted-foreground/60">(optional)</span>
+              </label>
+              <Textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Let us know if there's anything we should be aware of…"
+                className="h-20 resize-none text-sm"
+              />
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={submit} disabled={!selectedSlot || saving}>
+            {saving ? "Rescheduling…" : "Confirm reschedule"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Booking card ────────────────────────────────────────────────────────────
 
 function BookingCard({
   booking,
   onCancel,
+  onReschedule,
 }: {
   booking: CustomerBooking;
   onCancel: (id: string) => void;
+  onReschedule: (booking: CustomerBooking) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const isUpcoming = new Date(booking.start_time) >= new Date();
@@ -184,7 +411,6 @@ function BookingCard({
 
             {isUpcoming && !isCanceled && (
               <>
-                {/* Add to calendar */}
                 <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
                   <a href={buildGoogleCalUrl(booking)} target="_blank" rel="noopener noreferrer">
                     <CalendarPlus className="h-3.5 w-3.5" /> Google
@@ -195,13 +421,23 @@ function BookingCard({
                     <CalendarPlus className="h-3.5 w-3.5" /> Outlook
                   </a>
                 </Button>
+                {booking.appointment_type_id && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => onReschedule(booking)}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> Reschedule
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive ml-auto"
                   onClick={() => onCancel(booking.id)}
                 >
-                  <XCircle className="h-3.5 w-3.5" /> Cancel appointment
+                  <XCircle className="h-3.5 w-3.5" /> Cancel
                 </Button>
               </>
             )}
@@ -219,8 +455,13 @@ export function CustomerBookings() {
     useCustomerSession();
   const notifRef = useRef<HTMLDivElement>(null);
   const [notifOpen, setNotifOpen] = useState(false);
+
+  // Cancel state
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [canceling, setCanceling] = useState(false);
+
+  // Reschedule state
+  const [rescheduleBooking, setRescheduleBooking] = useState<CustomerBooking | null>(null);
 
   async function openNotifications() {
     setNotifOpen((o) => !o);
@@ -251,13 +492,37 @@ export function CustomerBookings() {
         alert(payload.error || "Could not cancel this appointment.");
         return;
       }
-      setBookings((prev) =>
-        prev.map((b) => (b.id === cancelId ? { ...b, status: "canceled" } : b))
-      );
+      setBookings((prev) => prev.map((b) => (b.id === cancelId ? { ...b, status: "canceled" } : b)));
       setCancelId(null);
     } finally {
       setCanceling(false);
     }
+  }
+
+  async function handleReschedule(newStart: string, reason: string) {
+    if (!rescheduleBooking) return;
+    const token = await getToken();
+    if (!token) return;
+    const res = await fetch(`/api/dashboard/customer/bookings/${rescheduleBooking.id}/reschedule`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ new_start_time: newStart, reason: reason || undefined }),
+    });
+    const payload = await res.json().catch(() => ({})) as { appointment?: { start_time: string; end_time: string; status: string }; error?: string };
+    if (!res.ok) {
+      alert(payload.error || "Could not reschedule this appointment.");
+      return;
+    }
+    if (payload.appointment) {
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === rescheduleBooking.id
+            ? { ...b, start_time: payload.appointment!.start_time, end_time: payload.appointment!.end_time, status: payload.appointment!.status }
+            : b
+        )
+      );
+    }
+    setRescheduleBooking(null);
   }
 
   const upcomingBookings = bookings.filter((b) => new Date(b.start_time) >= new Date());
@@ -305,7 +570,7 @@ export function CustomerBookings() {
                     <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Upcoming</div>
                     <div className="space-y-2">
                       {upcomingBookings.map((booking) => (
-                        <BookingCard key={booking.id} booking={booking} onCancel={setCancelId} />
+                        <BookingCard key={booking.id} booking={booking} onCancel={setCancelId} onReschedule={setRescheduleBooking} />
                       ))}
                     </div>
                   </div>
@@ -315,7 +580,7 @@ export function CustomerBookings() {
                     <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Past appointments</div>
                     <div className="space-y-2">
                       {pastBookings.map((booking) => (
-                        <BookingCard key={booking.id} booking={booking} onCancel={setCancelId} />
+                        <BookingCard key={booking.id} booking={booking} onCancel={setCancelId} onReschedule={setRescheduleBooking} />
                       ))}
                     </div>
                   </div>
@@ -338,22 +603,26 @@ export function CustomerBookings() {
                   {" on "}
                   {fmtDateTime(cancelTarget.start_time)}
                 </>
-              ) : (
-                "This appointment"
-              )}{" "}
-              will be marked as canceled. This cannot be undone — to reschedule, message the team or book a new appointment.
+              ) : "This appointment"}{" "}
+              will be marked as canceled. To reschedule instead, use the Reschedule button.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelId(null)} disabled={canceling}>
-              Keep appointment
-            </Button>
+            <Button variant="outline" onClick={() => setCancelId(null)} disabled={canceling}>Keep appointment</Button>
             <Button variant="destructive" onClick={handleCancel} disabled={canceling}>
               {canceling ? "Canceling…" : "Yes, cancel it"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reschedule dialog */}
+      <RescheduleDialog
+        booking={rescheduleBooking}
+        open={!!rescheduleBooking}
+        onClose={() => setRescheduleBooking(null)}
+        onConfirm={handleReschedule}
+      />
     </CustomerShell>
   );
 }

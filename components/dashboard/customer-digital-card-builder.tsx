@@ -1188,20 +1188,38 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
               {activePanel === "color_modes" && <Card>
                 <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Palette className="h-4 w-4" /> Color Modes</CardTitle><CardDescription>Set reusable dark and light palettes for the public card and preview each mode before saving.</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                    {colorPresets.map((preset) => (
-                      <button
-                        key={preset.label}
-                        type="button"
-                        className="flex items-center gap-3 rounded-lg border bg-background/35 p-2 text-left text-xs transition-colors hover:border-primary/60"
-                        onClick={() => applyThemePreset(preset)}
-                      >
-                        <span className="flex -space-x-1">
-                          {[preset.background, preset.accent, preset.text].map((color) => <span key={color} className="h-5 w-5 rounded-full border" style={{ backgroundColor: color }} />)}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        Quick presets — applying to{" "}
+                        <span className={`inline-flex items-center gap-1 font-semibold ${previewThemeMode === "dark" ? "text-foreground" : "text-amber-500"}`}>
+                          {previewThemeMode === "dark" ? <Moon className="h-3 w-3" /> : <Sun className="h-3 w-3" />}
+                          {previewThemeMode} mode
                         </span>
-                        {preset.label}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+                        onClick={() => setPreviewThemeMode(previewThemeMode === "dark" ? "light" : "dark")}
+                      >
+                        Switch to {previewThemeMode === "dark" ? "light" : "dark"}
                       </button>
-                    ))}
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                      {colorPresets.map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          className="flex items-center gap-3 rounded-lg border bg-background/35 p-2 text-left text-xs transition-colors hover:border-primary/60"
+                          onClick={() => applyThemePreset(preset)}
+                        >
+                          <span className="flex -space-x-1">
+                            {[preset.background, preset.accent, preset.text].map((color) => <span key={color} className="h-5 w-5 rounded-full border" style={{ backgroundColor: color }} />)}
+                          </span>
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div className="grid gap-3 md:grid-cols-3">
                     <SelectField label="Light / dark mode" value={form.theme_mode || "dark"} values={["light", "dark", "both"]} onChange={(value) => update("theme_mode", value)} />
