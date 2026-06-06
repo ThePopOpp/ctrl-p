@@ -9,7 +9,10 @@ import {
   CalendarCheck,
   CalendarDays,
   ChevronRight,
+  CheckCircle2,
   Clock,
+  Link2,
+  Link2Off,
   Loader2,
   Moon,
   Pencil,
@@ -562,6 +565,108 @@ function CalendarView({ appointments, types, onSelect }: { appointments: Appoint
   );
 }
 
+type CalendarIntegrationStatus = {
+  id: string;
+  account_email: string | null;
+  calendar_name: string | null;
+  is_active: boolean;
+  token_expires_at: string | null;
+} | null;
+
+function CalendarConnectionCard() {
+  const [status, setStatus] = useState<CalendarIntegrationStatus>(null);
+  const [connectUrl, setConnectUrl] = useState("");
+  const [configured, setConfigured] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  useEffect(() => {
+    async function getToken() {
+      const db = getSupabaseBrowserClient();
+      return (await db?.auth.getSession())?.data.session?.access_token ?? null;
+    }
+    async function load() {
+      try {
+        const token = await getToken();
+        const res = await fetch("/api/admin/calendar", {
+          headers: token ? { authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) return;
+        const data = await res.json() as { integration: CalendarIntegrationStatus; connectUrl: string; configured: boolean };
+        setStatus(data.integration);
+        setConnectUrl(data.connectUrl);
+        setConfigured(data.configured);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+    // Handle redirect back from Google OAuth
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("calendar_connected")) {
+        window.history.replaceState({}, "", window.location.pathname);
+        load();
+      }
+    }
+  }, []);
+
+  async function disconnect() {
+    setDisconnecting(true);
+    try {
+      const db = getSupabaseBrowserClient();
+      const token = (await db?.auth.getSession())?.data.session?.access_token;
+      await fetch("/api/admin/calendar", {
+        method: "DELETE",
+        headers: token ? { authorization: `Bearer ${token}` } : {},
+      });
+      setStatus(null);
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Google Calendar sync</CardTitle>
+        <CardDescription>Two-way sync blocks your Google Calendar busy times from being booked and pushes new appointments to your calendar.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
+        ) : !configured ? (
+          <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground space-y-1">
+            <div className="font-medium text-foreground">Not configured</div>
+            <p>Add <code className="rounded bg-muted px-1 py-0.5 text-xs">GOOGLE_CALENDAR_CLIENT_ID</code> and <code className="rounded bg-muted px-1 py-0.5 text-xs">GOOGLE_CALENDAR_CLIENT_SECRET</code> to your environment variables to enable Google Calendar sync.</p>
+          </div>
+        ) : status?.is_active ? (
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 rounded-lg border border-green-500/30 bg-green-500/5 p-3">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+              <div className="text-sm">
+                <div className="font-medium text-green-700 dark:text-green-300">Connected</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{status.account_email || status.calendar_name || "Google Calendar"}</div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Your Google Calendar busy times are now automatically blocked from public booking. New appointments will be pushed to your calendar.</p>
+            <Button variant="outline" size="sm" className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={disconnect} disabled={disconnecting}>
+              <Link2Off className="mr-2 h-3.5 w-3.5" />{disconnecting ? "Disconnecting…" : "Disconnect Google Calendar"}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Connect your Google Calendar to automatically block busy times and prevent double-booking.</p>
+            <Button className="w-full" asChild>
+              <a href={connectUrl}><Link2 className="mr-2 h-4 w-4" />Connect Google Calendar</a>
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function AvailabilityView(props: {
   types: AppointmentType[];
   rules: AvailabilityRule[];
@@ -631,6 +736,8 @@ function AvailabilityView(props: {
           </div>
         </CardContent>
       </Card>
+
+      <CalendarConnectionCard />
     </section>
   );
 }

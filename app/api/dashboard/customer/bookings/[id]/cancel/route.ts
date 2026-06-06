@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError } from "@/lib/admin/server-auth";
+import { getActiveCalendarIntegration, getFreshToken } from "@/lib/calendar/integration";
+import { cancelGoogleCalendarEvent } from "@/lib/calendar/google";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const config = getServerSupabaseConfig();
@@ -42,7 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const apptResult = await adminClient
     .from("booking_appointments")
-    .select("id, status, start_time, customer_email")
+    .select("id, status, start_time, customer_email, external_event_id, external_calendar_id, external_calendar_provider")
     .eq("id", id)
     .maybeSingle();
 
@@ -70,6 +72,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .single();
 
   if (updateResult.error) return jsonError(updateResult.error.message, 400);
+
+  // Cancel Google Calendar event (non-blocking)
+  if (appt.external_calendar_provider === "google" && appt.external_event_id) {
+    try {
+      const integration = await getActiveCalendarIntegration(adminClient);
+      if (integration) {
+        const token = await getFreshToken(adminClient, integration);
+        if (token) {
+          await cancelGoogleCalendarEvent(token, appt.external_calendar_id || integration.calendar_id, appt.external_event_id);
+        }
+      }
+    } catch {
+      // Calendar update failed silently
+    }
+  }
 
   return NextResponse.json({ appointment: updateResult.data });
 }

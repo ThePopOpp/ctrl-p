@@ -7,6 +7,8 @@ import {
   type AppointmentTypeRecord,
 } from "@/lib/booking/availability";
 import { getServerSupabaseConfig, jsonError } from "@/lib/admin/server-auth";
+import { getActiveCalendarIntegration, getFreshToken } from "@/lib/calendar/integration";
+import { createGoogleCalendarEvent, updateGoogleCalendarEvent } from "@/lib/calendar/google";
 
 const ACTIVE_BUSY_STATUSES = [
   "pending",
@@ -70,7 +72,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const apptResult = await adminClient
     .from("booking_appointments")
-    .select("id, status, start_time, end_time, customer_email, appointment_type_id")
+    .select("id, status, start_time, end_time, customer_email, appointment_type_id, external_event_id, external_calendar_id, external_calendar_provider")
     .eq("id", id)
     .maybeSingle();
 
@@ -162,6 +164,36 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .single();
 
   if (updateResult.error) return jsonError(updateResult.error.message, 400);
+
+  // Update or create Google Calendar event (non-blocking)
+  try {
+    const integration = await getActiveCalendarIntegration(adminClient);
+    if (integration) {
+      const token = await getFreshToken(adminClient, integration);
+      if (token) {
+        if (appt.external_calendar_provider === "google" && appt.external_event_id) {
+          await updateGoogleCalendarEvent(token, appt.external_calendar_id || integration.calendar_id, appt.external_event_id, {
+            start: selectedSlot.start,
+            end: selectedSlot.end,
+          });
+        } else {
+          const eventId = await createGoogleCalendarEvent(token, integration.calendar_id, {
+            summary: updateResult.data.title || apptType.name,
+            start: selectedSlot.start,
+            end: selectedSlot.end,
+          });
+          if (eventId) {
+            await adminClient
+              .from("booking_appointments")
+              .update({ external_calendar_provider: "google", external_event_id: eventId, external_calendar_id: integration.calendar_id })
+              .eq("id", id);
+          }
+        }
+      }
+    }
+  } catch {
+    // Calendar update failed silently
+  }
 
   return NextResponse.json({ appointment: updateResult.data });
 }

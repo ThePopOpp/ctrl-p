@@ -67,13 +67,13 @@ export async function GET(request: Request) {
     orderIds.length
       ? adminClient
           .from("payments")
-          .select("id, order_id, user_id, amount, status, provider, method, currency, invoice_number, invoice_due_at, payment_link_url, received_at, created_at")
+          .select("id, order_id, user_id, amount, balance_due, status, provider, method, currency, invoice_number, invoice_due_at, payment_link_url, delivery_status, received_at, created_at")
           .or(`user_id.eq.${actorId},order_id.in.(${orderIds.join(",")})`)
           .order("created_at", { ascending: false })
           .limit(100)
       : adminClient
           .from("payments")
-          .select("id, order_id, user_id, amount, status, provider, method, currency, invoice_number, invoice_due_at, payment_link_url, received_at, created_at")
+          .select("id, order_id, user_id, amount, balance_due, status, provider, method, currency, invoice_number, invoice_due_at, payment_link_url, delivery_status, received_at, created_at")
           .eq("user_id", actorId)
           .order("created_at", { ascending: false })
           .limit(100),

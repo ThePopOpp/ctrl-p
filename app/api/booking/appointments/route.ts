@@ -3,6 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import nodemailer from "nodemailer";
 import twilio from "twilio";
 
+import { getActiveCalendarIntegration, getFreshToken } from "@/lib/calendar/integration";
+import { createGoogleCalendarEvent } from "@/lib/calendar/google";
+
 import {
   buildAvailabilitySlots,
   cleanText,
@@ -409,6 +412,32 @@ export async function POST(request: Request) {
       answer: cleanText(value),
     }));
   if (answers.length) await db.from("booking_question_answers").insert(answers);
+
+  // Push to Google Calendar (non-blocking — failures are logged silently)
+  try {
+    const integration = await getActiveCalendarIntegration(db);
+    if (integration) {
+      const token = await getFreshToken(db, integration);
+      if (token) {
+        const eventId = await createGoogleCalendarEvent(token, integration.calendar_id, {
+          summary: appointmentResult.data.title || typeResult.data.name,
+          description: `Customer: ${firstName} ${lastName} <${email}>`,
+          location: typeResult.data.meeting_url || typeResult.data.location_type.replace(/_/g, " "),
+          start: selectedSlot.start,
+          end: selectedSlot.end,
+          attendeeEmail: email,
+        });
+        if (eventId) {
+          await db
+            .from("booking_appointments")
+            .update({ external_calendar_provider: "google", external_event_id: eventId, external_calendar_id: integration.calendar_id })
+            .eq("id", appointmentResult.data.id);
+        }
+      }
+    }
+  } catch {
+    // Calendar push failed — appointment still succeeds
+  }
 
   const dateLabel = new Intl.DateTimeFormat("en-US", { timeZone: "America/Phoenix", weekday: "short", month: "short", day: "numeric" }).format(requestedDate);
   const timeLabel = new Intl.DateTimeFormat("en-US", { timeZone: "America/Phoenix", hour: "numeric", minute: "2-digit" }).format(requestedDate);

@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 
 import { buildAvailabilitySlots, parseDateKey, type AppointmentTypeRecord } from "@/lib/booking/availability";
 import { getServerSupabaseConfig, jsonError } from "@/lib/admin/server-auth";
+import { getActiveCalendarIntegration, getFreshToken } from "@/lib/calendar/integration";
+import { getGoogleFreeBusy } from "@/lib/calendar/google";
 
 const ACTIVE_BUSY_STATUSES = [
   "pending",
@@ -65,12 +67,32 @@ export async function GET(request: Request) {
   const error = rules.error || appointments.error || blockedTimes.error;
   if (error) return jsonError(error.message, 400);
 
+  // Fetch Google Calendar busy windows and merge with blocked times
+  const calendarBusy: { start: string; end: string }[] = [];
+  try {
+    const integration = await getActiveCalendarIntegration(db);
+    if (integration) {
+      const token = await getFreshToken(db, integration);
+      if (token) {
+        const busy = await getGoogleFreeBusy(token, integration.calendar_id, rangeStart.toISOString(), rangeEnd.toISOString());
+        calendarBusy.push(...busy);
+      }
+    }
+  } catch {
+    // Calendar unavailable — don't fail the whole request, just skip
+  }
+
+  const allBlockedTimes = [
+    ...(blockedTimes.data ?? []),
+    ...calendarBusy.map((w) => ({ start_time: w.start, end_time: w.end })),
+  ];
+
   const slots = buildAvailabilitySlots({
     appointmentType: typeResult.data as AppointmentTypeRecord,
     dateKey,
     rules: rules.data ?? [],
     appointments: appointments.data ?? [],
-    blockedTimes: blockedTimes.data ?? [],
+    blockedTimes: allBlockedTimes,
   });
 
   return NextResponse.json({ date: dateKey, slots });

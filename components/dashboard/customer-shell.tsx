@@ -56,6 +56,7 @@ export type CustomerPayment = {
   id: string;
   order_id: string | null;
   amount: number | string | null;
+  balance_due: number | string | null;
   status: string;
   provider: string | null;
   method: string | null;
@@ -63,6 +64,7 @@ export type CustomerPayment = {
   invoice_number?: string | null;
   invoice_due_at?: string | null;
   payment_link_url?: string | null;
+  delivery_status?: string | null;
   received_at: string | null;
   created_at: string | null;
 };
