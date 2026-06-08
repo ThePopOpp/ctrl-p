@@ -274,6 +274,7 @@ function ProductDetailContent({ slug }: { slug: string }) {
 
   // Price calculation
   function computePrice(): { total: number; perSqft: number; label: string } {
+    if (!product) return { total: 0, perSqft: 0, label: "" };
     if (isPrint && selectedQtyTier) {
       const bc = Number(product.base_cost || 0);
       const retail = Math.round(((bc + selectedQtyTier.cost_delta) / 0.34) / 0.05) * 0.05;
