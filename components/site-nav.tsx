@@ -113,12 +113,12 @@ function DiscoverIcon({ name }: { name: string }) {
 }
 
 const SHOP_CATEGORIES = [
-  { href: "/shop", icon: "largeformat", title: "Large Format Prints", desc: "Banners, posters, displays" },
-  { href: "/shop", icon: "signs", title: "Signs", desc: "Standard & custom signage" },
-  { href: "/shop", icon: "wrap", title: "Vehicle Wraps", desc: "Full wraps, spot graphics, tint" },
-  { href: "/shop", icon: "cards", title: "Business Cards", desc: "Standard, die-cut, premium" },
-  { href: "/shop", icon: "merch", title: "Custom Merch", desc: "Shirts, hats, mugs, bags" },
-  { href: "/shop", icon: "flags", title: "Flags & Displays", desc: "Pole, feather, teardrop, tents" },
+  { href: "/shop?category=banners", icon: "largeformat", title: "Banners", desc: "Vinyl, mesh, fabric, step-repeat" },
+  { href: "/shop?category=signage", icon: "signs", title: "Signs & Yard Signs", desc: "Coroplast, foam board, A-frame" },
+  { href: "/shop?category=displays", icon: "wrap", title: "Displays & Stands", desc: "Retractable, tension fabric, pop-up" },
+  { href: "/shop?category=print", icon: "cards", title: "Business Cards", desc: "Standard, ultra-thick, premium" },
+  { href: "/shop?category=flags", icon: "flags", title: "Flags", desc: "Feather, teardrop, pole banners" },
+  { href: "/shop?category=wall-art", icon: "merch", title: "Wall Art", desc: "Framed prints, canvas, photo prints" },
 ];
 
 const DISCOVER_RESOURCES = [

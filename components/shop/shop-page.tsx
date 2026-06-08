@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus, ShoppingCart, Tag, X } from "lucide-react";
 
 import { CartProvider, useCart } from "@/lib/cart/cart-context";
@@ -168,11 +169,24 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 function ShopContent() {
+  const params = useSearchParams();
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
+  const [category, setCategory] = useState(params.get("category") || "all");
+
+  function selectCategory(cat: string) {
+    setCategory(cat);
+    const url = cat === "all" ? "/shop" : `/shop?category=${encodeURIComponent(cat)}`;
+    router.replace(url, { scroll: false });
+  }
+
+  // Sync category when URL param changes (e.g. browser back/forward)
+  useEffect(() => {
+    setCategory(params.get("category") || "all");
+  }, [params]);
 
   useEffect(() => {
     fetch("/api/products")
@@ -213,7 +227,7 @@ function ShopContent() {
             {categories.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setCategory(cat)}
+                onClick={() => selectCategory(cat)}
                 className={cn("rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors", category === cat ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground")}
               >
                 {cat}
@@ -257,7 +271,18 @@ function ShopContent() {
 export function ShopPage() {
   return (
     <CartProvider>
-      <ShopContent />
+      <Suspense fallback={
+        <div className="min-h-screen bg-white dark:bg-zinc-950">
+          <div className="mx-auto max-w-6xl px-4 py-8">
+            <div className="mb-8 h-10 w-48 animate-pulse rounded-lg bg-secondary" />
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-64 animate-pulse rounded-xl bg-secondary" />)}
+            </div>
+          </div>
+        </div>
+      }>
+        <ShopContent />
+      </Suspense>
     </CartProvider>
   );
 }
