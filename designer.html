@@ -192,7 +192,26 @@
 
 <script>
 // ─── Product state ───
-let currentProduct = 'hat'; // 'hat' | 'bc' | 'wa' | null (null = picker)
+// Slug → designer product key map (covers all Supabase product slugs)
+const SLUG_TO_PRODUCT = {
+  // A-Frame
+  'a-frame-signs': 'af', 'a-frame': 'af',
+  // Banners
+  'banners': 'bn', 'vinyl-banners': 'bn', 'mesh-banners': 'bn',
+  'step-repeat-banner': 'bn', 'retractable-banner-stands': 'bn',
+  'tension-fabric-display': 'bn', 'x-stand-banner': 'bn',
+  'tabletop-display': 'bn', 'pop-up-display': 'bn', 'pole-banner-set': 'bn',
+  // Rigid signs & yard signs
+  'rigid-signs': 'rs', 'yard-signs': 'rs', 'foam-board-signs': 'rs',
+  // Flags
+  'flags': 'fl', 'feather-flags': 'fl',
+  // Wall art
+  'wall-art': 'wa', 'canvas-prints': 'wa', 'framed-prints': 'wa',
+  // Business cards
+  'business-cards': 'bc', 'ultra-thick-business-cards': 'bc',
+  'die-cut-business-cards': 'bc', 'vision-art-chart': 'bc',
+};
+let currentProduct = null; // resolved from URL param; null shows the product picker
 let canvasZoom = 1.0;
 function setZoom(level) {
   canvasZoom = Math.max(0.25, Math.min(4, level));
@@ -4149,6 +4168,19 @@ function handleDone() {
 }
 
 // ─── Init ───
+// Read ?product= URL param and resolve to a designer product key
+(function initProductFromUrl() {
+  const slug = new URLSearchParams(window.location.search).get('product') || '';
+  const key = SLUG_TO_PRODUCT[slug.toLowerCase()] || null;
+  if (key) {
+    currentProduct = key;
+  }
+  // Also honour a direct ?key= param (e.g. ?key=af) for deep-linking
+  const directKey = new URLSearchParams(window.location.search).get('key') || '';
+  if (!key && ['hat','bc','wa','bn','rs','af','fl'].includes(directKey)) {
+    currentProduct = directKey;
+  }
+})();
 buildCanvas();
 setTool('swap');
 loadCustomerDesignDrafts();
