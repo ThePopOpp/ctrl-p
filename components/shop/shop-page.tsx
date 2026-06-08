@@ -23,8 +23,7 @@ type Product = {
   sale_price: number | string | null;
   featured: boolean | null;
   stock_status: string | null;
-  images: unknown;
-  color: string | null;
+  photo_gallery: unknown;
 };
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -33,12 +32,12 @@ function displayPrice(product: Product) {
   return Number(product.sale_price || product.base_price || 0);
 }
 
-function getImageUrl(images: unknown): string | null {
-  if (!images) return null;
-  if (typeof images === "string") return images;
-  if (Array.isArray(images) && images.length) return String(images[0]);
-  if (typeof images === "object" && images !== null) {
-    const obj = images as Record<string, unknown>;
+function getImageUrl(gallery: unknown): string | null {
+  if (!gallery) return null;
+  if (typeof gallery === "string") return gallery;
+  if (Array.isArray(gallery) && gallery.length) return String(gallery[0]);
+  if (typeof gallery === "object" && gallery !== null) {
+    const obj = gallery as Record<string, unknown>;
     if (obj.url) return String(obj.url);
     if (obj.src) return String(obj.src);
     const first = Object.values(obj)[0];
@@ -107,7 +106,7 @@ function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
   const price = displayPrice(product);
-  const imageUrl = getImageUrl(product.images);
+  const imageUrl = getImageUrl(product.photo_gallery);
   const isOutOfStock = product.stock_status === "out_of_stock";
 
   function handleAdd() {
@@ -124,7 +123,7 @@ function ProductCard({ product }: { product: Product }) {
           <img src={imageUrl} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <div className="h-16 w-16 rounded-full" style={{ backgroundColor: product.color || "#6b7280", opacity: 0.3 }} />
+            <div className="h-16 w-16 rounded-full" style={{ backgroundColor: "#6b7280", opacity: 0.3 }} />
           </div>
         )}
         {product.featured && (

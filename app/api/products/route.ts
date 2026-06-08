@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
   let query = db
     .from("products")
-    .select("id, sku, slug, name, category, tagline, description, base_price, sale_price, status, featured, stock_status, images, sizes, materials, print_options, turnaround_times, quantity_tiers, customizer_enabled, color")
+    .select("id, sku, slug, name, category, tagline, description, base_price, sale_price, status, featured, stock_status, photo_gallery, sizes, materials, print_options, turnaround_times, quantity_tiers, customizer_enabled")
     .eq("active", true)
     .order("featured", { ascending: false })
     .order("name", { ascending: true })

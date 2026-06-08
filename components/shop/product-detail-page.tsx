@@ -21,24 +21,23 @@ type Product = {
   sale_price: number | string | null;
   featured: boolean | null;
   stock_status: string | null;
-  images: unknown;
+  photo_gallery: unknown;
   sizes: unknown;
   materials: unknown;
   print_options: unknown;
   turnaround_times: unknown;
   quantity_tiers: unknown;
   customizer_enabled: boolean | null;
-  color: string | null;
 };
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
-function getImages(images: unknown): string[] {
-  if (!images) return [];
-  if (typeof images === "string") return [images];
-  if (Array.isArray(images)) return images.map(String).filter(Boolean);
-  if (typeof images === "object" && images !== null) {
-    const obj = images as Record<string, unknown>;
+function getImages(gallery: unknown): string[] {
+  if (!gallery) return [];
+  if (typeof gallery === "string") return [gallery];
+  if (Array.isArray(gallery)) return gallery.map(String).filter(Boolean);
+  if (typeof gallery === "object" && gallery !== null) {
+    const obj = gallery as Record<string, unknown>;
     const vals = Object.values(obj);
     return vals.flatMap((v) => Array.isArray(v) ? v.map(String) : [String(v)]).filter(Boolean);
   }
@@ -111,7 +110,7 @@ function ProductDetailContent({ slug }: { slug: string }) {
   }
 
   const price = Number(product.sale_price || product.base_price || 0);
-  const images = getImages(product.images);
+  const images = getImages(product.photo_gallery);
   const isOutOfStock = product.stock_status === "out_of_stock";
   const hasSalePrice = product.sale_price && Number(product.sale_price) < Number(product.base_price || Infinity);
 
@@ -139,7 +138,7 @@ function ProductDetailContent({ slug }: { slug: string }) {
                 <img src={images[activeImage]} alt={product.name} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <div className="h-24 w-24 rounded-full" style={{ backgroundColor: product.color || "#6b7280", opacity: 0.3 }} />
+                  <div className="h-24 w-24 rounded-full" style={{ backgroundColor: "#6b7280", opacity: 0.3 }} />
                 </div>
               )}
               {product.featured && (
