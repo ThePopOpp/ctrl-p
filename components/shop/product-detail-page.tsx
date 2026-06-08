@@ -649,7 +649,7 @@ function ProductDetailContent({ slug }: { slug: string }) {
                 <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive font-medium text-center">Currently out of stock</div>
               ) : (
                 <div className="space-y-2">
-                  <Button size="lg" onClick={handleAddToCart}
+                  <Button size="default" onClick={handleAddToCart}
                     className={cn("w-full text-base font-semibold gap-2 transition-all", added ? "bg-emerald-600 hover:bg-emerald-700" : "bg-zinc-900 hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200")}>
                     {added ? <><Check className="h-5 w-5" />Added to cart!</> : <><Tag className="h-4 w-4" />Add to cart</>}
                   </Button>
