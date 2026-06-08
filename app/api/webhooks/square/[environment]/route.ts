@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError, serverEnv } from "@/lib/admin/server-auth";
+import { sendPaymentConfirmed } from "@/lib/email/order-emails";
 
 type SquareEnvironment = "sandbox" | "production";
 
@@ -185,6 +186,23 @@ async function handlePaymentEvent(adminClient: any, payload: SquareWebhookPayloa
       .from("orders")
       .update({ payment_status: "paid", status: "paid" })
       .eq("id", updateResult.data.order_id);
+
+    // Send payment confirmed email (non-blocking)
+    const orderForEmail = await adminClient
+      .from("orders")
+      .select("order_number, customer_email, company")
+      .eq("id", updateResult.data.order_id)
+      .maybeSingle();
+    if (orderForEmail.data?.customer_email) {
+      sendPaymentConfirmed({
+        to: orderForEmail.data.customer_email,
+        customerName: orderForEmail.data.company || "",
+        orderNumber: orderForEmail.data.order_number || updateResult.data.order_id.slice(0, 8),
+        orderId: updateResult.data.order_id,
+        amount: updateResult.data.amount,
+        receiptUrl: squarePayment.receipt_url || null,
+      }).catch(() => { /* email failures are non-fatal */ });
+    }
   } else if (status === "failed") {
     await adminClient
       .from("orders")

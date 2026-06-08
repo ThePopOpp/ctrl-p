@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   const email = text(profile.email).toLowerCase();
   const ordersResult = await adminClient
     .from("orders")
-    .select("id, order_number, user_id, status, production_status, payment_status, total, company, customer_email, customer_phone, customer_notes, due_at, created_at")
+    .select("id, order_number, user_id, status, production_status, payment_status, subtotal, discount_amount, total, company, customer_email, customer_phone, customer_notes, shipping_method, due_at, created_at")
     .or(`user_id.eq.${actorId}${email ? `,customer_email.eq.${email}` : ""}`)
     .order("created_at", { ascending: false })
     .limit(50);

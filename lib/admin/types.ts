@@ -7,6 +7,9 @@ export type Order = {
   status: string;
   production_status: string;
   payment_status: string;
+  subtotal?: number | string | null;
+  discount_amount?: number | string | null;
+  coupon_id?: string | null;
   total: number | string | null;
   company: string | null;
   customer_email: string | null;

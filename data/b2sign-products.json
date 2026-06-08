@@ -1,0 +1,1086 @@
+{
+  "source": "b2sign.com",
+  "source_url": "https://www.b2sign.com",
+  "scraped_at": "2026-06-07",
+  "notes": "B2Sign is a trade-only wholesale printer selling exclusively to resellers. Pricing requires a reseller account login and is not publicly displayed. All product data was extracted from public-facing product pages. Product catalog PDF: https://www.b2sign.com/files/2024_catelog.pdf. Template user guide: https://www.b2sign.com/downloadable/6ead22206e5fb52493bc3f00056e7a6822d33eb5",
+  "fulfillment": {
+    "locations": [
+      { "name": "B2Sign Headquarters", "city": "Pomona", "state": "CA", "hours": "Mon-Fri 8am-5pm PST" },
+      { "name": "Sign Department", "city": "Pomona", "state": "CA", "hours": "Mon-Fri 8:30am-5:30pm PST" },
+      { "name": "TX Print Facility", "city": "Garland", "state": "TX", "hours": "Mon-Fri 2pm-4:30pm CST" },
+      { "name": "PA Print Facility", "city": "Philadelphia", "state": "PA", "hours": "Mon-Fri 2pm-4:30pm EST" }
+    ],
+    "standard_turnaround": "Next business day (order by 4pm PST)",
+    "rush_turnaround": "Same day (order by 12pm PST)",
+    "bulk_note": "Orders over 100 qty require 2 additional business days",
+    "contact_phone": "1(888)739-8501",
+    "contact_email": "info@b2sign.com"
+  },
+  "file_requirements": {
+    "formats": ["JPEG", "PDF (single page)"],
+    "color_space": "CMYK",
+    "resolution": "150 dpi minimum",
+    "max_upload_mb": 300,
+    "notes": "Submit artwork at ordered dimensions. No crop marks, bleeds, or Pantone spot colors."
+  },
+  "products": [
+    {
+      "name": "13oz Vinyl Banner",
+      "slug": "13oz-vinyl-banner",
+      "source_url": "https://www.b2sign.com/13oz-vinyl-banner",
+      "category": "Banners",
+      "tagline": "Premium heavyweight vinyl banner for indoor and outdoor use",
+      "description": "Premium heavyweight 13 oz. scrim vinyl banner designed for both indoor and outdoor applications. Suitable for billboards, building wraps, event flags, and trade show signage. Waterproof and UV safe.",
+      "materials": ["UV Printed 13oz Matte Vinyl (Scrim)"],
+      "sides": ["Single-Sided", "Double-Sided"],
+      "max_dimensions": {
+        "single_sided_no_pocket": "10' x 145'",
+        "single_sided_with_pocket": "9.5' x 145'",
+        "double_sided": "9.5' x 145'"
+      },
+      "sizes": "Custom — width and height entered by customer",
+      "finishing_options": [
+        "Hem (free)",
+        "Grommet (free)",
+        "Pole Pocket (2\", 3\", or 4\")",
+        "Windslit",
+        "Webbing (1\" nylon)",
+        "D-Ring",
+        "Reinforced Corners (Banner Tabs)",
+        "Rope (3/16\" or 5/16\")",
+        "Velcro (single-sided only)"
+      ],
+      "grommets": "Number 2 brass Stimpson grommets",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "weight": "13oz",
+        "finish": "Matte",
+        "waterproof": true,
+        "uv_safe": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "shipping": {
+        "rolled": "Up to 88\" on shortest side",
+        "folded": "89\"+ on shortest side"
+      },
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["banner", "vinyl", "outdoor", "indoor", "custom size", "trade show"]
+    },
+    {
+      "name": "18oz Blockout Banner",
+      "slug": "vinyl-banner-18oz-blockout",
+      "source_url": "https://www.b2sign.com/vinyl-banner-18oz-blockout",
+      "category": "Banners",
+      "tagline": "Heavy-duty blockout vinyl for street and light pole banners",
+      "description": "18 oz matte blockout banner material used for street banners and light pole banners, featuring PVC vinyl faces with blockout layer and reinforcing scrim fibers. Prevents show-through when backlit.",
+      "materials": ["UV Printed 18oz Matte Blockout Vinyl Banner"],
+      "sides": ["Single-Sided", "Double-Sided"],
+      "max_dimensions": {
+        "single_sided_no_pocket": "10' x 145'",
+        "single_sided_with_pocket": "9.5' x 145'",
+        "double_sided": "9.5' x 145'"
+      },
+      "sizes": "Custom — width and height entered by customer",
+      "finishing_options": [
+        "Hem (free)",
+        "Grommet (free)",
+        "Pole Pocket (2\", 3\", or 4\")",
+        "Windslit",
+        "Webbing (1\" nylon)",
+        "D-Ring",
+        "Reinforced Corners (Banner Tabs)",
+        "Sewn-in Rope",
+        "Velcro (single-sided only)"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "weight": "18oz",
+        "finish": "Matte",
+        "blockout": true,
+        "waterproof": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "shipping": {
+        "rolled": "Up to 88\" on shortest side",
+        "folded": "89\"+ on shortest side"
+      },
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["banner", "vinyl", "blockout", "street banner", "pole banner", "heavy duty"]
+    },
+    {
+      "name": "Backlit Banner",
+      "slug": "vinyl-banner-backlit",
+      "source_url": "https://www.b2sign.com/vinyl-banner-backlit",
+      "category": "Banners",
+      "tagline": "Translucent vinyl banner that glows when backlit",
+      "description": "Backlit banners are a great way to showcase graphics at night. The translucent material allows light to pass through from the backside, making graphics come to life at night. Available in daytime or nighttime color profiles.",
+      "materials": ["UV Printed 15oz Backlit Vinyl Banner"],
+      "sides": ["Single-Sided"],
+      "max_dimensions": {
+        "standard": "120\" x 150'"
+      },
+      "min_charge": "$50 minimum or 12.5 sq ft minimum",
+      "sizes": "Custom — width and height entered by customer",
+      "print_options": ["Daytime color profile", "Nighttime color profile", "Single layer print", "Double layer print"],
+      "finishing_options": [
+        "Hems (free)",
+        "Number 2 Brass Grommets (free)",
+        "1\" white nylon webbing with silver D-rings"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "weight": "15oz",
+        "finish": "Matte",
+        "translucent": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["banner", "backlit", "illuminated", "night", "translucent"]
+    },
+    {
+      "name": "Mesh Banner",
+      "slug": "mesh-banners",
+      "source_url": "https://www.b2sign.com/mesh-banners",
+      "category": "Banners",
+      "tagline": "Wind-resistant perforated vinyl banner for outdoor use",
+      "description": "Crafted from durable mesh material, these banners allow wind to pass through effortlessly, ensuring they stay securely in place. Designed for outdoor visibility with fade-resistant UV printing and easy installation.",
+      "materials": ["UV Printed 10oz Matte Vinyl with 70/30 Perforation"],
+      "sides": ["Single-Sided", "Double-Sided (two banners sewn back-to-back)"],
+      "max_dimensions": {
+        "single_sided_no_pocket": "10' x 145'",
+        "single_sided_with_pocket": "9.5' x 145'",
+        "double_sided": "9.5' x 145'"
+      },
+      "sizes": "Custom — width and height entered by customer",
+      "finishing_options": [
+        "Hem (free)",
+        "Grommet (free)",
+        "Pole Pocket (2\", 3\", or 4\")",
+        "Number 2 Brass Grommets",
+        "Velcro",
+        "Nylon Webbing with D-Rings",
+        "Sewn-in Rope (3/16\" or 5/16\")",
+        "Reinforced Corners",
+        "Welded Oversized Banners"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "weight": "10oz",
+        "perforation": "70/30",
+        "finish": "Matte",
+        "waterproof": true,
+        "uv_safe": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "shipping": {
+        "rolled": "Up to 96\"",
+        "folded": "Over 96\""
+      },
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["banner", "mesh", "wind resistant", "outdoor", "perforated"]
+    },
+    {
+      "name": "Indoor Banner (Super Smooth)",
+      "slug": "super-smooth-indoor-banner",
+      "source_url": "https://www.b2sign.com/super-smooth-indoor-banner",
+      "category": "Banners",
+      "tagline": "Smooth surface indoor banner for vivid prints",
+      "description": "Premium super smooth banner great for displaying graphics indoors. The smooth surface ensures vivid prints will come to life. With the material's low memory, your graphic will hang flawlessly without creases.",
+      "materials": ["14mil Double White Popup PVC"],
+      "sides": ["Single-Sided"],
+      "max_dimensions": {
+        "standard": "52\" wide x 100' long"
+      },
+      "recommended_sizes": ["24\" x 63\" (X-Stand)", "32\" x 71\" (X-Stand)"],
+      "sizes": "Custom — up to 52\" wide",
+      "finishing_options": [
+        "Flush Cut (standard)",
+        "Grommets (free, optional)",
+        "4 Corner Grommets (for X-Stand use)"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "thickness": "14mil",
+        "finish": "Smooth",
+        "indoor_use": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK",
+        "lamination": "Not required (UV printed)"
+      },
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["banner", "indoor", "smooth", "x-stand", "popup"]
+    },
+    {
+      "name": "Pole Banner Set",
+      "slug": "pole-banner-set",
+      "source_url": "https://www.b2sign.com/pole-banner-set",
+      "category": "Banners",
+      "tagline": "Double-sided street pole banners for citywide exposure",
+      "description": "Double-sided outdoor graphics for street poles featuring high visual impact and citywide exposure. Printed on a single piece vinyl, front and back using 18oz blockout material.",
+      "materials": ["18oz UV Blockout Vinyl Banner"],
+      "sides": ["Double-Sided (printed front and back on single piece)"],
+      "sizes": {
+        "widths": ["18\"", "24\"", "30\""],
+        "heights": "Custom between 24\" and 96\"",
+        "pole_pockets": "2\" top and bottom (included)"
+      },
+      "finishing_options": [
+        "Double-stitched pole pockets (included)",
+        "4 corner grommets (included)",
+        "Windslits (optional)"
+      ],
+      "hardware_options": {
+        "fiberglass_kit": "Includes 2 pole arms, 2 brackets, steel bands",
+        "options": ["Banner + Hardware", "Banner Only", "Hardware Only"]
+      },
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "weight": "18oz",
+        "blockout": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK",
+        "file_note": "Double-sided files submitted as separate files"
+      },
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["banner", "pole banner", "street", "double-sided", "outdoor", "city"]
+    },
+    {
+      "name": "9oz Fabric Banner (Wrinkle Free)",
+      "slug": "fabric-banner-9oz-wrinkle-free",
+      "source_url": "https://www.b2sign.com/fabric-banner-9oz-wrinkle-free",
+      "category": "Banners",
+      "tagline": "Dye sublimated wrinkle-free polyester fabric banner",
+      "description": "9 oz polyester dye sublimated wrinkle resistant fabric suited for backdrops, tapestries, and indoor displays with extra bright white point, known as Triple White.",
+      "materials": ["Dye Sublimated 9oz Wrinkle-Free Polyester"],
+      "sides": ["Single-Sided only"],
+      "max_dimensions": {
+        "standard": "8' x 100'"
+      },
+      "sizes": "Custom — up to 8' x 100' (no oversized prints available)",
+      "finishing_options": [
+        "Pole Pockets (1\" or 2\")",
+        "Hems (white or black thread)",
+        "Number 2 Brass Grommets",
+        "Heat Knife Cut Flush Edges",
+        "Sewn-on Velcro (1\" or 2\")"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Note: Same-day NOT available for this product"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "weight": "9oz",
+        "material": "Polyester",
+        "print_method": "Dye Sublimation",
+        "wrinkle_resistant": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK",
+        "white_point": "Triple White"
+      },
+      "use_cases": ["Backdrops", "Tapestries", "Indoor displays", "Photo backdrops"],
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["fabric", "banner", "dye sublimation", "wrinkle free", "polyester", "backdrop"]
+    },
+    {
+      "name": "Blockout Fabric Banner (9.5oz)",
+      "slug": "fabric-block-out",
+      "source_url": "https://www.b2sign.com/fabric-block-out",
+      "category": "Banners",
+      "tagline": "3-ply blockout fabric with low sheen for photo backdrops",
+      "description": "3-ply and 100% polyester dye sublimated fabric with blockout layer preventing backlighting interference. Features low sheen finish ideal for photo backdrops and applications requiring glare reduction.",
+      "materials": ["Dye Sublimated 9.5oz Blockout Fabric (3-ply Polyester)"],
+      "sides": ["Single-Sided only"],
+      "max_dimensions": {
+        "standard": "8' x 150'"
+      },
+      "sizes": "Custom — up to 8' x 150' (no oversized prints)",
+      "finishing_options": [
+        "Pole Pockets (1\" or 2\")",
+        "Hems (white or black thread)",
+        "Number 2 Brass Grommets",
+        "Heat Knife Cut Flush Edges",
+        "Sewn-on Velcro (1\" or 2\")"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Note: Same-day NOT available for this product"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "weight": "9.5oz",
+        "plies": 3,
+        "material": "Polyester",
+        "print_method": "Dye Sublimation",
+        "blockout": true,
+        "low_sheen": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "use_cases": ["Photo backdrops", "Low-glare displays", "Step and repeat backgrounds"],
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["fabric", "banner", "blockout", "dye sublimation", "backdrop", "low sheen"]
+    },
+    {
+      "name": "Tension Fabric",
+      "slug": "tension-fabric",
+      "source_url": "https://www.b2sign.com/tension-fabric",
+      "category": "Banners",
+      "tagline": "2-way stretch dye sublimated fabric for custom installs",
+      "description": "2-way stretch dye sublimated tension fabric popular for custom installs, used in tradeshow displays and fabric wraps.",
+      "materials": ["8.8oz Tension Fabric (2-way stretch, dye sublimated)"],
+      "sides": ["Single-Sided only"],
+      "max_dimensions": {
+        "standard": "90\" x 100'"
+      },
+      "sizes": "Custom — up to 90\" x 100' (no oversized prints)",
+      "finishing_options": [
+        "Double-stitched hems (white or black thread)",
+        "Number 2 Brass Grommets",
+        "Velcro 1\" (loop + hook included)",
+        "Velcro 2\" (hook only)",
+        "Pole Pocket 2\" (fits 1\" diameter poles)",
+        "Pole Pocket 3\" (fits 1.5\" diameter poles)",
+        "Heat Knife Cut Flush Edges"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Note: Same-day NOT available for this product"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "weight": "8.8oz",
+        "stretch": "2-way",
+        "material": "Polyester",
+        "print_method": "Dye Sublimation",
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "use_cases": ["Trade show displays", "Fabric wraps", "Custom installs", "SEG frames"],
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["fabric", "tension", "stretch", "tradeshow", "dye sublimation", "install"]
+    },
+    {
+      "name": "Hand Banner",
+      "slug": "hand-banner",
+      "source_url": "https://www.b2sign.com/hand-banner",
+      "category": "Banners",
+      "tagline": "Lightweight portable handheld signs sold in sets of 10",
+      "description": "Lightweight portable signage designed for public event advertising including sporting events, political rallies, and promotional giveaways.",
+      "materials": ["13oz Matte UV Printed Vinyl"],
+      "sides": ["Single-Sided"],
+      "sizes": {
+        "widths": ["24\"", "36\""],
+        "height": "9.5\"",
+        "sold_in": "Sets of 10"
+      },
+      "finishing_options": [
+        "Plastic handles (left and right, fixed)"
+      ],
+      "hardware_options": {
+        "options": ["Banner + Hardware", "Banner Only"]
+      },
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "weight": "13oz",
+        "finish": "Matte",
+        "resolution": "150 dpi",
+        "color_space": "CMYK",
+        "handles": "Plastic, non-retractable"
+      },
+      "use_cases": ["Sporting events", "Political rallies", "Promotional giveaways"],
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["banner", "handheld", "event", "portable", "rally"]
+    },
+    {
+      "name": "Advertising Flags",
+      "slug": "advertising-flags",
+      "source_url": "https://www.b2sign.com/advertising-flags",
+      "category": "Indoor/Outdoor Displays",
+      "tagline": "Indoor and outdoor advertising flags in various shapes and sizes",
+      "description": "Advertising flags offered in different shapes and sizes for indoor and outdoor flag purposes. Includes feather flags, teardrop flags, and rectangular flag styles.",
+      "sub_products_note": "Sub-product pages (feather, teardrop, rectangle) load dynamically — visit b2sign.com for individual flag configurators",
+      "materials": ["Dye Sublimated Polyester (assumed based on category)"],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["flags", "advertising", "feather flag", "teardrop flag", "outdoor", "indoor"]
+    },
+    {
+      "name": "Banner Stands",
+      "slug": "banner-stands",
+      "source_url": "https://www.b2sign.com/banner-stands",
+      "category": "Indoor/Outdoor Displays",
+      "tagline": "Indoor vertical displays for in-store advertising and traveling exhibitors",
+      "description": "Indoor vertical displays, great for in-store advertising and traveling exhibitors. Compatible with multiple banner types including retractable, X-stand, and L-stand configurations.",
+      "compatible_banners": [
+        "13oz Vinyl Banner",
+        "18oz Blockout Banner",
+        "Backlit Banner",
+        "Mesh Banner",
+        "Indoor Banner",
+        "Pole Banner",
+        "9oz Fabric Banner",
+        "Blockout Fabric Banner",
+        "Tension Fabric",
+        "Hand Banner"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["banner stand", "retractable", "x-stand", "indoor", "display", "trade show"]
+    },
+    {
+      "name": "Step and Repeat Backdrop",
+      "slug": "step-repeat-backdrop",
+      "source_url": "https://www.b2sign.com/step-repeat-backdrop",
+      "category": "Indoor/Outdoor Displays",
+      "tagline": "Telescoping tube backdrop with wrinkle-free dye sublimated fabric",
+      "description": "Large tube backdrop display featuring telescoping 1.625\" diameter poles for market-best stability with dye-sublimated wrinkle-free fabric. Designed for events, photo backdrops, and tradeshow use.",
+      "materials": ["Dye Sublimated 9oz Wrinkle-Free Fabric"],
+      "sides": ["Single-Sided"],
+      "sizes": {
+        "range": "6' x 4' up to 10' x 8'",
+        "adjustable_width": "69\" to 129\"",
+        "adjustable_height": "36\" to 102\""
+      },
+      "finishing_options": [
+        "Hemmed edges",
+        "3\" pole pockets top and bottom"
+      ],
+      "hardware": {
+        "frame_material": "Large tube aluminum (1.625\" diameter)",
+        "features": ["Plastic locking collars", "Heavy-weight feet", "Carrying bag included"],
+        "options": ["Graphic + Frame", "Graphic Only"]
+      },
+      "turnaround_times": ["Next business day (order approved before 6am PST M-F)", "Note: Same-day NOT available for this product"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "pole_diameter": "1.625\"",
+        "fabric_weight": "9oz",
+        "print_method": "Dye Sublimation",
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["backdrop", "step and repeat", "event", "photo", "trade show", "fabric", "tube frame"]
+    },
+    {
+      "name": "Real Estate Products",
+      "slug": "real-estate",
+      "source_url": "https://www.b2sign.com/real-estate",
+      "category": "Indoor/Outdoor Displays",
+      "tagline": "Outdoor signage designed to be long-lasting and reusable",
+      "description": "Outdoor real estate signage designed to be long-lasting and reusable. Includes yard signs, riders, and other real estate marketing signage.",
+      "sub_products_note": "Sub-product configurators load dynamically — visit b2sign.com for individual product specs",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["real estate", "yard sign", "rider", "outdoor", "reusable"]
+    },
+    {
+      "name": "A Frame and Sign Holders",
+      "slug": "a-frame-and-sign-holders",
+      "source_url": "https://www.b2sign.com/a-frame-and-sign-holders",
+      "category": "Indoor/Outdoor Displays",
+      "tagline": "Display systems for banners, signs, and posters",
+      "description": "Display systems for banners, signs, and posters. A-frame and sign holder hardware for indoor and outdoor use.",
+      "sub_products_note": "Sub-product configurators load dynamically — visit b2sign.com for individual product specs",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["a-frame", "sign holder", "display", "hardware"]
+    },
+    {
+      "name": "Signicade A-Frame",
+      "slug": "signicade-a-frame",
+      "source_url": "https://www.b2sign.com/signicade-a-frame",
+      "category": "Indoor/Outdoor Displays",
+      "tagline": "Genuine Plasticade A-frames with full color UV prints",
+      "description": "The ultimate in sidewalk signage — Genuine Plasticade A-frames with full color UV prints. Durable and weatherproof for outdoor use.",
+      "materials": ["Genuine Plasticade construction with UV printing"],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "print_method": "UV Printing",
+        "use": "Sidewalk / outdoor signage"
+      },
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["a-frame", "signicade", "sidewalk sign", "plasticade", "outdoor"]
+    },
+    {
+      "name": "SEG Products",
+      "slug": "seg-products",
+      "source_url": "https://www.b2sign.com/seg-products",
+      "category": "Indoor/Outdoor Displays",
+      "tagline": "Silicone edge fabric graphics for aluminum frames",
+      "description": "Silicone edged fabric graphics that slot into aluminum frames for easy installation. Available in non-lit, backlit LED, and wall mount configurations.",
+      "materials": ["Silicone-edged fabric with aluminum frames"],
+      "sub_products": [
+        {
+          "name": "Non-Lit SEG",
+          "description": "Silicone edged fabric graphics slot into aluminum frames for easy installation"
+        },
+        {
+          "name": "Backlit SEG",
+          "description": "LED illuminated fabric graphics with silicone edges and quick to assemble hardware"
+        },
+        {
+          "name": "SEG Fabric & Wall Mount SEG",
+          "description": "Framed or frameless silicone-edge graphics for versatile use"
+        }
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "product_catalog": "https://www.b2sign.com/files/2024_catelog.pdf",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["SEG", "silicone edge", "fabric", "frame", "backlit", "LED", "trade show"]
+    },
+    {
+      "name": "Trade Show Products",
+      "slug": "trade-show-products",
+      "source_url": "https://www.b2sign.com/trade-show-products",
+      "category": "Indoor/Outdoor Displays",
+      "tagline": "Complete trade show display solutions",
+      "description": "Full range of trade show products including backdrops, stands, displays, and portable signage solutions.",
+      "sub_products_note": "Sub-product configurators load dynamically — visit b2sign.com for individual product specs",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["trade show", "display", "exhibit", "booth"]
+    },
+    {
+      "name": "Custom Event Tents",
+      "slug": "custom-event-tents",
+      "source_url": "https://www.b2sign.com/custom-event-tents",
+      "category": "Indoor/Outdoor Displays",
+      "tagline": "Custom printed event canopy tents",
+      "description": "Custom printed event tents in multiple sizes for outdoor events, trade shows, and promotional use.",
+      "sizes": ["10' x 10'", "10' x 15'", "10' x 20'"],
+      "accessories": "Tent accessories available separately",
+      "images": [
+        "https://www.b2sign.com/image/page/260117/uqmsJXuN.jpg"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "tags": ["tent", "canopy", "event", "outdoor", "trade show", "10x10", "10x15", "10x20"]
+    },
+    {
+      "name": "Table Throws",
+      "slug": "table-throw",
+      "source_url": "https://www.b2sign.com/table-throw",
+      "category": "Indoor/Outdoor Displays",
+      "tagline": "Full color dye sublimated table covers",
+      "description": "Full color dye sublimated 8.8 oz. polyester fabric table covers for trade shows, events, and promotional use.",
+      "materials": ["Dye Sublimated 8.8oz Polyester Fabric"],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "weight": "8.8oz",
+        "material": "Polyester",
+        "print_method": "Dye Sublimation"
+      },
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["table throw", "table cover", "trade show", "event", "dye sublimation"]
+    },
+    {
+      "name": "Wall Art",
+      "slug": "wall-art",
+      "source_url": "https://www.b2sign.com/wall-art",
+      "category": "Large Format",
+      "tagline": "Large format custom wall art prints",
+      "description": "Large format wall art prints for commercial and retail interior spaces.",
+      "sub_products_note": "Sub-product configurators load dynamically — visit b2sign.com for individual product specs",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["wall art", "large format", "interior", "print"]
+    },
+    {
+      "name": "Wall Murals",
+      "slug": "wall-murals",
+      "source_url": "https://www.b2sign.com/wall-murals",
+      "category": "Large Format",
+      "tagline": "Custom printed wall murals",
+      "description": "Custom printed wall murals for interior and exterior applications.",
+      "sub_products_note": "Sub-product configurators load dynamically — visit b2sign.com for individual product specs",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["wall mural", "large format", "interior", "exterior", "adhesive"]
+    },
+    {
+      "name": "Adhesive Products",
+      "slug": "adhesive-products",
+      "source_url": "https://www.b2sign.com/adhesive-products",
+      "category": "Large Format",
+      "tagline": "Adhesive-backed printed products for walls, windows, and floors",
+      "description": "Adhesive-backed printed products including vinyl wraps, window graphics, floor graphics, and wall decals.",
+      "sub_products_note": "Sub-product configurators load dynamically — visit b2sign.com for individual product specs",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["adhesive", "vinyl", "wall decal", "window graphic", "floor graphic"]
+    },
+    {
+      "name": "Rigid Signs and Magnets",
+      "slug": "rigid-signs-and-magnets",
+      "source_url": "https://www.b2sign.com/rigid-signs-and-magnets",
+      "category": "Large Format",
+      "tagline": "Rigid substrate signs and magnetic vehicle graphics",
+      "description": "Rigid signs on substrates including coroplast, foam board, aluminum, and PVC, plus magnetic vehicle graphics.",
+      "sub_products_note": "Sub-product configurators load dynamically — visit b2sign.com for individual product specs",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["rigid sign", "coroplast", "foam board", "aluminum", "PVC", "magnet", "vehicle"]
+    },
+    {
+      "name": "Reflective Products",
+      "slug": "reflective-products",
+      "source_url": "https://www.b2sign.com/reflective-products",
+      "category": "Large Format",
+      "tagline": "Reflective printed graphics for safety and high-visibility applications",
+      "description": "Reflective printed products for safety signage, traffic control, and high-visibility applications.",
+      "sub_products_note": "Sub-product configurators load dynamically — visit b2sign.com for individual product specs",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["reflective", "safety", "traffic", "high visibility"]
+    },
+    {
+      "name": "Dry Erase Products",
+      "slug": "dry-erase-products",
+      "source_url": "https://www.b2sign.com/dry-erase-products",
+      "category": "Large Format",
+      "tagline": "Custom printed dry erase and whiteboard surfaces",
+      "description": "Custom printed dry erase products for offices, schools, and commercial spaces.",
+      "sub_products_note": "Sub-product configurators load dynamically — visit b2sign.com for individual product specs",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["dry erase", "whiteboard", "writable", "custom print"]
+    },
+    {
+      "name": "DTF and UV DTF",
+      "slug": "dtf-and-uv-dtf",
+      "source_url": "https://www.b2sign.com/dtf-and-uv-dtf",
+      "category": "Large Format",
+      "tagline": "Direct-to-film and UV direct-to-film heat transfer prints",
+      "description": "DTF (Direct to Film) and UV DTF heat transfer prints for garments, hard surfaces, and custom applications.",
+      "sub_products_note": "Sub-product configurators load dynamically — visit b2sign.com for individual product specs",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["DTF", "UV DTF", "heat transfer", "transfer print", "garment", "hard surface"]
+    },
+    {
+      "name": "Backlit Film",
+      "slug": "backlit-film",
+      "source_url": "https://www.b2sign.com/backlit-film",
+      "category": "Large Format",
+      "tagline": "Heavy-duty translucent film for illuminated lightbox displays",
+      "description": "10 mil heavy-duty translucent film for best quality with matte finish designed to minimize glare. Ideal for airport signs, movie theater boxes, menu displays, bus stops, and window presentations.",
+      "materials": ["10 Mil Translucent Backlit Film (non-adhesive)"],
+      "sides": ["Single-Sided (4/0)"],
+      "max_dimensions": {
+        "standard": "59\" high x 100' wide"
+      },
+      "sizes": "Custom — up to 59\" high x 100' wide",
+      "finishing_options": [
+        "UV Print Matte Finish (standard)",
+        "No lamination"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "thickness": "10 mil",
+        "finish": "Matte",
+        "translucent": true,
+        "adhesive": false,
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "use_cases": ["Airport signs", "Movie theater lightboxes", "Menu displays", "Bus stop ads", "Window displays"],
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["backlit", "film", "lightbox", "translucent", "menu board", "illuminated"]
+    },
+    {
+      "name": "Premium Window Cling",
+      "slug": "premium-window-cling",
+      "source_url": "https://www.b2sign.com/premium-window-cling",
+      "category": "Large Format",
+      "tagline": "Repositionable low-tack window cling for glass surfaces",
+      "description": "8 mil low tack window cling with mini-dot adhesive backing ideal for POP signage on glass surfaces. Can be removed and repositioned easily. Air egress adhesive for bubble-free installation.",
+      "materials": ["8 Mil Window Film with mini-dot adhesive"],
+      "sides": ["Single-Sided (4/0)"],
+      "max_dimensions": {
+        "standard": "52\" high x 159' wide"
+      },
+      "sizes": "Custom — up to 52\" high x 159' wide",
+      "finishing_options": [
+        "UV Print Matte Finish (standard)",
+        "No lamination"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "thickness": "8 mil",
+        "adhesive": "Low-tack mini-dot",
+        "finish": "Matte",
+        "removable": true,
+        "repositionable": true,
+        "waterproof": true,
+        "uv_safe": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "use_cases": ["POP signage", "Retail windows", "Glass partitions", "Storefronts"],
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["window cling", "window film", "removable", "repositionable", "POP", "retail"]
+    },
+    {
+      "name": "Posters",
+      "slug": "posters",
+      "source_url": "https://www.b2sign.com/posters",
+      "category": "Large Format",
+      "tagline": "Wide format UV printed posters on double-white material",
+      "description": "Digitally printed wide format posters optimized for temporary and semi-permanent displays, utilizing UV printing on Double-White Popup material without requiring lamination for protection.",
+      "materials": ["14 mil Double White Popup (non-adhesive), Polypropylene PVC"],
+      "sides": ["Single-Sided (4/0)"],
+      "max_dimensions": {
+        "standard": "52\" high x 159' wide"
+      },
+      "sizes": "Custom — up to 52\" high x 159' wide",
+      "finishing_options": [
+        "UV Print Matte Finish (standard)",
+        "No lamination available"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "thickness": "14 mil",
+        "finish": "Matte",
+        "waterproof": true,
+        "uv_safe": true,
+        "low_memory": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "use_cases": ["Hanging graphics", "Mounted graphics", "Frame inserts", "Temporary displays"],
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["poster", "wide format", "UV print", "double white", "indoor"]
+    },
+    {
+      "name": "Styrene",
+      "slug": "styrene",
+      "source_url": "https://www.b2sign.com/styrene",
+      "category": "Large Format",
+      "tagline": "Durable flexible plastic board for long-term POP signage",
+      "description": "Styrene is a durable plastic flexible board suitable for long term POP signage used for outdoor events, restaurants, and malls with direct UV printing in full color.",
+      "materials": [".020\" White Polystyrene Film"],
+      "sides": ["Single-Sided (4/0)"],
+      "max_dimensions": {
+        "standard": "48\" x 96\""
+      },
+      "sizes": "Custom — up to 48\" x 96\"",
+      "finishing_options": [
+        "UV Print Matte Finish (standard)",
+        "Number 2 Brass Grommets (optional)",
+        "No lamination available"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "thickness": ".020\"",
+        "material": "White Polystyrene",
+        "finish": "Matte",
+        "waterproof": true,
+        "uv_safe": true,
+        "flexible": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "use_cases": ["POP signage", "Restaurant menus", "Outdoor events", "Mall displays"],
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["styrene", "polystyrene", "POP", "flexible", "rigid-lite", "outdoor"]
+    },
+    {
+      "name": "Popup",
+      "slug": "popup",
+      "source_url": "https://www.b2sign.com/popup",
+      "category": "Large Format",
+      "tagline": "Double-white popup PVC for vivid flat-laying graphics",
+      "description": "Double-White Popup material is a beautiful surface for vivid full color graphics made from polypropylene PVC printed with UV inks. White on both sides with a blockout layer. Low memory so it lays flat even after extended rolling.",
+      "materials": ["14 mil Double White Popup, Polypropylene PVC (non-adhesive)"],
+      "sides": ["Single-Sided (4/0)"],
+      "max_dimensions": {
+        "standard": "52\" high x 159' wide"
+      },
+      "sizes": "Custom — up to 52\" high x 159' wide",
+      "finishing_options": [
+        "UV Print Matte Finish (standard)",
+        "Grommets (optional)",
+        "No lamination available"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "thickness": "14 mil",
+        "material": "Polypropylene PVC",
+        "finish": "Matte",
+        "blockout": true,
+        "low_memory": true,
+        "scratch_resistant": true,
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["popup", "double white", "PVC", "blockout", "flat", "indoor"]
+    },
+    {
+      "name": "Canvas Roll",
+      "slug": "canvas-roll",
+      "source_url": "https://www.b2sign.com/canvas-roll",
+      "category": "Large Format",
+      "tagline": "Photo quality printed artist canvas, unstretched and rolled",
+      "description": "Photo quality printed artist canvas material that arrives unstretched and rolled. Suitable for posters or stretching on canvas bars. Semi-gloss finish for fade-resistant reproduction.",
+      "materials": ["15 mil White Semi-Gloss Artist Canvas (polyester/cotton blend)"],
+      "sides": ["Single-Sided"],
+      "max_dimensions": {
+        "standard": "58\" high x 100' wide"
+      },
+      "sizes": "Custom — up to 58\" high x 100' wide",
+      "finishing_options": [
+        "Semi-gloss finish (standard)"
+      ],
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "specifications": {
+        "thickness": "15 mil",
+        "material": "Polyester/cotton blend",
+        "finish": "Semi-gloss",
+        "indoor_use": true,
+        "uv_safe": true,
+        "delivery": "Unstretched, rolled",
+        "resolution": "150 dpi",
+        "color_space": "CMYK"
+      },
+      "use_cases": ["Art reproduction", "Canvas wraps", "Gallery prints", "Photo prints"],
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["canvas", "art", "photo quality", "gallery", "fine art", "roll"]
+    },
+    {
+      "name": "Channel Letters",
+      "slug": "channel-letter",
+      "source_url": "https://www.b2sign.com/channel-letter",
+      "category": "Signs",
+      "tagline": "Ready-to-install LED illuminated UL Listed channel letters",
+      "description": "Ready to install, LED illuminated, UL Listed channel letters with power supplies and installation patterns. Professional dimensional signage for storefronts and buildings.",
+      "specifications": {
+        "lighting": "LED illuminated",
+        "certification": "UL Listed",
+        "includes": ["Power supplies", "Installation patterns"]
+      },
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "templates": "https://www.b2sign.com/design-templates",
+      "images": [],
+      "tags": ["channel letters", "LED", "illuminated", "storefront", "dimensional", "sign", "UL listed"]
+    },
+    {
+      "name": "Hardware Only",
+      "slug": "hardware-only",
+      "source_url": "https://www.b2sign.com/hardware-only",
+      "category": "Hardware",
+      "tagline": "Banner and display hardware without printed graphics",
+      "description": "Hardware-only products for banners and display systems. Order frames, stands, poles, and accessories without printed graphics.",
+      "sub_products_note": "Individual hardware items available — visit b2sign.com for current inventory",
+      "turnaround_times": ["Next business day (order by 4pm PST)", "Same day (order by 12pm PST)"],
+      "quantity_pricing": "Login required (reseller pricing)",
+      "pricing_note": "Please sign in to see prices — trade reseller account required",
+      "images": [],
+      "tags": ["hardware", "frame", "stand", "pole", "accessories"]
+    }
+  ],
+  "materials_and_supplies": [
+    {
+      "name": "3 Mil Calendered Lamination Film (Matte)",
+      "slug": "material-lamination-film-matte",
+      "source_url": "https://www.b2sign.com/material",
+      "category": "Materials & Supplies",
+      "size": "54\" x 164'",
+      "specifications": {
+        "thickness": "3 mil",
+        "type": "Calendered",
+        "finish": "Matte",
+        "use": "Lamination overlaminate"
+      },
+      "pricing_note": "Login required (reseller pricing)"
+    },
+    {
+      "name": "4 Mil Calendered Vinyl (Matte)",
+      "slug": "material-calendered-vinyl-matte",
+      "source_url": "https://www.b2sign.com/material",
+      "category": "Materials & Supplies",
+      "size": "54\" x 164'",
+      "specifications": {
+        "thickness": "4 mil",
+        "type": "Calendered",
+        "finish": "Matte"
+      },
+      "pricing_note": "Login required (reseller pricing)"
+    },
+    {
+      "name": "15 Mil Polyester Canvas Fabric (Semi Gloss)",
+      "slug": "material-polyester-canvas-semi-gloss",
+      "source_url": "https://www.b2sign.com/material",
+      "category": "Materials & Supplies",
+      "size": "50\" x 164'",
+      "specifications": {
+        "thickness": "15 mil",
+        "material": "Polyester Canvas",
+        "finish": "Semi-Gloss"
+      },
+      "pricing_note": "Login required (reseller pricing)"
+    },
+    {
+      "name": "PET Double Sided Tape / Red Tape",
+      "slug": "material-pet-double-sided-tape",
+      "source_url": "https://www.b2sign.com/material",
+      "category": "Materials & Supplies",
+      "size": "2 Rolls",
+      "specifications": {
+        "type": "Double-sided tape",
+        "material": "PET"
+      },
+      "pricing_note": "Login required (reseller pricing)"
+    },
+    {
+      "name": "Blue Masking Tape",
+      "slug": "material-blue-masking-tape",
+      "source_url": "https://www.b2sign.com/material",
+      "category": "Materials & Supplies",
+      "size": "0.8\" x 164'",
+      "specifications": {
+        "width": "0.8\"",
+        "length": "164'",
+        "type": "Masking tape"
+      },
+      "pricing_note": "Login required (reseller pricing)"
+    },
+    {
+      "name": "Double Sided Banner Tape",
+      "slug": "material-double-sided-banner-tape",
+      "source_url": "https://www.b2sign.com/material",
+      "category": "Materials & Supplies",
+      "size": "1\" x 164'",
+      "specifications": {
+        "width": "1\"",
+        "length": "164'",
+        "type": "Double-sided tape"
+      },
+      "pricing_note": "Login required (reseller pricing)"
+    },
+    {
+      "name": "#2 Self Piercing Brass Grommets (Stimpson)",
+      "slug": "material-brass-grommets",
+      "source_url": "https://www.b2sign.com/material",
+      "category": "Materials & Supplies",
+      "size": "500 set",
+      "specifications": {
+        "type": "Self-piercing brass grommet",
+        "brand": "Stimpson",
+        "size": "#2"
+      },
+      "pricing_note": "Login required (reseller pricing)"
+    },
+    {
+      "name": "Aluminum Standoff Hardware",
+      "slug": "material-aluminum-standoff",
+      "source_url": "https://www.b2sign.com/material",
+      "category": "Materials & Supplies",
+      "specifications": {
+        "type": "Standoff hardware",
+        "material": "Aluminum"
+      },
+      "pricing_note": "Login required (reseller pricing)"
+    }
+  ],
+  "resources": {
+    "product_catalog_pdf": "https://www.b2sign.com/files/2024_catelog.pdf",
+    "design_templates_page": "https://www.b2sign.com/design-templates",
+    "template_user_guide": "https://www.b2sign.com/downloadable/6ead22206e5fb52493bc3f00056e7a6822d33eb5",
+    "sample_kit_request": "https://www.b2sign.com/request-sample-kit",
+    "help_center": "https://www.b2sign.com/help-center"
+  }
+}

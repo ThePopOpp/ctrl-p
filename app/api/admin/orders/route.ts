@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     product_id?: string;
     quantity?: number | string;
     unit_price?: number | string;
+    coupon_code?: string;
     status?: string;
     payment_status?: string;
     production_status?: string;
@@ -63,6 +64,38 @@ export async function POST(request: Request) {
   const unitCost = Number(productResult.data.base_cost || 0);
   const subtotal = Number((quantity * unitPrice).toFixed(2));
 
+  // Validate coupon if provided
+  let couponId: string | null = null;
+  let discountAmount = 0;
+
+  if (body.coupon_code) {
+    const couponCode = String(body.coupon_code).trim().toUpperCase();
+    const couponResult = await verified.adminClient
+      .from("coupons")
+      .select("id, discount_type, discount_value, min_order_total, max_uses, uses_count, expires_at, active")
+      .eq("code", couponCode)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (!couponResult.data) return jsonError("Coupon code is not valid or inactive.", 422);
+    const coupon = couponResult.data;
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) return jsonError("This coupon has expired.", 422);
+    if (coupon.max_uses !== null && coupon.uses_count >= coupon.max_uses) return jsonError("This coupon has reached its usage limit.", 422);
+    if (coupon.min_order_total !== null && subtotal < Number(coupon.min_order_total)) {
+      return jsonError(`This coupon requires a minimum order total of $${Number(coupon.min_order_total).toFixed(2)}.`, 422);
+    }
+
+    discountAmount = coupon.discount_type === "percentage"
+      ? Number(((subtotal * Number(coupon.discount_value)) / 100).toFixed(2))
+      : Math.min(Number(coupon.discount_value), subtotal);
+    couponId = coupon.id;
+
+    // Increment uses_count
+    await verified.adminClient.from("coupons").update({ uses_count: coupon.uses_count + 1 }).eq("id", coupon.id);
+  }
+
+  const total = Number(Math.max(0, subtotal - discountAmount).toFixed(2));
+
   const orderResult = await verified.adminClient
     .from("orders")
     .insert({
@@ -79,7 +112,9 @@ export async function POST(request: Request) {
       shipping_method: cleanText(body.shipping_method) || null,
       pickup_shipping_method: cleanText(body.shipping_method) || null,
       subtotal,
-      total: subtotal,
+      discount_amount: discountAmount || null,
+      coupon_id: couponId,
+      total,
     })
     .select("id, order_number, status, payment_status, production_status")
     .single();
@@ -129,7 +164,7 @@ export async function POST(request: Request) {
     action: "order_created",
     entity_type: "order",
     entity_id: order.id,
-    details: { order_number: order.order_number, product_id: body.product_id, quantity, total: subtotal },
+    details: { order_number: order.order_number, product_id: body.product_id, quantity, subtotal, discount_amount: discountAmount || undefined, total },
   });
 
   return NextResponse.json({ order });

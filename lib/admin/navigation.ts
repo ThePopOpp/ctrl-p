@@ -12,6 +12,7 @@ import {
   Radio,
   Settings,
   ShoppingBag,
+  Tag,
   Truck,
   UserCog,
   Users,
@@ -43,6 +44,7 @@ export const adminNavGroups: readonly {
     label: "Catalog",
     items: [
       ["Products", PackageCheck, "/admin/products"],
+      ["Coupons", Tag, "/admin/coupons"],
       ["Artwork", FileText, "/admin/artwork"],
       ["Shipping", Truck, "/admin/shipments"],
       ["Marketing", Megaphone, "/admin/marketing"],

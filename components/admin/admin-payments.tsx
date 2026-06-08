@@ -18,7 +18,7 @@ import {
 import { LogOut } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-import { createAdminInvoice, createSquareCardPayment, createSquarePaymentLink, deliverPaymentDocument, getCurrentAdminProfile, loadAdminDashboardData, loadSquarePaymentConfig } from "@/lib/admin/admin-api";
+import { createAdminInvoice, createSquareCardPayment, createSquarePaymentLink, createSquareRefund, deliverPaymentDocument, getCurrentAdminProfile, loadAdminDashboardData, loadSquarePaymentConfig } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData, Order, Payment, Product } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -60,6 +61,7 @@ export function AdminPayments() {
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [refundPayment, setRefundPayment] = useState<Payment | null>(null);
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -248,6 +250,9 @@ export function AdminPayments() {
                                   <>
                                     <Button size="sm" variant="outline" onClick={() => openPaymentDocument(payment.id, "receipt")}>Receipt</Button>
                                     <Button size="sm" variant="outline" onClick={() => sendPaymentDocument(payment, "receipt")}>Send receipt</Button>
+                                    {payment.provider === "square" && (
+                                      <Button size="sm" variant="outline" className="text-red-600 hover:text-red-600 dark:text-red-400" onClick={() => setRefundPayment(payment)}>Refund</Button>
+                                    )}
                                   </>
                                 )}
                               </div>
@@ -293,6 +298,11 @@ export function AdminPayments() {
             </>
           )}
         </main>
+        <RefundDialog
+          payment={refundPayment}
+          onClose={() => setRefundPayment(null)}
+          onRefunded={refreshPayments}
+        />
         <NewInvoiceSheet
           open={invoiceOpen}
           onOpenChange={setInvoiceOpen}
@@ -1300,6 +1310,92 @@ function NewInvoiceSheet({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function RefundDialog({
+  payment,
+  onClose,
+  onRefunded,
+}: {
+  payment: Payment | null;
+  onClose: () => void;
+  onRefunded: () => Promise<void>;
+}) {
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [done, setDone] = useState(false);
+
+  const maxAmount = Number(payment?.amount || 0);
+
+  useEffect(() => {
+    if (!payment) return;
+    setAmount(maxAmount.toFixed(2));
+    setReason("Admin refund");
+    setMessage("");
+    setDone(false);
+    setSaving(false);
+  }, [payment]);
+
+  async function issueRefund() {
+    if (!payment) return;
+    const parsed = Number(amount);
+    if (!parsed || parsed <= 0) { setMessage("Enter a valid refund amount."); return; }
+    if (parsed > maxAmount) { setMessage(`Refund cannot exceed ${money.format(maxAmount)}.`); return; }
+
+    setSaving(true);
+    setMessage("Processing refund with Square...");
+    try {
+      const result = await createSquareRefund({ paymentId: payment.id, amount: parsed, reason });
+      setMessage(`Refund ${result.status} — ${money.format(result.amount)}. Square refund ID: ${result.square_refund_id || "pending"}.`);
+      setDone(true);
+      await onRefunded();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not process refund.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!payment} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-[440px]">
+        <DialogHeader>
+          <DialogTitle>Issue Square refund</DialogTitle>
+          <DialogDescription>
+            Refund payment {payment?.id.slice(0, 8)} — {money.format(maxAmount)} paid.
+          </DialogDescription>
+        </DialogHeader>
+
+        {!done ? (
+          <div className="space-y-4 pt-2">
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Refund amount</div>
+              <Input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" />
+              <div className="mt-1 text-xs text-muted-foreground">Maximum: {money.format(maxAmount)}</div>
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Reason</div>
+              <Input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Admin refund" />
+            </div>
+            {message && <div className="rounded-md border bg-background/50 p-3 text-sm text-muted-foreground">{message}</div>}
+            <div className="flex gap-2">
+              <Button className="flex-1 bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600" disabled={saving} onClick={issueRefund}>
+                {saving ? "Processing..." : "Confirm refund"}
+              </Button>
+              <Button variant="outline" onClick={onClose}>Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 pt-2">
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">{message}</div>
+            <Button variant="outline" className="w-full" onClick={onClose}>Close</Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

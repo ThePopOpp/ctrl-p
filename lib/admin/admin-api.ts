@@ -44,7 +44,7 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
   const [orders, orderItems, productionJobs, artworkFiles, proofs, designDrafts, shipments, payments, messages, users, activityLogs, products] = await Promise.all([
     db
       .from("orders")
-      .select("id, order_number, user_id, status, production_status, payment_status, total, company, customer_email, customer_phone, customer_notes, internal_notes, due_at, users!orders_user_id_fkey(full_name, company)")
+      .select("id, order_number, user_id, status, production_status, payment_status, subtotal, discount_amount, coupon_id, total, company, customer_email, customer_phone, customer_notes, internal_notes, due_at, users!orders_user_id_fkey(full_name, company)")
       .order("created_at", { ascending: false })
       .limit(50),
     db
@@ -453,6 +453,7 @@ export async function createAdminOrder(input: {
   productId: string;
   quantity: number;
   unitPrice: number;
+  couponCode?: string;
   status: string;
   paymentStatus: string;
   productionStatus: string;
@@ -480,6 +481,7 @@ export async function createAdminOrder(input: {
       product_id: input.productId,
       quantity: input.quantity,
       unit_price: input.unitPrice,
+      coupon_code: input.couponCode || undefined,
       status: input.status,
       payment_status: input.paymentStatus,
       production_status: input.productionStatus,
@@ -804,6 +806,33 @@ export async function createSquareCardPayment(input: {
       receipt_url: string | null;
     };
   };
+}
+
+export async function createSquareRefund(input: {
+  paymentId: string;
+  amount: number;
+  reason: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before issuing a refund.");
+
+  const response = await fetch(`/api/admin/payments/${input.paymentId}/refund`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ amount: input.amount, reason: input.reason }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not process refund.");
+  }
+
+  return payload as { refund: { id: string; status: string }; square_refund_id: string | null; amount: number; status: string };
 }
 
 export async function deliverPaymentDocument(input: {

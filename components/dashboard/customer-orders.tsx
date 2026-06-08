@@ -171,6 +171,12 @@ export function CustomerOrders() {
                                     <span className="text-muted-foreground">Shipping</span>
                                     <span>{shipments.find((s) => s.order_id === order.id) ? human(shipments.find((s) => s.order_id === order.id)!.status || "pending") : "Not shipped"}</span>
                                   </div>
+                                  {Number((order as unknown as Record<string, unknown>).discount_amount || 0) > 0 && (
+                                    <>
+                                      <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{amount((order as unknown as Record<string, unknown>).subtotal as number | string | null | undefined)}</span></div>
+                                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400"><span>Discount</span><span>-{amount((order as unknown as Record<string, unknown>).discount_amount as number | string | null | undefined)}</span></div>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                               {order.customer_notes && (
