@@ -5,21 +5,30 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  Archive,
   Bell,
+  BookOpen,
   Calendar,
+  CalendarPlus,
+  ChevronLeft,
   ChevronRight,
   Inbox,
+  List,
+  LogOut,
   Mail,
+  MessageSquare,
   Moon,
   Pencil,
   Phone,
   Plus,
+  RefreshCw,
   Search,
   Send,
   Sun,
+  Table2,
   Trash2,
+  User,
 } from "lucide-react";
-import { LogOut } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData, markMessageRead } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
@@ -34,6 +43,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 type BookingTemplate = {
   id: string;
@@ -54,13 +65,36 @@ type MessagingConfig = {
   pop?: { configured: boolean; host: string; port: string; secure: string; user: string; hasPassword: boolean };
 };
 
+type ContactSubmission = {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  subject: string | null;
+  message: string;
+  status: "new" | "read" | "replied" | "archived";
+  created_at: string;
+};
+
+type ComposePrefill = {
+  channel?: string;
+  recipient?: string;
+  subject?: string;
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function human(value: string | null | undefined) {
-  return String(value || "unknown").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return String(value || "unknown").replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "Not available";
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)).replace(",", "");
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+    .format(new Date(value))
+    .replace(",", "");
 }
 
 async function handleSignOut() {
@@ -68,6 +102,8 @@ async function handleSignOut() {
   if (db) await db.auth.signOut();
   window.location.href = "/login";
 }
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function AdminMessages() {
   const pathname = usePathname();
@@ -77,14 +113,23 @@ export function AdminMessages() {
   const [config, setConfig] = useState<MessagingConfig | null>(null);
   const [query, setQuery] = useState("");
   const [composeOpen, setComposeOpen] = useState(false);
+  const [composePrefill, setComposePrefill] = useState<ComposePrefill | null>(null);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [notice, setNotice] = useState("");
-  const [activeSection, setActiveSection] = useState<"inbox" | "templates">("inbox");
+  const [activeSection, setActiveSection] = useState<"inbox" | "templates" | "contact">("inbox");
   const [templates, setTemplates] = useState<BookingTemplate[]>([]);
   const [templateFormOpen, setTemplateFormOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<BookingTemplate | null>(null);
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
+
+  // Contact Page tab state
+  const [contactSubmissions, setContactSubmissions] = useState<ContactSubmission[]>([]);
+  const [contactView, setContactView] = useState<"table" | "list" | "calendar">("table");
+  const [contactQuery, setContactQuery] = useState("");
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [contactCalendarMonth, setContactCalendarMonth] = useState(() => new Date());
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<string | null>(null);
 
   useEffect(() => {
     async function boot() {
@@ -93,30 +138,37 @@ export function AdminMessages() {
         setAuthState("denied");
         return;
       }
-
       setAuthState("allowed");
-      const [dashData, msgConfig, templateData] = await Promise.all([
+      const [dashData, msgConfig, templateData, contactData] = await Promise.all([
         loadAdminDashboardData(),
         loadMessagingConfig(),
         loadBookingTemplates(),
+        loadContactSubmissions(),
       ]);
       setData(dashData);
       setConfig(msgConfig);
       setTemplates(templateData);
+      setContactSubmissions(contactData);
     }
-
     boot();
   }, []);
 
   async function refreshData() {
-    const [nextData, nextConfig, nextTemplates] = await Promise.all([
+    const [nextData, nextConfig, nextTemplates, nextContacts] = await Promise.all([
       loadAdminDashboardData(),
       loadMessagingConfig(),
       loadBookingTemplates(),
+      loadContactSubmissions(),
     ]);
     setData(nextData);
     setConfig(nextConfig);
     setTemplates(nextTemplates);
+    setContactSubmissions(nextContacts);
+  }
+
+  async function refreshContacts() {
+    const submissions = await loadContactSubmissions();
+    setContactSubmissions(submissions);
   }
 
   async function deleteTemplate(id: string) {
@@ -158,40 +210,14 @@ export function AdminMessages() {
     }
   }
 
-  const orders = data?.orders ?? [];
-  const payments = data?.payments ?? [];
-  const messages = data?.messages ?? [];
-  const users = data?.users ?? [];
-  const visibleMessages = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return messages;
-    return messages.filter((message) => [
-      message.subject,
-      message.body,
-      message.channel,
-      message.direction,
-      message.order_id,
-    ].some((value) => String(value || "").toLowerCase().includes(needle)));
-  }, [messages, query]);
-
-  const inbound = messages.filter((message) => message.direction === "inbound");
-  const outbound = messages.filter((message) => message.direction === "outbound");
-  const unread = messages.filter((message) => !message.read_at);
-  const configuredChannels = [config?.twilio?.configured, config?.smtp?.configured, config?.imap?.configured].filter(Boolean).length;
-  const selectedMessage = useMemo(
-    () => messages.find((message) => message.id === selectedMessageId) ?? null,
-    [messages, selectedMessageId],
-  );
-
   async function openMessage(message: AdminDashboardData["messages"][number]) {
     setSelectedMessageId(message.id);
     if (message.read_at) return;
-
-    setData((current) => current ? {
-      ...current,
-      messages: current.messages.map((item) => item.id === message.id ? { ...item, read_at: new Date().toISOString() } : item),
-    } : current);
-
+    setData((current) =>
+      current
+        ? { ...current, messages: current.messages.map((item) => item.id === message.id ? { ...item, read_at: new Date().toISOString() } : item) }
+        : current,
+    );
     try {
       await markMessageRead(message.id, message.order_id);
     } catch (error) {
@@ -199,9 +225,58 @@ export function AdminMessages() {
     }
   }
 
+  async function openContact(submission: ContactSubmission) {
+    setSelectedContactId(submission.id);
+    if (submission.status !== "new") return;
+    setContactSubmissions((prev) => prev.map((s) => s.id === submission.id ? { ...s, status: "read" } : s));
+    updateContactStatus(submission.id, "read").catch(() => {});
+  }
+
+  async function handleContactStatusChange(id: string, status: string) {
+    setContactSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, status: status as ContactSubmission["status"] } : s));
+    await updateContactStatus(id, status).catch(() => {});
+  }
+
+  // Derived data
+  const orders = data?.orders ?? [];
+  const payments = data?.payments ?? [];
+  const messages = data?.messages ?? [];
+  const users = data?.users ?? [];
+
+  const visibleMessages = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return messages;
+    return messages.filter((m) =>
+      [m.subject, m.body, m.channel, m.direction, m.order_id].some((v) => String(v || "").toLowerCase().includes(needle)),
+    );
+  }, [messages, query]);
+
+  const visibleContacts = useMemo(() => {
+    const needle = contactQuery.trim().toLowerCase();
+    if (!needle) return contactSubmissions;
+    return contactSubmissions.filter((s) =>
+      [s.first_name, s.last_name, s.email, s.phone, s.company, s.subject, s.message].some((v) =>
+        String(v || "").toLowerCase().includes(needle),
+      ),
+    );
+  }, [contactSubmissions, contactQuery]);
+
+  const inbound = messages.filter((m) => m.direction === "inbound");
+  const outbound = messages.filter((m) => m.direction === "outbound");
+  const unread = messages.filter((m) => !m.read_at);
+  const configuredChannels = [config?.twilio?.configured, config?.smtp?.configured, config?.imap?.configured].filter(Boolean).length;
+  const selectedMessage = useMemo(() => messages.find((m) => m.id === selectedMessageId) ?? null, [messages, selectedMessageId]);
+  const selectedContact = useMemo(() => contactSubmissions.find((s) => s.id === selectedContactId) ?? null, [contactSubmissions, selectedContactId]);
+
+  const contactNew = contactSubmissions.filter((s) => s.status === "new").length;
+  const contactReplied = contactSubmissions.filter((s) => s.status === "replied").length;
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const contactThisWeek = contactSubmissions.filter((s) => s.created_at >= weekAgo).length;
+
   return (
     <div className={cn(theme === "dark" && "dark")}>
       <div className="min-h-screen bg-background text-foreground">
+        {/* Sidebar */}
         <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
           <div className="mb-[45px] px-2 pt-[5px]">
             <a href="/admin">
@@ -209,11 +284,12 @@ export function AdminMessages() {
               <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[125px] dark:block" />
             </a>
           </div>
-
           <nav className="space-y-4">
             {adminNavGroups.map((group) => (
               <div key={group.label}>
-                {group.label !== "Main" && <div className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</div>}
+                {group.label !== "Main" && (
+                  <div className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</div>
+                )}
                 <div className="space-y-0.5">
                   {group.items.map(([label, Icon, href]) => (
                     <Link
@@ -235,7 +311,6 @@ export function AdminMessages() {
               </div>
             ))}
           </nav>
-
           <div className="absolute bottom-3 left-3 right-3">
             <div className="mb-3 border-t border-border" />
             <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2">
@@ -244,11 +319,14 @@ export function AdminMessages() {
                 <div className="truncate text-xs font-medium">Jeremy Waters</div>
                 <div className="truncate text-[10px] text-muted-foreground">Owner - Super Admin</div>
               </div>
-              <button onClick={handleSignOut} aria-label="Sign out" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button>
+              <button onClick={handleSignOut} aria-label="Sign out" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
         </aside>
 
+        {/* Header */}
         <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">
           <div className="flex h-12 items-center gap-3 px-5">
             <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
@@ -259,7 +337,12 @@ export function AdminMessages() {
             <div className="ml-auto flex items-center gap-2">
               <div className="relative hidden w-[380px] md:block">
                 <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
-                <Input className="h-8 rounded-lg pl-9 text-xs" placeholder="Search messages, customers, orders..." value={query} onChange={(event) => setQuery(event.target.value)} />
+                <Input
+                  className="h-8 rounded-lg pl-9 text-xs"
+                  placeholder="Search messages, customers, orders..."
+                  value={activeSection === "contact" ? contactQuery : query}
+                  onChange={(e) => activeSection === "contact" ? setContactQuery(e.target.value) : setQuery(e.target.value)}
+                />
               </div>
               <Button variant="outline" size="icon" aria-label="Notifications" className="h-8 w-8">
                 <Bell className="h-4 w-4" />
@@ -271,8 +354,11 @@ export function AdminMessages() {
           </div>
         </header>
 
+        {/* Main */}
         <main className="px-4 py-5 lg:pl-[258px] lg:pr-6">
-          {authState === "checking" && <Card><CardContent className="p-5 text-sm text-muted-foreground">Checking admin access...</CardContent></Card>}
+          {authState === "checking" && (
+            <Card><CardContent className="p-5 text-sm text-muted-foreground">Checking admin access...</CardContent></Card>
+          )}
           {authState === "denied" && (
             <Card className="border-red-500/30">
               <CardContent className="p-5">
@@ -284,11 +370,12 @@ export function AdminMessages() {
           )}
           {authState === "allowed" && (
             <>
+              {/* Page heading + actions */}
               <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
                   <h1 className="text-[25px] font-semibold tracking-tight">Messaging command center</h1>
                   <p className="mt-1 max-w-3xl text-sm leading-5 text-muted-foreground">
-                    Manage customer conversations, Twilio SMS, SMTP outbound email, IMAP inbox sync, notifications, templates, and order communication.
+                    Manage customer conversations, Twilio SMS, SMTP outbound email, IMAP inbox sync, notifications, templates, and contact form messages.
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -299,6 +386,10 @@ export function AdminMessages() {
                         <Inbox className="h-4 w-4" /> {syncing ? "Syncing..." : "Sync email"}
                       </Button>
                     </>
+                  ) : activeSection === "contact" ? (
+                    <Button variant="outline" onClick={refreshContacts}>
+                      <RefreshCw className="h-4 w-4" /> Refresh
+                    </Button>
                   ) : (
                     <Button onClick={() => { setEditingTemplate(null); setTemplateFormOpen(true); }}>
                       <Plus className="h-4 w-4" /> New template
@@ -307,25 +398,34 @@ export function AdminMessages() {
                 </div>
               </div>
 
+              {/* Tab nav */}
               <div className="mb-5 flex border-b border-border">
                 <button
                   onClick={() => setActiveSection("inbox")}
                   className={cn(
                     "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium -mb-px transition-colors",
-                    activeSection === "inbox"
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
+                    activeSection === "inbox" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <Inbox className="h-4 w-4" /> Messages
                 </button>
                 <button
+                  onClick={() => setActiveSection("contact")}
+                  className={cn(
+                    "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium -mb-px transition-colors",
+                    activeSection === "contact" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <User className="h-4 w-4" /> Contact Page
+                  {contactNew > 0 && (
+                    <Badge className="h-4 bg-primary/20 px-1.5 text-[10px] text-foreground">{contactNew}</Badge>
+                  )}
+                </button>
+                <button
                   onClick={() => setActiveSection("templates")}
                   className={cn(
                     "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium -mb-px transition-colors",
-                    activeSection === "templates"
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
+                    activeSection === "templates" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <Calendar className="h-4 w-4" /> Booking Templates
@@ -333,11 +433,10 @@ export function AdminMessages() {
               </div>
 
               {notice && (
-                <div className="mb-4 rounded-lg border bg-secondary/40 px-3 py-2 text-sm text-muted-foreground">
-                  {notice}
-                </div>
+                <div className="mb-4 rounded-lg border bg-secondary/40 px-3 py-2 text-sm text-muted-foreground">{notice}</div>
               )}
 
+              {/* ── Inbox section ── */}
               {activeSection === "inbox" && (
                 <>
                   <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -372,12 +471,7 @@ export function AdminMessages() {
                                 className="cursor-pointer hover:bg-accent/45"
                                 tabIndex={0}
                                 onClick={() => openMessage(message)}
-                                onKeyDown={(event) => {
-                                  if (event.key === "Enter" || event.key === " ") {
-                                    event.preventDefault();
-                                    openMessage(message);
-                                  }
-                                }}
+                                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openMessage(message); } }}
                               >
                                 <TableCell className="pl-4">
                                   <div className="flex items-center gap-2 font-medium">
@@ -429,6 +523,69 @@ export function AdminMessages() {
                 </>
               )}
 
+              {/* ── Contact Page section ── */}
+              {activeSection === "contact" && (
+                <>
+                  {/* Stats */}
+                  <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <MessageStat label="Total" value={String(contactSubmissions.length)} hint="All contact submissions" />
+                    <MessageStat label="New" value={String(contactNew)} hint="Awaiting response" />
+                    <MessageStat label="Replied" value={String(contactReplied)} hint="Marked as replied" />
+                    <MessageStat label="This Week" value={String(contactThisWeek)} hint="Last 7 days" />
+                  </section>
+
+                  {/* Search + view toggle */}
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="relative sm:w-72">
+                      <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        className="h-8 pl-9 text-xs"
+                        placeholder="Search name, email, subject..."
+                        value={contactQuery}
+                        onChange={(e) => setContactQuery(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-center gap-0.5 rounded-lg border bg-secondary/40 p-1 w-fit">
+                      {(["table", "list", "calendar"] as const).map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => setContactView(v)}
+                          className={cn(
+                            "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors",
+                            contactView === v
+                              ? "bg-background shadow-sm text-foreground"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          {v === "table" && <Table2 className="h-3.5 w-3.5" />}
+                          {v === "list" && <List className="h-3.5 w-3.5" />}
+                          {v === "calendar" && <Calendar className="h-3.5 w-3.5" />}
+                          {v.charAt(0).toUpperCase() + v.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {contactView === "table" && (
+                    <ContactTableView submissions={visibleContacts} onSelect={openContact} />
+                  )}
+                  {contactView === "list" && (
+                    <ContactListView submissions={visibleContacts} onSelect={openContact} />
+                  )}
+                  {contactView === "calendar" && (
+                    <ContactCalendarView
+                      submissions={visibleContacts}
+                      month={contactCalendarMonth}
+                      onMonthChange={setContactCalendarMonth}
+                      selectedDay={selectedCalendarDay}
+                      onDaySelect={setSelectedCalendarDay}
+                      onSelect={openContact}
+                    />
+                  )}
+                </>
+              )}
+
+              {/* ── Booking Templates section ── */}
               {activeSection === "templates" && (
                 <>
                   <div className="mb-4 grid gap-3 md:grid-cols-3">
@@ -519,6 +676,7 @@ export function AdminMessages() {
           )}
         </main>
 
+        {/* Sheets */}
         <BookingTemplateSheet
           open={templateFormOpen}
           onOpenChange={setTemplateFormOpen}
@@ -532,17 +690,31 @@ export function AdminMessages() {
             setEditingTemplate(null);
           }}
         />
-        <ComposeMessageSheet open={composeOpen} onOpenChange={setComposeOpen} orders={orders} users={users} config={config} onMessageSent={refreshData} />
+        <ComposeMessageSheet
+          open={composeOpen}
+          onOpenChange={(open) => { setComposeOpen(open); if (!open) setComposePrefill(null); }}
+          orders={orders}
+          users={users}
+          config={config}
+          prefill={composePrefill}
+          onMessageSent={refreshData}
+        />
         <MessageDetailSheet
           message={selectedMessage}
           open={Boolean(selectedMessage)}
-          onOpenChange={(open) => {
-            if (!open) setSelectedMessageId(null);
-          }}
-          order={orders.find((order) => order.id === selectedMessage?.order_id) ?? null}
-          user={users.find((user) => user.id === selectedMessage?.user_id) ?? null}
-          onCompose={() => {
-            setSelectedMessageId(null);
+          onOpenChange={(open) => { if (!open) setSelectedMessageId(null); }}
+          order={orders.find((o) => o.id === selectedMessage?.order_id) ?? null}
+          user={users.find((u) => u.id === selectedMessage?.user_id) ?? null}
+          onCompose={() => { setSelectedMessageId(null); setComposeOpen(true); }}
+        />
+        <ContactSubmissionSheet
+          submission={selectedContact}
+          open={Boolean(selectedContact)}
+          onOpenChange={(open) => { if (!open) setSelectedContactId(null); }}
+          onStatusChange={handleContactStatusChange}
+          onCompose={(prefill) => {
+            setSelectedContactId(null);
+            setComposePrefill(prefill);
             setComposeOpen(true);
           }}
         />
@@ -550,6 +722,8 @@ export function AdminMessages() {
     </div>
   );
 }
+
+// ─── Auth helpers ─────────────────────────────────────────────────────────────
 
 async function getAdminToken() {
   const db = getSupabaseBrowserClient();
@@ -563,11 +737,9 @@ async function loadMessagingConfig(): Promise<MessagingConfig | null> {
   const db = getSupabaseBrowserClient();
   const session = db ? (await db.auth.getSession()).data.session : null;
   if (!session) return null;
-
   const response = await fetch("/api/admin/messaging/config", {
     headers: { authorization: `Bearer ${session.access_token}` },
   });
-
   if (!response.ok) return null;
   return response.json();
 }
@@ -586,6 +758,31 @@ async function loadBookingTemplates(): Promise<BookingTemplate[]> {
   }
 }
 
+async function loadContactSubmissions(): Promise<ContactSubmission[]> {
+  try {
+    const token = await getAdminToken();
+    const response = await fetch("/api/admin/contact-submissions", {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return [];
+    const payload = await response.json();
+    return payload.submissions ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function updateContactStatus(id: string, status: string) {
+  const token = await getAdminToken();
+  await fetch("/api/admin/contact-submissions", {
+    method: "PATCH",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify({ id, status }),
+  });
+}
+
+// ─── Shared UI atoms ──────────────────────────────────────────────────────────
+
 function MessageStat({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
     <Card>
@@ -599,8 +796,25 @@ function MessageStat({ label, value, hint }: { label: string; value: string; hin
 }
 
 function ChannelBadge({ channel }: { channel: string }) {
-  const tone = channel === "sms" ? "bg-primary/15 text-foreground" : channel === "email" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-secondary text-secondary-foreground";
-  return <Badge className={tone}>{human(channel)}</Badge>;
+  const tone =
+    channel === "sms"
+      ? "bg-primary/15 text-foreground"
+      : channel === "email"
+      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+      : channel === "contact_form"
+      ? "bg-blue-500/10 text-blue-700 dark:text-blue-300"
+      : "bg-secondary text-secondary-foreground";
+  return <Badge className={tone}>{channel === "contact_form" ? "Contact Form" : human(channel)}</Badge>;
+}
+
+function ContactStatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    new: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
+    read: "bg-secondary text-secondary-foreground",
+    replied: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    archived: "bg-orange-500/10 text-orange-700 dark:text-orange-300",
+  };
+  return <Badge className={styles[status] ?? "bg-secondary text-secondary-foreground"}>{human(status)}</Badge>;
 }
 
 function ChannelCard({ icon, title, ready, rows }: { icon: ReactNode; title: string; ready: boolean; rows: [string, string][] }) {
@@ -612,7 +826,9 @@ function ChannelCard({ icon, title, ready, rows }: { icon: ReactNode; title: str
             <div className="text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</div>
             <CardTitle className="text-base">{title}</CardTitle>
           </div>
-          <Badge className={ready ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-red-500/10 text-red-700 dark:text-red-300"}>{ready ? "Ready" : "Missing"}</Badge>
+          <Badge className={ready ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-red-500/10 text-red-700 dark:text-red-300"}>
+            {ready ? "Ready" : "Missing"}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -640,6 +856,377 @@ function TemplateCard({ title, items }: { title: string; items: string[] }) {
   );
 }
 
+function MessageMeta({ label, value, subvalue }: { label: string; value: string; subvalue?: string }) {
+  return (
+    <div className="rounded-lg border bg-secondary/25 px-3 py-2">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-1 break-words text-sm font-medium">{value}</div>
+      {subvalue && <div className="mt-1 break-words text-xs text-muted-foreground">{subvalue}</div>}
+    </div>
+  );
+}
+
+// ─── Contact view components ──────────────────────────────────────────────────
+
+function contactInitials(s: ContactSubmission) {
+  return [s.first_name[0], s.last_name?.[0]].filter(Boolean).join("").toUpperCase();
+}
+
+function contactFullName(s: ContactSubmission) {
+  return [s.first_name, s.last_name].filter(Boolean).join(" ");
+}
+
+function ContactTableView({ submissions, onSelect }: { submissions: ContactSubmission[]; onSelect: (s: ContactSubmission) => void }) {
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="pl-4">Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-[140px] min-w-[140px] whitespace-nowrap">Date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {submissions.map((s) => (
+              <TableRow
+                key={s.id}
+                className="cursor-pointer hover:bg-accent/45"
+                tabIndex={0}
+                onClick={() => onSelect(s)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(s); } }}
+              >
+                <TableCell className="pl-4">
+                  <div className="flex items-center gap-2">
+                    {s.status === "new" && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="New" />}
+                    <div>
+                      <div className="font-medium">{contactFullName(s)}</div>
+                      {s.company && <div className="text-xs text-muted-foreground">{s.company}</div>}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-sm">{s.email}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{s.phone || "—"}</TableCell>
+                <TableCell className="max-w-[200px] truncate text-sm">{s.subject || "No subject"}</TableCell>
+                <TableCell><ContactStatusBadge status={s.status} /></TableCell>
+                <TableCell className="whitespace-nowrap text-sm">{formatDate(s.created_at)}</TableCell>
+              </TableRow>
+            ))}
+            {!submissions.length && (
+              <TableRow>
+                <TableCell className="p-8 text-center text-muted-foreground" colSpan={6}>No contact submissions found.</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContactListView({ submissions, onSelect }: { submissions: ContactSubmission[]; onSelect: (s: ContactSubmission) => void }) {
+  if (!submissions.length) {
+    return <div className="py-16 text-center text-muted-foreground">No contact submissions found.</div>;
+  }
+  return (
+    <div className="space-y-3">
+      {submissions.map((s) => (
+        <Card key={s.id} className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => onSelect(s)}>
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+                {contactInitials(s)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-0.5 flex items-center gap-2">
+                  {s.status === "new" && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                  <span className="truncate font-semibold text-sm">{contactFullName(s)}</span>
+                  {s.company && <span className="text-xs text-muted-foreground shrink-0">· {s.company}</span>}
+                  <span className="ml-auto shrink-0"><ContactStatusBadge status={s.status} /></span>
+                </div>
+                {s.subject && <div className="mb-1 text-sm font-medium text-foreground/80">{s.subject}</div>}
+                <div className="line-clamp-2 text-xs text-muted-foreground">{s.message}</div>
+                <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <span>{s.email}</span>
+                  {s.phone && <span>{s.phone}</span>}
+                  <span className="ml-auto">{formatDate(s.created_at)}</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function ContactCalendarView({
+  submissions,
+  month,
+  onMonthChange,
+  selectedDay,
+  onDaySelect,
+  onSelect,
+}: {
+  submissions: ContactSubmission[];
+  month: Date;
+  onMonthChange: (d: Date) => void;
+  selectedDay: string | null;
+  onDaySelect: (day: string | null) => void;
+  onSelect: (s: ContactSubmission) => void;
+}) {
+  const year = month.getFullYear();
+  const monthNum = month.getMonth();
+  const firstDayOfWeek = new Date(year, monthNum, 1).getDay();
+  const daysInMonth = new Date(year, monthNum + 1, 0).getDate();
+  const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(month);
+  const todayKey = new Date().toISOString().slice(0, 10);
+
+  const dayMap = new Map<string, number>();
+  submissions.forEach((s) => {
+    const key = s.created_at.slice(0, 10);
+    dayMap.set(key, (dayMap.get(key) ?? 0) + 1);
+  });
+
+  const cells: (number | null)[] = [
+    ...Array(firstDayOfWeek).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const filteredSubs = selectedDay ? submissions.filter((s) => s.created_at.startsWith(selectedDay)) : submissions;
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+      <Card className="h-fit">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => onMonthChange(new Date(year, monthNum - 1, 1))}
+              className="grid h-7 w-7 place-items-center rounded-md hover:bg-accent"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-semibold">{monthLabel}</span>
+            <button
+              onClick={() => onMonthChange(new Date(year, monthNum + 1, 1))}
+              className="grid h-7 w-7 place-items-center rounded-md hover:bg-accent"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-1 grid grid-cols-7">
+            {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+              <div key={d} className="py-1 text-center text-[10px] font-medium text-muted-foreground">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((day, i) => {
+              if (!day) return <div key={`e-${i}`} className="aspect-square" />;
+              const key = `${year}-${String(monthNum + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+              const count = dayMap.get(key) ?? 0;
+              const isSelected = selectedDay === key;
+              const isToday = key === todayKey;
+              return (
+                <button
+                  key={key}
+                  onClick={() => onDaySelect(isSelected ? null : key)}
+                  className={cn(
+                    "relative flex aspect-square flex-col items-center justify-center rounded-md text-xs transition-colors",
+                    isSelected ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-accent",
+                    isToday && !isSelected && "font-bold text-primary",
+                    count > 0 && !isSelected && "bg-primary/8",
+                  )}
+                >
+                  <span>{day}</span>
+                  {count > 0 && (
+                    <span className={cn(
+                      "absolute bottom-0 text-[8px] font-bold leading-tight",
+                      isSelected ? "text-primary-foreground/80" : "text-primary",
+                    )}>{count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+            {selectedDay ? (
+              <div className="flex items-center justify-between">
+                <span>
+                  {filteredSubs.length} submission{filteredSubs.length !== 1 ? "s" : ""} on{" "}
+                  {new Date(selectedDay + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </span>
+                <button onClick={() => onDaySelect(null)} className="underline hover:text-foreground">Clear</button>
+              </div>
+            ) : (
+              <span className="block text-center">Click a day to filter</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div>
+        <ContactListView submissions={filteredSubs} onSelect={onSelect} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Detail sheet for contact submissions ────────────────────────────────────
+
+const STATUS_OPTIONS = [
+  { value: "new", label: "New", color: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700" },
+  { value: "read", label: "Read", color: "bg-secondary text-secondary-foreground border-border" },
+  { value: "replied", label: "Replied", color: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700" },
+  { value: "archived", label: "Archived", color: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700" },
+];
+
+function ContactSubmissionSheet({
+  submission,
+  open,
+  onOpenChange,
+  onStatusChange,
+  onCompose,
+}: {
+  submission: ContactSubmission | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onStatusChange: (id: string, status: string) => void;
+  onCompose: (prefill: ComposePrefill) => void;
+}) {
+  if (!submission) return null;
+
+  const fullName = contactFullName(submission);
+  const initials = contactInitials(submission);
+  const currentStatus = STATUS_OPTIONS.find((s) => s.value === submission.status) ?? STATUS_OPTIONS[0];
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-[64rem]">
+        <SheetHeader>
+          <div className="flex items-start gap-3">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary/15 text-base font-semibold text-primary">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <SheetTitle className="text-xl">{fullName}</SheetTitle>
+              <SheetDescription className="mt-0.5">
+                {submission.company ? `${submission.company} · ` : ""}{submission.email}
+              </SheetDescription>
+            </div>
+            <Badge className={currentStatus.color}>{currentStatus.label}</Badge>
+          </div>
+        </SheetHeader>
+
+        {/* Quick actions */}
+        <div className="mt-5">
+          <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Quick actions</div>
+          <div className="flex flex-wrap gap-2">
+            {submission.phone && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={`tel:${submission.phone}`}>
+                  <Phone className="mr-1.5 h-3.5 w-3.5" />Call
+                </a>
+              </Button>
+            )}
+            {submission.phone && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { onOpenChange(false); onCompose({ channel: "sms", recipient: submission.phone! }); }}
+              >
+                <MessageSquare className="mr-1.5 h-3.5 w-3.5" />SMS
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                onOpenChange(false);
+                onCompose({
+                  channel: "email",
+                  recipient: submission.email,
+                  subject: `Re: ${submission.subject || "your inquiry"}`,
+                });
+              }}
+            >
+              <Mail className="mr-1.5 h-3.5 w-3.5" />Email
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/admin/orders?customer_email=${encodeURIComponent(submission.email)}&name=${encodeURIComponent(fullName)}`}>
+                <BookOpen className="mr-1.5 h-3.5 w-3.5" />Add project
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/admin/bookings?email=${encodeURIComponent(submission.email)}&name=${encodeURIComponent(fullName)}`}>
+                <CalendarPlus className="mr-1.5 h-3.5 w-3.5" />Book appointment
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        {/* Contact info */}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <MessageMeta label="Email" value={submission.email} />
+          <MessageMeta label="Phone" value={submission.phone || "Not provided"} />
+          <MessageMeta label="Company" value={submission.company || "Not provided"} />
+          <MessageMeta label="Submitted" value={formatDate(submission.created_at)} />
+        </div>
+
+        {/* Subject */}
+        {submission.subject && (
+          <div className="mt-4">
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Subject</div>
+            <div className="rounded-lg border bg-secondary/25 px-3 py-2 text-sm font-medium">{submission.subject}</div>
+          </div>
+        )}
+
+        {/* Message body */}
+        <div className="mt-4">
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Message</div>
+          <div className="rounded-xl border bg-background/40 p-4 whitespace-pre-wrap break-words text-sm leading-6">
+            {submission.message}
+          </div>
+        </div>
+
+        {/* Status update */}
+        <div className="mt-5">
+          <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Update status</div>
+          <div className="flex flex-wrap gap-2">
+            {STATUS_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => onStatusChange(submission.id, opt.value)}
+                className={cn(
+                  "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
+                  submission.status === opt.value
+                    ? opt.color
+                    : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                {opt.value === "archived" && <Archive className="mr-1 inline h-3 w-3" />}
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// ─── Existing detail / compose sheets ────────────────────────────────────────
+
 function MessageDetailSheet({
   message,
   open,
@@ -656,7 +1243,6 @@ function MessageDetailSheet({
   onCompose: () => void;
 }) {
   if (!message) return null;
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
@@ -666,14 +1252,12 @@ function MessageDetailSheet({
             {human(message.direction)} {human(message.channel)} message created {formatDate(message.created_at)}
           </SheetDescription>
         </SheetHeader>
-
         <div className="mt-6 space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <MessageMeta label="Channel" value={human(message.channel)} />
             <MessageMeta label="Direction" value={human(message.direction)} />
             <MessageMeta label="Read" value={message.read_at ? formatDate(message.read_at) : "Unread"} />
           </div>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <MessageMeta
               label="Customer"
@@ -686,20 +1270,14 @@ function MessageDetailSheet({
               subvalue={order ? `${human(order.status)} / ${human(order.payment_status)}` : undefined}
             />
           </div>
-
           <div className="rounded-xl border bg-background/40 p-4">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Full message</div>
-            <div className="whitespace-pre-wrap break-words text-sm leading-6">
-              {message.body || "No message body was saved for this record."}
-            </div>
+            <div className="whitespace-pre-wrap break-words text-sm leading-6">{message.body || "No message body was saved for this record."}</div>
           </div>
-
           <div className="flex gap-2">
             <Button onClick={onCompose}><Send className="h-4 w-4" /> Reply or forward</Button>
             {order && (
-              <Button variant="outline" asChild>
-                <Link href="/admin/orders">Open orders</Link>
-              </Button>
+              <Button variant="outline" asChild><Link href="/admin/orders">Open orders</Link></Button>
             )}
             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
           </div>
@@ -709,22 +1287,13 @@ function MessageDetailSheet({
   );
 }
 
-function MessageMeta({ label, value, subvalue }: { label: string; value: string; subvalue?: string }) {
-  return (
-    <div className="rounded-lg border bg-secondary/25 px-3 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-1 break-words text-sm font-medium">{value}</div>
-      {subvalue && <div className="mt-1 break-words text-xs text-muted-foreground">{subvalue}</div>}
-    </div>
-  );
-}
-
 function ComposeMessageSheet({
   open,
   onOpenChange,
   orders,
   users,
   config,
+  prefill,
   onMessageSent,
 }: {
   open: boolean;
@@ -732,6 +1301,7 @@ function ComposeMessageSheet({
   orders: AdminDashboardData["orders"];
   users: AdminDashboardData["users"];
   config: MessagingConfig | null;
+  prefill?: ComposePrefill | null;
   onMessageSent: () => Promise<void>;
 }) {
   const [channel, setChannel] = useState("email");
@@ -745,12 +1315,26 @@ function ComposeMessageSheet({
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState("");
 
+  // Apply prefill when sheet opens
+  useEffect(() => {
+    if (open && prefill) {
+      setMode("single");
+      setTarget("manual");
+      if (prefill.channel) setChannel(prefill.channel);
+      if (prefill.recipient) setRecipient(prefill.recipient);
+      if (prefill.subject) setSubject(prefill.subject);
+    }
+    if (!open) setStatus("");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const channelReady = channel === "sms" ? config?.twilio?.configured : channel === "email" ? config?.smtp?.configured : true;
-  const roles = Array.from(new Set(users.map((user) => user.role))).sort();
-  const selectedUser = users.find((user) => user.id === target);
-  const resolvedRecipient = target === "manual"
-    ? recipient
-    : channel === "sms"
+  const roles = Array.from(new Set(users.map((u) => u.role))).sort();
+  const selectedUser = users.find((u) => u.id === target);
+  const resolvedRecipient =
+    target === "manual"
+      ? recipient
+      : channel === "sms"
       ? selectedUser?.phone || ""
       : selectedUser?.email || "";
 
@@ -761,10 +1345,7 @@ function ComposeMessageSheet({
       const token = await getAdminToken();
       const response = await fetch("/api/admin/messaging/send", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${token}`,
-        },
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
         body: JSON.stringify({
           channel,
           mode,
@@ -798,7 +1379,6 @@ function ComposeMessageSheet({
           <SheetTitle>New message</SheetTitle>
           <SheetDescription>Send email, SMS, dashboard, or internal messages to one contact or a role-based audience.</SheetDescription>
         </SheetHeader>
-
         <div className="mt-6 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -824,7 +1404,6 @@ function ComposeMessageSheet({
               </Select>
             </div>
           </div>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Linked order</div>
@@ -832,7 +1411,7 @@ function ComposeMessageSheet({
                 <SelectTrigger><SelectValue placeholder="Order" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No order</SelectItem>
-                  {orders.map((order) => <SelectItem key={order.id} value={order.id}>#{order.order_number || order.id.slice(0, 8)}</SelectItem>)}
+                  {orders.map((o) => <SelectItem key={o.id} value={o.id}>#{o.order_number || o.id.slice(0, 8)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -843,7 +1422,7 @@ function ComposeMessageSheet({
                   <SelectTrigger><SelectValue placeholder="Audience" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All active users</SelectItem>
-                    {roles.map((item) => <SelectItem key={item} value={item}>{human(item)}</SelectItem>)}
+                    {roles.map((r) => <SelectItem key={r} value={r}>{human(r)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -854,9 +1433,9 @@ function ComposeMessageSheet({
                   <SelectTrigger><SelectValue placeholder="Contact" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="manual">Manual recipient</SelectItem>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.full_name || user.email || user.phone || user.id.slice(0, 8)}
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.full_name || u.email || u.phone || u.id.slice(0, 8)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -864,59 +1443,49 @@ function ComposeMessageSheet({
               </div>
             )}
           </div>
-
           {mode === "single" && (
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Recipient</div>
               <Input
                 value={target === "manual" ? recipient : resolvedRecipient}
-                onChange={(event) => setRecipient(event.target.value)}
+                onChange={(e) => setRecipient(e.target.value)}
                 disabled={target !== "manual"}
                 placeholder={channel === "sms" ? "+14805551212" : "customer@example.com"}
               />
             </div>
           )}
-
           {mode === "bulk" && (
             <div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground">
               Bulk {human(channel)} will target active {role === "all" ? "users across every role" : human(role)} with a saved {channel === "sms" ? "phone number" : "email address"}.
             </div>
           )}
-
           {target !== "manual" && selectedUser && mode === "single" && (
             <div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground">
               Connected to {selectedUser.full_name || selectedUser.email || "selected user"}: {selectedUser.email || "no email"} / {selectedUser.phone || "no phone"}.
             </div>
           )}
-
           {channel === "sms" && (
             <div className="rounded-lg border bg-secondary/30 p-3 text-xs text-muted-foreground">
               SMS replies should point Twilio Messaging webhook to {config?.twilio?.webhookUrl || "/api/webhooks/twilio/sms"}.
             </div>
           )}
-
           {channel === "email" && (
             <div className="rounded-lg border bg-secondary/30 p-3 text-xs text-muted-foreground">
               Email replies are pulled from {config?.imap?.mailbox || "INBOX"} with the Sync email action.
             </div>
           )}
-
           <div>
             <div className="mb-1.5 text-xs font-medium text-muted-foreground">Subject</div>
-            <Input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Order update" disabled={channel === "sms"} />
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Order update" disabled={channel === "sms"} />
           </div>
-
           <div>
             <div className="mb-1.5 text-xs font-medium text-muted-foreground">Message</div>
-            <Textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Write the message..." />
+            <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write the message..." />
           </div>
-
           <div className="rounded-lg border bg-secondary/30 p-3 text-sm text-muted-foreground">
             {channelReady ? "This channel is configured and ready to send." : "This channel is missing environment variables."}
           </div>
-
           {status && <div className="rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground">{status}</div>}
-
           <div className="flex gap-2">
             <Button className="flex-1" onClick={sendMessage} disabled={sending || !channelReady || !body.trim()}>
               {sending ? "Sending..." : mode === "bulk" ? "Send bulk message" : "Send message"}
@@ -928,6 +1497,8 @@ function ComposeMessageSheet({
     </Sheet>
   );
 }
+
+// ─── Booking template sheet ───────────────────────────────────────────────────
 
 const NOTIFICATION_TYPES = [
   { value: "booking_confirmation", label: "Booking Confirmation" },
@@ -968,12 +1539,7 @@ function BookingTemplateSheet({
       setBody(template.body);
       setIsActive(template.is_active);
     } else {
-      setName("");
-      setChannel("email");
-      setNotificationType("booking_confirmation");
-      setSubject("");
-      setBody("");
-      setIsActive(true);
+      setName(""); setChannel("email"); setNotificationType("booking_confirmation"); setSubject(""); setBody(""); setIsActive(true);
     }
     setStatus("");
   }, [template, open]);
@@ -986,12 +1552,9 @@ function BookingTemplateSheet({
       const method = isEdit ? "PATCH" : "POST";
       const payload = {
         ...(isEdit ? { id: template!.id } : {}),
-        name,
-        channel,
-        notification_type: notificationType,
+        name, channel, notification_type: notificationType,
         subject: channel === "email" ? subject : undefined,
-        body,
-        is_active: isActive,
+        body, is_active: isActive,
       };
       const response = await fetch("/api/admin/booking-templates", {
         method,
@@ -1017,13 +1580,11 @@ function BookingTemplateSheet({
             {isEdit ? "Update the content and settings for this template." : "Create an email or SMS template for booking notifications."}
           </SheetDescription>
         </SheetHeader>
-
         <div className="mt-6 space-y-5">
           <div>
             <div className="mb-1.5 text-xs font-medium text-muted-foreground">Template name</div>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Booking Confirmation Email" />
           </div>
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Channel</div>
@@ -1045,14 +1606,12 @@ function BookingTemplateSheet({
               </Select>
             </div>
           </div>
-
           {channel === "email" && (
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Subject line</div>
               <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Your appointment is confirmed" />
             </div>
           )}
-
           <div>
             <div className="mb-1.5 text-xs font-medium text-muted-foreground">
               {channel === "email" ? "Email body" : "SMS message"}
@@ -1066,23 +1625,14 @@ function BookingTemplateSheet({
                 : "Hi {{firstName}},\n\nYour {{typeName}} appointment is confirmed for {{date}} at {{time}}.\n\nSee you soon!"}
             />
             <p className="mt-1.5 text-[11px] text-muted-foreground">
-              Available placeholders: {"{{firstName}}"}, {"{{lastName}}"}, {"{{typeName}}"}, {"{{date}}"}, {"{{time}}"}, {"{{location}}"}
+              Available: {"{{firstName}}"}, {"{{lastName}}"}, {"{{typeName}}"}, {"{{date}}"}, {"{{time}}"}, {"{{location}}"}
             </p>
           </div>
-
           <div className="flex items-center gap-3 rounded-lg border bg-secondary/30 px-4 py-3">
-            <input
-              id="template-active"
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
+            <input id="template-active" type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-4 w-4 accent-primary" />
             <label htmlFor="template-active" className="text-sm">Active — use this template for automated notifications</label>
           </div>
-
           {status && <div className="rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground">{status}</div>}
-
           <div className="flex gap-2">
             <Button className="flex-1" onClick={save} disabled={saving || !name.trim() || !body.trim()}>
               {saving ? "Saving..." : isEdit ? "Save changes" : "Create template"}
