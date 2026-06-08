@@ -365,8 +365,15 @@ const AF_PRICES = {
   size: { '18x24':39, '22x28':49, '24x36':65 },
   insertType: { coroplast:0, pvc:8 },
   sides: { single:0, double:15 },
+  frameColor: { white:0, black:5, orange:5, yellow:5 },
 };
-const af = { size:'18x24', insertType:'coroplast', sides:'double', quantity:1 };
+const AF_FRAME_COLORS = [
+  { key:'white',  label:'White',         hex:'#f2f2f0', border:'#d0d0d0' },
+  { key:'black',  label:'Black',         hex:'#252525', border:'#111111' },
+  { key:'orange', label:'Safety Orange', hex:'#e05800', border:'#b84800' },
+  { key:'yellow', label:'Yellow',        hex:'#d49500', border:'#a87600' },
+];
+const af = { size:'18x24', insertType:'coroplast', sides:'double', frameColor:'white', quantity:1 };
 
 // ─── Flag state ───
 const FL_SIZES = {
@@ -574,7 +581,7 @@ function calcRsPrice() {
   return ((RS_PRICES.size[rs.size] || 28) + (RS_PRICES.material[rs.material] || 0)) * rs.quantity;
 }
 function calcAfPrice() {
-  return ((AF_PRICES.size[af.size] || 39) + (AF_PRICES.insertType[af.insertType] || 0) + (AF_PRICES.sides[af.sides] || 0)) * af.quantity;
+  return ((AF_PRICES.size[af.size] || 39) + (AF_PRICES.insertType[af.insertType] || 0) + (AF_PRICES.sides[af.sides] || 0) + (AF_PRICES.frameColor[af.frameColor] || 0)) * af.quantity;
 }
 function calcFlPrice() {
   return ((FL_PRICES.size[fl.size] || 59) + (FL_PRICES.base[fl.base] || 0) + (FL_PRICES.sides[fl.sides] || 0)) * fl.quantity;
@@ -997,54 +1004,147 @@ function getRsPrintArea() {
 }
 
 // ─── A-Frame canvas ───
-function buildAFrameSVG() {
+function _afDims() {
+  // Shared dimension calculations used by both build and print-area functions
   const s = AF_SIZES[af.size];
-  const maxIW = 300, maxIH = 220;
-  const iAspect = s.w / s.h;
-  let iw, ih;
-  if (iAspect >= 1) { iw = maxIW; ih = Math.round(maxIW / iAspect); if (ih > maxIH) { ih = maxIH; iw = Math.round(maxIH * iAspect); } }
-  else              { ih = maxIH; iw = Math.round(maxIH * iAspect); if (iw > maxIW) { iw = maxIW; ih = Math.round(maxIW / iAspect); } }
-  iw = Math.max(iw, 80); ih = Math.max(ih, 80);
-  const legH = Math.round(ih * 0.4), spread = Math.round(iw * 0.12);
-  const cw = iw + spread * 2 + 20, ch = ih + legH + 20;
-  const sx = (cw - iw) / 2, sy = 10;
-  const lLx = sx - spread, lRx = sx + iw + spread, legBotY = ch - 8;
-  const insertBg = af.insertType === 'pvc' ? '#f0f0f5' : '#f5f5f5';
+  const INS_W = 210;
+  const INS_H = Math.round(INS_W * (s.h / s.w));
+  const FB    = 24;  // frame border thickness
+  const FRM_W = INS_W + FB * 2;
+  const FRM_H = INS_H + FB * 2;
+  const HANDLE_H = 40;
+  const FEET_H   = 70;
+  const CW = FRM_W + 80;
+  const CH = FRM_H + HANDLE_H + FEET_H + 20;
+  const fx = (CW - FRM_W) / 2;
+  const fy = HANDLE_H + 8;
+  const ix = fx + FB;
+  const iy = fy + FB;
+  return { s, INS_W, INS_H, FB, FRM_W, FRM_H, HANDLE_H, FEET_H, CW, CH, fx, fy, ix, iy };
+}
+
+function buildAFrameSVG() {
+  const { s, INS_W, INS_H, FB, FRM_W, FRM_H, CW, CH, fx, fy, ix, iy } = _afDims();
+
+  // Frame colour palette
+  const palettes = {
+    white:  { body:'#f0efed', hi:'#ffffff', sh:'#c8c8c4', dk:'#a8a8a4', edge:'#dcdcda' },
+    black:  { body:'#252524', hi:'#3e3e3c', sh:'#111110', dk:'#060605', edge:'#1a1a18' },
+    orange: { body:'#e05600', hi:'#f86820', sh:'#b84400', dk:'#8c3200', edge:'#d04e00' },
+    yellow: { body:'#d49200', hi:'#f0ad10', sh:'#a87200', dk:'#7a5200', edge:'#c08600' },
+  };
+  const p = palettes[af.frameColor] || palettes.white;
+  const insertBg = af.insertType === 'pvc' ? '#f0f0f5' : '#f9f9f9';
+
+  // Feet geometry — angled outward like the real product
+  const feetBotY  = fy + FRM_H;
+  const feetTipY  = feetBotY + 58;
+  const leftBase  = fx + FRM_W * 0.18;
+  const rightBase = fx + FRM_W * 0.82;
+  const leftTip   = fx - 18;
+  const rightTip  = fx + FRM_W + 18;
+  const footW     = 28; // foot pad half-width
+
   const svgEl = document.getElementById('card-svg');
-  svgEl.setAttribute('viewBox', `0 0 ${cw} ${ch}`);
-  svgEl.setAttribute('width', String(cw)); svgEl.setAttribute('height', String(ch));
-  svgEl.style.filter = 'drop-shadow(0 8px 28px rgba(0,0,0,0.2))';
-  const braceY = sy + ih + legH * 0.5;
+  svgEl.setAttribute('viewBox', `0 0 ${CW} ${CH}`);
+  svgEl.setAttribute('width',  String(CW));
+  svgEl.setAttribute('height', String(CH));
+  svgEl.style.filter = 'drop-shadow(0 10px 30px rgba(0,0,0,0.22))';
+
   svgEl.innerHTML = `
-    <clipPath id="af-clip"><rect x="${sx}" y="${sy}" width="${iw}" height="${ih}"/></clipPath>
-    <line x1="${sx+iw*.15}" y1="${sy+ih}" x2="${lLx}" y2="${legBotY}" stroke="#888" stroke-width="3" stroke-linecap="round"/>
-    <line x1="${sx+iw*.85}" y1="${sy+ih}" x2="${lRx}" y2="${legBotY}" stroke="#888" stroke-width="3" stroke-linecap="round"/>
-    <line x1="${lLx+(lRx-lLx)*.2}" y1="${braceY}" x2="${lRx-(lRx-lLx)*.2}" y2="${braceY}" stroke="#aaa" stroke-width="2" stroke-linecap="round"/>
-    <rect x="${sx-6}" y="${sy-6}" width="${iw+12}" height="${ih+12}" fill="#ffd7d7" opacity=".28" rx="2"/>
-    <rect x="${sx}" y="${sy}" width="${iw}" height="${ih}" fill="${insertBg}" clip-path="url(#af-clip)"/>
-    <rect x="${sx-6}" y="${sy-6}" width="${iw+12}" height="${ih+12}" fill="none" stroke="#ff9999" stroke-width="1" stroke-dasharray="4 3" rx="2" opacity=".7"/>
-    <rect x="${sx+12}" y="${sy+12}" width="${iw-24}" height="${ih-24}" fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>
+    <defs>
+      <clipPath id="af-clip"><rect x="${ix}" y="${iy}" width="${INS_W}" height="${INS_H}" rx="1"/></clipPath>
+      <linearGradient id="af-body-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%"   stop-color="${p.hi}" stop-opacity="0.6"/>
+        <stop offset="100%" stop-color="${p.dk}" stop-opacity="0.4"/>
+      </linearGradient>
+      <linearGradient id="af-left-bevel" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="${p.hi}" stop-opacity="0.55"/>
+        <stop offset="100%" stop-color="${p.hi}" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="af-right-bevel" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="${p.dk}" stop-opacity="0"/>
+        <stop offset="100%" stop-color="${p.dk}" stop-opacity="0.45"/>
+      </linearGradient>
+      <linearGradient id="af-top-bevel" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="${p.hi}" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="${p.hi}" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="af-bot-bevel" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="${p.dk}" stop-opacity="0"/>
+        <stop offset="100%" stop-color="${p.dk}" stop-opacity="0.5"/>
+      </linearGradient>
+    </defs>
+
+    <!-- Drop shadow under frame -->
+    <rect x="${fx+5}" y="${fy+6}" width="${FRM_W}" height="${FRM_H}" rx="6" fill="rgba(0,0,0,0.13)"/>
+
+    <!-- ── FEET ── -->
+    <!-- Left foot shaft -->
+    <path d="M ${leftBase} ${feetBotY - 4} L ${leftBase - 10} ${feetBotY} L ${leftTip - footW + 10} ${feetTipY} L ${leftTip + footW + 2} ${feetTipY} L ${leftBase + 12} ${feetBotY} Z"
+          fill="${p.body}" stroke="${p.dk}" stroke-width="1.2" stroke-linejoin="round"/>
+    <!-- Left foot pad -->
+    <rect x="${leftTip - footW + 8}" y="${feetTipY - 7}" width="${footW * 2}" height="12" rx="4" fill="${p.sh}" stroke="${p.dk}" stroke-width="1"/>
+    <!-- Right foot shaft -->
+    <path d="M ${rightBase} ${feetBotY - 4} L ${rightBase + 10} ${feetBotY} L ${rightTip + footW - 10} ${feetTipY} L ${rightTip - footW - 2} ${feetTipY} L ${rightBase - 12} ${feetBotY} Z"
+          fill="${p.body}" stroke="${p.dk}" stroke-width="1.2" stroke-linejoin="round"/>
+    <!-- Right foot pad -->
+    <rect x="${rightTip - footW - 10}" y="${feetTipY - 7}" width="${footW * 2}" height="12" rx="4" fill="${p.sh}" stroke="${p.dk}" stroke-width="1"/>
+
+    <!-- ── MAIN FRAME BODY ── -->
+    <rect x="${fx}" y="${fy}" width="${FRM_W}" height="${FRM_H}" rx="6" fill="${p.body}" stroke="${p.edge}" stroke-width="1.5"/>
+    <!-- Gradient overlay for 3-D depth -->
+    <rect x="${fx}" y="${fy}" width="${FRM_W}" height="${FRM_H}" rx="6" fill="url(#af-body-grad)" pointer-events="none"/>
+    <!-- Left highlight bevel -->
+    <rect x="${fx}" y="${fy}" width="${FB - 4}" height="${FRM_H}" rx="4" fill="url(#af-left-bevel)" pointer-events="none"/>
+    <!-- Right shadow bevel -->
+    <rect x="${fx + FRM_W - FB + 4}" y="${fy}" width="${FB - 4}" height="${FRM_H}" rx="4" fill="url(#af-right-bevel)" pointer-events="none"/>
+    <!-- Top highlight bevel -->
+    <rect x="${fx}" y="${fy}" width="${FRM_W}" height="${FB - 4}" rx="4" fill="url(#af-top-bevel)" pointer-events="none"/>
+    <!-- Bottom shadow bevel -->
+    <rect x="${fx}" y="${fy + FRM_H - FB + 4}" width="${FRM_W}" height="${FB - 4}" rx="4" fill="url(#af-bot-bevel)" pointer-events="none"/>
+
+    <!-- ── INSERT RECESS SHADOW ── -->
+    <rect x="${ix - 4}" y="${iy - 4}" width="${INS_W + 8}" height="${INS_H + 8}" rx="3" fill="rgba(0,0,0,0.18)"/>
+    <!-- Insert panel -->
+    <rect x="${ix}" y="${iy}" width="${INS_W}" height="${INS_H}" fill="${insertBg}" rx="1"/>
+    <!-- User design (clipped) -->
     <g id="canvas-design" clip-path="url(#af-clip)"></g>
+    <!-- Insert edge -->
+    <rect x="${ix}" y="${iy}" width="${INS_W}" height="${INS_H}" fill="none" stroke="${p.sh}" stroke-width="1.2" rx="1"/>
+
+    <!-- ── BLEED / SAFE ZONE ── -->
+    <rect x="${ix - 8}" y="${iy - 8}" width="${INS_W + 16}" height="${INS_H + 16}" fill="none" stroke="#ff9999" stroke-width="1" stroke-dasharray="4 3" rx="3" opacity=".65"/>
+    <rect x="${ix + 14}" y="${iy + 14}" width="${INS_W - 28}" height="${INS_H - 28}" fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" opacity=".75"/>
+
+    <!-- ── TOP BRACKET / HANDLE ── -->
+    <!-- Bracket bar spanning most of the top width -->
+    <rect x="${fx + 18}" y="${fy - 10}" width="${FRM_W - 36}" height="20" rx="4" fill="${p.sh}" stroke="${p.dk}" stroke-width="1"/>
+    <!-- Handle housing (raised center) -->
+    <rect x="${CW / 2 - 26}" y="${fy - 26}" width="52" height="32" rx="6" fill="${p.body}" stroke="${p.edge}" stroke-width="1.5"/>
+    <!-- Handle hole (the carry cutout) -->
+    <rect x="${CW / 2 - 15}" y="${fy - 22}" width="30" height="20" rx="4" fill="${p.dk}" opacity="0.55"/>
+    <!-- Handle inner edge highlight -->
+    <rect x="${CW / 2 - 15}" y="${fy - 22}" width="30" height="5" rx="2" fill="${p.hi}" opacity="0.3"/>
+    <!-- Left clip tab -->
+    <rect x="${fx + 22}" y="${fy - 8}" width="26" height="14" rx="3" fill="${p.body}" stroke="${p.sh}" stroke-width="1.2"/>
+    <rect x="${fx + 25}" y="${fy - 5}" width="20" height="8" rx="2" fill="${p.edge}" opacity="0.6"/>
+    <!-- Right clip tab -->
+    <rect x="${fx + FRM_W - 48}" y="${fy - 8}" width="26" height="14" rx="3" fill="${p.body}" stroke="${p.sh}" stroke-width="1.2"/>
+    <rect x="${fx + FRM_W - 45}" y="${fy - 5}" width="20" height="8" rx="2" fill="${p.edge}" opacity="0.6"/>
+
+    <!-- ── PLACEHOLDER TEXT ── -->
     <g id="af-placeholder">
-      <text x="${sx+iw/2}" y="${sy+ih/2-8}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(9,Math.min(14,iw*.065))}" fill="#b0b0b0" font-weight="500">Add your design</text>
-      <text x="${sx+iw/2}" y="${sy+ih/2+12}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(7,Math.min(11,iw*.04))}" fill="#c0c0c0">${s.label}  ·  A-Frame Insert</text>
+      <text x="${CW / 2}" y="${iy + INS_H / 2 - 9}" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="${Math.round(INS_W * 0.058)}" fill="#c8c8c8" font-weight="500">Add your design</text>
+      <text x="${CW / 2}" y="${iy + INS_H / 2 + 12}" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="${Math.round(INS_W * 0.042)}" fill="#d8d8d8">${s.label} · A-Frame Insert</text>
     </g>
-    <rect x="${sx}" y="${sy}" width="${iw}" height="${ih}" fill="none" stroke="#c8c8c8" stroke-width="1.5" rx="1"/>`;
+  `;
   updateSizeLabel();
 }
 
 function getAfPrintArea() {
-  const s = AF_SIZES[af.size];
-  const maxIW = 300, maxIH = 220;
-  const iAspect = s.w / s.h;
-  let iw, ih;
-  if (iAspect >= 1) { iw = maxIW; ih = Math.round(maxIW / iAspect); if (ih > maxIH) { ih = maxIH; iw = Math.round(maxIH * iAspect); } }
-  else              { ih = maxIH; iw = Math.round(maxIH * iAspect); if (iw > maxIW) { iw = maxIW; ih = Math.round(maxIW / iAspect); } }
-  iw = Math.max(iw, 80); ih = Math.max(ih, 80);
-  const legH = Math.round(ih * 0.4), spread = Math.round(iw * 0.12);
-  const cw = iw + spread * 2 + 20;
-  const sx = (cw - iw) / 2;
-  return { ox: sx, oy: 10, ix: 0, iy: 0, iw, ih };
+  const { INS_W, INS_H, ix, iy } = _afDims();
+  return { ox: ix, oy: iy, ix: 0, iy: 0, iw: INS_W, ih: INS_H };
 }
 
 // ─── Flag canvas ───
@@ -1323,7 +1423,8 @@ function updateSizeLabel() {
   }
   if (currentProduct === 'af') {
     const s = AF_SIZES[af.size];
-    el.textContent = `${s.label}  ·  A-Frame  ·  ${af.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}`;
+    const fcLabel = af.frameColor.charAt(0).toUpperCase() + af.frameColor.slice(1);
+    el.textContent = `${s.label}  ·  ${fcLabel} Frame  ·  ${af.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}`;
     return;
   }
   if (currentProduct === 'fl') {
@@ -2047,7 +2148,7 @@ function renderAFrame() {
   const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
   const insertTypes = [{key:'coroplast',label:'Coroplast Insert',sub:'Lightweight, weatherproof',adj:0},{key:'pvc',label:'PVC Insert',sub:'Rigid smooth finish',adj:AF_PRICES.insertType.pvc}];
   const sidesOpts = [{key:'single',label:'Single-Sided',sub:'Print on front panel only',adj:0},{key:'double',label:'Double-Sided',sub:'Print on both panels',adj:AF_PRICES.sides.double}];
-  const base=AF_PRICES.size[af.size]||39, insAdj=AF_PRICES.insertType[af.insertType]||0, sidesAdj=AF_PRICES.sides[af.sides]||0, unit=base+insAdj+sidesAdj, total=unit*af.quantity;
+  const base=AF_PRICES.size[af.size]||39, insAdj=AF_PRICES.insertType[af.insertType]||0, sidesAdj=AF_PRICES.sides[af.sides]||0, frameAdj=AF_PRICES.frameColor[af.frameColor]||0, unit=base+insAdj+sidesAdj+frameAdj, total=unit*af.quantity;
   return `
     <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button onclick="showProductPicker()" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Products</button>
@@ -2057,12 +2158,14 @@ function renderAFrame() {
       ${sec('Insert Size', `<div style="display:flex;flex-direction:column;gap:4px;">${Object.entries(AF_SIZES).map(([k,s])=>`<button onclick="setAf('size','${k}')" class="opt-btn af-size${af.size===k?' active':''}" data-val="${k}" style="justify-content:space-between;width:100%;font-size:11px;padding:5px 9px;"><span>${s.label}</span><span style="font-size:10px;opacity:.65;margin-left:8px;">$${AF_PRICES.size[k]}</span></button>`).join('')}</div>`, true)}
       ${sec('Insert Material', `<div style="display:flex;flex-direction:column;gap:5px;">${insertTypes.map(m=>`<button onclick="setAf('insertType','${m.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${af.insertType===m.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${af.insertType===m.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${m.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${m.sub}</div></div><span style="font-size:11px;font-weight:600;color:${m.adj>0?'#52525b':'#a1a1aa'};">${m.adj===0?'Included':'+$'+m.adj}</span></button>`).join('')}</div>`, true)}
       ${sec('Sides', `<div style="display:flex;flex-direction:column;gap:5px;">${sidesOpts.map(s=>`<button onclick="setAf('sides','${s.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${af.sides===s.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${af.sides===s.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${s.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${s.sub}</div></div><span style="font-size:11px;font-weight:600;color:${s.adj>0?'#52525b':'#a1a1aa'};">${s.adj===0?'Included':'+$'+s.adj}</span></button>`).join('')}</div>`, true)}
+      ${sec('Frame Color', `<div style="display:flex;gap:6px;flex-wrap:wrap;">${AF_FRAME_COLORS.map(c=>`<button onclick="setAf('frameColor','${c.key}')" style="flex:1;min-width:60px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 6px;border:2px solid ${af.frameColor===c.key?'#2563eb':'#e4e4e7'};border-radius:8px;background:${af.frameColor===c.key?'#eff6ff':'white'};cursor:pointer;transition:all .12s;"><div style="width:28px;height:28px;border-radius:50%;background:${c.hex};border:1.5px solid ${c.border};box-shadow:inset 0 1px 2px rgba(255,255,255,.3),0 1px 2px rgba(0,0,0,.15);"></div><span style="font-size:10px;font-weight:600;color:#18181b;text-align:center;line-height:1.2;">${c.label}</span>${AF_PRICES.frameColor[c.key]>0?`<span style="font-size:9px;color:#a1a1aa;">+$${AF_PRICES.frameColor[c.key]}</span>`:''}</button>`).join('')}</div>`, true)}
       ${sec('Quantity', `<select onchange="af.quantity=parseInt(this.value);buildCanvas();updatePrice();setTool('swap');" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">${[1,2,3,5,10].map(q=>`<option value="${q}"${af.quantity===q?' selected':''}>${q} frame${q>1?'s':''} — $${unit*q}</option>`).join('')}</select>`, true)}
       <div style="padding:12px;background:#fafafa;border-top:1px solid #f0f0f0;margin-top:4px;">
         <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Price Breakdown</div>
         <div class="price-row"><span>Base (${AF_SIZES[af.size].label})</span><span>$${base}</span></div>
         ${insAdj>0?`<div class="price-row"><span>Insert material</span><span>+$${insAdj}</span></div>`:''}
         ${sidesAdj>0?`<div class="price-row"><span>Double-sided</span><span>+$${sidesAdj}</span></div>`:''}
+        ${frameAdj>0?`<div class="price-row"><span>${AF_FRAME_COLORS.find(c=>c.key===af.frameColor)?.label||''} frame</span><span>+$${frameAdj}</span></div>`:''}
         ${af.quantity>1?`<div class="price-row"><span>Qty × ${af.quantity}</span><span>$${unit} × ${af.quantity}</span></div>`:''}
         <div class="price-row total"><span>Total</span><span>$${total}</span></div>
       </div>
