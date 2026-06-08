@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ArrowLeft, Check, ChevronDown, Download, Loader2, Minus,
-  Plus, Shield, Star, Tag, Truck, Upload, Zap,
+  ArrowLeft, Check, ChevronDown, Download, ExternalLink, Loader2, Minus,
+  Palette, Plus, Shield, Star, Tag, Truck, Upload, UserCheck, Zap,
 } from "lucide-react";
 
 import { CartProvider, useCart } from "@/lib/cart/cart-context";
@@ -194,6 +194,8 @@ function ProductDetailContent({ slug }: { slug: string }) {
   const [quantity, setQuantity] = useState(1);
   const [turnaround, setTurnaround] = useState(TURNAROUND_OPTIONS[0]);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFileBack, setUploadFileBack] = useState<File | null>(null);
+  const [artworkMode, setArtworkMode] = useState<"upload" | "design" | "hire" | null>(null);
   const [selectedQtyTier, setSelectedQtyTier] = useState<ProductOption | null>(null);
 
   // Cart
@@ -619,14 +621,99 @@ function ProductDetailContent({ slug }: { slug: string }) {
                 </div>
               )}
 
-              {/* ── Artwork Upload ── */}
+              {/* ── Artwork ── */}
               <div>
-                <div className="mb-2 text-sm font-semibold">Artwork</div>
-                <UploadZone file={uploadFile} onFile={setUploadFile} />
-                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                  <button className="underline underline-offset-2 hover:text-foreground">Upload later →</button>
-                  <button className="underline underline-offset-2 hover:text-foreground">I need design help ($85+) →</button>
+                <div className="mb-3 text-sm font-semibold">How would you like to create your design?</div>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {([
+                    { id: "upload" as const, Icon: Upload, label: "Upload Artwork", sub: "PDF, AI, PNG, JPG" },
+                    { id: "design" as const, Icon: Palette, label: "Design Online", sub: "Free browser tool" },
+                    { id: "hire" as const, Icon: UserCheck, label: "Hire Designer", sub: "From $85" },
+                  ]).map(({ id, Icon, label, sub }) => (
+                    <button
+                      key={id}
+                      onClick={() => setArtworkMode(id)}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all",
+                        artworkMode === id
+                          ? "border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-800"
+                          : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500"
+                      )}
+                    >
+                      <Icon className={cn("h-5 w-5", artworkMode === id ? "text-zinc-900 dark:text-zinc-100" : "text-muted-foreground")} />
+                      <div className={cn("text-xs font-semibold leading-tight", artworkMode === id ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-600 dark:text-zinc-400")}>{label}</div>
+                      <div className="text-[10px] text-muted-foreground">{sub}</div>
+                    </button>
+                  ))}
                 </div>
+
+                {artworkMode === "upload" && (
+                  <div className="space-y-3">
+                    <div>
+                      {sides.toLowerCase().includes("double") && (
+                        <div className="mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Front side</div>
+                      )}
+                      <UploadZone file={uploadFile} onFile={setUploadFile} />
+                    </div>
+                    {sides.toLowerCase().includes("double") && (
+                      <div>
+                        <div className="mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Back side</div>
+                        <UploadZone file={uploadFileBack} onFile={setUploadFileBack} />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>PDF, AI, EPS, PNG, JPG · 300 DPI · CMYK</span>
+                      <a href="/resources" className="underline underline-offset-2 hover:text-foreground">File prep guide →</a>
+                    </div>
+                  </div>
+                )}
+
+                {artworkMode === "design" && (
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/60 p-5 text-center">
+                    <Palette className="mx-auto mb-2 h-8 w-8 text-muted-foreground/60" />
+                    <div className="mb-1 font-semibold text-sm">Open our online designer</div>
+                    <p className="mb-4 text-xs text-muted-foreground leading-relaxed">
+                      Add text, upload logos, choose layouts, and preview your design live — no software required.
+                    </p>
+                    <a
+                      href={`https://my.controlp.io/designer.html?product=${product.slug}&sides=${sides.toLowerCase().includes("double") ? "2" : "1"}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-5 py-2.5 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Launch Designer
+                    </a>
+                    <p className="mt-2 text-[10px] text-muted-foreground">Opens in a new tab · Your cart is saved</p>
+                  </div>
+                )}
+
+                {artworkMode === "hire" && (
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
+                    <div className="mb-1 font-semibold text-sm">Hire a designer — from $85</div>
+                    <p className="mb-3 text-xs text-muted-foreground leading-relaxed">
+                      Our team creates a print-ready design matched to your brand. Includes up to 3 revisions. Typical turnaround 24–48 hours.
+                    </p>
+                    <ul className="mb-4 space-y-1.5">
+                      {["Logo placement & brand matching", "Up to 3 revisions included", "Print-ready file delivered", "Direct communication with your designer"].map((item) => (
+                        <li key={item} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                    <a
+                      href="/contact"
+                      className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
+                    >
+                      Request design help →
+                    </a>
+                  </div>
+                )}
+
+                {artworkMode === null && (
+                  <p className="text-xs text-muted-foreground text-center">Select an option above to continue</p>
+                )}
               </div>
 
               {/* ── Estimated Total ── */}
@@ -653,10 +740,7 @@ function ProductDetailContent({ slug }: { slug: string }) {
                     className={cn("w-full text-base font-semibold gap-2 transition-all", added ? "bg-emerald-600 hover:bg-emerald-700" : "bg-zinc-900 hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200")}>
                     {added ? <><Check className="h-5 w-5" />Added to cart!</> : <><Tag className="h-4 w-4" />Add to cart</>}
                   </Button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm" className="text-xs">Save as draft</Button>
-                    <Button variant="outline" size="sm" className="text-xs">Design in browser</Button>
-                  </div>
+                  <Button variant="outline" size="sm" className="w-full text-xs">Save as draft</Button>
                 </div>
               )}
 
