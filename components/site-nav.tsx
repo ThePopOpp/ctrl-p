@@ -187,9 +187,9 @@ export function SiteNav() {
 
             {/* Logo + Desktop Nav */}
             <div className="flex items-center gap-6 lg:gap-8 min-w-0">
-              <Link href="/" className="flex items-center gap-2 shrink-0">
-                <div className="w-8 h-8 rounded-md flex items-center justify-center bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold text-[13px]">cp</div>
-                <span className="font-bold text-[16px] tracking-tight text-zinc-900 dark:text-zinc-100">controlp<span className="text-zinc-400">.io</span></span>
+              <Link href="/" className="flex items-center shrink-0">
+                <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-8 w-auto dark:hidden" />
+                <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-8 w-auto dark:block" />
               </Link>
 
               <nav className="hidden lg:flex items-center gap-1 text-[14px]">
