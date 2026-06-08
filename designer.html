@@ -368,10 +368,8 @@ const AF_PRICES = {
   frameColor: { white:0, black:5, orange:5, yellow:5 },
 };
 const AF_FRAME_COLORS = [
-  { key:'white',  label:'White',         hex:'#f2f2f0', border:'#d0d0d0' },
-  { key:'black',  label:'Black',         hex:'#252525', border:'#111111' },
-  { key:'orange', label:'Safety Orange', hex:'#e05800', border:'#b84800' },
-  { key:'yellow', label:'Yellow',        hex:'#d49500', border:'#a87600' },
+  { key:'white', label:'White', hex:'#f2f2f0', border:'#d0d0d0' },
+  { key:'black', label:'Black', hex:'#252525', border:'#111111' },
 ];
 const af = { size:'18x24', insertType:'coroplast', sides:'double', frameColor:'white', quantity:1 };
 
@@ -1005,145 +1003,91 @@ function getRsPrintArea() {
 
 // ─── A-Frame canvas ───
 function _afDims() {
-  // Shared dimension calculations used by both build and print-area functions
   const s = AF_SIZES[af.size];
-  const INS_W = 210;
-  const INS_H = Math.round(INS_W * (s.h / s.w));
-  const FB    = 24;  // frame border thickness
-  const FRM_W = INS_W + FB * 2;
-  const FRM_H = INS_H + FB * 2;
-  const HANDLE_H = 40;
-  const FEET_H   = 70;
-  const CW = FRM_W + 80;
-  const CH = FRM_H + HANDLE_H + FEET_H + 20;
-  const fx = (CW - FRM_W) / 2;
-  const fy = HANDLE_H + 8;
-  const ix = fx + FB;
-  const iy = fy + FB;
-  return { s, INS_W, INS_H, FB, FRM_W, FRM_H, HANDLE_H, FEET_H, CW, CH, fx, fy, ix, iy };
+  // Scale the actual SVG mockup (viewBox 665×1201) to a 360px-wide canvas.
+  // Insert area bounds derived from the rounded-rect path in the SVG files:
+  //   top-left (23.369, 191.386), size 617.626 × 922.285, corner-radius 12.353
+  const CW  = 360;
+  const SCL = CW / 665;
+  const CH  = Math.round(1201 * SCL);
+  const ix  = Math.round(23.369  * SCL);
+  const iy  = Math.round(191.386 * SCL);
+  const INS_W = Math.round(617.626 * SCL);
+  const INS_H = Math.round(922.285 * SCL);
+  const irx   = Math.round(12.353  * SCL);
+  return { s, CW, CH, ix, iy, INS_W, INS_H, irx };
 }
 
 function buildAFrameSVG() {
-  const { s, INS_W, INS_H, FB, FRM_W, FRM_H, CW, CH, fx, fy, ix, iy } = _afDims();
-
-  // Frame colour palette
-  const palettes = {
-    white:  { body:'#f0efed', hi:'#ffffff', sh:'#c8c8c4', dk:'#a8a8a4', edge:'#dcdcda' },
-    black:  { body:'#252524', hi:'#3e3e3c', sh:'#111110', dk:'#060605', edge:'#1a1a18' },
-    orange: { body:'#e05600', hi:'#f86820', sh:'#b84400', dk:'#8c3200', edge:'#d04e00' },
-    yellow: { body:'#d49200', hi:'#f0ad10', sh:'#a87200', dk:'#7a5200', edge:'#c08600' },
-  };
-  const p = palettes[af.frameColor] || palettes.white;
-  const insertBg = af.insertType === 'pvc' ? '#f0f0f5' : '#f9f9f9';
-
-  // Feet geometry — angled outward like the real product
-  const feetBotY  = fy + FRM_H;
-  const feetTipY  = feetBotY + 58;
-  const leftBase  = fx + FRM_W * 0.18;
-  const rightBase = fx + FRM_W * 0.82;
-  const leftTip   = fx - 18;
-  const rightTip  = fx + FRM_W + 18;
-  const footW     = 28; // foot pad half-width
+  const { s, CW, CH, ix, iy, INS_W, INS_H, irx } = _afDims();
+  const svgFile = af.frameColor === 'black'
+    ? '/mockups/Products/a-frame-black.svg'
+    : '/mockups/Products/a-frame-white.svg';
+  const shH = Math.round(INS_H * 0.17);
 
   const svgEl = document.getElementById('card-svg');
   svgEl.setAttribute('viewBox', `0 0 ${CW} ${CH}`);
-  svgEl.setAttribute('width',  String(CW));
-  svgEl.setAttribute('height', String(CH));
-  svgEl.style.filter = 'drop-shadow(0 10px 30px rgba(0,0,0,0.22))';
+  svgEl.setAttribute('width',   String(CW));
+  svgEl.setAttribute('height',  String(CH));
+  svgEl.style.filter = 'drop-shadow(0 8px 24px rgba(0,0,0,0.20))';
 
   svgEl.innerHTML = `
     <defs>
-      <clipPath id="af-clip"><rect x="${ix}" y="${iy}" width="${INS_W}" height="${INS_H}" rx="1"/></clipPath>
-      <linearGradient id="af-body-grad" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%"   stop-color="${p.hi}" stop-opacity="0.6"/>
-        <stop offset="100%" stop-color="${p.dk}" stop-opacity="0.4"/>
+      <clipPath id="af-clip">
+        <rect x="${ix}" y="${iy}" width="${INS_W}" height="${INS_H}" rx="${irx}"/>
+      </clipPath>
+      <mask id="af-frame-mask">
+        <rect x="0" y="0" width="${CW}" height="${CH}" fill="white"/>
+        <rect x="${ix}" y="${iy}" width="${INS_W}" height="${INS_H}" rx="${irx}" fill="black"/>
+      </mask>
+      <linearGradient id="af-top-shad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#000" stop-opacity="0.38"/>
+        <stop offset="1" stop-color="#000" stop-opacity="0"/>
       </linearGradient>
-      <linearGradient id="af-left-bevel" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%"   stop-color="${p.hi}" stop-opacity="0.55"/>
-        <stop offset="100%" stop-color="${p.hi}" stop-opacity="0"/>
-      </linearGradient>
-      <linearGradient id="af-right-bevel" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%"   stop-color="${p.dk}" stop-opacity="0"/>
-        <stop offset="100%" stop-color="${p.dk}" stop-opacity="0.45"/>
-      </linearGradient>
-      <linearGradient id="af-top-bevel" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stop-color="${p.hi}" stop-opacity="0.5"/>
-        <stop offset="100%" stop-color="${p.hi}" stop-opacity="0"/>
-      </linearGradient>
-      <linearGradient id="af-bot-bevel" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stop-color="${p.dk}" stop-opacity="0"/>
-        <stop offset="100%" stop-color="${p.dk}" stop-opacity="0.5"/>
+      <linearGradient id="af-bot-shad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#000" stop-opacity="0"/>
+        <stop offset="1" stop-color="#000" stop-opacity="0.38"/>
       </linearGradient>
     </defs>
 
-    <!-- Drop shadow under frame -->
-    <rect x="${fx+5}" y="${fy+6}" width="${FRM_W}" height="${FRM_H}" rx="6" fill="rgba(0,0,0,0.13)"/>
+    <!-- Insert white background (sits behind the design) -->
+    <rect x="${ix}" y="${iy}" width="${INS_W}" height="${INS_H}" rx="${irx}" fill="white"/>
 
-    <!-- ── FEET ── -->
-    <!-- Left foot shaft -->
-    <path d="M ${leftBase} ${feetBotY - 4} L ${leftBase - 10} ${feetBotY} L ${leftTip - footW + 10} ${feetTipY} L ${leftTip + footW + 2} ${feetTipY} L ${leftBase + 12} ${feetBotY} Z"
-          fill="${p.body}" stroke="${p.dk}" stroke-width="1.2" stroke-linejoin="round"/>
-    <!-- Left foot pad -->
-    <rect x="${leftTip - footW + 8}" y="${feetTipY - 7}" width="${footW * 2}" height="12" rx="4" fill="${p.sh}" stroke="${p.dk}" stroke-width="1"/>
-    <!-- Right foot shaft -->
-    <path d="M ${rightBase} ${feetBotY - 4} L ${rightBase + 10} ${feetBotY} L ${rightTip + footW - 10} ${feetTipY} L ${rightTip - footW - 2} ${feetTipY} L ${rightBase - 12} ${feetBotY} Z"
-          fill="${p.body}" stroke="${p.dk}" stroke-width="1.2" stroke-linejoin="round"/>
-    <!-- Right foot pad -->
-    <rect x="${rightTip - footW - 10}" y="${feetTipY - 7}" width="${footW * 2}" height="12" rx="4" fill="${p.sh}" stroke="${p.dk}" stroke-width="1"/>
-
-    <!-- ── MAIN FRAME BODY ── -->
-    <rect x="${fx}" y="${fy}" width="${FRM_W}" height="${FRM_H}" rx="6" fill="${p.body}" stroke="${p.edge}" stroke-width="1.5"/>
-    <!-- Gradient overlay for 3-D depth -->
-    <rect x="${fx}" y="${fy}" width="${FRM_W}" height="${FRM_H}" rx="6" fill="url(#af-body-grad)" pointer-events="none"/>
-    <!-- Left highlight bevel -->
-    <rect x="${fx}" y="${fy}" width="${FB - 4}" height="${FRM_H}" rx="4" fill="url(#af-left-bevel)" pointer-events="none"/>
-    <!-- Right shadow bevel -->
-    <rect x="${fx + FRM_W - FB + 4}" y="${fy}" width="${FB - 4}" height="${FRM_H}" rx="4" fill="url(#af-right-bevel)" pointer-events="none"/>
-    <!-- Top highlight bevel -->
-    <rect x="${fx}" y="${fy}" width="${FRM_W}" height="${FB - 4}" rx="4" fill="url(#af-top-bevel)" pointer-events="none"/>
-    <!-- Bottom shadow bevel -->
-    <rect x="${fx}" y="${fy + FRM_H - FB + 4}" width="${FRM_W}" height="${FB - 4}" rx="4" fill="url(#af-bot-bevel)" pointer-events="none"/>
-
-    <!-- ── INSERT RECESS SHADOW ── -->
-    <rect x="${ix - 4}" y="${iy - 4}" width="${INS_W + 8}" height="${INS_H + 8}" rx="3" fill="rgba(0,0,0,0.18)"/>
-    <!-- Insert panel -->
-    <rect x="${ix}" y="${iy}" width="${INS_W}" height="${INS_H}" fill="${insertBg}" rx="1"/>
-    <!-- User design (clipped) -->
+    <!-- User design (clipped to insert area) -->
     <g id="canvas-design" clip-path="url(#af-clip)"></g>
-    <!-- Insert edge -->
-    <rect x="${ix}" y="${iy}" width="${INS_W}" height="${INS_H}" fill="none" stroke="${p.sh}" stroke-width="1.2" rx="1"/>
 
-    <!-- ── BLEED / SAFE ZONE ── -->
-    <rect x="${ix - 8}" y="${iy - 8}" width="${INS_W + 16}" height="${INS_H + 16}" fill="none" stroke="#ff9999" stroke-width="1" stroke-dasharray="4 3" rx="3" opacity=".65"/>
-    <rect x="${ix + 14}" y="${iy + 14}" width="${INS_W - 28}" height="${INS_H - 28}" fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" opacity=".75"/>
-
-    <!-- ── TOP BRACKET / HANDLE ── -->
-    <!-- Bracket bar spanning most of the top width -->
-    <rect x="${fx + 18}" y="${fy - 10}" width="${FRM_W - 36}" height="20" rx="4" fill="${p.sh}" stroke="${p.dk}" stroke-width="1"/>
-    <!-- Handle housing (raised center) -->
-    <rect x="${CW / 2 - 26}" y="${fy - 26}" width="52" height="32" rx="6" fill="${p.body}" stroke="${p.edge}" stroke-width="1.5"/>
-    <!-- Handle hole (the carry cutout) -->
-    <rect x="${CW / 2 - 15}" y="${fy - 22}" width="30" height="20" rx="4" fill="${p.dk}" opacity="0.55"/>
-    <!-- Handle inner edge highlight -->
-    <rect x="${CW / 2 - 15}" y="${fy - 22}" width="30" height="5" rx="2" fill="${p.hi}" opacity="0.3"/>
-    <!-- Left clip tab -->
-    <rect x="${fx + 22}" y="${fy - 8}" width="26" height="14" rx="3" fill="${p.body}" stroke="${p.sh}" stroke-width="1.2"/>
-    <rect x="${fx + 25}" y="${fy - 5}" width="20" height="8" rx="2" fill="${p.edge}" opacity="0.6"/>
-    <!-- Right clip tab -->
-    <rect x="${fx + FRM_W - 48}" y="${fy - 8}" width="26" height="14" rx="3" fill="${p.body}" stroke="${p.sh}" stroke-width="1.2"/>
-    <rect x="${fx + FRM_W - 45}" y="${fy - 5}" width="20" height="8" rx="2" fill="${p.edge}" opacity="0.6"/>
-
-    <!-- ── PLACEHOLDER TEXT ── -->
-    <g id="af-placeholder">
-      <text x="${CW / 2}" y="${iy + INS_H / 2 - 9}" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="${Math.round(INS_W * 0.058)}" fill="#c8c8c8" font-weight="500">Add your design</text>
-      <text x="${CW / 2}" y="${iy + INS_H / 2 + 12}" text-anchor="middle" dominant-baseline="middle" font-family="Inter,system-ui,sans-serif" font-size="${Math.round(INS_W * 0.042)}" fill="#d8d8d8">${s.label} · A-Frame Insert</text>
+    <!-- Placeholder text (hidden once layers are added) -->
+    <g id="af-placeholder" clip-path="url(#af-clip)">
+      <text x="${ix + INS_W / 2}" y="${iy + INS_H / 2 - 9}" text-anchor="middle" dominant-baseline="middle"
+            font-family="Inter,system-ui,sans-serif" font-size="${Math.round(INS_W * 0.058)}"
+            fill="#c8c8c8" font-weight="500">Add your design</text>
+      <text x="${ix + INS_W / 2}" y="${iy + INS_H / 2 + 12}" text-anchor="middle" dominant-baseline="middle"
+            font-family="Inter,system-ui,sans-serif" font-size="${Math.round(INS_W * 0.042)}"
+            fill="#d8d8d8">${s.label} · A-Frame Insert</text>
     </g>
+
+    <!-- Edge-depth shadow overlays on the design -->
+    <rect x="${ix}" y="${iy}" width="${INS_W}" height="${shH}"
+          fill="url(#af-top-shad)" pointer-events="none" clip-path="url(#af-clip)"/>
+    <rect x="${ix}" y="${iy + INS_H - shH}" width="${INS_W}" height="${shH}"
+          fill="url(#af-bot-shad)" pointer-events="none" clip-path="url(#af-clip)"/>
+
+    <!-- Product photo mockup — insert area cut out so design shows through -->
+    <image href="${svgFile}" x="0" y="0" width="${CW}" height="${CH}"
+           mask="url(#af-frame-mask)" pointer-events="none"/>
+
+    <!-- Bleed indicator -->
+    <rect x="${ix - 6}" y="${iy - 6}" width="${INS_W + 12}" height="${INS_H + 12}"
+          fill="none" stroke="#ff9999" stroke-width="1" stroke-dasharray="4 3" rx="${irx + 2}" opacity=".6"/>
+    <!-- Safe zone indicator -->
+    <rect x="${ix + 12}" y="${iy + 12}" width="${INS_W - 24}" height="${INS_H - 24}"
+          fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>
   `;
   updateSizeLabel();
 }
 
 function getAfPrintArea() {
-  const { INS_W, INS_H, ix, iy } = _afDims();
+  const { ix, iy, INS_W, INS_H } = _afDims();
   return { ox: ix, oy: iy, ix: 0, iy: 0, iw: INS_W, ih: INS_H };
 }
 
