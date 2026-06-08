@@ -6,6 +6,7 @@ import { ArrowLeft, Check, Loader2, Minus, Plus, ShoppingCart, Tag } from "lucid
 import { CartProvider, useCart } from "@/lib/cart/cart-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SiteNav } from "@/components/site-nav";
 import { cn } from "@/lib/utils";
 
 type Product = {
@@ -122,16 +123,8 @@ function ProductDetailContent({ slug }: { slug: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
-          <a href="/"><img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-7 w-auto dark:hidden" /><img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-7 w-auto dark:block" /></a>
-          <span className="text-muted-foreground">/</span>
-          <a href="/shop" className="text-sm text-muted-foreground hover:text-foreground">Shop</a>
-          <span className="text-muted-foreground">/</span>
-          <span className="max-w-[200px] truncate text-sm font-medium">{product.name}</span>
-        </div>
-      </header>
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+      <SiteNav />
 
       <main className="mx-auto max-w-6xl px-4 py-8">
         <a href="/shop" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">

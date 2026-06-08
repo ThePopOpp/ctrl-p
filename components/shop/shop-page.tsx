@@ -7,6 +7,7 @@ import { CartProvider, useCart } from "@/lib/cart/cart-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SiteNav } from "@/components/site-nav";
 import { cn } from "@/lib/utils";
 
 type Product = {
@@ -191,18 +192,8 @@ function ShopContent() {
   });
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
-          <a href="/"><img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-7 w-auto dark:hidden" /><img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-7 w-auto dark:block" /></a>
-          <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-            <a href="/" className="hover:text-foreground">Home</a>
-            <a href="/book" className="hover:text-foreground">Book</a>
-            <a href="/shop" className="font-medium text-foreground">Shop</a>
-            <a href="/login" className="hover:text-foreground">Sign in</a>
-          </nav>
-        </div>
-      </header>
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+      <SiteNav />
 
       <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="mb-8">
