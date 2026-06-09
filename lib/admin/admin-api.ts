@@ -69,7 +69,7 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
       .limit(200),
     db
       .from("design_drafts")
-      .select("id, user_id, product_id, title, state, artwork_file_id, last_saved_at, created_at")
+      .select("id, user_id, product_id, product_key, product_label, title, status, state, artwork_file_id, preview_image_url, order_id, notes, last_saved_at, created_at, updated_at")
       .order("last_saved_at", { ascending: false })
       .limit(100),
     db

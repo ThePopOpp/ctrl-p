@@ -103,11 +103,18 @@ export type DesignDraft = {
   id: string;
   user_id: string | null;
   product_id: string | null;
+  product_key: string | null;
+  product_label: string | null;
   title: string | null;
+  status: string | null;
   state?: unknown;
   artwork_file_id?: string | null;
+  preview_image_url?: string | null;
+  order_id?: string | null;
+  notes?: string | null;
   last_saved_at: string | null;
   created_at: string | null;
+  updated_at?: string | null;
 };
 
 export type Shipment = {

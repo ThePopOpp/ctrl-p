@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -23,6 +23,7 @@ import {
   markMessageRead,
   updateProductionJobStatus,
 } from "@/lib/admin/admin-api";
+import { AdminNotificationBell } from "@/components/admin/admin-notification-bell";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData, Order } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
@@ -230,9 +231,7 @@ export function AdminDashboard() {
                 <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
                 <Input className="h-8 rounded-lg pl-9 text-xs" placeholder="Search orders, customers, products..." />
               </div>
-              <Button variant="outline" size="icon" aria-label="Notifications" className="h-8 w-8">
-                <Bell className="h-4 w-4" />
-              </Button>
+              <AdminNotificationBell />
               <Button variant="outline" size="icon" aria-label="Toggle theme" className="h-8 w-8" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
                 {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
               </Button>

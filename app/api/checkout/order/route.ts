@@ -264,6 +264,18 @@ export async function POST(request: Request) {
     delivery_status: "created",
   });
 
+  // Create admin notification (non-blocking)
+  try {
+    await db.from("admin_notifications").insert({
+      type: "new_order",
+      title: `New order #${order.order_number}`,
+      body: `${firstName} ${lastName} · ${lineItems.length} item${lineItems.length !== 1 ? "s" : ""} · $${total.toFixed(2)}`,
+      order_id: order.id,
+      user_id: userId,
+      meta: { customer_email: email, total, items_count: lineItems.length },
+    });
+  } catch { /* non-fatal */ }
+
   // Send order confirmation email (non-blocking)
   sendOrderConfirmation({
     to: email,

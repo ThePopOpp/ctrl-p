@@ -9,7 +9,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 import { getCurrentAdminProfile, loadAdminDashboardData, updateAdminArtworkReview, uploadAdminArtwork } from "@/lib/admin/admin-api";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
-import type { AdminDashboardData, ArtworkFile, Proof } from "@/lib/admin/types";
+import type { AdminDashboardData, ArtworkFile, DesignDraft, Proof } from "@/lib/admin/types";
+import { AdminNotificationBell } from "@/components/admin/admin-notification-bell";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,13 @@ function statusTone(status: string) {
   return "border-border bg-secondary text-secondary-foreground";
 }
 
+function draftStatusTone(status: string) {
+  if (status === "ready_for_review") return "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+  if (status === "ordered" || status === "in_production") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+  if (status === "archived") return "border-border bg-muted text-muted-foreground";
+  return "border-border bg-secondary text-secondary-foreground";
+}
+
 async function handleSignOut() {
   const db = getSupabaseBrowserClient();
   if (db) await db.auth.signOut();
@@ -61,6 +69,7 @@ export function AdminArtwork() {
   const [authState, setAuthState] = useState<"checking" | "allowed" | "denied">("checking");
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"artwork" | "designs">("artwork");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ArtworkRecord | null>(null);
 
@@ -174,7 +183,7 @@ export function AdminArtwork() {
             <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex"><span>Super Admin</span><ChevronRight className="h-3.5 w-3.5" /><span className="font-medium text-foreground">Artwork</span></div>
             <div className="ml-auto flex items-center gap-2">
               <div className="relative hidden w-[380px] md:block"><Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" /><Input className="h-8 rounded-lg pl-9 text-xs" placeholder="Search artwork, proofs, customers..." value={query} onChange={(event) => setQuery(event.target.value)} /></div>
-              <Button variant="outline" size="icon" aria-label="Notifications" className="h-8 w-8"><Bell className="h-4 w-4" /></Button>
+              <AdminNotificationBell />
               <Button variant="outline" size="icon" aria-label="Toggle theme" className="h-8 w-8" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
             </div>
           </div>
@@ -201,47 +210,129 @@ export function AdminArtwork() {
                 <ArtworkStat label="Approved" value={String(artworkFiles.filter((item) => item.review_status === "approved").length + proofs.filter((item) => item.status === "approved").length)} hint="Ready for production" />
               </section>
 
-              <section className="mb-4 grid gap-4 xl:grid-cols-[1fr_360px]">
-                <Card>
-                  <CardHeader className="pb-3"><CardTitle className="text-base">Artwork queue</CardTitle><CardDescription>Click a file or proof to review details and update approval status.</CardDescription></CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader><TableRow><TableHead className="pl-4">File / proof</TableHead><TableHead>Order / customer</TableHead><TableHead>Product</TableHead><TableHead>Status</TableHead><TableHead>Size</TableHead><TableHead className="pr-4">Created</TableHead></TableRow></TableHeader>
-                      <TableBody>
-                        {visibleRecords.map((record) => {
-                          const link = getRecordLinks(record, { orders, orderItems, users });
-                          const title = record.kind === "artwork" ? record.artwork.filename : `Proof v${record.proof.revision_number || 1}`;
-                          const status = record.kind === "artwork" ? record.artwork.review_status || "waiting_for_file_review" : record.proof.status || "proof_sent";
-                          return (
-                            <TableRow key={`${record.kind}-${record.id}`} className="cursor-pointer hover:bg-accent/45" onClick={() => setSelectedRecord(record)}>
-                              <TableCell className="pl-4"><div className="font-medium">{title}</div><div className="text-xs text-muted-foreground">{human(record.kind)}</div></TableCell>
-                              <TableCell><div className="font-mono text-xs">#{link.order?.order_number || "No order"}</div><div className="text-xs text-muted-foreground">{link.user?.full_name || link.order?.customer_email || "Customer not linked"}</div></TableCell>
-                              <TableCell><div className="font-medium">{link.item?.products?.name || "No product"}</div><div className="text-xs text-muted-foreground">{link.item?.products?.category || "No category"}</div></TableCell>
-                              <TableCell><Badge className={cn("border", statusTone(status))}>{human(status)}</Badge></TableCell>
-                              <TableCell>{record.kind === "artwork" ? fileSize(record.artwork.file_size_bytes) : `Revision ${record.proof.revision_number || 1}`}</TableCell>
-                              <TableCell className="pr-4">{formatDate(record.kind === "artwork" ? record.artwork.created_at : record.proof.created_at)}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                        {!visibleRecords.length && <TableRow><TableCell colSpan={6} className="p-6 text-center text-muted-foreground">No artwork or proofs found.</TableCell></TableRow>}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+              {/* Tab switcher */}
+              <div className="mb-4 flex gap-1 rounded-lg border bg-muted/40 p-1 w-fit">
+                <button
+                  onClick={() => setActiveTab("artwork")}
+                  className={cn("rounded-md px-4 py-1.5 text-xs font-medium transition-colors", activeTab === "artwork" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+                >
+                  Artwork & proofs
+                </button>
+                <button
+                  onClick={() => setActiveTab("designs")}
+                  className={cn("flex items-center gap-1.5 rounded-md px-4 py-1.5 text-xs font-medium transition-colors", activeTab === "designs" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+                >
+                  Designer drafts
+                  {drafts.filter((d) => d.status === "ready_for_review").length > 0 && (
+                    <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                      {drafts.filter((d) => d.status === "ready_for_review").length} to review
+                    </span>
+                  )}
+                </button>
+              </div>
 
-                <div className="space-y-4">
-                  <Card><CardHeader className="pb-3"><CardTitle className="text-base">Design queue</CardTitle><CardDescription>Saved online designer work</CardDescription></CardHeader><CardContent className="space-y-2">{drafts.slice(0, 6).map((draft) => {
-                    const user = users.find((item) => item.id === draft.user_id);
-                    const product = products.find((item) => item.id === draft.product_id);
-                    return <MiniRow key={draft.id} title={draft.title || "Untitled design"} detail={`${user?.full_name || user?.email || "Customer"} - ${product?.name || "Product"}`} value={formatDate(draft.last_saved_at)} />;
-                  })}{!drafts.length && <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">No saved drafts yet.</div>}</CardContent></Card>
-                  <Card><CardHeader className="pb-3"><CardTitle className="text-base">Operational links</CardTitle></CardHeader><CardContent className="space-y-2">
-                    <MiniRow title="Production jobs" detail="Artwork statuses update matching jobs" value={String(jobs.length)} />
-                    <MiniRow title="Messages" detail="Proof uploads create dashboard notices" value={String(messages.length)} />
-                    <MiniRow title="Payments" detail="Connected through order records" value={String(payments.length)} />
-                  </CardContent></Card>
-                </div>
-              </section>
+              {activeTab === "artwork" && (
+                <section className="mb-4 grid gap-4 xl:grid-cols-[1fr_360px]">
+                  <Card>
+                    <CardHeader className="pb-3"><CardTitle className="text-base">Artwork queue</CardTitle><CardDescription>Click a file or proof to review details and update approval status.</CardDescription></CardHeader>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader><TableRow><TableHead className="pl-4">File / proof</TableHead><TableHead>Order / customer</TableHead><TableHead>Product</TableHead><TableHead>Status</TableHead><TableHead>Size</TableHead><TableHead className="pr-4">Created</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                          {visibleRecords.map((record) => {
+                            const link = getRecordLinks(record, { orders, orderItems, users });
+                            const title = record.kind === "artwork" ? record.artwork.filename : `Proof v${record.proof.revision_number || 1}`;
+                            const status = record.kind === "artwork" ? record.artwork.review_status || "waiting_for_file_review" : record.proof.status || "proof_sent";
+                            return (
+                              <TableRow key={`${record.kind}-${record.id}`} className="cursor-pointer hover:bg-accent/45" onClick={() => setSelectedRecord(record)}>
+                                <TableCell className="pl-4"><div className="font-medium">{title}</div><div className="text-xs text-muted-foreground">{human(record.kind)}</div></TableCell>
+                                <TableCell><div className="font-mono text-xs">#{link.order?.order_number || "No order"}</div><div className="text-xs text-muted-foreground">{link.user?.full_name || link.order?.customer_email || "Customer not linked"}</div></TableCell>
+                                <TableCell><div className="font-medium">{link.item?.products?.name || "No product"}</div><div className="text-xs text-muted-foreground">{link.item?.products?.category || "No category"}</div></TableCell>
+                                <TableCell><Badge className={cn("border", statusTone(status))}>{human(status)}</Badge></TableCell>
+                                <TableCell>{record.kind === "artwork" ? fileSize(record.artwork.file_size_bytes) : `Revision ${record.proof.revision_number || 1}`}</TableCell>
+                                <TableCell className="pr-4">{formatDate(record.kind === "artwork" ? record.artwork.created_at : record.proof.created_at)}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          {!visibleRecords.length && <TableRow><TableCell colSpan={6} className="p-6 text-center text-muted-foreground">No artwork or proofs found.</TableCell></TableRow>}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                  <div className="space-y-4">
+                    <Card><CardHeader className="pb-3"><CardTitle className="text-base">Operational links</CardTitle></CardHeader><CardContent className="space-y-2">
+                      <MiniRow title="Production jobs" detail="Artwork statuses update matching jobs" value={String(jobs.length)} />
+                      <MiniRow title="Messages" detail="Proof uploads create dashboard notices" value={String(messages.length)} />
+                      <MiniRow title="Payments" detail="Connected through order records" value={String(payments.length)} />
+                    </CardContent></Card>
+                  </div>
+                </section>
+              )}
+
+              {activeTab === "designs" && (
+                <section className="mb-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Designer drafts</CardTitle>
+                      <CardDescription>
+                        Designs created with the online product designer or submitted for custom work. {drafts.filter((d) => d.status === "ready_for_review").length > 0 && <span className="font-medium text-amber-600 dark:text-amber-400">{drafts.filter((d) => d.status === "ready_for_review").length} awaiting review.</span>}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="pl-4">Design</TableHead>
+                            <TableHead>Customer</TableHead>
+                            <TableHead>Product</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Order</TableHead>
+                            <TableHead className="pr-4">Last saved</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {drafts.map((draft) => {
+                            const user = users.find((u) => u.id === draft.user_id);
+                            const product = products.find((p) => p.id === draft.product_id);
+                            const linkedOrder = orders.find((o) => o.id === draft.order_id);
+                            const draftStatus = draft.status || "draft";
+                            return (
+                              <TableRow key={draft.id} className="hover:bg-accent/45">
+                                <TableCell className="pl-4">
+                                  <div className="font-medium">{draft.title || "Untitled design"}</div>
+                                  {draft.notes && <div className="text-xs text-muted-foreground line-clamp-1">{draft.notes}</div>}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium">{user?.full_name || "Guest"}</div>
+                                  <div className="text-xs text-muted-foreground">{user?.email || "—"}</div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium">{product?.name || draft.product_label || draft.product_key || "—"}</div>
+                                  <div className="text-xs text-muted-foreground capitalize">{draft.product_key || product?.category || "—"}</div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={cn("border", draftStatusTone(draftStatus))}>{human(draftStatus)}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {linkedOrder ? (
+                                    <span className="font-mono text-xs">#{linkedOrder.order_number}</span>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">No order</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="pr-4">{formatDate(draft.last_saved_at)}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          {!drafts.length && (
+                            <TableRow><TableCell colSpan={6} className="p-6 text-center text-muted-foreground">No designer drafts yet.</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </section>
+              )}
             </>
           )}
         </main>

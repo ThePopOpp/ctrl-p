@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,6 +25,7 @@ import {
 import { LogOut } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
+import { AdminNotificationBell } from "@/components/admin/admin-notification-bell";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData } from "@/lib/admin/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -361,7 +362,7 @@ export function AdminBookings() {
                 <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
                 <Input className="h-8 rounded-lg pl-9 text-xs" placeholder="Search bookings, customers, appointment types..." />
               </div>
-              <Button variant="outline" size="icon" aria-label="Notifications" className="h-8 w-8"><Bell className="h-4 w-4" /></Button>
+              <AdminNotificationBell />
               <Button variant="outline" size="icon" aria-label="Toggle theme" className="h-8 w-8" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
             </div>
           </div>

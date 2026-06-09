@@ -130,6 +130,27 @@ export async function POST(request: Request) {
         .single();
 
   if (result.error) return jsonError(result.error.message, 400);
+
+  // Notify admin on new design or when customer marks ready for review (non-blocking)
+  const isNew = !body.id;
+  const isReadyForReview = status === "ready_for_review";
+  if (isNew || isReadyForReview) {
+    const notifType = isReadyForReview ? "custom_design_request" : "design_submitted";
+    const notifTitle = isReadyForReview
+      ? `Design ready for review: "${payload.title}"`
+      : `New design saved: "${payload.title}"`;
+    try {
+      await verified.adminClient.from("admin_notifications").insert({
+        type: notifType,
+        title: notifTitle,
+        body: `Product: ${nullable(body.product_label) || nullable(body.product_key) || "Custom design"}`,
+        design_draft_id: result.data.id,
+        user_id: verified.actorId,
+        meta: { product_key: body.product_key, title: payload.title, status },
+      });
+    } catch { /* non-fatal */ }
+  }
+
   return NextResponse.json({ draft: result.data });
 }
 
