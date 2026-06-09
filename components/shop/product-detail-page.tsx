@@ -737,7 +737,7 @@ function ProductDetailContent({ slug }: { slug: string }) {
               ) : (
                 <div className="space-y-2">
                   <Button size="default" onClick={handleAddToCart}
-                    className={cn("w-full text-base font-semibold gap-2 transition-all", added ? "bg-emerald-600 hover:bg-emerald-700" : "bg-zinc-900 hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200")}>
+                    className={cn("w-full text-base font-semibold gap-2 transition-all", added ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200")}>
                     {added ? <><Check className="h-5 w-5" />Added to cart!</> : <><Tag className="h-4 w-4" />Add to cart</>}
                   </Button>
                   <Button variant="outline" size="sm" className="w-full text-xs">Save as draft</Button>

@@ -125,6 +125,28 @@
   .dn-or::before,.dn-or::after { content:''; flex:1; height:1px; background:#e4e4e7; }
   .dn-user-pill { display:flex; align-items:center; gap:8px; padding:5px 10px; border-radius:8px; border:1.5px solid #e4e4e7; background:white; cursor:pointer; font-size:12.5px; font-weight:600; color:#18181b; transition:all .12s; }
   .dn-user-pill:hover { background:#f4f4f5; }
+
+  /* ─── Dark mode nav ─── */
+  #dn-nav.dark { background:#18181b; border-bottom-color:#3f3f46; }
+  #dn-nav.dark .dn-nav-link { color:#a1a1aa; }
+  #dn-nav.dark .dn-nav-link:hover { color:#fff; background:#27272a; }
+  #dn-nav.dark .dn-icon-btn { color:#a1a1aa; }
+  #dn-nav.dark .dn-icon-btn:hover { background:#27272a; color:#fff; }
+  #dn-nav.dark .dn-user-pill { border-color:#3f3f46; background:#27272a; color:#e4e4e7; }
+  #dn-nav.dark .dn-user-pill:hover { background:#3f3f46; }
+  #dn-nav.dark .dn-cta-btn { background:#a3e635; color:#14532d; }
+  #dn-nav.dark .dn-cta-btn:hover { background:#bef264; }
+
+  /* ─── CTA button ─── */
+  .dn-cta-btn { display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; border:none; background:#18181b; color:#a3e635; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; white-space:nowrap; transition:all .12s; flex-shrink:0; }
+  .dn-cta-btn:hover { background:#27272a; }
+
+  /* ─── Toast notification ─── */
+  #dn-toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px); z-index:9999; min-width:260px; max-width:420px; padding:12px 20px; border-radius:10px; font-size:13.5px; font-weight:600; text-align:center; opacity:0; pointer-events:none; transition:opacity .22s, transform .22s; box-shadow:0 8px 32px rgba(0,0,0,.18); }
+  #dn-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  #dn-toast.toast-success { background:#16a34a; color:#fff; }
+  #dn-toast.toast-error { background:#dc2626; color:#fff; }
+  #dn-toast.toast-info { background:#18181b; color:#fff; }
 </style>
 </head>
 <body>
@@ -132,26 +154,40 @@
 <!-- SITE NAV -->
 <header id="dn-nav">
   <!-- Logo -->
-  <a href="/shop" onclick="return dnNavIntercept(event,'/shop')" style="display:flex;align-items:center;gap:6px;text-decoration:none;flex-shrink:0;">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#18181b"/><path d="M7 12h10M12 7v10" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg>
-    <span style="font-size:14px;font-weight:800;color:#18181b;letter-spacing:-.03em;">controlp.io</span>
+  <a href="/shop" onclick="return dnNavIntercept(event,'/shop')" style="display:flex;align-items:center;text-decoration:none;flex-shrink:0;">
+    <img id="dn-logo-light" src="/logos/logo-light-lime.svg" alt="Ctrl+P" style="height:28px;display:block;" />
+    <img id="dn-logo-dark" src="/logos/logo-darkgreen-lime.svg" alt="Ctrl+P" style="height:28px;display:none;" />
   </a>
-  <!-- Nav links (hidden on narrow screens) -->
+  <!-- Nav links -->
   <nav style="display:flex;align-items:center;gap:2px;flex:1;justify-content:center;">
     <a href="/shop" onclick="return dnNavIntercept(event,'/shop')" class="dn-nav-link">Shop</a>
-    <a href="/templates" onclick="return dnNavIntercept(event,'/templates')" class="dn-nav-link">Templates</a>
-    <a href="/resources" onclick="return dnNavIntercept(event,'/resources')" class="dn-nav-link">Resources</a>
+    <a href="/shop/discover" onclick="return dnNavIntercept(event,'/shop/discover')" class="dn-nav-link">Discover</a>
+    <a href="/shop/deals" onclick="return dnNavIntercept(event,'/shop/deals')" class="dn-nav-link">Deals</a>
     <a href="/faq" onclick="return dnNavIntercept(event,'/faq')" class="dn-nav-link">FAQ</a>
+    <a href="/contact" onclick="return dnNavIntercept(event,'/contact')" class="dn-nav-link">Contact</a>
   </nav>
-  <!-- Right: cart + user -->
-  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-    <button class="dn-icon-btn" onclick="dnOpenCart()" title="Your cart" aria-label="Open cart">
+  <!-- Right: search, dark mode, cart, user, CTA -->
+  <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+    <!-- Search -->
+    <button class="dn-icon-btn" title="Search" aria-label="Search" onclick="dnNavIntercept(event,'/shop')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    <!-- Dark mode toggle -->
+    <button class="dn-icon-btn" id="dn-theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode" onclick="dnToggleTheme()">
+      <svg id="dn-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg id="dn-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+    <!-- Cart -->
+    <button class="dn-icon-btn" onclick="dnOpenCart()" title="Your cart" aria-label="Open cart" style="position:relative;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
       <span id="dn-cart-badge" style="display:none;">0</span>
     </button>
+    <!-- User area -->
     <div id="dn-user-area">
       <a href="/login" onclick="return dnNavIntercept(event,'/login')" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1.5px solid #e4e4e7;font-size:13px;font-weight:600;color:#18181b;text-decoration:none;transition:all .12s;white-space:nowrap;" onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background=''">Sign in</a>
     </div>
+    <!-- Get a quote CTA -->
+    <a href="/contact" onclick="return dnNavIntercept(event,'/contact')" class="dn-cta-btn" style="margin-left:4px;">Get a quote</a>
   </div>
 </header>
 
@@ -4058,7 +4094,7 @@ async function saveDesign() {
   if (!token) {
     savedDesigns = [localDraft, ...savedDesigns.filter(d => d.id !== localDraft.id)];
     setTool('saved');
-    alert('Saved locally for this browser. Sign in to save designs to your customer dashboard.');
+    dnToast('Saved locally. Sign in to save to your dashboard.', 'info');
     return;
   }
 
@@ -4085,11 +4121,11 @@ async function saveDesign() {
     const savedDraft = payload.draft || { ...localDraft, id: activeDesignDraftId };
     savedDesigns = [savedDraft, ...savedDesigns.filter(d => d.id !== savedDraft.id)];
     setTool('saved');
-    alert('Design saved to your customer dashboard.');
+    dnToast('Design saved to your dashboard!', 'success');
   } catch (error) {
     savedDesigns = [localDraft, ...savedDesigns.filter(d => d.id !== localDraft.id)];
     setTool('saved');
-    alert(error?.message || 'Could not save to the dashboard. Saved locally for this browser.');
+    dnToast(error?.message || 'Saved locally — could not reach dashboard.', 'error');
   }
 }
 
@@ -4521,6 +4557,7 @@ function dnCloseLeaveModal() {
 function dnLeaveWithoutSaving() {
   const href = dnPendingHref || '/shop';
   dnCloseLeaveModal();
+  dnLeavingGracefully = true;
   window.location.href = href;
 }
 async function dnSaveDesignFromModal() {
@@ -4553,14 +4590,14 @@ async function dnSaveDesignFromModal() {
     if (!response.ok) throw new Error(payload.error || 'Could not save design.');
     status.style.color = '#16a34a';
     status.textContent = '✓ Design saved! Redirecting…';
-    setTimeout(() => { dnCloseLeaveModal(); window.location.href = dnPendingHref || '/shop'; }, 800);
+    setTimeout(() => { dnCloseLeaveModal(); dnLeavingGracefully = true; window.location.href = dnPendingHref || '/shop'; }, 800);
   } catch (err) {
     // Save locally and continue
     status.style.color = '#dc2626';
     status.textContent = 'Could not save to account — saved locally instead.';
     btn.textContent = 'Continue anyway';
     btn.disabled = false;
-    btn.onclick = () => { dnCloseLeaveModal(); window.location.href = dnPendingHref || '/shop'; };
+    btn.onclick = () => { dnCloseLeaveModal(); dnLeavingGracefully = true; window.location.href = dnPendingHref || '/shop'; };
   }
 }
 
@@ -4637,14 +4674,64 @@ async function dnUpdateUserArea() {
   } catch { /* silently ignore */ }
 }
 
+// ── Theme ─────────────────────────────────────────────
+let dnLeavingGracefully = false;
+let dnIsDark = false;
+
+function dnApplyTheme() {
+  const nav = document.getElementById('dn-nav');
+  const logoLight = document.getElementById('dn-logo-light');
+  const logoDark = document.getElementById('dn-logo-dark');
+  const iconMoon = document.getElementById('dn-icon-moon');
+  const iconSun = document.getElementById('dn-icon-sun');
+  if (dnIsDark) {
+    nav.classList.add('dark');
+    if (logoLight) logoLight.style.display = 'none';
+    if (logoDark) logoDark.style.display = 'block';
+    if (iconMoon) iconMoon.style.display = 'none';
+    if (iconSun) iconSun.style.display = '';
+  } else {
+    nav.classList.remove('dark');
+    if (logoLight) logoLight.style.display = 'block';
+    if (logoDark) logoDark.style.display = 'none';
+    if (iconMoon) iconMoon.style.display = '';
+    if (iconSun) iconSun.style.display = 'none';
+  }
+}
+
+function dnToggleTheme() {
+  dnIsDark = !dnIsDark;
+  localStorage.setItem('dn-dark', dnIsDark ? '1' : '');
+  dnApplyTheme();
+}
+
+// ── Toast ─────────────────────────────────────────────
+let dnToastTimer = null;
+function dnToast(msg, type = 'info', duration = 3200) {
+  let el = document.getElementById('dn-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'dn-toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.className = `toast-${type}`;
+  requestAnimationFrame(() => { el.classList.add('show'); });
+  clearTimeout(dnToastTimer);
+  dnToastTimer = setTimeout(() => { el.classList.remove('show'); }, duration);
+}
+
 // ── Init ──────────────────────────────────────────────
 (function dnInit() {
+  dnIsDark = !!localStorage.getItem('dn-dark');
+  dnApplyTheme();
   dnUpdateCartBadge();
   dnUpdateUserArea();
   // Keep cart badge in sync when other tabs change cart
   window.addEventListener('storage', e => { if (e.key === DN_CART_KEY) dnUpdateCartBadge(); });
   // Warn on browser back/close if there's an unsaved design
   window.addEventListener('beforeunload', e => {
+    if (dnLeavingGracefully) return;
     if (typeof layers !== 'undefined' && layers.length > 0 && !dnAddedToCart) {
       e.preventDefault(); e.returnValue = '';
     }
