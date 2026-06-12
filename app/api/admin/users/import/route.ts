@@ -266,6 +266,25 @@ export async function POST(request: Request) {
         continue;
       }
 
+      // ── Ghost-user recovery ───────────────────────────────────────────────────
+      // A previous failed import may have created an auth.users row but never
+      // written the public.users profile. Check auth.users via the helper fn.
+      const { data: ghostId } = await adminClient.rpc("get_auth_user_id_by_email", { user_email: email });
+      if (ghostId) {
+        const { error: ghostUpsertError } = await adminClient.from("users").upsert({
+          id: ghostId as string,
+          email,
+          full_name: fullName || null,
+          phone,
+          company,
+          role,
+          status,
+        });
+        if (ghostUpsertError) throw new Error(ghostUpsertError.message);
+        results.push({ row: i + 1, email, full_name: fullName, success: true, user_id: ghostId as string, placeholder_email: usedPlaceholderEmail });
+        continue;
+      }
+
       // ── Create new auth user ──────────────────────────────────────────────────
       let authUserId: string;
       let inviteLink: string | null = null;
