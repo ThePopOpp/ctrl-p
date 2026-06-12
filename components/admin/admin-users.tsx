@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Smartphone,
   Sun,
+  Upload,
   UserRoundPlus,
   UserPlus,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import { LogOut } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData, removeAdminUser, updateAdminUser } from "@/lib/admin/admin-api";
 import { AdminNotificationBell } from "@/components/admin/admin-notification-bell";
+import { ImportUsersSheet } from "@/components/admin/import-users-sheet";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData, AdminProfile, AdminUser } from "@/lib/admin/types";
 import { ROLES, type AppRole } from "@/lib/rbac/roles";
@@ -85,6 +87,7 @@ export function AdminUsers() {
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [inviteUserOpen, setInviteUserOpen] = useState(false);
   const [roleReviewOpen, setRoleReviewOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [quickSendUser, setQuickSendUser] = useState<AdminUser | null>(null);
   const [quickSendChannel, setQuickSendChannel] = useState<"sms" | "email" | "dashboard">("dashboard");
 
@@ -235,7 +238,8 @@ export function AdminUsers() {
                     Manage ControlP roles, account status, internal access, customers, vendors, designers, referrals, resellers, and staff permissions.
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="h-4 w-4" /> Import CSV</Button>
                   <Button variant="outline" onClick={() => setAddUserOpen(true)}><UserRoundPlus className="h-4 w-4" /> Add user</Button>
                   <Button onClick={() => setInviteUserOpen(true)}><UserPlus className="h-4 w-4" /> Invite user</Button>
                   <Button variant="outline" onClick={() => setRoleReviewOpen(true)}><ShieldCheck className="h-4 w-4" /> Review roles</Button>
@@ -401,6 +405,7 @@ export function AdminUsers() {
         <AddUserSheet currentProfile={profile} open={inviteUserOpen} onOpenChange={setInviteUserOpen} onCreated={refreshUsers} assignableRoles={assignableRoles} mode="invite" />
         <RoleReviewSheet open={roleReviewOpen} onOpenChange={setRoleReviewOpen} users={users} assignableRoles={assignableRoles} />
         <QuickSendModal user={quickSendUser} channel={quickSendChannel} onChannelChange={setQuickSendChannel} onClose={() => setQuickSendUser(null)} />
+        <ImportUsersSheet open={importOpen} onClose={() => setImportOpen(false)} onImported={refreshUsers} />
       </div>
     </div>
   );
