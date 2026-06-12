@@ -6,6 +6,9 @@ import { isAppRole } from "@/lib/rbac/roles";
 
 const VALID_STATUSES = new Set(["active", "pending", "suspended", "inactive"]);
 
+// Common TLD-like strings that appear as last_name artifacts in dirty CRM exports
+const JUNK_LAST_NAMES = new Set(["com", "net", "org", "gov", "edu", "io", "co", "us", "ca", "uk", "au", "biz", "info"]);
+
 function env(name: string) {
   return process.env[name] || "";
 }
@@ -20,6 +23,31 @@ function boolEnv(name: string) {
 
 function smtpReady() {
   return Boolean(env("SMTP_HOST") && env("SMTP_PORT") && env("SMTP_USER") && env("SMTP_PASSWORD"));
+}
+
+/** Extract the first phone number from strings like "+1 (623) 777-9838, +1 (317) 605-6726" or "1234 ::: 5678" */
+function cleanPhone(raw: string | undefined): string | null {
+  const str = String(raw || "").trim();
+  if (!str) return null;
+  // Split on common multi-phone separators and take the first
+  const first = str.split(/\s*:::\s*|\s*\/\/\/\s*/)[0].split(",")[0].trim();
+  const digits = first.replace(/[^\d+]/g, "");
+  return digits || null;
+}
+
+/** Sanitise a name segment — strips junk like TLD artifacts ("com", "net") */
+function buildFullName(firstName: string, lastName: string, fullNameRaw: string): string {
+  if (fullNameRaw.trim()) return fullNameRaw.trim();
+
+  let first = firstName.trim();
+  let last = lastName.trim();
+
+  // If first_name looks like an email address (contains @), use the local part before @
+  if (first.includes("@")) first = first.split("@")[0].replace(/[._-]+/g, " ").trim();
+  // Drop last names that are clearly TLD artifacts
+  if (JUNK_LAST_NAMES.has(last.toLowerCase())) last = "";
+
+  return [first, last].filter(Boolean).join(" ");
 }
 
 function getSupabaseEnv() {
@@ -121,6 +149,7 @@ export type ImportUserResult = {
   full_name: string;
   success: boolean;
   skipped?: boolean;
+  placeholder_email?: boolean;
   error?: string;
   user_id?: string;
 };
@@ -159,39 +188,60 @@ export async function POST(request: Request) {
 
   for (let i = 0; i < body.rows.length; i++) {
     const row = body.rows[i];
-    const email = String(row.email || "").trim().toLowerCase();
+
+    // ── Resolve email ──────────────────────────────────────────────────────────
+    let email = String(row.email || "").trim().toLowerCase();
+    let usedPlaceholderEmail = false;
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      results.push({ row: i + 1, email: email || "(blank)", full_name: "", success: false, error: "Invalid email address" });
-      continue;
+      // No valid email — try to generate a placeholder from phone number
+      const phone = cleanPhone(row.phone);
+      if (phone && phone.length >= 7) {
+        email = `no-email-${phone.replace(/\D/g, "")}@import.controlp.io`;
+        usedPlaceholderEmail = true;
+      } else {
+        // No email and no usable phone — skip
+        const rawEmail = String(row.email || "").trim() || "(blank)";
+        const rawName = buildFullName(
+          String(row.first_name || ""),
+          String(row.last_name || ""),
+          String(row.full_name || ""),
+        );
+        results.push({
+          row: i + 1,
+          email: rawEmail,
+          full_name: rawName,
+          success: false,
+          error: "No valid email or phone number — skipped",
+        });
+        continue;
+      }
     }
 
-    // Compute full_name
-    let fullName = String(row.full_name || "").trim();
-    if (!fullName) {
-      const first = String(row.first_name || "").trim();
-      const last = String(row.last_name || "").trim();
-      fullName = [first, last].filter(Boolean).join(" ");
-    }
+    // ── Resolve name ───────────────────────────────────────────────────────────
+    const fullName = buildFullName(
+      String(row.first_name || ""),
+      String(row.last_name || ""),
+      String(row.full_name || ""),
+    );
 
+    // ── Role / status ──────────────────────────────────────────────────────────
     const rowRole = String(row.role || "").trim().toLowerCase();
     const role = isAppRole(rowRole) ? rowRole : defaultRole;
     const rowStatus = String(row.status || "").trim().toLowerCase();
-    const status = sendInvites ? "pending" : (VALID_STATUSES.has(rowStatus) ? rowStatus : "active");
+    // Phone-only placeholder contacts are always pending; send_invites overrides to pending too
+    const status = (sendInvites || usedPlaceholderEmail)
+      ? "pending"
+      : (VALID_STATUSES.has(rowStatus) ? rowStatus : "active");
 
-    // Address fields collected into metadata for future use
-    const addressMeta = {
-      address_line1: String(row.address_line1 || "").trim() || null,
-      address_line2: String(row.address_line2 || "").trim() || null,
-      city: String(row.city || "").trim() || null,
-      state: String(row.state || "").trim() || null,
-      zip: String(row.zip || "").trim() || null,
-      country: String(row.country || "").trim() || null,
-    };
-    const hasAddress = Object.values(addressMeta).some(Boolean);
+    // ── Phone ──────────────────────────────────────────────────────────────────
+    const phone = cleanPhone(row.phone);
+
+    // ── Company ────────────────────────────────────────────────────────────────
+    const company = String(row.company || "").trim() || null;
 
     try {
-      // Check if user already exists
+      // Check if this email already exists in public.users
       const existing = await adminClient
         .from("users")
         .select("id, email")
@@ -201,26 +251,26 @@ export async function POST(request: Request) {
       if (existing.data?.id) {
         if (skipExisting) {
           results.push({ row: i + 1, email, full_name: fullName, success: false, skipped: true, error: "Already exists — skipped" });
-        } else {
-          // Update the existing user's profile
-          await adminClient.from("users").update({
-            full_name: fullName || null,
-            phone: String(row.phone || "").trim().replace(/[^\d+]/g, "") || null,
-            company: String(row.company || "").trim() || null,
-            role,
-            status,
-            ...(hasAddress ? { address: addressMeta } : {}),
-          }).eq("id", existing.data.id);
-          results.push({ row: i + 1, email, full_name: fullName, success: true, user_id: existing.data.id });
+          continue;
         }
+        // Update existing user's profile — only columns that exist in public.users
+        const { error: updateError } = await adminClient.from("users").update({
+          full_name: fullName || null,
+          phone,
+          company,
+          role,
+          status,
+        }).eq("id", existing.data.id);
+        if (updateError) throw new Error(updateError.message);
+        results.push({ row: i + 1, email, full_name: fullName, success: true, user_id: existing.data.id });
         continue;
       }
 
-      // Create new auth user
+      // ── Create new auth user ──────────────────────────────────────────────────
       let authUserId: string;
       let inviteLink: string | null = null;
 
-      if (sendInvites) {
+      if (sendInvites && !usedPlaceholderEmail) {
         const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
           data: { full_name: fullName, role },
         });
@@ -237,21 +287,39 @@ export async function POST(request: Request) {
         authUserId = data.user.id;
       }
 
-      // Upsert profile in public.users
-      await adminClient.from("users").upsert({
+      // ── Upsert into public.users — only columns that exist in the schema ──────
+      // NOTE: address and avatar_url are NOT stored here as those columns don't
+      // exist in public.users. Address data is preserved in auth user_metadata below.
+      const { error: upsertError } = await adminClient.from("users").upsert({
         id: authUserId,
         email,
         full_name: fullName || null,
-        phone: String(row.phone || "").trim().replace(/[^\d+]/g, "") || null,
-        company: String(row.company || "").trim() || null,
+        phone,
+        company,
         role,
         status,
-        ...(hasAddress ? { address: addressMeta } : {}),
-        ...(row.profile_photo_url ? { avatar_url: String(row.profile_photo_url).trim() } : {}),
       });
+      if (upsertError) throw new Error(upsertError.message);
 
-      // Send invite email if we have an invite link
-      if (sendInvites && inviteLink) {
+      // Store address + photo URL in auth user_metadata (no separate DB column needed)
+      const addressMeta = {
+        address_line1: String(row.address_line1 || "").trim() || null,
+        address_line2: String(row.address_line2 || "").trim() || null,
+        city: String(row.city || "").trim() || null,
+        state: String(row.state || "").trim() || null,
+        zip: String(row.zip || "").trim() || null,
+        country: String(row.country || "").trim() || null,
+        profile_photo_url: String(row.profile_photo_url || "").trim() || null,
+      };
+      const hasExtraMeta = Object.values(addressMeta).some(Boolean);
+      if (hasExtraMeta) {
+        await adminClient.auth.admin.updateUserById(authUserId, {
+          user_metadata: { full_name: fullName, role, ...addressMeta },
+        });
+      }
+
+      // Send invite email if applicable
+      if (sendInvites && inviteLink && !usedPlaceholderEmail) {
         await sendInviteEmail({ email, fullName, actionLink: inviteLink, role, appUrl });
       }
 
@@ -262,11 +330,18 @@ export async function POST(request: Request) {
           action: sendInvites ? "user_invited" : "user_created",
           entity_type: "user",
           entity_id: authUserId,
-          details: { email, role, source: "csv_import" },
+          details: { email, role, source: "csv_import", placeholder_email: usedPlaceholderEmail },
         });
       } catch { /* non-fatal */ }
 
-      results.push({ row: i + 1, email, full_name: fullName, success: true, user_id: authUserId });
+      results.push({
+        row: i + 1,
+        email,
+        full_name: fullName,
+        success: true,
+        user_id: authUserId,
+        placeholder_email: usedPlaceholderEmail,
+      });
     } catch (err) {
       results.push({
         row: i + 1,
@@ -281,6 +356,7 @@ export async function POST(request: Request) {
   const succeeded = results.filter((r) => r.success).length;
   const skipped = results.filter((r) => r.skipped).length;
   const failed = results.filter((r) => !r.success && !r.skipped).length;
+  const placeholders = results.filter((r) => r.success && r.placeholder_email).length;
 
-  return NextResponse.json({ results, succeeded, skipped, failed });
+  return NextResponse.json({ results, succeeded, skipped, failed, placeholders });
 }

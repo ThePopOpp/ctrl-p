@@ -93,7 +93,7 @@ export async function loadAdminDashboardData(): Promise<AdminDashboardData> {
       .select("id, email, full_name, phone, company, role, status, created_at, last_login_at, deleted_at")
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
-      .limit(200),
+      .limit(1000),
     db
       .from("activity_logs")
       .select("id, actor_id, action, entity_type, entity_id, details, created_at")

@@ -38,6 +38,7 @@ type ImportResult = {
   full_name: string;
   success: boolean;
   skipped?: boolean;
+  placeholder_email?: boolean;
   error?: string;
   user_id?: string;
 };
@@ -197,7 +198,7 @@ export function ImportUsersSheet({ open, onClose, onImported }: Props) {
   const [skipExisting, setSkipExisting] = useState(true);
   const [importing, setImporting] = useState(false);
   const [results, setResults] = useState<ImportResult[]>([]);
-  const [summary, setSummary] = useState({ succeeded: 0, skipped: 0, failed: 0 });
+  const [summary, setSummary] = useState({ succeeded: 0, skipped: 0, failed: 0, placeholders: 0 });
   const [showErrors, setShowErrors] = useState(false);
 
   function reset() {
@@ -210,7 +211,7 @@ export function ImportUsersSheet({ open, onClose, onImported }: Props) {
     setSendInvites(false);
     setSkipExisting(true);
     setResults([]);
-    setSummary({ succeeded: 0, skipped: 0, failed: 0 });
+    setSummary({ succeeded: 0, skipped: 0, failed: 0, placeholders: 0 });
     setShowErrors(false);
   }
 
@@ -278,7 +279,7 @@ export function ImportUsersSheet({ open, onClose, onImported }: Props) {
         return;
       }
       setResults(data.results ?? []);
-      setSummary({ succeeded: data.succeeded ?? 0, skipped: data.skipped ?? 0, failed: data.failed ?? 0 });
+      setSummary({ succeeded: data.succeeded ?? 0, skipped: data.skipped ?? 0, failed: data.failed ?? 0, placeholders: data.placeholders ?? 0 });
       setStep("done");
       if ((data.succeeded ?? 0) > 0) onImported();
     } catch {
@@ -484,6 +485,13 @@ export function ImportUsersSheet({ open, onClose, onImported }: Props) {
                   <p className="text-xs text-muted-foreground mt-1">Failed</p>
                 </div>
               </div>
+
+              {summary.placeholders > 0 && (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-4">
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">{summary.placeholders} phone-only contact{summary.placeholders !== 1 ? "s" : ""} imported with placeholder email</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">These contacts had no email address. A system placeholder was used so they appear in your contacts list. Update their email from the Users page when known.</p>
+                </div>
+              )}
 
               {summary.failed > 0 && (
                 <div className="rounded-lg border overflow-hidden">
