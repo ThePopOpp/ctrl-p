@@ -109,16 +109,7 @@ export function AdminPayments() {
     setSendMenuId(null);
     setNotice(`Sending ${kind} by ${channel}...`);
     try {
-      const order = Array.isArray(payment.orders) ? (payment.orders as any[])[0] : (payment.orders as any);
-      const billingContact = (payment.billing_contact as any) || {};
-      const customer = billingContact?.customer || {};
-      await deliverPaymentDocument({
-        paymentId: payment.id,
-        kind,
-        channel,
-        recipientEmail: channel !== "sms" ? (customer.email || order?.customer_email || undefined) : undefined,
-        recipientPhone: channel !== "email" ? (customer.phone || order?.customer_phone || undefined) : undefined,
-      });
+      await deliverPaymentDocument({ paymentId: payment.id, kind, channel });
       setNotice(`${human(kind)} sent by ${channel}.`);
       await refreshPayments();
     } catch (error) {
