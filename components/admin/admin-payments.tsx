@@ -375,16 +375,16 @@ function SendFab({
         )}
       >
         <button
-          onClick={onSms}
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-card px-3 py-1.5 text-xs font-medium shadow-md hover:bg-accent"
-        >
-          SMS
-        </button>
-        <button
           onClick={onEmail}
           className="flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-card px-3 py-1.5 text-xs font-medium shadow-md hover:bg-accent"
         >
           Email
+        </button>
+        <button
+          onClick={onSms}
+          className="flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-card px-3 py-1.5 text-xs font-medium shadow-md hover:bg-accent"
+        >
+          SMS
         </button>
       </div>
       <Button size="sm" variant={open ? "default" : "outline"} onClick={onToggle}>
