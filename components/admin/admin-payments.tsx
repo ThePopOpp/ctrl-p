@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DateInput } from "@/components/ui/date-input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -1270,7 +1270,7 @@ function NewInvoiceSheet({
             </div>
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Due date</div>
-              <DateInput value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+              <DatePicker value={dueAt} onChange={setDueAt} />
             </div>
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Terms</div>
@@ -1642,7 +1642,7 @@ function EditInvoiceSheet({
             </div>
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Due date</div>
-              <DateInput value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+              <DatePicker value={dueAt} onChange={setDueAt} />
             </div>
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Terms</div>

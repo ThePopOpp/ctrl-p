@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DateInput } from "@/components/ui/date-input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -164,7 +164,7 @@ function CouponForm({
         </div>
         <div>
           <div className="mb-1.5 text-xs font-medium text-muted-foreground">Expiry date</div>
-          <DateInput value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+          <DatePicker value={expiresAt} onChange={setExpiresAt} />
         </div>
       </div>
       {error && <div className="rounded-lg border bg-background/35 p-3 text-sm text-destructive">{error}</div>}
