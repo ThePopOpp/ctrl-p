@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -244,6 +245,7 @@ export function AdminPayments() {
                             <TableCell className="pr-4">
                               <div className="flex justify-end gap-1">
                                 <Button size="sm" variant="outline" onClick={() => openPaymentDocument(payment.id, "invoice")}>View</Button>
+                                <Button size="sm" variant="outline" onClick={() => window.open(`/api/payments/${payment.id}/document?kind=invoice&autoprint=1`, "_blank", "noopener,noreferrer")}>Download PDF</Button>
                                 <Button size="sm" variant="outline" onClick={() => sendPaymentDocument(payment, "invoice")}>Send</Button>
                                 {payment.status === "paid" && (
                                   <>
@@ -1085,7 +1087,7 @@ function NewInvoiceSheet({
             </div>
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Due date</div>
-              <Input type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
+              <DateInput value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
             </div>
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Terms</div>

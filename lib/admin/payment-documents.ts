@@ -103,7 +103,7 @@ export async function loadPaymentDocument(adminClient: SupabaseClient, paymentId
     .single();
 }
 
-export function renderPaymentDocumentHtml(payment: PaymentRecord, kind: PaymentDocumentKind) {
+export function renderPaymentDocumentHtml(payment: PaymentRecord, kind: PaymentDocumentKind, autoPrint = false) {
   const order = Array.isArray(payment.orders) ? payment.orders[0] : payment.orders;
   const billingContact = asRecord(payment.billing_contact);
   const sender = asRecord(billingContact.sender);
@@ -218,8 +218,9 @@ export function renderPaymentDocumentHtml(payment: PaymentRecord, kind: PaymentD
       <div><span>Discount</span><span>-${money.format(discount)}</span></div>
       <div class="grand"><span>Total</span><span>${money.format(total)}</span></div>
     </section>
-    ${payment.payment_link_url && kind === "invoice" ? `<section class="actions"><a class="button" href="${html(payment.payment_link_url)}">Pay securely</a><button class="button" onclick="window.print()">Print or save PDF</button></section>` : `<section class="actions"><button class="button" onclick="window.print()">Print or save PDF</button></section>`}
+    ${payment.payment_link_url && kind === "invoice" ? `<section class="actions"><a class="button" href="${html(payment.payment_link_url)}">Pay securely</a><button class="button" onclick="window.print()">Download PDF</button></section>` : `<section class="actions"><button class="button" onclick="window.print()">Download PDF</button></section>`}
   </main>
+  ${autoPrint ? `<script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 400); });</script>` : ""}
 </body>
 </html>`;
 }

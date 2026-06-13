@@ -14,6 +14,7 @@ export async function GET(
   const { paymentId } = await context.params;
   const url = new URL(request.url);
   const kind = (url.searchParams.get("kind") === "receipt" ? "receipt" : "invoice") as PaymentDocumentKind;
+  const autoPrint = url.searchParams.get("autoprint") === "1";
   const adminClient = createClient(config.supabaseUrl, config.serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -23,7 +24,7 @@ export async function GET(
     return jsonError(paymentResult.error?.message || "Payment not found.", 404);
   }
 
-  const html = renderPaymentDocumentHtml(paymentResult.data as any, kind);
+  const html = renderPaymentDocumentHtml(paymentResult.data as any, kind, autoPrint);
   await adminClient
     .from("payments")
     .update({ document_status: "generated" })

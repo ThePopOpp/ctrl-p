@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -3100,7 +3101,7 @@ function DependencyPanel({
           </div>
           <div>
             <div className="mb-1.5 text-xs font-medium text-muted-foreground">Required completion date</div>
-            <Input type="date" value={requiredDate} onChange={(event) => setRequiredDate(event.target.value)} />
+            <DateInput value={requiredDate} onChange={(event) => setRequiredDate(event.target.value)} />
           </div>
           <div>
             <div className="mb-1.5 text-xs font-medium text-muted-foreground">Delay impact notes</div>

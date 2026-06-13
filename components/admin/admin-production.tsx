@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -414,7 +415,7 @@ function ProductionJobSheet({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Due date</div>
-              <Input type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
+              <DateInput value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
             </div>
             <FieldSelect label="Assigned staff" value={assignedStaffId} onChange={setAssignedStaffId} items={staff.map((user) => ({
               value: user.id,
