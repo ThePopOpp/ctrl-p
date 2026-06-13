@@ -253,27 +253,25 @@ export function AdminPayments() {
                                 <Button size="sm" variant="outline" onClick={() => setEditPayment(payment)}>Edit</Button>
                                 <Button size="sm" variant="outline" onClick={() => openPaymentDocument(payment.id, "invoice")}>View</Button>
                                 <Button size="sm" variant="outline" onClick={() => window.open(`/api/payments/${payment.id}/document?kind=invoice&autoprint=1`, "_blank", "noopener,noreferrer")}>Download PDF</Button>
-                                <div className="relative">
-                                  <Button size="sm" variant="outline" onClick={() => setSendMenuId(sendMenuId === payment.id ? null : payment.id)}>Send ▾</Button>
-                                  {sendMenuId === payment.id && (
-                                    <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border bg-card shadow-md">
-                                      <button className="flex w-full items-center gap-2 rounded-t-lg px-3 py-2 text-sm hover:bg-accent" onClick={() => sendPaymentDocument(payment, "invoice", "email")}>Email invoice</button>
-                                      <button className="flex w-full items-center gap-2 rounded-b-lg px-3 py-2 text-sm hover:bg-accent" onClick={() => sendPaymentDocument(payment, "invoice", "sms")}>SMS invoice</button>
-                                    </div>
-                                  )}
-                                </div>
+                                <SendFab
+                                  id={payment.id}
+                                  label="Send"
+                                  open={sendMenuId === payment.id}
+                                  onToggle={() => setSendMenuId(sendMenuId === payment.id ? null : payment.id)}
+                                  onEmail={() => sendPaymentDocument(payment, "invoice", "email")}
+                                  onSms={() => sendPaymentDocument(payment, "invoice", "sms")}
+                                />
                                 {payment.status === "paid" && (
                                   <>
                                     <Button size="sm" variant="outline" onClick={() => openPaymentDocument(payment.id, "receipt")}>Receipt</Button>
-                                    <div className="relative">
-                                      <Button size="sm" variant="outline" onClick={() => setSendMenuId(sendMenuId === `${payment.id}-receipt` ? null : `${payment.id}-receipt`)}>Send receipt ▾</Button>
-                                      {sendMenuId === `${payment.id}-receipt` && (
-                                        <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border bg-card shadow-md">
-                                          <button className="flex w-full items-center gap-2 rounded-t-lg px-3 py-2 text-sm hover:bg-accent" onClick={() => sendPaymentDocument(payment, "receipt", "email")}>Email receipt</button>
-                                          <button className="flex w-full items-center gap-2 rounded-b-lg px-3 py-2 text-sm hover:bg-accent" onClick={() => sendPaymentDocument(payment, "receipt", "sms")}>SMS receipt</button>
-                                        </div>
-                                      )}
-                                    </div>
+                                    <SendFab
+                                      id={`${payment.id}-receipt`}
+                                      label="Send receipt"
+                                      open={sendMenuId === `${payment.id}-receipt`}
+                                      onToggle={() => setSendMenuId(sendMenuId === `${payment.id}-receipt` ? null : `${payment.id}-receipt`)}
+                                      onEmail={() => sendPaymentDocument(payment, "receipt", "email")}
+                                      onSms={() => sendPaymentDocument(payment, "receipt", "sms")}
+                                    />
                                     {payment.provider === "square" && (
                                       <Button size="sm" variant="outline" className="text-red-600 hover:text-red-600 dark:text-red-400" onClick={() => setRefundPayment(payment)}>Refund</Button>
                                     )}
@@ -348,6 +346,50 @@ export function AdminPayments() {
           onCreated={refreshPayments}
         />
       </div>
+    </div>
+  );
+}
+
+function SendFab({
+  id,
+  label,
+  open,
+  onToggle,
+  onEmail,
+  onSms,
+}: {
+  id: string;
+  label: string;
+  open: boolean;
+  onToggle: () => void;
+  onEmail: () => void;
+  onSms: () => void;
+}) {
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      {/* FAB actions — float upward above trigger */}
+      <div
+        className={cn(
+          "absolute bottom-full right-0 mb-2 flex flex-col items-end gap-1.5 transition-all duration-150",
+          open ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0",
+        )}
+      >
+        <button
+          onClick={onSms}
+          className="flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-card px-3 py-1.5 text-xs font-medium shadow-md hover:bg-accent"
+        >
+          SMS
+        </button>
+        <button
+          onClick={onEmail}
+          className="flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-card px-3 py-1.5 text-xs font-medium shadow-md hover:bg-accent"
+        >
+          Email
+        </button>
+      </div>
+      <Button size="sm" variant={open ? "default" : "outline"} onClick={onToggle}>
+        {label}
+      </Button>
     </div>
   );
 }
