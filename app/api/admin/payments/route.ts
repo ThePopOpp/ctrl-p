@@ -87,6 +87,7 @@ export async function POST(request: Request) {
     discount_amount?: number | string;
     processor?: string;
     delivery_status?: string;
+    payment_link_url?: string | null;
   } | null;
 
   const orderId = body?.order_id;
@@ -159,6 +160,7 @@ export async function POST(request: Request) {
       tax_amount: taxAmount,
       discount_amount: discountAmount,
       balance_due: amount,
+      payment_link_url: body?.payment_link_url || null,
       document_status: "not_generated",
       delivery_status: deliveryStatus,
       created_by: verified.actorId,

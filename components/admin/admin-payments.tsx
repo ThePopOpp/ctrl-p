@@ -18,7 +18,7 @@ import {
 import { LogOut } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-import { createAdminInvoice, createSquareCardPayment, createSquarePaymentLink, createSquareRefund, deliverPaymentDocument, getCurrentAdminProfile, loadAdminDashboardData, loadSquarePaymentConfig } from "@/lib/admin/admin-api";
+import { createAdminInvoice, createSquareCardPayment, createSquarePaymentLink, createSquareRefund, deliverPaymentDocument, getCurrentAdminProfile, loadAdminDashboardData, loadSquarePaymentConfig, updateAdminInvoice } from "@/lib/admin/admin-api";
 import { AdminNotificationBell } from "@/components/admin/admin-notification-bell";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData, Order, Payment, Product } from "@/lib/admin/types";
@@ -64,6 +64,8 @@ export function AdminPayments() {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [refundPayment, setRefundPayment] = useState<Payment | null>(null);
+  const [editPayment, setEditPayment] = useState<Payment | null>(null);
+  const [sendMenuId, setSendMenuId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -81,6 +83,13 @@ export function AdminPayments() {
     boot();
   }, []);
 
+  useEffect(() => {
+    if (!sendMenuId) return;
+    function close() { setSendMenuId(null); }
+    document.addEventListener("click", close, { capture: true, once: true });
+    return () => document.removeEventListener("click", close, { capture: true });
+  }, [sendMenuId]);
+
   const orders = data?.orders ?? [];
   const payments = data?.payments ?? [];
   const messages = data?.messages ?? [];
@@ -96,15 +105,21 @@ export function AdminPayments() {
     window.open(`/api/payments/${paymentId}/document?kind=${kind}`, "_blank", "noopener,noreferrer");
   }
 
-  async function sendPaymentDocument(payment: Payment, kind: "invoice" | "receipt") {
-    setNotice(`Sending ${kind}...`);
+  async function sendPaymentDocument(payment: Payment, kind: "invoice" | "receipt", channel: "email" | "sms") {
+    setSendMenuId(null);
+    setNotice(`Sending ${kind} by ${channel}...`);
     try {
+      const order = Array.isArray(payment.orders) ? (payment.orders as any[])[0] : (payment.orders as any);
+      const billingContact = (payment.billing_contact as any) || {};
+      const customer = billingContact?.customer || {};
       await deliverPaymentDocument({
         paymentId: payment.id,
         kind,
-        channel: "email",
+        channel,
+        recipientEmail: channel !== "sms" ? (customer.email || order?.customer_email || undefined) : undefined,
+        recipientPhone: channel !== "email" ? (customer.phone || order?.customer_phone || undefined) : undefined,
       });
-      setNotice(`${human(kind)} sent.`);
+      setNotice(`${human(kind)} sent by ${channel}.`);
       await refreshPayments();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : `Could not send ${kind}.`);
@@ -244,13 +259,30 @@ export function AdminPayments() {
                             <TableCell className="text-right font-semibold">{money.format(numberValue(payment.amount))}</TableCell>
                             <TableCell className="pr-4">
                               <div className="flex justify-end gap-1">
+                                <Button size="sm" variant="outline" onClick={() => setEditPayment(payment)}>Edit</Button>
                                 <Button size="sm" variant="outline" onClick={() => openPaymentDocument(payment.id, "invoice")}>View</Button>
                                 <Button size="sm" variant="outline" onClick={() => window.open(`/api/payments/${payment.id}/document?kind=invoice&autoprint=1`, "_blank", "noopener,noreferrer")}>Download PDF</Button>
-                                <Button size="sm" variant="outline" onClick={() => sendPaymentDocument(payment, "invoice")}>Send</Button>
+                                <div className="relative">
+                                  <Button size="sm" variant="outline" onClick={() => setSendMenuId(sendMenuId === payment.id ? null : payment.id)}>Send ▾</Button>
+                                  {sendMenuId === payment.id && (
+                                    <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border bg-card shadow-md">
+                                      <button className="flex w-full items-center gap-2 rounded-t-lg px-3 py-2 text-sm hover:bg-accent" onClick={() => sendPaymentDocument(payment, "invoice", "email")}>Email invoice</button>
+                                      <button className="flex w-full items-center gap-2 rounded-b-lg px-3 py-2 text-sm hover:bg-accent" onClick={() => sendPaymentDocument(payment, "invoice", "sms")}>SMS invoice</button>
+                                    </div>
+                                  )}
+                                </div>
                                 {payment.status === "paid" && (
                                   <>
                                     <Button size="sm" variant="outline" onClick={() => openPaymentDocument(payment.id, "receipt")}>Receipt</Button>
-                                    <Button size="sm" variant="outline" onClick={() => sendPaymentDocument(payment, "receipt")}>Send receipt</Button>
+                                    <div className="relative">
+                                      <Button size="sm" variant="outline" onClick={() => setSendMenuId(sendMenuId === `${payment.id}-receipt` ? null : `${payment.id}-receipt`)}>Send receipt ▾</Button>
+                                      {sendMenuId === `${payment.id}-receipt` && (
+                                        <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border bg-card shadow-md">
+                                          <button className="flex w-full items-center gap-2 rounded-t-lg px-3 py-2 text-sm hover:bg-accent" onClick={() => sendPaymentDocument(payment, "receipt", "email")}>Email receipt</button>
+                                          <button className="flex w-full items-center gap-2 rounded-b-lg px-3 py-2 text-sm hover:bg-accent" onClick={() => sendPaymentDocument(payment, "receipt", "sms")}>SMS receipt</button>
+                                        </div>
+                                      )}
+                                    </div>
                                     {payment.provider === "square" && (
                                       <Button size="sm" variant="outline" className="text-red-600 hover:text-red-600 dark:text-red-400" onClick={() => setRefundPayment(payment)}>Refund</Button>
                                     )}
@@ -299,6 +331,12 @@ export function AdminPayments() {
             </>
           )}
         </main>
+        <EditInvoiceSheet
+          payment={editPayment}
+          open={!!editPayment}
+          onOpenChange={(open) => { if (!open) setEditPayment(null); }}
+          onSaved={refreshPayments}
+        />
         <RefundDialog
           payment={refundPayment}
           onClose={() => setRefundPayment(null)}
@@ -878,6 +916,7 @@ function NewInvoiceSheet({
   const [billingContact, setBillingContact] = useState("{}");
   const [lineItems, setLineItems] = useState("[]");
   const [notes, setNotes] = useState("");
+  const [paymentLinkUrl, setPaymentLinkUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -905,6 +944,7 @@ function NewInvoiceSheet({
     setSenderLogoUrl("https://my.controlp.io/logos/ctrl-p-logo-dark.svg");
     setNotes("");
     setMessage("");
+    setPaymentLinkUrl("");
     setPreviewOpen(false);
   }, [open, invoiceableOrders]);
 
@@ -1012,6 +1052,7 @@ function NewInvoiceSheet({
         discountAmount: parsedDiscount,
         processor,
         deliveryStatus,
+        paymentLinkUrl: paymentLinkUrl.trim() || undefined,
       });
       if (deliveryMethod !== "none" && deliveryStatus !== "draft") {
         await deliverPaymentDocument({
@@ -1230,6 +1271,12 @@ function NewInvoiceSheet({
             <Input value={invoiceMessage} onChange={(event) => setInvoiceMessage(event.target.value)} />
           </div>
 
+          <div className="rounded-lg border bg-secondary/30 p-3">
+            <div className="mb-1.5 text-xs font-semibold text-muted-foreground">Credit / debit card payment link (optional)</div>
+            <Input value={paymentLinkUrl} onChange={(event) => setPaymentLinkUrl(event.target.value)} placeholder="https://checkout.square.site/..." />
+            <div className="mt-1.5 text-[11px] text-muted-foreground">When filled, a clickable "Pay securely" button appears in the PDF, email, and SMS. Leave blank for check or manual payments — the link will not appear.</div>
+          </div>
+
           <div className="grid gap-3 xl:grid-cols-2">
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Billing contact JSON</div>
@@ -1306,6 +1353,183 @@ function NewInvoiceSheet({
             <Button className="flex-1" disabled={!canCreate} onClick={createInvoice}>
               {saving ? "Creating..." : "Create invoice"}
             </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function EditInvoiceSheet({
+  payment,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  payment: Payment | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [dueAt, setDueAt] = useState("");
+  const [terms, setTerms] = useState("Due on receipt");
+  const [amount, setAmount] = useState("");
+  const [subtotal, setSubtotal] = useState("");
+  const [taxAmount, setTaxAmount] = useState("0");
+  const [discountAmount, setDiscountAmount] = useState("0");
+  const [notes, setNotes] = useState("");
+  const [paymentLinkUrl, setPaymentLinkUrl] = useState("");
+  const [lineItems, setLineItems] = useState("[]");
+  const [status, setStatus] = useState("pending");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!payment) return;
+    setInvoiceNumber(payment.invoice_number || "");
+    setDueAt(payment.invoice_due_at ? new Date(payment.invoice_due_at).toISOString().slice(0, 10) : "");
+    setTerms(payment.invoice_terms || "Due on receipt");
+    setAmount(String(numberValue(payment.amount)));
+    setSubtotal(String(numberValue(payment.subtotal ?? payment.amount)));
+    setTaxAmount(String(numberValue(payment.tax_amount)));
+    setDiscountAmount(String(numberValue(payment.discount_amount)));
+    setNotes(payment.notes || "");
+    setPaymentLinkUrl(payment.payment_link_url || "");
+    setLineItems(payment.line_items ? JSON.stringify(payment.line_items, null, 2) : "[]");
+    setStatus(payment.status || "pending");
+    setMessage("");
+  }, [payment]);
+
+  function recomputeAmount(nextSubtotal = subtotal, nextTax = taxAmount, nextDiscount = discountAmount) {
+    const total = Number(nextSubtotal || 0) + Number(nextTax || 0) - Number(nextDiscount || 0);
+    setAmount(Number.isFinite(total) ? Math.max(0, total).toFixed(2) : "");
+  }
+
+  async function saveInvoice() {
+    if (!payment) return;
+    const parsedAmount = Number(amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setMessage("Amount must be greater than zero.");
+      return;
+    }
+    setSaving(true);
+    setMessage("Saving...");
+    try {
+      let parsedLines: unknown = undefined;
+      try { parsedLines = JSON.parse(lineItems); } catch { throw new Error("Line items must be valid JSON."); }
+      await updateAdminInvoice({
+        paymentId: payment.id,
+        amount: parsedAmount,
+        notes,
+        invoiceNumber,
+        dueAt: dueAt ? new Date(`${dueAt}T12:00:00`).toISOString() : "",
+        terms,
+        lineItems: parsedLines,
+        subtotal: Number(subtotal || parsedAmount),
+        taxAmount: Number(taxAmount || 0),
+        discountAmount: Number(discountAmount || 0),
+        paymentLinkUrl: paymentLinkUrl.trim() || null,
+        status,
+      });
+      setMessage("Invoice updated.");
+      await onSaved();
+      onOpenChange(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not update invoice.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-[60rem]">
+        <SheetHeader>
+          <SheetTitle>Edit invoice {payment?.invoice_number || payment?.id.slice(0, 8)}</SheetTitle>
+          <SheetDescription>Update invoice details, amounts, and payment link.</SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Invoice number</div>
+              <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="INV-1001" />
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Due date</div>
+              <DateInput value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Terms</div>
+              <Select value={terms} onValueChange={setTerms}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Due on receipt">Due on receipt</SelectItem>
+                  <SelectItem value="Net 7">Net 7</SelectItem>
+                  <SelectItem value="Net 15">Net 15</SelectItem>
+                  <SelectItem value="Net 30">Net 30</SelectItem>
+                  <SelectItem value="Deposit required">Deposit required</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Status</div>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="partially_paid">Partially paid</SelectItem>
+                  <SelectItem value="unpaid">Unpaid</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Subtotal</div>
+              <Input inputMode="decimal" value={subtotal} onChange={(e) => { setSubtotal(e.target.value); recomputeAmount(e.target.value); }} />
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Tax</div>
+              <Input inputMode="decimal" value={taxAmount} onChange={(e) => { setTaxAmount(e.target.value); recomputeAmount(subtotal, e.target.value); }} />
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Discount</div>
+              <Input inputMode="decimal" value={discountAmount} onChange={(e) => { setDiscountAmount(e.target.value); recomputeAmount(subtotal, taxAmount, e.target.value); }} />
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Invoice total</div>
+            <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Notes</div>
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Payment note or instructions" />
+          </div>
+
+          <div className="rounded-lg border bg-secondary/30 p-3">
+            <div className="mb-1.5 text-xs font-semibold text-muted-foreground">Credit / debit card payment link</div>
+            <Input value={paymentLinkUrl} onChange={(e) => setPaymentLinkUrl(e.target.value)} placeholder="https://checkout.square.site/..." />
+            <div className="mt-1.5 text-[11px] text-muted-foreground">When filled, a clickable pay button appears in the PDF, email, and SMS sent to the customer. Leave blank for check or manual payments.</div>
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Line items JSON</div>
+            <textarea className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={lineItems} onChange={(e) => setLineItems(e.target.value)} />
+          </div>
+
+          {message && <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{message}</div>}
+
+          <div className="flex gap-2">
+            <Button className="flex-1" onClick={saveInvoice} disabled={saving}>{saving ? "Saving..." : "Save invoice"}</Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           </div>
         </div>

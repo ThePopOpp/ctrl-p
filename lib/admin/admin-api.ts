@@ -616,6 +616,7 @@ export async function createAdminInvoice(input: {
   discountAmount: number;
   processor: string;
   deliveryStatus: string;
+  paymentLinkUrl?: string;
 }) {
   const db = requireClient();
   const sessionResult = await db.auth.getSession();
@@ -646,12 +647,68 @@ export async function createAdminInvoice(input: {
       discount_amount: input.discountAmount,
       processor: input.processor,
       delivery_status: input.deliveryStatus,
+      payment_link_url: input.paymentLinkUrl || null,
     }),
   });
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(payload.error || "Could not create invoice.");
+  }
+
+  return payload.payment;
+}
+
+export async function updateAdminInvoice(input: {
+  paymentId: string;
+  amount?: number;
+  notes?: string;
+  invoiceNumber?: string;
+  dueAt?: string;
+  terms?: string;
+  billingContact?: unknown;
+  senderProfile?: unknown;
+  lineItems?: unknown;
+  subtotal?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  paymentLinkUrl?: string | null;
+  deliveryStatus?: string;
+  status?: string;
+}) {
+  const db = requireClient();
+  const sessionResult = await db.auth.getSession();
+  const token = sessionResult.data.session?.access_token;
+  if (!token) throw new Error("Sign in again before editing an invoice.");
+
+  const body: Record<string, unknown> = {};
+  if (input.amount !== undefined) body.amount = input.amount;
+  if (input.notes !== undefined) body.notes = input.notes;
+  if (input.invoiceNumber !== undefined) body.invoice_number = input.invoiceNumber;
+  if (input.dueAt !== undefined) body.invoice_due_at = input.dueAt;
+  if (input.terms !== undefined) body.invoice_terms = input.terms;
+  if (input.billingContact !== undefined) body.billing_contact = input.billingContact;
+  if (input.senderProfile !== undefined) body.sender_profile = input.senderProfile;
+  if (input.lineItems !== undefined) body.line_items = input.lineItems;
+  if (input.subtotal !== undefined) body.subtotal = input.subtotal;
+  if (input.taxAmount !== undefined) body.tax_amount = input.taxAmount;
+  if (input.discountAmount !== undefined) body.discount_amount = input.discountAmount;
+  if (input.paymentLinkUrl !== undefined) body.payment_link_url = input.paymentLinkUrl;
+  if (input.deliveryStatus !== undefined) body.delivery_status = input.deliveryStatus;
+  if (input.status !== undefined) body.status = input.status;
+
+  const response = await fetch(`/api/admin/payments/${input.paymentId}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not update invoice.");
   }
 
   return payload.payment;
