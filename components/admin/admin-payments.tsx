@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Bell,
   ChevronRight,
@@ -365,29 +366,44 @@ function SendFab({
   onEmail: () => void;
   onSms: () => void;
 }) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ bottom: number; right: number } | null>(null);
+
+  function handleToggle() {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({
+        bottom: window.innerHeight - rect.top + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    onToggle();
+  }
+
   return (
-    <div className="relative" onClick={(e) => e.stopPropagation()}>
-      {/* FAB actions — float upward above trigger */}
-      <div
-        className={cn(
-          "absolute bottom-full right-0 mb-2 flex flex-col items-end gap-1.5 transition-all duration-150",
-          open ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0",
-        )}
-      >
-        <button
-          onClick={onEmail}
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-card px-3 py-1.5 text-xs font-medium shadow-md hover:bg-accent"
+    <div onClick={(e) => e.stopPropagation()}>
+      {open && pos && createPortal(
+        <div
+          style={{ position: "fixed", bottom: pos.bottom, right: pos.right, zIndex: 9999 }}
+          className="flex flex-col items-end gap-1.5"
+          onClick={(e) => e.stopPropagation()}
         >
-          Email
-        </button>
-        <button
-          onClick={onSms}
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-card px-3 py-1.5 text-xs font-medium shadow-md hover:bg-accent"
-        >
-          SMS
-        </button>
-      </div>
-      <Button size="sm" variant={open ? "default" : "outline"} onClick={onToggle}>
+          <button
+            onClick={onEmail}
+            className="flex items-center whitespace-nowrap rounded-full border bg-card px-3 py-1.5 text-xs font-medium shadow-lg hover:bg-accent"
+          >
+            Email
+          </button>
+          <button
+            onClick={onSms}
+            className="flex items-center whitespace-nowrap rounded-full border bg-card px-3 py-1.5 text-xs font-medium shadow-lg hover:bg-accent"
+          >
+            SMS
+          </button>
+        </div>,
+        document.body,
+      )}
+      <Button ref={btnRef} size="sm" variant={open ? "default" : "outline"} onClick={handleToggle}>
         {label}
       </Button>
     </div>
