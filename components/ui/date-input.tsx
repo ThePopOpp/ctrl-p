@@ -22,8 +22,10 @@ const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
           "placeholder:text-muted-foreground",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          // Make the browser's native calendar popup respect dark mode
+          // color-scheme controls both the popup theme and the native spinner icon;
+          // hide the native icon so only our CalendarIcon shows
           "[color-scheme:light] dark:[color-scheme:dark]",
+          "[&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute",
           className,
         )}
         {...props}

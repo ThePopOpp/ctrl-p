@@ -945,7 +945,8 @@ function NewInvoiceSheet({
   const [processor, setProcessor] = useState("manual");
   const [deliveryStatus, setDeliveryStatus] = useState("draft");
   const [deliveryMethod, setDeliveryMethod] = useState("none");
-  const [deliveryRecipient, setDeliveryRecipient] = useState("");
+  const [deliveryEmail, setDeliveryEmail] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
   const [invoiceMessage, setInvoiceMessage] = useState("Thank you for choosing ControlP.io. You can review and pay this invoice using the secure link.");
   const [senderLogoUrl, setSenderLogoUrl] = useState("https://my.controlp.io/logos/ctrl-p-logo-dark.svg");
   const [senderName, setSenderName] = useState("ControlP.io");
@@ -988,7 +989,8 @@ function NewInvoiceSheet({
     setProcessor("manual");
     setDeliveryStatus("draft");
     setDeliveryMethod("none");
-    setDeliveryRecipient(first?.customer_email || first?.customer_phone || "");
+    setDeliveryEmail(first?.customer_email || "");
+    setDeliveryPhone(first?.customer_phone || "");
     setInvoiceMessage("Thank you for choosing ControlP.io. You can review and pay this invoice using the secure link.");
     setSenderLogoUrl("https://my.controlp.io/logos/ctrl-p-logo-dark.svg");
     setNotes("");
@@ -1009,7 +1011,8 @@ function NewInvoiceSheet({
       email: order?.customer_email || "",
       phone: order?.customer_phone || "",
     }, null, 2));
-    setDeliveryRecipient(order?.customer_email || order?.customer_phone || "");
+    setDeliveryEmail(order?.customer_email || "");
+    setDeliveryPhone(order?.customer_phone || "");
     setLineItems(JSON.stringify([
       {
         description: order?.order_number ? `Order #${order.order_number}` : "Order",
@@ -1093,7 +1096,7 @@ function NewInvoiceSheet({
           address: senderAddress,
         },
         deliveryMethod,
-        deliveryRecipient,
+        deliveryRecipient: deliveryEmail || deliveryPhone,
         invoiceMessage,
         lineItems: parseJson("Line items", lineItems),
         subtotal: parsedSubtotal,
@@ -1108,8 +1111,8 @@ function NewInvoiceSheet({
           paymentId: payment.id,
           kind: "invoice",
           channel: deliveryMethod === "both" ? "both" : deliveryMethod === "sms" ? "sms" : "email",
-          recipientEmail: deliveryMethod === "sms" ? undefined : deliveryRecipient,
-          recipientPhone: deliveryMethod === "email" ? undefined : deliveryRecipient,
+          recipientEmail: deliveryMethod !== "sms" ? deliveryEmail || undefined : undefined,
+          recipientPhone: deliveryMethod !== "email" ? deliveryPhone || undefined : undefined,
         });
       }
       setMessage(deliveryMethod !== "none" && deliveryStatus !== "draft" ? "Invoice created and sent." : "Invoice created.");
@@ -1167,10 +1170,25 @@ function NewInvoiceSheet({
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Delivery recipient</div>
-              <Input placeholder="email or phone" value={deliveryRecipient} onChange={(event) => setDeliveryRecipient(event.target.value)} />
-            </div>
+            {deliveryMethod !== "sms" && (
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Recipient email</div>
+                <Input type="email" placeholder="customer@example.com" value={deliveryEmail} onChange={(event) => setDeliveryEmail(event.target.value)} />
+              </div>
+            )}
+            {deliveryMethod !== "email" && deliveryMethod !== "none" && (
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Recipient phone (SMS)</div>
+                <Input type="tel" placeholder="+16025550123" value={deliveryPhone} onChange={(event) => {
+                  setDeliveryPhone(event.target.value);
+                  // keep billing_contact.phone in sync so Send FAB later can resolve it
+                  try {
+                    const parsed = JSON.parse(billingContact);
+                    setBillingContact(JSON.stringify({ ...parsed, phone: event.target.value }, null, 2));
+                  } catch { /* leave JSON as-is if user has edited it manually */ }
+                }} />
+              </div>
+            )}
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Invoice number</div>
               <Input placeholder="INV-1001" value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} />
