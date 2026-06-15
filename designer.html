@@ -250,9 +250,32 @@
     #dn-toolbar::-webkit-scrollbar { display: none; }
     #dn-toolbar > div { flex-shrink: 0; }
   }
-  @media (max-width: 767px) {
+  /* ─── Mobile nav dropdown ─── */
+  #dn-hamburger { display: none; }
+  #dn-mobile-nav {
+    display: none;
+    position: fixed;
+    top: 48px; left: 0; right: 0;
+    background: white;
+    border-bottom: 1.5px solid #e4e4e7;
+    z-index: 29;
+    padding: 4px 0 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  }
+  #dn-mobile-nav.open { display: block; }
+  #dn-mobile-nav.dark { background: #18181b; border-bottom-color: #3f3f46; }
+  .dn-mob-nav-link {
+    display: flex; align-items: center;
+    padding: 13px 20px; font-size: 15px; font-weight: 500;
+    color: #18181b; text-decoration: none; transition: background .1s; border: none; background: none; width: 100%; cursor: pointer;
+  }
+  .dn-mob-nav-link:hover { background: #f4f4f5; }
+  #dn-mobile-nav.dark .dn-mob-nav-link { color: #e4e4e7; }
+  #dn-mobile-nav.dark .dn-mob-nav-link:hover { background: #27272a; }
+
+  @media (max-width: 1023px) {
     #dn-nav nav { display: none; }
-    .dn-cta-btn { display: none; }
+    #dn-hamburger { display: flex; }
   }
   @media (max-width: 479px) {
     #dn-user-area { display: none; }
@@ -298,8 +321,21 @@
     </div>
     <!-- Get a quote CTA -->
     <a href="/contact" onclick="return dnNavIntercept(event,'/contact')" class="dn-cta-btn" style="margin-left:4px;">Get a quote</a>
+    <!-- Hamburger menu button (mobile only) -->
+    <button id="dn-hamburger" onclick="dnToggleMobileNav()" class="dn-icon-btn" title="Menu" aria-label="Open menu" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </div>
 </header>
+
+<!-- MOBILE NAV DROPDOWN (hidden on desktop, toggled by hamburger) -->
+<div id="dn-mobile-nav">
+  <a href="/shop" onclick="return dnMobileNavLink(event,'/shop')" class="dn-mob-nav-link">Shop</a>
+  <a href="/shop/discover" onclick="return dnMobileNavLink(event,'/shop/discover')" class="dn-mob-nav-link">Discover</a>
+  <a href="/shop/deals" onclick="return dnMobileNavLink(event,'/shop/deals')" class="dn-mob-nav-link">Deals</a>
+  <a href="/faq" onclick="return dnMobileNavLink(event,'/faq')" class="dn-mob-nav-link">FAQ</a>
+  <a href="/contact" onclick="return dnMobileNavLink(event,'/contact')" class="dn-mob-nav-link">Contact</a>
+</div>
 
 <!-- TOP TOOLBAR -->
 <div id="dn-toolbar" style="height:48px;background:#18181b;border-bottom:1px solid #3f3f46;display:flex;align-items:center;justify-content:space-between;padding:0 10px;user-select:none;flex-shrink:0;">
@@ -4896,18 +4932,21 @@ function openMobileSection(keyword, btn) {
 
 function dnApplyTheme() {
   const nav = document.getElementById('dn-nav');
+  const mobileNav = document.getElementById('dn-mobile-nav');
   const logoLight = document.getElementById('dn-logo-light');
   const logoDark = document.getElementById('dn-logo-dark');
   const iconMoon = document.getElementById('dn-icon-moon');
   const iconSun = document.getElementById('dn-icon-sun');
   if (dnIsDark) {
     nav.classList.add('dark');
+    if (mobileNav) mobileNav.classList.add('dark');
     if (logoLight) logoLight.style.display = 'none';
     if (logoDark) logoDark.style.display = 'block';
     if (iconMoon) iconMoon.style.display = 'none';
     if (iconSun) iconSun.style.display = '';
   } else {
     nav.classList.remove('dark');
+    if (mobileNav) mobileNav.classList.remove('dark');
     if (logoLight) logoLight.style.display = 'block';
     if (logoDark) logoDark.style.display = 'none';
     if (iconMoon) iconMoon.style.display = '';
@@ -4919,6 +4958,23 @@ function dnToggleTheme() {
   dnIsDark = !dnIsDark;
   localStorage.setItem('dn-dark', dnIsDark ? '1' : '');
   dnApplyTheme();
+}
+
+function dnToggleMobileNav() {
+  const mn = document.getElementById('dn-mobile-nav');
+  const hb = document.getElementById('dn-hamburger');
+  if (!mn) return;
+  const isOpen = mn.classList.toggle('open');
+  if (hb) hb.setAttribute('aria-expanded', String(isOpen));
+}
+
+function dnMobileNavLink(e, path) {
+  // Close mobile nav then navigate (respects unsaved-design intercept)
+  const mn = document.getElementById('dn-mobile-nav');
+  const hb = document.getElementById('dn-hamburger');
+  if (mn) mn.classList.remove('open');
+  if (hb) hb.setAttribute('aria-expanded', 'false');
+  return dnNavIntercept(e, path);
 }
 
 // ── Toast ─────────────────────────────────────────────
