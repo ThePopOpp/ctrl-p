@@ -3225,7 +3225,7 @@ function renderShapes() {
         ${types.map(t => `
           <button class="shape-tile${shapeState.type===t.key?' active':''}" draggable="true"
             ondragstart="shapeState.type='${t.key}';event.dataTransfer.setData('application/x-ctrlp-shape','${t.key}');event.dataTransfer.effectAllowed='copy';"
-            onclick="shapeState.type='${t.key}';setTool('shapes');">
+            onclick="shapeState.type='${t.key}';addShape();">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="color:${shapeState.type===t.key?'#2563eb':'#71717a'}">${t.svg}</svg>
             <span style="font-size:9px;font-weight:500;color:${shapeState.type===t.key?'#2563eb':'#52525b'};">${t.label}</span>
           </button>`).join('')}
