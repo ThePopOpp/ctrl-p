@@ -147,6 +147,104 @@
   #dn-toast.toast-success { background:#16a34a; color:#fff; }
   #dn-toast.toast-error { background:#dc2626; color:#fff; }
   #dn-toast.toast-info { background:#18181b; color:#fff; }
+
+  /* ─── Mobile panel flyout — two user-selectable layouts ─────────────────────
+     Option 1 (default): left slide-in panel   — no body class required
+     Option 2 (bottom sheet): activated by     — body.mobile-sheet class
+     The user switches between them via the layout-toggle button in the cart bar.
+     Preference is saved to localStorage key 'dn-panel-layout'.
+     JS (openMobileFlyout / closeMobileFlyout / dnApplyPanelLayout) is shared.
+  ──────────────────────────────────────────────────────────────────────────────── */
+  #mobile-flyout {
+    position: fixed;
+    top: 96px; /* nav(48) + toolbar(48) */
+    left: 56px; /* tool rail width */
+    bottom: 0;
+    width: min(380px, calc(100vw - 56px));
+    background: white;
+    border-right: 1px solid #e4e4e7;
+    z-index: 200;
+    overflow-y: auto;
+    display: none;
+    flex-direction: column;
+    /* Option 1: slide in from left */
+    transform: translateX(-102%);
+    transition: transform .24s cubic-bezier(.4,0,.2,1);
+  }
+  #mobile-flyout.open { transform: translateX(0); }
+  /* Option 2: bottom sheet — toggled by body.mobile-sheet */
+  body.mobile-sheet #mobile-flyout {
+    top: auto;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 65vh;
+    border-right: none;
+    border-top: 1.5px solid #e4e4e7;
+    border-radius: 16px 16px 0 0;
+    transform: translateY(100%);
+  }
+  body.mobile-sheet #mobile-flyout.open { transform: translateY(0); }
+  #mobile-flyout-bd {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.38);
+    z-index: 199;
+    display: none;
+    opacity: 0;
+    transition: opacity .24s;
+  }
+  #mobile-flyout-bd.open { opacity: 1; }
+  #mobile-cart-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: #18181b;
+    z-index: 300;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    gap: 12px;
+  }
+  #mobile-cart-price { font-size: 18px; font-weight: 700; color: #a3e635; }
+  #mobile-cart-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 10px 18px; border-radius: 8px; border: none;
+    background: #a3e635; color: #18181b;
+    font-size: 13.5px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+    transition: background .12s;
+  }
+  #mobile-cart-btn:hover { background: #bef264; }
+  .mb-sec-divider {
+    display: none;
+    width: 30px; height: 1px; background: #e4e4e7; margin: 4px auto; flex-shrink: 0;
+  }
+  .mb-sec-btn {
+    display: none;
+    flex-direction: column; align-items: center; gap: 2px;
+    width: 48px; padding: 7px 2px; border: none; background: none;
+    cursor: pointer; border-radius: 8px;
+    color: #71717a; font-size: 9px; font-weight: 600; line-height: 1.2;
+    text-align: center; transition: background .12s, color .12s;
+  }
+  .mb-sec-btn:hover, .mb-sec-btn.active { background: #f4f4f5; color: #18181b; }
+  .mb-sec-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .mob-close-btn { display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:none;cursor:pointer;border-radius:6px;color:#a1a1aa;margin-left:auto; }
+  .mob-close-btn:hover { background:#f4f4f5; color:#18181b; }
+
+  @media (max-width: 1023px) {
+    #tool-panel  { display: none !important; }
+    #mobile-flyout { display: flex; }
+    #mobile-flyout-bd { display: block; }
+    #mobile-cart-bar { display: flex; }
+    .mb-sec-divider { display: block; }
+    .mb-sec-btn { display: flex; }
+    .canvas-bg { padding-bottom: 60px; }
+  }
+  @media (max-width: 599px) {
+    #dn-nav nav { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -249,6 +347,23 @@
     </button>
     <button onclick="setTool('saved')" id="tool-saved" class="tool-btn">
       <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Saved Designs
+    </button>
+    <!-- Mobile-only product section shortcuts -->
+    <div class="mb-sec-divider"></div>
+    <button class="mb-sec-btn" onclick="openMobileSection('size',this)" title="Size">
+      <svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>Size
+    </button>
+    <button class="mb-sec-btn" onclick="openMobileSection('color',this)" title="Color">
+      <svg viewBox="0 0 24 24"><path d="M12 22a7 7 0 007-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 007 7z"/></svg>Color
+    </button>
+    <button class="mb-sec-btn" onclick="openMobileSection('side',this)" title="Sides">
+      <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>Sides
+    </button>
+    <button class="mb-sec-btn" onclick="openMobileSection('material',this)" title="Material">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>Material
+    </button>
+    <button class="mb-sec-btn" onclick="openMobileSection('quantity',this)" title="Qty">
+      <svg viewBox="0 0 24 24"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>Qty
     </button>
   </div>
 
@@ -761,6 +876,8 @@ function updatePrice() {
   else if (currentProduct === 'fl') p = calcFlPrice();
   else p = calcPrice();
   document.getElementById('price-badge').textContent = '$' + p.toFixed(2);
+  const _mp = document.getElementById('mobile-cart-price');
+  if (_mp) _mp.textContent = '$' + p.toFixed(2);
 }
 
 // ─── BC canvas ───
@@ -3398,7 +3515,12 @@ function setTool(tool) {
   const btn = document.getElementById('tool-' + tool);
   if (btn) btn.classList.add('active');
   const map = { swap: renderSwap, image: renderImage, designs: renderDesigns, text: renderText, shapes: renderShapes, icons: renderIcons, patterns: renderPatterns, layers: renderLayers, saved: renderSaved };
-  document.getElementById('tool-panel').innerHTML = map[tool]?.() || '';
+  const _html = map[tool]?.() || '';
+  if (window.innerWidth < 1024) {
+    openMobileFlyout(_html);
+  } else {
+    document.getElementById('tool-panel').innerHTML = _html;
+  }
 }
 
 function switchTab(btn) {
@@ -4678,6 +4800,84 @@ async function dnUpdateUserArea() {
 let dnLeavingGracefully = false;
 let dnIsDark = false;
 
+// ── Mobile panel layout preference ───────────────────────────────────────────
+// 1 = side panel (Option 1, default)   2 = bottom sheet (Option 2)
+let dnPanelLayout = 1;
+
+function dnApplyPanelLayout() {
+  document.body.classList.toggle('mobile-sheet', dnPanelLayout === 2);
+  const btn = document.getElementById('mobile-layout-btn');
+  if (!btn) return;
+  if (dnPanelLayout === 1) {
+    // Currently side panel — icon previews bottom sheet (what tap will switch to)
+    btn.title = 'Switch to bottom sheet';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="10" rx="1.5"/><rect x="2" y="15" width="20" height="6" rx="1.5"/></svg>';
+  } else {
+    // Currently bottom sheet — icon previews side panel (what tap will switch to)
+    btn.title = 'Switch to side panel';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="20" rx="1.5"/><rect x="12" y="2" width="10" height="20" rx="1.5"/></svg>';
+  }
+}
+
+function dnTogglePanelLayout() {
+  dnPanelLayout = dnPanelLayout === 1 ? 2 : 1;
+  localStorage.setItem('dn-panel-layout', String(dnPanelLayout));
+  // Close flyout so the layout transition isn't jarring
+  closeMobileFlyout();
+  dnApplyPanelLayout();
+}
+
+// ── Mobile flyout — shared JS for both layout options ─────────────────────────
+
+function openMobileFlyout(html) {
+  const flyout = document.getElementById('mobile-flyout');
+  const bd = document.getElementById('mobile-flyout-bd');
+  if (!flyout || !bd) return;
+  const wasOpen = flyout.classList.contains('open');
+  const prevScroll = wasOpen ? flyout.scrollTop : 0;
+  // Prepend sticky close bar so the X is always reachable without scrolling
+  flyout.innerHTML =
+    '<div style="display:flex;align-items:center;padding:6px 10px;border-bottom:1px solid #f0f0f0;position:sticky;top:0;background:white;z-index:1;flex-shrink:0;">' +
+    '<button class="mob-close-btn" onclick="closeMobileFlyout()" title="Close">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+    '</button></div>' +
+    (html || '');
+  flyout.classList.add('open');
+  bd.classList.add('open');
+  // Preserve scroll when refreshing content (e.g. option change re-renders panel)
+  flyout.scrollTop = wasOpen ? prevScroll : 0;
+}
+
+function closeMobileFlyout() {
+  const flyout = document.getElementById('mobile-flyout');
+  const bd = document.getElementById('mobile-flyout-bd');
+  if (!flyout || !bd) return;
+  flyout.classList.remove('open');
+  bd.classList.remove('open');
+  document.querySelectorAll('.mb-sec-btn').forEach(b => b.classList.remove('active'));
+}
+
+function openMobileSection(keyword, btn) {
+  // Highlight the tapped shortcut button
+  document.querySelectorAll('.mb-sec-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  // Load product options panel then scroll to the matching section header
+  const html = (typeof renderSwap === 'function') ? renderSwap() : '';
+  openMobileFlyout(html);
+  requestAnimationFrame(() => {
+    const flyout = document.getElementById('mobile-flyout');
+    if (!flyout) return;
+    for (const hdr of flyout.querySelectorAll('.cfg-header')) {
+      const label = (hdr.querySelector('span') || hdr).textContent.toLowerCase();
+      if (label.includes(keyword.toLowerCase())) {
+        if (!hdr.classList.contains('open')) hdr.click();
+        hdr.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        break;
+      }
+    }
+  });
+}
+
 function dnApplyTheme() {
   const nav = document.getElementById('dn-nav');
   const logoLight = document.getElementById('dn-logo-light');
@@ -4725,10 +4925,16 @@ function dnToast(msg, type = 'info', duration = 3200) {
 (function dnInit() {
   dnIsDark = !!localStorage.getItem('dn-dark');
   dnApplyTheme();
+  dnPanelLayout = parseInt(localStorage.getItem('dn-panel-layout') || '1', 10) || 1;
+  // body class applied immediately; button icon updated after mobile HTML is parsed
+  document.body.classList.toggle('mobile-sheet', dnPanelLayout === 2);
+  requestAnimationFrame(dnApplyPanelLayout);
   dnUpdateCartBadge();
   dnUpdateUserArea();
   // Keep cart badge in sync when other tabs change cart
   window.addEventListener('storage', e => { if (e.key === DN_CART_KEY) dnUpdateCartBadge(); });
+  // Close flyout when screen grows past tablet breakpoint
+  window.addEventListener('resize', () => { if (window.innerWidth >= 1024) closeMobileFlyout(); });
   // Warn on browser back/close if there's an unsaved design
   window.addEventListener('beforeunload', e => {
     if (dnLeavingGracefully) return;
@@ -4738,5 +4944,30 @@ function dnToast(msg, type = 'info', duration = 3200) {
   });
 })();
 </script>
+
+<!-- Mobile flyout backdrop (closes flyout on tap-outside) -->
+<div id="mobile-flyout-bd" onclick="closeMobileFlyout()"></div>
+
+<!-- Mobile flyout panel — content injected by openMobileFlyout() -->
+<div id="mobile-flyout" class="thin-scroll"></div>
+
+<!-- Mobile bottom cart bar -->
+<div id="mobile-cart-bar">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <!-- Layout toggle: switches between side-panel (Option 1) and bottom-sheet (Option 2) -->
+    <button id="mobile-layout-btn" onclick="dnTogglePanelLayout()" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;background:rgba(255,255,255,0.1);border-radius:7px;cursor:pointer;color:#a1a1aa;flex-shrink:0;transition:background .12s,color .12s;">
+      <!-- default Option 1 icon — dnApplyPanelLayout() updates this on load -->
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="10" rx="1.5"/><rect x="2" y="15" width="20" height="6" rx="1.5"/></svg>
+    </button>
+    <div>
+      <div style="font-size:10px;color:#a1a1aa;margin-bottom:2px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;">Total</div>
+      <div id="mobile-cart-price">$0.00</div>
+    </div>
+  </div>
+  <button id="mobile-cart-btn" onclick="handleDone()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+    Add to Cart
+  </button>
+</div>
 </body>
 </html>
