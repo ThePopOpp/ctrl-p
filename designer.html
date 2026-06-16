@@ -2693,6 +2693,197 @@ const designTemplates = [
     { type:'rule', xr:.5, yr:.73, wr:.3, color:'#d4a22a', thick:.8 },
     { type:'text', text:'DATE  ·  VENUE', xr:.5, yr:.83, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#a1a1aa', letterSpacing:3 },
   ]},
+  // ── Food & Restaurant ─────────────────────────────────────────────────────
+  { id:'menu-header', name:'Menu Header', category:'food', elements:[
+    { type:'text', text:'EST. 2019', xr:.5, yr:.18, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#a1a1aa', letterSpacing:4 },
+    { type:'rule', xr:.5, yr:.27, wr:.5, color:'#d4a22a', thick:1 },
+    { type:'text', text:'RESTAURANT NAME', xr:.5, yr:.42, sizer:.054, font:'Georgia, serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Fine Dining & Cocktails', xr:.5, yr:.57, sizer:.028, font:'Georgia, serif', italic:true, align:'center', color:'#52525b' },
+    { type:'rule', xr:.5, yr:.67, wr:.5, color:'#d4a22a', thick:1 },
+    { type:'text', text:'yourrestaurant.com', xr:.5, yr:.80, sizer:.024, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+  ]},
+  { id:'daily-special', name:'Daily Special', category:'food', elements:[
+    { name:'Top Banner', type:'rect', xr:.5, yr:.15, wr:1, hr:.24, color:'#18181b' },
+    { type:'text', text:"TODAY'S SPECIAL", xr:.5, yr:.15, sizer:.046, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:3 },
+    { type:'text', text:'Chef's Signature Dish', xr:.5, yr:.45, sizer:.060, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Fresh ingredients · House-made · Seasonal', xr:.5, yr:.63, sizer:.024, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+    { type:'text', text:'$18.99', xr:.5, yr:.81, sizer:.068, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+  ]},
+  { id:'cocktail-menu', name:'Cocktail Menu', category:'food', elements:[
+    { type:'text', text:'C O C K T A I L S', xr:.5, yr:.18, sizer:.034, font:'Georgia, serif', bold:true, align:'center', color:'#18181b', letterSpacing:5 },
+    { type:'rule', xr:.5, yr:.27, wr:.6, color:'#d4a22a', thick:1 },
+    { type:'text', text:'The Classic', xr:.5, yr:.39, sizer:.035, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'The Signature', xr:.5, yr:.52, sizer:.035, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'The House Favorite', xr:.5, yr:.65, sizer:.035, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'rule', xr:.5, yr:.77, wr:.6, color:'#d4a22a', thick:1 },
+    { type:'text', text:'Ask your server for today\'s specials', xr:.5, yr:.87, sizer:.020, font:'Inter, sans-serif', italic:true, align:'center', color:'#a1a1aa' },
+  ]},
+  { id:'food-truck', name:'Food Truck', category:'food', elements:[
+    { name:'BG', type:'rect', xr:.5, yr:.5, wr:1, hr:1, color:'#18181b' },
+    { type:'text', text:'TRUCK NAME', xr:.5, yr:.28, sizer:.088, font:'Inter, sans-serif', bold:true, align:'center', color:'white' },
+    { type:'rule', xr:.5, yr:.41, wr:.55, color:'#a3e635', thick:3 },
+    { type:'text', text:'STREET FOOD CO.', xr:.5, yr:.54, sizer:.032, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:4 },
+    { type:'text', text:'Find us  ·  @yourtruckname', xr:.5, yr:.73, sizer:.026, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+  ]},
+  // ── Health & Wellness ─────────────────────────────────────────────────────
+  { id:'clinic-card', name:'Clinic Card', category:'health', elements:[
+    { name:'Top Bar', type:'rect', xr:.5, yr:.12, wr:1, hr:.19, color:'#1d4ed8' },
+    { type:'text', text:'HEALTH CLINIC', xr:.5, yr:.12, sizer:.046, font:'Inter, sans-serif', bold:true, align:'center', color:'white', letterSpacing:2 },
+    { type:'text', text:'Dr. Your Name, MD', xr:.5, yr:.40, sizer:.050, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'General Practice', xr:.5, yr:.56, sizer:.028, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+    { type:'rule', xr:.5, yr:.65, wr:.5, color:'#1d4ed8', thick:1 },
+    { type:'text', text:'(555) 000-0000  ·  clinic.com', xr:.5, yr:.78, sizer:.025, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+  ]},
+  { id:'spa-wellness', name:'Spa & Wellness', category:'health', elements:[
+    { type:'text', text:'SERENITY', xr:.5, yr:.26, sizer:.078, font:'Georgia, serif', bold:true, align:'center', color:'#18181b', letterSpacing:5 },
+    { type:'rule', xr:.5, yr:.39, wr:.35, color:'#a3e635', thick:1.5 },
+    { type:'text', text:'Spa & Wellness', xr:.5, yr:.52, sizer:.030, font:'Georgia, serif', italic:true, align:'center', color:'#52525b' },
+    { type:'text', text:'Book your experience today', xr:.5, yr:.67, sizer:.024, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+    { type:'text', text:'yourspа.com', xr:.5, yr:.80, sizer:.024, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+  ]},
+  { id:'fitness-gym', name:'Fitness / Gym', category:'health', elements:[
+    { name:'BG', type:'rect', xr:.5, yr:.5, wr:1, hr:1, color:'#18181b' },
+    { type:'text', text:'TRAIN HARD', xr:.5, yr:.28, sizer:.080, font:'Inter, sans-serif', bold:true, align:'center', color:'white' },
+    { type:'text', text:'WIN BIG', xr:.5, yr:.47, sizer:.080, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635' },
+    { type:'rule', xr:.5, yr:.60, wr:.4, color:'#a3e635', thick:2 },
+    { type:'text', text:'GYM NAME  ·  LOCATION', xr:.5, yr:.74, sizer:.024, font:'Inter, sans-serif', bold:true, align:'center', color:'#71717a', letterSpacing:2 },
+  ]},
+  { id:'appointment-card', name:'Appointment Card', category:'health', elements:[
+    { type:'text', text:'YOUR APPOINTMENT', xr:.5, yr:.18, sizer:.034, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:2 },
+    { type:'rule', xr:.5, yr:.27, wr:.7, color:'#a3e635', thick:1.5 },
+    { type:'text', text:'Date:', xr:.19, yr:.42, sizer:.028, font:'Inter, sans-serif', align:'left', color:'#a1a1aa' },
+    { type:'text', text:'_______________', xr:.58, yr:.42, sizer:.028, font:'Inter, sans-serif', align:'left', color:'#18181b' },
+    { type:'text', text:'Time:', xr:.19, yr:.57, sizer:.028, font:'Inter, sans-serif', align:'left', color:'#a1a1aa' },
+    { type:'text', text:'_______________', xr:.58, yr:.57, sizer:.028, font:'Inter, sans-serif', align:'left', color:'#18181b' },
+    { type:'rule', xr:.5, yr:.70, wr:.7, color:'#d4d4d8', thick:1 },
+    { type:'text', text:'(555) 000-0000  ·  Call to reschedule', xr:.5, yr:.82, sizer:.021, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+  ]},
+  // ── Real Estate ───────────────────────────────────────────────────────────
+  { id:'for-sale', name:'For Sale', category:'realestate', elements:[
+    { name:'BG', type:'rect', xr:.5, yr:.5, wr:1, hr:1, color:'#1d4ed8' },
+    { type:'text', text:'FOR SALE', xr:.5, yr:.28, sizer:.10, font:'Inter, sans-serif', bold:true, align:'center', color:'white' },
+    { type:'rule', xr:.5, yr:.41, wr:.55, color:'white', thick:2 },
+    { type:'text', text:'123 Main Street', xr:.5, yr:.55, sizer:.040, font:'Inter, sans-serif', align:'center', color:'white' },
+    { type:'text', text:'City, State  ·  $000,000', xr:.5, yr:.70, sizer:.028, font:'Inter, sans-serif', align:'center', color:'rgba(255,255,255,0.75)' },
+    { type:'text', text:'Agent Name  ·  (555) 000-0000', xr:.5, yr:.84, sizer:.022, font:'Inter, sans-serif', align:'center', color:'rgba(255,255,255,0.65)' },
+  ]},
+  { id:'open-house', name:'Open House', category:'realestate', elements:[
+    { type:'text', text:'OPEN', xr:.5, yr:.28, sizer:.11, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:8 },
+    { type:'text', text:'HOUSE', xr:.5, yr:.46, sizer:.11, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:8 },
+    { type:'rule', xr:.5, yr:.57, wr:.65, color:'#d4d4d8' },
+    { type:'text', text:'Saturday & Sunday  ·  1 – 4 PM', xr:.5, yr:.68, sizer:.028, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+    { type:'text', text:'123 Property St, City', xr:.5, yr:.81, sizer:.026, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+  ]},
+  { id:'agent-card', name:'Agent Card', category:'realestate', elements:[
+    { name:'Stripe', type:'rect', xr:.08, yr:.5, wr:.012, hr:.55, color:'#1d4ed8' },
+    { type:'text', text:'Agent Name', xr:.18, yr:.32, sizer:.060, font:'Georgia, serif', italic:true, align:'left', color:'#18181b' },
+    { type:'text', text:'REALTOR® · DRE #000000', xr:.18, yr:.47, sizer:.022, font:'Inter, sans-serif', bold:true, align:'left', color:'#1d4ed8', letterSpacing:1 },
+    { type:'text', text:'(555) 000-0000', xr:.18, yr:.62, sizer:.025, font:'Inter, sans-serif', align:'left', color:'#52525b' },
+    { type:'text', text:'agent@realty.com', xr:.18, yr:.73, sizer:.024, font:'Inter, sans-serif', align:'left', color:'#a1a1aa' },
+    { type:'text', text:'yourrealty.com', xr:.18, yr:.83, sizer:.024, font:'Inter, sans-serif', bold:true, align:'left', color:'#18181b' },
+  ]},
+  { id:'just-listed', name:'Just Listed', category:'realestate', elements:[
+    { name:'Top Bar', type:'rect', xr:.5, yr:.13, wr:1, hr:.20, color:'#a3e635' },
+    { type:'text', text:'JUST LISTED', xr:.5, yr:.13, sizer:.072, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'123 Main Street, City', xr:.5, yr:.43, sizer:.040, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'3 Bed · 2 Bath · 1,850 sqft', xr:.5, yr:.59, sizer:.028, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+    { type:'rule', xr:.5, yr:.70, wr:.5, color:'#d4d4d8' },
+    { type:'text', text:'$000,000  ·  Agent Name', xr:.5, yr:.83, sizer:.026, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+  ]},
+  // ── Events & Parties ──────────────────────────────────────────────────────
+  { id:'birthday-party', name:'Birthday Party', category:'events', elements:[
+    { type:'text', text:'Happy', xr:.5, yr:.22, sizer:.065, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Birthday!', xr:.5, yr:.40, sizer:.10, font:'Georgia, serif', italic:true, align:'center', color:'#a3e635' },
+    { type:'rule', xr:.5, yr:.53, wr:.45, color:'#d4d4d8' },
+    { type:'text', text:'FIRST NAME', xr:.5, yr:.64, sizer:.048, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:3 },
+    { type:'text', text:'Date · Time · Location', xr:.5, yr:.78, sizer:.025, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+  ]},
+  { id:'save-the-date', name:'Save the Date', category:'events', elements:[
+    { type:'text', text:'SAVE', xr:.5, yr:.24, sizer:.075, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:8 },
+    { type:'text', text:'THE DATE', xr:.5, yr:.42, sizer:.075, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:4 },
+    { type:'rule', xr:.5, yr:.56, wr:.55, color:'#d4d4d8' },
+    { type:'text', text:'Name & Name', xr:.5, yr:.67, sizer:.036, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Month Day, Year  ·  City, State', xr:.5, yr:.80, sizer:.024, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+  ]},
+  { id:'graduation', name:'Graduation', category:'events', elements:[
+    { type:'text', text:'CLASS OF', xr:.5, yr:.21, sizer:.034, font:'Inter, sans-serif', bold:true, align:'center', color:'#a1a1aa', letterSpacing:4 },
+    { type:'text', text:'2025', xr:.5, yr:.40, sizer:.13, font:'Georgia, serif', bold:true, align:'center', color:'#18181b' },
+    { type:'rule', xr:.5, yr:.52, wr:.5, color:'#d4a22a', thick:1.5 },
+    { type:'text', text:'Graduate\'s Name', xr:.5, yr:.64, sizer:.048, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'School Name · Major', xr:.5, yr:.80, sizer:.026, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+  ]},
+  { id:'corporate-event', name:'Corporate Event', category:'events', elements:[
+    { name:'Header BG', type:'rect', xr:.5, yr:.14, wr:1, hr:.22, color:'#18181b' },
+    { type:'text', text:'ANNUAL SUMMIT', xr:.5, yr:.14, sizer:.052, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:3 },
+    { type:'text', text:'Company Conference 2025', xr:.5, yr:.43, sizer:.040, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Join us for an inspiring day of learning,', xr:.5, yr:.57, sizer:.025, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+    { type:'text', text:'networking, and innovation.', xr:.5, yr:.65, sizer:.025, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+    { type:'rule', xr:.5, yr:.75, wr:.5, color:'#d4d4d8' },
+    { type:'text', text:'Date · Venue · Register at site.com', xr:.5, yr:.85, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+  ]},
+  // ── Contractor & Trades ───────────────────────────────────────────────────
+  { id:'contractor-card', name:'Contractor Card', category:'trades', elements:[
+    { name:'BG', type:'rect', xr:.5, yr:.5, wr:1, hr:1, color:'#18181b' },
+    { name:'Accent', type:'rect', xr:.5, yr:.88, wr:1, hr:.20, color:'#a3e635' },
+    { type:'text', text:'YOUR COMPANY', xr:.5, yr:.28, sizer:.065, font:'Inter, sans-serif', bold:true, align:'center', color:'white' },
+    { type:'text', text:'CONTRACTOR CO.', xr:.5, yr:.43, sizer:.028, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:3 },
+    { type:'text', text:'Licensed · Bonded · Insured', xr:.5, yr:.60, sizer:.024, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+    { type:'text', text:'(555) 000-0000  ·  LIC# 000000', xr:.5, yr:.88, sizer:.024, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+  ]},
+  { id:'landscaping', name:'Landscaping', category:'trades', elements:[
+    { type:'text', text:'GREEN THUMB', xr:.5, yr:.26, sizer:.065, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'LANDSCAPING', xr:.5, yr:.40, sizer:.040, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:5 },
+    { type:'rule', xr:.5, yr:.52, wr:.55, color:'#a3e635', thick:2 },
+    { type:'text', text:'Lawn Care · Landscaping · Irrigation', xr:.5, yr:.64, sizer:.025, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+    { type:'text', text:'(555) 000-0000', xr:.5, yr:.78, sizer:.032, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Free Estimates Available', xr:.5, yr:.88, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+  ]},
+  { id:'auto-shop', name:'Auto Shop', category:'trades', elements:[
+    { name:'BG', type:'rect', xr:.5, yr:.5, wr:1, hr:1, color:'#0f172a' },
+    { type:'text', text:'PRECISION', xr:.5, yr:.24, sizer:.072, font:'Inter, sans-serif', bold:true, align:'center', color:'white', letterSpacing:3 },
+    { type:'text', text:'AUTO REPAIR', xr:.5, yr:.40, sizer:.040, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:5 },
+    { type:'rule', xr:.5, yr:.52, wr:.5, color:'#334155', thick:1 },
+    { type:'text', text:'Oil · Brakes · Engine · A/C', xr:.5, yr:.64, sizer:.026, font:'Inter, sans-serif', align:'center', color:'#64748b' },
+    { type:'text', text:'(555) 000-0000  ·  yourshop.com', xr:.5, yr:.80, sizer:.024, font:'Inter, sans-serif', align:'center', color:'#94a3b8' },
+  ]},
+  { id:'cleaning-service', name:'Cleaning Service', category:'trades', elements:[
+    { type:'text', text:'✦  SPOTLESS  ✦', xr:.5, yr:.22, sizer:.042, font:'Inter, sans-serif', bold:true, align:'center', color:'#1d4ed8', letterSpacing:2 },
+    { type:'rule', xr:.5, yr:.32, wr:.55, color:'#1d4ed8', thick:1.5 },
+    { type:'text', text:'Cleaning Services', xr:.5, yr:.46, sizer:.050, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Residential · Commercial · Move-in/Out', xr:.5, yr:.62, sizer:.024, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+    { type:'rule', xr:.5, yr:.72, wr:.55, color:'#1d4ed8', thick:1.5 },
+    { type:'text', text:'(555) 000-0000  ·  yoursite.com', xr:.5, yr:.84, sizer:.024, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+  ]},
+  // ── Dark Mode ─────────────────────────────────────────────────────────────
+  { id:'dark-minimal', name:'Dark Minimal', category:'dark', elements:[
+    { name:'BG', type:'rect', xr:.5, yr:.5, wr:1, hr:1, color:'#09090b' },
+    { type:'text', text:'YOUR NAME', xr:.5, yr:.38, sizer:.066, font:'Inter, sans-serif', bold:true, align:'center', color:'white' },
+    { type:'rule', xr:.5, yr:.52, wr:.3, color:'#a3e635', thick:2 },
+    { type:'text', text:'Title · Company', xr:.5, yr:.65, sizer:.028, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+  ]},
+  { id:'dark-executive', name:'Dark Executive', category:'dark', elements:[
+    { name:'BG', type:'rect', xr:.5, yr:.5, wr:1, hr:1, color:'#09090b' },
+    { type:'rule', xr:.5, yr:.20, wr:.75, color:'#27272a', thick:1 },
+    { type:'text', text:'YOUR NAME', xr:.5, yr:.38, sizer:.058, font:'Georgia, serif', bold:true, align:'center', color:'white', letterSpacing:3 },
+    { type:'text', text:'Chief Executive Officer', xr:.5, yr:.54, sizer:.026, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+    { type:'rule', xr:.5, yr:.66, wr:.75, color:'#27272a', thick:1 },
+    { type:'text', text:'email@company.com  ·  (555) 000-0000', xr:.5, yr:.80, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+  ]},
+  { id:'dark-neon', name:'Dark Neon', category:'dark', elements:[
+    { name:'BG', type:'rect', xr:.5, yr:.5, wr:1, hr:1, color:'#09090b' },
+    { type:'text', text:'BRAND NAME', xr:.5, yr:.30, sizer:.074, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635' },
+    { type:'text', text:'YOUR TAGLINE GOES HERE', xr:.5, yr:.48, sizer:.028, font:'Inter, sans-serif', align:'center', color:'#3f3f46', letterSpacing:2 },
+    { type:'rule', xr:.5, yr:.60, wr:.35, color:'#a3e635', thick:2 },
+    { type:'text', text:'yoursite.com', xr:.5, yr:.74, sizer:.028, font:'Inter, sans-serif', bold:true, align:'center', color:'white' },
+  ]},
+  { id:'dark-gold', name:'Dark Gold', category:'dark', elements:[
+    { name:'BG', type:'rect', xr:.5, yr:.5, wr:1, hr:1, color:'#0c0a09' },
+    { type:'rule', xr:.5, yr:.22, wr:.4, color:'#d4a22a', thick:1 },
+    { type:'text', text:'YOUR NAME', xr:.5, yr:.38, sizer:.062, font:'Georgia, serif', bold:true, align:'center', color:'#f5f5f5', letterSpacing:2 },
+    { type:'text', text:'Title  ·  Company', xr:.5, yr:.54, sizer:.026, font:'Georgia, serif', italic:true, align:'center', color:'#d4a22a' },
+    { type:'rule', xr:.5, yr:.65, wr:.4, color:'#d4a22a', thick:1 },
+    { type:'text', text:'yoursite.com  ·  (555) 000-0000', xr:.5, yr:.80, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#57534e' },
+  ]},
 ];
 
 function getTemplatePreview(tpl) {
@@ -2717,7 +2908,7 @@ function getTemplatePreview(tpl) {
 }
 
 function renderDesigns() {
-  const tabs = [['business','Business'],['promo','Promo'],['signage','Signage'],['luxury','Luxury'],['ai','AI ✦']];
+  const tabs = [['business','Business'],['promo','Promo'],['signage','Signage'],['luxury','Luxury'],['food','Food'],['health','Health'],['realestate','Real Estate'],['events','Events'],['trades','Trades'],['dark','Dark'],['ai','AI ✦']];
   const list = designStyleTab === 'ai' ? [] : designTemplates.filter(t =>
     t.category === designStyleTab && (!designSearch || t.name.toLowerCase().includes(designSearch.toLowerCase()))
   );
