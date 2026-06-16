@@ -689,20 +689,31 @@ const af = { size:'18x24', insertType:'coroplast', sides:'double', frameColor:'w
 
 // ─── Flag state ───
 const FL_SIZES = {
-  'feather-s':  { w:25,   h:80,    label:'Feather S',  in:'9 ft',    printIn:'25"×80"',      shape:'feather', heightFt:9 },
-  'feather-m':  { w:25.5, h:105.5, label:'Feather M',  in:'10.5 ft', printIn:'25.5"×105.5"', shape:'feather', heightFt:10.5 },
-  'feather-l':  { w:29.5, h:139.5, label:'Feather L',  in:'14 ft',   printIn:'29.5"×139.5"', shape:'feather', heightFt:14 },
-  'feather-xl': { w:27,   h:187.5, label:'Feather XL', in:'18 ft',   printIn:'27"×187.5"',   shape:'feather', heightFt:18 },
+  'feather-s':  { w:15,  h:60,  label:'Feather S',  in:'9 ft',    printIn:'15"×60"',   shape:'feather', heightFt:9 },
+  'feather-m':  { w:18,  h:75,  label:'Feather M',  in:'10.5 ft', printIn:'18"×75"',   shape:'feather', heightFt:10.5 },
+  'feather-l':  { w:22,  h:90,  label:'Feather L',  in:'14 ft',   printIn:'22"×90"',   shape:'feather', heightFt:14 },
+  'feather-xl': { w:27,  h:120, label:'Feather XL', in:'18 ft',   printIn:'27"×120"',  shape:'feather', heightFt:18 },
   'tear-s':     { w:24, h:72,  label:'Teardrop S', in:'24"×72"',  shape:'teardrop' },
   'tear-m':     { w:36, h:96,  label:'Teardrop M', in:'36"×96"',  shape:'teardrop' },
   'tear-l':     { w:48, h:120, label:'Teardrop L', in:'48"×120"', shape:'teardrop' },
 };
 const FL_PRICES = {
-  size: { 'feather-s':49, 'feather-m':59, 'feather-l':79, 'feather-xl':99, 'tear-s':59, 'tear-m':79, 'tear-l':99 },
-  base: { 'ground-spike':0, 'cross-base':12, 'water-base':18 },
-  sides: { single:0, double:15 },
+  feather: {
+    'feather-s':  { single:36.29, double:72.59 },
+    'feather-m':  { single:36.29, double:72.59 },
+    'feather-l':  { single:39.25, double:81.99 },
+    'feather-xl': { single:55.25, double:107.99 },
+  },
+  size: { 'tear-s':59, 'tear-m':79, 'tear-l':99 },
+  base: {
+    'none':             { label:'No Base', sub:'Flag only — I have my own hardware', price:0 },
+    'ground-stake':     { label:'Ground Stake', sub:'Outdoor use: grass or dirt only', price:52.25 },
+    'cross-base':       { label:'Cross Base', sub:'Indoor or outdoor hard floors', price:72.25 },
+    'cross-base-water': { label:'Cross Base + Water Bag', sub:'Added stability on pavement', price:75.25 },
+    'square-base':      { label:'Square Base', sub:'Weighted indoor floor stand', price:61.25 },
+  },
 };
-const fl = { size:'feather-m', base:'ground-spike', sides:'single', activeSide:'front', quantity:1, sideLayers:{ front:[], back:[] } };
+const fl = { size:'feather-m', base:'none', sides:'single', activeSide:'front', quantity:1, sideLayers:{ front:[], back:[] } };
 
 // ─── Hat designer model ───
 const decorationMethods = {
@@ -896,7 +907,12 @@ function calcAfPrice() {
   return ((AF_PRICES.size[af.size] || 39) + (AF_PRICES.insertType[af.insertType] || 0) + (AF_PRICES.sides[af.sides] || 0) + (AF_PRICES.frameColor[af.frameColor] || 0)) * af.quantity;
 }
 function calcFlPrice() {
-  return ((FL_PRICES.size[fl.size] || 59) + (FL_PRICES.base[fl.base] || 0) + (FL_PRICES.sides[fl.sides] || 0)) * fl.quantity;
+  const fls = FL_SIZES[fl.size];
+  const flagPrice = fls?.shape === 'feather'
+    ? (FL_PRICES.feather[fl.size]?.[fl.sides] || 36.29)
+    : (FL_PRICES.size[fl.size] || 59);
+  const basePrice = (FL_PRICES.base[fl.base] || { price:0 }).price;
+  return (flagPrice + basePrice) * fl.quantity;
 }
 
 function getHatProduct() {
@@ -1408,27 +1424,14 @@ function getAfPrintArea() {
 }
 
 // ─── Flag canvas ───
+// Derived from ctrl-p/mockups/Products/Feather Flag.svg (viewBox 0 0 377 1390), mirrored so pole pocket is on the left.
+const _FF_PATH = 'M11.886,12.443l0,1063.47c0,5.869 3.221,11.265 8.387,14.05c42.775,23.06 234.613,126.478 234.613,126.478l0,-856c-12,-183 -93,-342 -243,-348Z';
+const _FF_SLEEVE = 'M11.886,12.443 L11.886,1075.913';
 const FL_FEATHER_TEMPLATES = {
-  'feather-s': {
-    w:1700.788, h:5685.182,
-    d:'M1700.788 21C1700.788 21 1359.552 0 1125.044 55.499C1087.464 68.997 738.711 155.993 486.166 479.977C450.088 520.476 261.016 780.768 164.804 1094.768C140.75 1168.768 42.533 1510.768 12.467 1866.768C12.467 1866.768 10.463 1914.768 0 2076.768L16.475 5685.182L1700.788 4931.227C1700.194 4701.227 1700.788 21 1700.788 21Z',
-    sleeve:'M16.475 5685.182L0 2076.768C10.463 1914.768 12.467 1866.768 12.467 1866.768C42.533 1510.768 140.75 1168.768 164.804 1094.768C261.016 780.768 450.088 520.476 486.166 479.977C738.711 155.993 1087.464 68.997 1125.044 55.499C1359.552 0 1700.788 21 1700.788 21'
-  },
-  'feather-m': {
-    w:1737.165, h:7488,
-    d:'M1737.165 6493.875L9.165 7488L9.165 3021.506C9.165 3021.506 0 1623.786 444.614 837.943C897.11 38.163 1737.165 0 1737.165 0Z',
-    sleeve:'M9.165 7488L9.165 3021.506C9.165 3021.506 0 1623.786 444.614 837.943C897.11 38.163 1737.165 0 1737.165 0'
-  },
-  'feather-l': {
-    w:2087.885, h:9936,
-    d:'M2087.885 8780.132L71.885 9936L71.885 3599.5C71.885 3599.5 0 2096.766 617.385 999.5C1179.761 0 2087.885 0 2087.885 0Z',
-    sleeve:'M71.885 9936L71.885 3599.5C71.885 3599.5 0 2096.766 617.385 999.5C1179.761 0 2087.885 0 2087.885 0'
-  },
-  'feather-xl': {
-    w:1735.87, h:13225.105,
-    d:'M1726.477 12239.302L1726.477 12232.179L0 13225.105L16.292 2078.586C16.292 2078.586 85.322 447.881 1735.87 0Z',
-    sleeve:'M0 13225.105L16.292 2078.586C16.292 2078.586 85.322 447.881 1735.87 0'
-  }
+  'feather-s':  { w:377, h:1390, d:_FF_PATH, sleeve:_FF_SLEEVE },
+  'feather-m':  { w:377, h:1390, d:_FF_PATH, sleeve:_FF_SLEEVE },
+  'feather-l':  { w:377, h:1390, d:_FF_PATH, sleeve:_FF_SLEEVE },
+  'feather-xl': { w:377, h:1390, d:_FF_PATH, sleeve:_FF_SLEEVE },
 };
 
 function getFlagCanvasGeometry() {
@@ -1443,8 +1446,7 @@ function getFlagCanvasGeometry() {
     return { s, shape:'teardrop', vw:cw + 20, vh:ch + 30, ox:10, oy:5, flagW:cw, flagH:ch, poleX:6, baseY:ch + 27 };
   }
   const template = FL_FEATHER_TEMPLATES[fl.size] || FL_FEATHER_TEMPLATES['feather-m'];
-  const maxTemplateH = FL_FEATHER_TEMPLATES['feather-xl'].h;
-  const flagH = Math.round(380 * (template.h / maxTemplateH));
+  const flagH = Math.round(380 * (s.heightFt / FL_SIZES['feather-xl'].heightFt));
   const scale = flagH / template.h;
   const flagW = Math.round(template.w * scale);
   const isBack = fl.sides === 'double' && fl.activeSide === 'back';
@@ -1513,7 +1515,7 @@ function buildFlagSVG() {
          : `M${g.poleX-3},${oy+ch*.8} l7,-6 M${g.poleX-3},${oy+ch*.86} l6,-5`}" fill="none" stroke="#71717a" stroke-width="1"/>`
     : `<line x1="${ox-4}" y1="${oy-5}" x2="${ox-4}" y2="${oy+ch+22}" stroke="#888" stroke-width="3" stroke-linecap="round"/>`;
   const shine = s.shape === 'feather'
-    ? `<path d="M${ox+cw*.06},${oy+ch*.9} L${ox+cw*.98},${oy+ch*.74} L${ox+cw*.98},${oy+ch*.58} L${ox+cw*.06},${oy+ch*.82} Z" fill="#ffffff" opacity=".38" clip-path="url(#fl-clip)"/>`
+    ? `<path d="M${ox},${oy+ch*.88} L${ox+cw*.67},${oy+ch*.74} L${ox+cw*.67},${oy+ch*.56} L${ox},${oy+ch*.78} Z" fill="#ffffff" opacity=".38" clip-path="url(#fl-clip)"/>`
     : '';
   svgEl.innerHTML = `
     <defs><clipPath id="fl-clip"><path d="${fp}" ${flagTransform ? `transform="${flagTransform}"` : ''}/></clipPath></defs>
@@ -1521,11 +1523,19 @@ function buildFlagSVG() {
     <path d="${fp}" ${flagTransform ? `transform="${flagTransform}"` : ''} fill="#f5f5f5"/>
     ${shine}
     <g id="canvas-design" clip-path="url(#fl-clip)"></g>
-    <g id="fl-placeholder">
-      <text x="${ox+cw*.55}" y="${oy+ch*.36}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(7,Math.min(14,cw*.12))}" fill="#b0b0b0" font-weight="500">Add your</text>
-      <text x="${ox+cw*.55}" y="${oy+ch*.48}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(7,Math.min(14,cw*.12))}" fill="#b0b0b0" font-weight="500">design</text>
-      <text x="${ox+cw*.55}" y="${oy+ch*.6}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(6,Math.min(10,cw*.08))}" fill="#c8c8c8">${g.isBack ? 'Back' : 'Front'} · ${s.printIn || s.in}</text>
-    </g>
+    <g id="fl-placeholder">${(()=>{
+      // Position text at visual center of flag body (not bounding box)
+      const bodyMid = s.shape==='feather'
+        ? (g.isBack ? ox + cw - 133.5*g.templateScale : ox + 133.5*g.templateScale)
+        : ox + cw*0.5;
+      const bodyW = s.shape==='feather' ? 243*g.templateScale : cw;
+      const fs = Math.max(7,Math.min(14,bodyW*.18));
+      const fs2 = Math.max(6,Math.min(10,bodyW*.12));
+      return `
+      <text x="${bodyMid}" y="${oy+ch*.36}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${fs}" fill="#b0b0b0" font-weight="500">Add your</text>
+      <text x="${bodyMid}" y="${oy+ch*.48}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${fs}" fill="#b0b0b0" font-weight="500">design</text>
+      <text x="${bodyMid}" y="${oy+ch*.6}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${fs2}" fill="#c8c8c8">${g.isBack ? 'Back' : 'Front'} · ${s.printIn || s.in}</text>`;
+    })()}</g>
     <path d="${fp}" ${flagTransform ? `transform="${flagTransform}"` : ''} fill="none" stroke="#d4d4d8" stroke-width="1.2"/>`;
   updateSizeLabel();
 }
@@ -1689,7 +1699,7 @@ function updateSizeLabel() {
   }
   if (currentProduct === 'fl') {
     const s = FL_SIZES[fl.size];
-    el.textContent = `${s.label} (${s.in})  ·  ${fl.base.replace(/-/g,' ')}  ·  ${fl.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}`;
+    el.textContent = `${s.label} (${s.in})  ·  ${fl.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}  ·  ${FL_PRICES.base[fl.base]?.label || 'No Base'}`;
     return;
   }
   if (currentProduct === 'hat') {
@@ -2437,10 +2447,13 @@ function renderFlag() {
   const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
   const featherSizes = Object.entries(FL_SIZES).filter(([,s])=>s.shape==='feather');
   const tearSizes    = Object.entries(FL_SIZES).filter(([,s])=>s.shape==='teardrop');
-  const sBtn = ([k,s]) => `<button onclick="setFl('size','${k}')" class="opt-btn fl-size${fl.size===k?' active':''}" data-val="${k}" style="justify-content:space-between;width:100%;font-size:11px;padding:5px 9px;"><span>${s.label}<span style="font-size:9px;opacity:.65;margin-left:5px;">${s.in}</span></span><span style="font-size:10px;opacity:.65;margin-left:8px;">$${FL_PRICES.size[k]}</span></button>`;
-  const bases = [{key:'ground-spike',label:'Ground Spike',sub:'Outdoor grass/dirt',adj:0},{key:'cross-base',label:'Cross Base',sub:'Hard floor, indoor/outdoor',adj:FL_PRICES.base['cross-base']},{key:'water-base',label:'Water Base',sub:'Weighted, stable on pavement',adj:FL_PRICES.base['water-base']}];
-  const sidesOpts = [{key:'single',label:'Single-Sided',sub:'One-sided print',adj:0},{key:'double',label:'Double-Sided',sub:'Visible from both sides',adj:FL_PRICES.sides.double}];
-  const base=FL_PRICES.size[fl.size]||59, baseAdj=FL_PRICES.base[fl.base]||0, sidesAdj=FL_PRICES.sides[fl.sides]||0, unit=base+baseAdj+sidesAdj, total=unit*fl.quantity;
+  const getFlFlagPrice = (k, sides) => FL_SIZES[k]?.shape==='feather' ? (FL_PRICES.feather[k]?.[sides]||36.29) : (FL_PRICES.size[k]||59);
+  const sBtn = ([k,s]) => `<button onclick="setFl('size','${k}')" class="opt-btn fl-size${fl.size===k?' active':''}" data-val="${k}" style="justify-content:space-between;width:100%;font-size:11px;padding:5px 9px;"><span>${s.label}<span style="font-size:9px;opacity:.65;margin-left:5px;">${s.in}</span></span><span style="font-size:10px;opacity:.65;margin-left:8px;">$${getFlFlagPrice(k, fl.sides).toFixed(2)}</span></button>`;
+  const sidesOpts = [{key:'single',label:'Single-Sided',sub:'One-sided print'},{key:'double',label:'Double-Sided',sub:'Visible from both sides'}];
+  const bases = Object.entries(FL_PRICES.base).map(([k,b])=>({key:k,...b}));
+  const flagPrice = getFlFlagPrice(fl.size, fl.sides);
+  const basePrice = (FL_PRICES.base[fl.base]||{price:0}).price;
+  const unit = flagPrice + basePrice, total = unit * fl.quantity;
   return `
     <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button onclick="showProductPicker()" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Products</button>
@@ -2452,18 +2465,17 @@ function renderFlag() {
         <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">${featherSizes.map(sBtn).join('')}</div>
         <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Teardrop</div>
         <div style="display:flex;flex-direction:column;gap:4px;">${tearSizes.map(sBtn).join('')}</div>`, true)}
-      ${sec('Base Hardware', `<div style="display:flex;flex-direction:column;gap:5px;">${bases.map(b2=>`<button onclick="setFl('base','${b2.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${fl.base===b2.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${fl.base===b2.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${b2.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${b2.sub}</div></div><span style="font-size:11px;font-weight:600;color:${b2.adj>0?'#52525b':'#a1a1aa'};">${b2.adj===0?'Included':'+$'+b2.adj}</span></button>`).join('')}</div>`, true)}
-      ${sec('Sides', `<div style="display:flex;flex-direction:column;gap:5px;">${sidesOpts.map(s2=>`<button onclick="setFl('sides','${s2.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${fl.sides===s2.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${fl.sides===s2.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${s2.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${s2.sub}</div></div><span style="font-size:11px;font-weight:600;color:${s2.adj>0?'#52525b':'#a1a1aa'};">${s2.adj===0?'Included':'+$'+s2.adj}</span></button>`).join('')}</div>`, true)}
-      ${sec('Quantity', `<select onchange="fl.quantity=parseInt(this.value);buildCanvas();updatePrice();setTool('swap');" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">${[1,2,3,5,10].map(q=>`<option value="${q}"${fl.quantity===q?' selected':''}>${q} flag${q>1?'s':''} — $${unit*q}</option>`).join('')}</select>`, true)}
+      ${sec('Sides', `<div style="display:flex;flex-direction:column;gap:5px;">${sidesOpts.map(s2=>`<button onclick="setFl('sides','${s2.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${fl.sides===s2.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${fl.sides===s2.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${s2.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${s2.sub}</div></div><span style="font-size:11px;font-weight:600;color:#52525b;">$${getFlFlagPrice(fl.size,s2.key).toFixed(2)}</span></button>`).join('')}</div>`, true)}
+      ${sec('Base Hardware', `<div style="font-size:10.5px;color:#71717a;line-height:1.5;margin-bottom:8px;">Add-on hardware sold separately. Ground Stake is for outdoor grass/dirt use only and does <strong>not</strong> come with the flag.</div><div style="display:flex;flex-direction:column;gap:5px;">${bases.map(b2=>`<button onclick="setFl('base','${b2.key}')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1.5px solid ${fl.base===b2.key?'#2563eb':'#e4e4e7'};border-radius:7px;background:${fl.base===b2.key?'#eff6ff':'white'};cursor:pointer;width:100%;transition:all .12s;"><div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#18181b;">${b2.label}</div><div style="font-size:10px;color:#a1a1aa;margin-top:1px;">${b2.sub}</div></div><span style="font-size:11px;font-weight:600;color:${b2.price>0?'#52525b':'#a1a1aa'};">${b2.price===0?'No charge':'+$'+b2.price.toFixed(2)}</span></button>`).join('')}</div>`, true)}
+      ${sec('Quantity', `<select onchange="fl.quantity=parseInt(this.value);buildCanvas();updatePrice();setTool('swap');" style="width:100%;font-size:12.5px;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px 10px;outline:none;background:white;">${[1,2,3,5,10].map(q=>`<option value="${q}"${fl.quantity===q?' selected':''}>${q} flag${q>1?'s':''} — $${(unit*q).toFixed(2)}</option>`).join('')}</select>`, true)}
       <div style="padding:12px;background:#fafafa;border-top:1px solid #f0f0f0;margin-top:4px;">
         <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Price Breakdown</div>
-        <div class="price-row"><span>Base (${FL_SIZES[fl.size].label})</span><span>$${base}</span></div>
-        ${baseAdj>0?`<div class="price-row"><span>Base hardware</span><span>+$${baseAdj}</span></div>`:''}
-        ${sidesAdj>0?`<div class="price-row"><span>Double-sided</span><span>+$${sidesAdj}</span></div>`:''}
-        ${fl.quantity>1?`<div class="price-row"><span>Qty × ${fl.quantity}</span><span>$${unit} × ${fl.quantity}</span></div>`:''}
-        <div class="price-row total"><span>Total</span><span>$${total}</span></div>
+        <div class="price-row"><span>Flag (${FL_SIZES[fl.size].label} · ${fl.sides==='double'?'Double':'Single'})</span><span>$${flagPrice.toFixed(2)}</span></div>
+        ${basePrice>0?`<div class="price-row"><span>${FL_PRICES.base[fl.base]?.label||'Base'}</span><span>+$${basePrice.toFixed(2)}</span></div>`:''}
+        ${fl.quantity>1?`<div class="price-row"><span>Qty × ${fl.quantity}</span><span>$${unit.toFixed(2)} × ${fl.quantity}</span></div>`:''}
+        <div class="price-row total"><span>Total</span><span>$${total.toFixed(2)}</span></div>
       </div>
-      <div style="padding:10px 12px 16px;"><button onclick="handleDone()" style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:#18181b;color:white;border:none;cursor:pointer;">Add to Cart — $${total}</button></div>
+      <div style="padding:10px 12px 16px;"><button onclick="handleDone()" style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:#18181b;color:white;border:none;cursor:pointer;">Add to Cart — $${total.toFixed(2)}</button></div>
     </div>`;
 }
 
@@ -4736,7 +4748,8 @@ function showSpecs() {
   }
   if (currentProduct === 'fl') {
     const s = FL_SIZES[fl.size];
-    alert(`Flag Specs\n\nSize: ${s.label} (${s.in})\nShape: ${s.shape.charAt(0).toUpperCase()+s.shape.slice(1)}\nBase: ${fl.base.replace(/-/g,' ')}\nSides: ${fl.sides}\nQuantity: ${fl.quantity}\n\nTotal: $${calcFlPrice()}`);
+    const baseLabel = FL_PRICES.base[fl.base]?.label || 'No Base';
+    alert(`Flag Specs\n\nSize: ${s.label} (${s.in})\nShape: ${s.shape.charAt(0).toUpperCase()+s.shape.slice(1)}\nSides: ${fl.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}\nBase: ${baseLabel}\nQuantity: ${fl.quantity}\n\nTotal: $${calcFlPrice().toFixed(2)}`);
     return;
   }
   const s = SIZES[bc.size];
@@ -4766,7 +4779,8 @@ function handleDone() {
     item = { product_id: 'af', sku: `af-${af.size}-${af.frameColor}`, name: `A-Frame Sign — ${s.label} · ${af.frameColor.charAt(0).toUpperCase()+af.frameColor.slice(1)} · ${af.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}`, unit_price: calcAfPrice(), quantity: af.quantity, image: null };
   } else if (currentProduct === 'fl') {
     const s = FL_SIZES[fl.size];
-    item = { product_id: 'fl', sku: `fl-${fl.size}-${fl.base}`, name: `Flag — ${s.label} · ${fl.base.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase())} · ${fl.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}`, unit_price: calcFlPrice(), quantity: fl.quantity, image: null };
+    const flBaseLabel = FL_PRICES.base[fl.base]?.label || 'No Base';
+    item = { product_id: 'fl', sku: `fl-${fl.size}-${fl.sides}-${fl.base}`, name: `Feather Flag — ${s.label} · ${fl.sides === 'double' ? 'Double-Sided' : 'Single-Sided'} · ${flBaseLabel}`, unit_price: calcFlPrice(), quantity: fl.quantity, image: null };
   } else {
     const s = SIZES[bc.size];
     item = { product_id: 'bc', sku: `bc-${bc.size}`, name: `Business Cards — ${s?.label || bc.size}`, unit_price: calcPrice(), quantity: bc.quantity, image: null };
