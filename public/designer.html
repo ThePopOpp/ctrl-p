@@ -1850,6 +1850,7 @@ function setSide(side) {
 // ─── Wall art setters ───
 function setWa(key, val) { wa[key] = val; buildCanvas(); setTool('swap'); }
 function setBn(key, val) { bn[key] = val; buildCanvas(); setTool('swap'); }
+function setPo(key, val) { po[key] = key === 'quantity' ? Math.max(1, Number(val)||1) : val; buildCanvas(); setTool('swap'); }
 function setRs(key, val) { rs[key] = val; buildCanvas(); setTool('swap'); }
 function setAf(key, val) { af[key] = val; buildCanvas(); setTool('swap'); }
 function setHat(key, val) {
@@ -2533,7 +2534,6 @@ function renderAFrame() {
 
 function renderPoster() {
   const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
-  const setPo = (k, v) => { po[k] = isNaN(v) ? v : (k==='quantity' ? Math.max(1, Number(v)) : v); renderCanvas(); setTool('swap'); };
   const price = calcPoPrice();
   const unitPx = (price / po.quantity).toFixed(2);
   return `
