@@ -524,6 +524,8 @@ const SLUG_TO_PRODUCT = {
   // Business cards
   'business-cards': 'bc', 'ultra-thick-business-cards': 'bc',
   'die-cut-business-cards': 'bc', 'vision-art-chart': 'bc',
+  // Posters
+  'posters': 'po', 'poster-printing': 'po', 'flyers': 'po',
 };
 let currentProduct = null; // resolved from URL param; null shows the product picker
 let canvasZoom = 1.0;
@@ -714,6 +716,32 @@ const FL_PRICES = {
   },
 };
 const fl = { size:'feather-m', base:'none', sides:'single', activeSide:'front', quantity:1, sideLayers:{ front:[], back:[] } };
+
+// ─── Poster ───
+const PO_SIZES = {
+  '85x11':  { w:8.5, h:11,  label:'8.5×11"', aspect:8.5/11 },
+  '11x14':  { w:11,  h:14,  label:'11×14"',  aspect:11/14  },
+  '11x17':  { w:11,  h:17,  label:'11×17"',  aspect:11/17  },
+  '18x24':  { w:18,  h:24,  label:'18×24"',  aspect:18/24  },
+  '24x36':  { w:24,  h:36,  label:'24×36"',  aspect:24/36  },
+};
+const PO_PRICES = {
+  '85x11':  { 1:3.99,  5:14.99, 10:24.99, 25:44.99,  50:79.99,  100:129.99 },
+  '11x14':  { 1:5.99,  5:19.99, 10:34.99, 25:59.99,  50:99.99,  100:179.99 },
+  '11x17':  { 1:7.99,  5:24.99, 10:44.99, 25:79.99,  50:139.99, 100:239.99 },
+  '18x24':  { 1:14.99, 5:49.99, 10:84.99, 25:149.99, 50:249.99, 100:399.99 },
+  '24x36':  { 1:24.99, 5:79.99, 10:129.99,25:219.99, 50:379.99, 100:599.99 },
+};
+const PO_FINISH_LABELS = { matte:'Matte', glossy:'Glossy', lustre:'Lustre', satin:'Satin' };
+const PO_QTY_TIERS = [1,5,10,25,50,100];
+let po = { size:'11x17', finish:'matte', quantity:1 };
+
+function calcPoPrice() {
+  const tiers = PO_PRICES[po.size] || PO_PRICES['11x17'];
+  const validTier = PO_QTY_TIERS.filter(t => t <= po.quantity).pop() || 1;
+  const unitPrice = tiers[validTier] / validTier;
+  return +(unitPrice * po.quantity).toFixed(2);
+}
 
 // ─── Hat designer model ───
 const decorationMethods = {
@@ -990,6 +1018,7 @@ function updatePrice() {
   else if (currentProduct === 'rs') p = calcRsPrice();
   else if (currentProduct === 'af') p = calcAfPrice();
   else if (currentProduct === 'fl') p = calcFlPrice();
+  else if (currentProduct === 'po') p = calcPoPrice();
   else p = calcPrice();
   document.getElementById('price-badge').textContent = '$' + p.toFixed(2);
   const _mp = document.getElementById('mobile-cart-price');
@@ -1545,6 +1574,47 @@ function getFlPrintArea() {
   return { ox: g.ox, oy: g.oy, ix: 0, iy: 0, iw: g.flagW, ih: g.flagH };
 }
 
+// ─── Poster canvas ───
+function getPoCanvasDims() {
+  const s = PO_SIZES[po.size] || PO_SIZES['11x17'];
+  const maxW = 380, maxH = 380;
+  let cw, ch;
+  if (s.aspect >= 1) { cw = maxW; ch = Math.round(maxW / s.aspect); }
+  else { ch = maxH; cw = Math.round(maxH * s.aspect); }
+  if (cw > maxW) { cw = maxW; ch = Math.round(cw / s.aspect); }
+  if (ch > maxH) { ch = maxH; cw = Math.round(ch * s.aspect); }
+  return { cw: Math.max(cw,80), ch: Math.max(ch,80) };
+}
+
+function buildPosterSVG() {
+  const { cw, ch } = getPoCanvasDims();
+  const bleed = 8, safe = 12, bw = cw + bleed*2, bh = ch + bleed*2;
+  const s = PO_SIZES[po.size] || PO_SIZES['11x17'];
+  const finishBg = { matte:'#f8f8f6', glossy:'#fafafe', lustre:'#f8faf8', satin:'#f8f8fa' }[po.finish] || '#f8f8f8';
+  const svgEl = document.getElementById('card-svg');
+  svgEl.setAttribute('viewBox', `-${bleed} -${bleed} ${bw} ${bh}`);
+  svgEl.setAttribute('width', String(bw)); svgEl.setAttribute('height', String(bh));
+  svgEl.style.filter = 'drop-shadow(0 6px 24px rgba(0,0,0,0.18))';
+  svgEl.innerHTML = `
+    <clipPath id="po-clip"><rect x="0" y="0" width="${cw}" height="${ch}"/></clipPath>
+    <rect x="${-bleed}" y="${-bleed}" width="${bw}" height="${bh}" fill="#ffd7d7" opacity=".22" rx="1"/>
+    <rect x="0" y="0" width="${cw}" height="${ch}" fill="${finishBg}"/>
+    <rect x="${-bleed}" y="${-bleed}" width="${bw}" height="${bh}" fill="none" stroke="#ff9999" stroke-width="1" stroke-dasharray="4 3" rx="1" opacity=".6"/>
+    <rect x="${safe}" y="${safe}" width="${cw-safe*2}" height="${ch-safe*2}" fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>
+    <g id="canvas-design" clip-path="url(#po-clip)"></g>
+    <g id="po-placeholder">
+      <text x="${cw/2}" y="${ch/2-8}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(9,Math.min(14,cw*.065))}" fill="#c0c0c0" font-weight="500">Add your design</text>
+      <text x="${cw/2}" y="${ch/2+12}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(7,Math.min(10,cw*.04))}" fill="#c0c0c0">${s.label}  ·  ${PO_FINISH_LABELS[po.finish]}</text>
+    </g>
+    <rect x="0" y="0" width="${cw}" height="${ch}" fill="none" stroke="#d0d0d0" stroke-width="1"/>`;
+  updateSizeLabel();
+}
+
+function getPoPrintArea() {
+  const { cw, ch } = getPoCanvasDims();
+  return { ox:0, oy:0, iw:cw, ih:ch };
+}
+
 function getHatCanvasGeometry() {
   const product = getHatProduct();
   const zone = getHatZone(product);
@@ -1651,6 +1721,7 @@ function buildCanvas() {
   else if (currentProduct === 'rs') buildRigidSignSVG();
   else if (currentProduct === 'af') buildAFrameSVG();
   else if (currentProduct === 'fl') buildFlagSVG();
+  else if (currentProduct === 'po') buildPosterSVG();
   else buildCardSVG();
   reattachPreservedLayers(preservedLayers);
   initCanvasInteractions();
@@ -1700,6 +1771,11 @@ function updateSizeLabel() {
   if (currentProduct === 'fl') {
     const s = FL_SIZES[fl.size];
     el.textContent = `${s.label} (${s.in})  ·  ${fl.sides === 'double' ? 'Double-Sided' : 'Single-Sided'}  ·  ${FL_PRICES.base[fl.base]?.label || 'No Base'}`;
+    return;
+  }
+  if (currentProduct === 'po') {
+    const s = PO_SIZES[po.size];
+    el.textContent = `${s.label}  ·  ${PO_FINISH_LABELS[po.finish]}  ·  Qty ${po.quantity}`;
     return;
   }
   if (currentProduct === 'hat') {
@@ -1849,6 +1925,7 @@ function renderSwap() {
   if (currentProduct === 'rs') return renderRigidSign();
   if (currentProduct === 'af') return renderAFrame();
   if (currentProduct === 'fl') return renderFlag();
+  if (currentProduct === 'po') return renderPoster();
   return renderBC();
 }
 
@@ -1938,6 +2015,17 @@ function renderProductPicker() {
         <div style="flex:1;text-align:left;">
           <div style="font-size:12.5px;font-weight:600;color:#18181b;">Flags</div>
           <div style="font-size:10.5px;color:#71717a;margin-top:2px;">Feather &amp; Teardrop styles</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <button onclick="selectProduct('po')" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid #e4e4e7;border-radius:8px;background:white;cursor:pointer;text-align:left;width:100%;transition:all .12s;" onmouseover="this.style.borderColor='#93c5fd';this.style.background='#f8fbff'" onmouseout="this.style.borderColor='#e4e4e7';this.style.background='white'">
+        <div style="width:34px;height:42px;flex-shrink:0;background:#f8f8f6;border:1.5px solid #ccc;border-radius:2px;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 30" width="20" height="24"><rect x="2" y="2" width="20" height="26" rx="1" fill="none" stroke="#888" stroke-width="1.5"/><line x1="5" y1="8" x2="19" y2="8" stroke="#bbb" stroke-width="1.2"/><line x1="5" y1="12" x2="17" y2="12" stroke="#bbb" stroke-width="1.2"/><line x1="5" y1="16" x2="15" y2="16" stroke="#bbb" stroke-width="1.2"/></svg>
+        </div>
+        <div style="flex:1;text-align:left;">
+          <div style="font-size:12.5px;font-weight:600;color:#18181b;">Posters</div>
+          <div style="font-size:10.5px;color:#71717a;margin-top:2px;">8.5×11 to 24×36  ·  Matte, Glossy &amp; more</div>
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
@@ -2443,6 +2531,47 @@ function renderAFrame() {
     </div>`;
 }
 
+function renderPoster() {
+  const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
+  const setPo = (k, v) => { po[k] = isNaN(v) ? v : (k==='quantity' ? Math.max(1, Number(v)) : v); renderCanvas(); setTool('swap'); };
+  const price = calcPoPrice();
+  const unitPx = (price / po.quantity).toFixed(2);
+  return `
+    <div class="cfg-section" style="padding:10px 12px 8px;">
+      <div style="font-size:13.5px;font-weight:700;color:#18181b;">Posters</div>
+      <div style="font-size:11px;color:#71717a;margin-top:2px;">Full-color print on premium paper</div>
+    </div>
+    ${sec('Size', `
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        ${Object.entries(PO_SIZES).map(([k,s])=>{
+          const tiers = PO_PRICES[k]; const unitStr = `$${(tiers[1]).toFixed(2)}/ea+`;
+          return `<button onclick="setPo('size','${k}')" class="opt-btn${po.size===k?' active':''}" style="justify-content:space-between;width:100%;padding:6px 10px;font-size:11.5px;">
+            <span>${s.label}</span><span style="opacity:.7;font-size:10.5px;">${unitStr}</span>
+          </button>`;
+        }).join('')}
+      </div>`, true)}
+    ${sec('Finish', `
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        ${Object.entries(PO_FINISH_LABELS).map(([k,label])=>`
+          <button onclick="setPo('finish','${k}')" class="opt-btn${po.finish===k?' active':''}" style="width:100%;padding:6px 10px;font-size:11.5px;">${label}</button>`).join('')}
+      </div>`)}
+    ${sec('Quantity', `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px;">
+        ${PO_QTY_TIERS.map(q=>`<button onclick="setPo('quantity',${q})" class="opt-btn${po.quantity===q?' active':''}" style="font-size:11.5px;">${q}</button>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:#71717a;">Or enter qty:</span>
+        <input type="number" min="1" max="10000" value="${po.quantity}" oninput="setPo('quantity',this.value)" style="width:80px;border:1px solid #e4e4e7;border-radius:5px;padding:5px 7px;font-size:12px;outline:none;"/>
+      </div>`)}
+    <div style="padding:10px 12px;border-top:1px solid #f0f0f0;margin-top:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+        <span style="font-size:11.5px;color:#71717a;">$${unitPx}/ea × ${po.quantity}</span>
+        <span style="font-size:16px;font-weight:700;color:#18181b;">$${price.toFixed(2)}</span>
+      </div>
+      <button onclick="handleDone()" style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:#18181b;color:white;border:none;cursor:pointer;">Add to Cart — $${price.toFixed(2)}</button>
+    </div>`;
+}
+
 function renderFlag() {
   const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
   const featherSizes = Object.entries(FL_SIZES).filter(([,s])=>s.shape==='feather');
@@ -2528,6 +2657,9 @@ function renderImage() {
 let designStyleTab = 'business';
 let designSearch = '';
 let aiDesignStyle = 'Minimal';
+let aiPromptHistory = [];
+let aiLastDesign = null;
+let aiGenerating = false;
 
 const designTemplates = [
   // ── Business ──────────────────────────────────────────────────────────────
@@ -2925,20 +3057,48 @@ function renderDesigns() {
     <div style="padding:8px;overflow-y:auto;flex:1;" class="thin-scroll">
       ${designStyleTab === 'ai' ? `
         <div style="padding:2px 2px 6px;">
-          <div style="font-size:11px;font-weight:700;color:#3f3f46;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Describe your design</div>
-          <textarea id="ai-design-prompt" placeholder="e.g. A bold business card for a photographer — dark background, white text, clean minimal layout with a lime green accent line..." style="width:100%;box-sizing:border-box;height:82px;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:12px;color:#18181b;resize:none;outline:none;font-family:Inter,sans-serif;line-height:1.4;display:block;"></textarea>
-          <div style="font-size:11px;font-weight:700;color:#3f3f46;margin:8px 0 5px;text-transform:uppercase;letter-spacing:.04em;">Style</div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
-            ${['Minimal','Bold','Luxury','Playful','Corporate'].map(s=>`<button onclick="aiDesignStyle='${s}';document.querySelectorAll('.ai-style-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');" class="ai-style-btn opt-btn${s==='Minimal'?' active':''}" style="font-size:11px;">${s}</button>`).join('')}
+          <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Describe your design</div>
+          <textarea id="ai-design-prompt" placeholder="e.g. Bold card for a photographer — dark bg, white text, lime accent line..." style="width:100%;box-sizing:border-box;height:76px;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:12px;color:#18181b;resize:none;outline:none;font-family:Inter,sans-serif;line-height:1.4;display:block;" onfocus="this.style.borderColor='#18181b'" onblur="this.style.borderColor='#e4e4e7'"></textarea>
+          ${aiPromptHistory.length > 0 ? `
+          <div style="margin-top:5px;">
+            <div style="font-size:9px;color:#a1a1aa;margin-bottom:3px;">Recent:</div>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              ${aiPromptHistory.slice(0,3).map((p,i)=>`<button onclick="document.getElementById('ai-design-prompt').value=${JSON.stringify(p)}" style="text-align:left;padding:4px 7px;border:1px solid #e4e4e7;border-radius:5px;background:white;font-size:10px;color:#52525b;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escAttr(p.length>52?p.slice(0,52)+'…':p)}</button>`).join('')}
+            </div>
+          </div>` : ''}
+          <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.06em;margin:9px 0 5px;">Style</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px;">
+            ${['Minimal','Bold','Luxury','Playful','Corporate','Retro','Modern','Elegant'].map(s=>`<button onclick="aiDesignStyle='${s}';setTool('designs');" class="opt-btn${aiDesignStyle===s?' active':''}" style="font-size:10.5px;padding:4px 8px;">${s}</button>`).join('')}
           </div>
-          <button onclick="generateAIDesign()" style="width:100%;padding:11px;border-radius:7px;background:#18181b;color:white;border:none;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;">
+          <button onclick="generateAIDesign()" id="ai-gen-btn" style="width:100%;padding:10px;border-radius:7px;background:#18181b;color:white;border:none;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            Generate Design
+            <span id="ai-gen-label">Generate Design</span>
           </button>
-          <div id="ai-design-status" style="margin-top:8px;font-size:12px;color:#71717a;text-align:center;min-height:18px;"></div>
-          <div style="margin-top:12px;padding:10px;background:#fafafa;border:1px solid #f0f0f0;border-radius:7px;font-size:11px;color:#a1a1aa;line-height:1.5;">
-            AI generates a unique editable layout from your description. Each element can be moved, resized, and styled after generation.
+          ${aiLastDesign ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px;">
+            <button onclick="generateAIDesign(true)" style="padding:8px;border-radius:6px;border:1.5px solid #e4e4e7;background:white;font-size:11px;font-weight:600;color:#52525b;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+              Regenerate
+            </button>
+            <button onclick="openAIRefine()" style="padding:8px;border-radius:6px;border:1.5px solid #e4e4e7;background:white;font-size:11px;font-weight:600;color:#52525b;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+              Refine
+            </button>
           </div>
+          <div id="ai-refine-box" style="display:none;margin-top:6px;">
+            <textarea id="ai-refine-prompt" placeholder="e.g. Make the headline larger and use a blue accent color instead..." style="width:100%;box-sizing:border-box;height:60px;border:1.5px solid #e4e4e7;border-radius:7px;padding:7px 10px;font-size:12px;color:#18181b;resize:none;outline:none;font-family:Inter,sans-serif;line-height:1.4;display:block;"></textarea>
+            <button onclick="refineAIDesign()" style="width:100%;margin-top:5px;padding:8px;border-radius:6px;background:#18181b;color:white;border:none;cursor:pointer;font-size:12px;font-weight:600;">Apply Refinement</button>
+          </div>` : ''}
+          <div id="ai-design-status" style="margin-top:8px;font-size:11.5px;color:#71717a;text-align:center;min-height:16px;"></div>
+          <details style="margin-top:10px;">
+            <summary style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;user-select:none;padding:2px 0;">Business Info Shortcuts</summary>
+            <div style="margin-top:7px;display:flex;flex-direction:column;gap:5px;">
+              <input id="ai-biz-name" placeholder="Business name..." style="width:100%;box-sizing:border-box;border:1px solid #e4e4e7;border-radius:5px;padding:5px 8px;font-size:11.5px;outline:none;color:#18181b;"/>
+              <input id="ai-biz-tag" placeholder="Tagline..." style="width:100%;box-sizing:border-box;border:1px solid #e4e4e7;border-radius:5px;padding:5px 8px;font-size:11.5px;outline:none;color:#18181b;"/>
+              <input id="ai-biz-contact" placeholder="Phone / email / website..." style="width:100%;box-sizing:border-box;border:1px solid #e4e4e7;border-radius:5px;padding:5px 8px;font-size:11.5px;outline:none;color:#18181b;"/>
+              <button onclick="insertBizInfo()" style="padding:6px;border-radius:5px;border:1.5px solid #e4e4e7;background:white;font-size:11px;font-weight:600;color:#52525b;cursor:pointer;">Add to Prompt</button>
+            </div>
+          </details>
         </div>` : `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
           ${list.map(tpl=>`
@@ -3020,9 +3180,21 @@ function renderLayers() {
       <button class="l-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11.99V11.9999M10 11.99V11.9999M14 11.99V11.9999M18 11.99V11.9999M17.2 18H6.8C5.11984 18 4.27976 18 3.63803 17.673C3.07354 17.3854 2.6146 16.9265 2.32698 16.362C2 15.7202 2 14.8802 2 13.2L2 10.8C2 9.11984 2 8.27976 2.32698 7.63803C2.6146 7.07354 3.07354 6.6146 3.63803 6.32698C4.27976 6 5.11984 6 6.8 6L17.2 6C18.8802 6 19.7202 6 20.362 6.32698C20.9265 6.6146 21.3854 7.07354 21.673 7.63803C22 8.27976 22 9.11984 22 10.8V13.2C22 14.8802 22 15.7202 21.673 16.362C21.3854 16.9265 20.9265 17.3854 20.362 17.673C19.7202 18 18.8802 18 17.2 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>`;
   return `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #f0f0f0;flex-shrink:0;">
-      <span style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;">Layers</span>
-      <span style="font-size:11px;color:#a1a1aa;">${layers.length} layer${layers.length!==1?'s':''}</span>
+    <div style="border-bottom:1px solid #f0f0f0;flex-shrink:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px 6px;">
+        <span style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;">Layers</span>
+        <span style="font-size:11px;color:#a1a1aa;">${layers.length} layer${layers.length!==1?'s':''}</span>
+      </div>
+      ${selLayer >= 0 ? `
+      <div style="display:flex;align-items:center;gap:3px;padding:0 10px 8px;">
+        <button title="Align Left" onclick="alignLayer('left')" style="flex:1;padding:5px 2px;border:1px solid #e4e4e7;border-radius:5px;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background='white'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round"><path d="M3 5v14M7 12H21"/></svg></button>
+        <button title="Center Horizontal" onclick="alignLayer('cx')" style="flex:1;padding:5px 2px;border:1px solid #e4e4e7;border-radius:5px;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background='white'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M5 12H19"/></svg></button>
+        <button title="Align Right" onclick="alignLayer('right')" style="flex:1;padding:5px 2px;border:1px solid #e4e4e7;border-radius:5px;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background='white'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round"><path d="M21 5v14M3 12H17"/></svg></button>
+        <button title="Align Top" onclick="alignLayer('top')" style="flex:1;padding:5px 2px;border:1px solid #e4e4e7;border-radius:5px;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background='white'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round"><path d="M5 3h14M12 7V21"/></svg></button>
+        <button title="Center Vertical" onclick="alignLayer('cy')" style="flex:1;padding:5px 2px;border:1px solid #e4e4e7;border-radius:5px;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background='white'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 3v18"/></svg></button>
+        <button title="Align Bottom" onclick="alignLayer('bottom')" style="flex:1;padding:5px 2px;border:1px solid #e4e4e7;border-radius:5px;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background='white'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round"><path d="M5 21h14M12 3V17"/></svg></button>
+        <button title="Duplicate (Ctrl+D)" onclick="duplicateLayer()" style="flex:1;padding:5px 2px;border:1px solid #e4e4e7;border-radius:5px;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background='white'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+      </div>` : ''}
     </div>
     <div style="flex:1;overflow-y:auto;" class="thin-scroll">
       ${layers.length === 0
@@ -3246,6 +3418,8 @@ function getPrintAreaBounds() {
     const p = getAfPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
   } else if (currentProduct === 'fl') {
     const p = getFlPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
+  } else if (currentProduct === 'po') {
+    const p = getPoPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
   } else {
     const { cw, ch } = getCardDimensions();
     ax = 0; ay = 0; aw = cw; ah = ch;
@@ -3289,7 +3463,7 @@ function applyLayerTransform(layer) {
 }
 
 function hideProductPlaceholder() {
-  ['wa', 'bn', 'rs', 'af', 'fl', 'hat'].forEach(id => {
+  ['wa', 'bn', 'rs', 'af', 'fl', 'hat', 'po'].forEach(id => {
     const ph = document.getElementById(`${id}-placeholder`);
     if (ph) ph.setAttribute('display', 'none');
   });
@@ -3673,21 +3847,112 @@ let iconLibrary = 'basic';
 let customIconStyle = 'linear';
 let iconSearch = '';
 const iconTypes = [
+  // Symbols & Ratings
   ['star','Star','M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3z'],
   ['heart','Heart','M20.8 7.6c0 5.4-8.8 10.4-8.8 10.4S3.2 13 3.2 7.6C3.2 5 5.2 3 7.7 3c1.5 0 3 .8 4.3 2.3C13.3 3.8 14.8 3 16.3 3c2.5 0 4.5 2 4.5 4.6z'],
   ['check','Check','M4 12.5l5 5L20 6'],
   ['bolt','Bolt','M13 2L4 14h7l-1 8 9-12h-7l1-8z'],
+  ['crown','Crown','M2 17L5.22 7.31 9.16 12 12 3l2.84 9 3.94-4.69L22 17H2z M2 17h20'],
+  ['diamond','Diamond','M12 2L2 9.5l10 12.5 10-12.5L12 2z M2 9.5h20'],
+  ['fire','Fire','M12 12c2-2.96 0-7-1-8 0 3.38-3.93 5-5.8 7.32C4 13.17 4 14.09 4 15a8 8 0 1016 0c0-4.73-3.6-5-4-8z'],
+  ['award','Award','M12 15a7 7 0 100-14 7 7 0 000 14z M8.21 13.89L7 23l5-3 5 3-1.21-9.12'],
+  // Navigation & Location
   ['pin','Pin','M12 21s7-6.1 7-12A7 7 0 105 9c0 5.9 7 12 7 12z M12 12a3 3 0 100-6 3 3 0 000 6z'],
+  ['arrow','Arrow','M5 12h14 M13 6l6 6-6 6'],
+  ['home','Home','M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10'],
+  ['compass','Compass','M12 22a10 10 0 100-20 10 10 0 000 20z M16.24 7.76L14.12 14.12l-6.36 2.12 2.12-6.36 6.36-2.12z'],
+  ['globe','Globe','M12 22a10 10 0 100-20 10 10 0 000 20z M2 12h20 M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z'],
+  // Communication
   ['phone','Phone','M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012 4.2 2 2 0 014 2h3a2 2 0 012 1.7c.1 1 .4 2 .7 2.9a2 2 0 01-.4 2.1L8 10a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.9.6 2.9.7A2 2 0 0122 16.9z'],
+  ['mail','Mail','M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6'],
+  ['chat','Chat','M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z'],
+  ['megaphone','Megaphone','M11 5L6 9H2v6h4l5 4V5z M15.54 8.46a5 5 0 010 7.07 M19.07 4.93a10 10 0 010 14.14'],
+  // Commerce & Business
   ['cart','Cart','M6 6h15l-2 8H8L6 3H3 M9 20a1 1 0 100-2 1 1 0 000 2z M18 20a1 1 0 100-2 1 1 0 000 2z'],
-  ['arrow','Arrow','M5 12h14 M13 6l6 6-6 6']
+  ['tag','Tag','M20.59 13.41L13.42 20.58a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z M7 7h.01'],
+  ['gift','Gift','M20 12v10H4V12 M2 7h20v5H2z M12 22V7 M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z'],
+  ['briefcase','Briefcase','M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2'],
+  ['percent','Percent','M19 5L5 19 M6.5 8.5a2 2 0 100-4 2 2 0 000 4z M17.5 19.5a2 2 0 100-4 2 2 0 000 4z'],
+  // People & Social
+  ['user','User','M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z'],
+  ['share','Share','M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8 M16 6l-4-4-4 4 M12 2v13'],
+  // Time & Date
+  ['clock','Clock','M12 22a10 10 0 100-20 10 10 0 000 20z M12 6v6l4 2'],
+  ['calendar','Calendar','M8 2v3 M16 2v3 M3 9h18 M21 7H3a1 1 0 00-1 1v13a1 1 0 001 1h18a1 1 0 001-1V8a1 1 0 00-1-1z'],
+  // Media & UI
+  ['camera','Camera','M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z M12 17a4 4 0 100-8 4 4 0 000 8z'],
+  ['play','Play','M5 3l14 9-14 9V3z'],
+  ['music','Music','M9 18V5l12-2v13 M9 18a3 3 0 100-6 3 3 0 000 6z M21 16a3 3 0 100-6 3 3 0 000 6z'],
+  ['eye','Eye','M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 15a3 3 0 100-6 3 3 0 000 6z'],
+  // Actions & Status
+  ['search','Search','M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'],
+  ['edit','Edit','M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7 M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z'],
+  ['download','Download','M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M7 10l5 5 5-5 M12 15V3'],
+  ['info','Info','M12 22a10 10 0 100-20 10 10 0 000 20z M12 8h.01 M12 12v4'],
+  ['alert','Alert','M10.3 3.3L2.2 17a2 2 0 001.7 3h16.2a2 2 0 001.7-3L13.7 3.3a2 2 0 00-3.4 0z M12 9v4 M12 17h.01'],
+  ['lock','Lock','M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z M7 11V7a5 5 0 0110 0v4'],
+  ['plus','Plus','M12 5v14 M5 12h14'],
+  ['menu','Menu','M3 12h18 M3 6h18 M3 18h18'],
+  // Nature & Lifestyle
+  ['sun','Sun','M12 1v2 M12 21v2 M4.22 4.22l1.42 1.42 M18.36 18.36l1.42 1.42 M1 12h2 M21 12h2 M4.22 19.78l1.42-1.42 M18.36 5.64l1.42-1.42 M12 5a7 7 0 100 14A7 7 0 0012 5z'],
+  ['moon','Moon','M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z'],
+  ['leaf','Leaf','M17 8C8 10 5.9 16.17 3.82 19.82 M21 4c-1 1-3 3-5 4a9 9 0 01-14 8c4 0 9.5-3.5 11.5-11 1-3 2.5-5 7.5-1z'],
+  ['cloud','Cloud','M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z'],
+  // Coffee & Food
+  ['coffee','Coffee','M18 8h1a4 4 0 110 8h-1 M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z M6 1v3 M10 1v3 M14 1v3'],
+  // Misc
+  ['anchor','Anchor','M12 8a4 4 0 100-8 4 4 0 000 8z M12 4v16 M3.93 7h16.14a10 10 0 01-16.14 0z'],
+  ['refresh','Refresh','M23 4v6h-6 M1 20v-6h6 M3.51 9a9 9 0 0114.85-3.36L23 10 M1 14l4.64 4.36A9 9 0 0020.49 15'],
+  ['link','Link','M10 13a5 5 0 007.5.67l3-3a5 5 0 00-7.07-7.07L11.75 6 M14 11a5 5 0 00-7.5-.67l-3 3a5 5 0 007.07 7.07L12.25 18'],
 ];
 const customIconBases = [
-  ['home','Home'],['user','User'],['phone','Phone'],['letter','Email'],['map-point','Map Pin'],['cart-large-minimalistic','Cart'],
-  ['shop','Shop'],['calendar','Calendar'],['camera','Camera'],['gallery','Gallery'],['heart','Heart'],['star','Star'],
-  ['magnifer','Search'],['settings','Settings'],['trash-bin-trash','Trash'],['download','Download'],['upload','Upload'],['printer','Printer'],
-  ['document','Document'],['qr-code','QR Code'],['chat-round','Chat'],['bell','Bell'],['check-circle','Check'],['close-circle','Close'],
-  ['arrow-right','Arrow Right'],['link','Link'],['clock-circle','Clock'],['wallet','Wallet'],['sale','Sale'],['wifi-router','Wifi']
+  ['__','Essentials'],
+  ['home','Home'],['user','User'],['phone','Phone'],['letter','Email'],['map-point','Map Pin'],
+  ['shop','Shop'],['calendar','Calendar'],['camera','Camera'],['gallery','Gallery'],['star','Star'],
+  ['heart','Heart'],['magnifer','Search'],['settings','Settings'],['printer','Printer'],
+  ['document','Document'],['qr-code','QR Code'],['chat-round','Chat'],['bell','Bell'],
+  ['check-circle','Check'],['close-circle','Close'],['arrow-right','Arrow'],['link','Link'],
+  ['clock-circle','Clock'],['wallet','Wallet'],['sale','Sale'],['wifi-router','WiFi'],
+  ['download','Download'],['upload','Upload'],['cart-large-minimalistic','Cart'],['trash-bin-trash','Trash'],
+  ['__','Business & Finance'],
+  ['briefcase-minimalistic','Briefcase'],['chart-2','Chart'],['graph-up','Growth'],
+  ['money-bag','Money Bag'],['bill-list','Invoice'],['presentation-chart','Presentation'],
+  ['medal-star','Medal'],['tag-price','Price Tag'],['percent-circle','Percent'],
+  ['card-recieve','Card'],['safe-2','Safe'],['pie-chart-2','Pie Chart'],
+  ['__','Food & Drink'],
+  ['cup-hot','Coffee'],['hamburger','Burger'],['pizza-slice','Pizza'],['wine-glass','Wine'],
+  ['chef-hat','Chef'],['ice-cream-circle','Ice Cream'],['candy','Candy'],
+  ['fork-spoon','Utensils'],['bottle-glass','Bottle'],
+  ['__','Health & Wellness'],
+  ['heart-pulse','Heart Rate'],['dumbbell-small','Dumbbell'],['hospital','Hospital'],
+  ['pharmacy','Pharmacy'],['shield-plus','Health Shield'],['stethoscope','Stethoscope'],
+  ['health','Health'],['sleeping','Sleep'],
+  ['__','Real Estate'],
+  ['buildings','Buildings'],['buildings-2','Complex'],['home-angle','House 2'],
+  ['key-minimalistic','Key'],['sofa','Sofa'],['swimming-pool','Pool'],['garage','Garage'],
+  ['home-wifi','Smart Home'],['ruler','Ruler'],['tools','Tools'],
+  ['__','Sports & Fitness'],
+  ['basketball','Basketball'],['football','Football'],['tennis-ball','Tennis'],
+  ['bicycle','Cycling'],['trophy','Trophy'],['running','Running'],
+  ['swimming','Swimming'],['yoga','Yoga'],['dumbbell','Weights'],
+  ['__','People & Community'],
+  ['users-group-two-rounded','Group'],['baby','Baby'],['graduation-cap','Education'],
+  ['handshake','Handshake'],['people-nearby','People'],
+  ['__','Tech & Digital'],
+  ['laptop-minimalistic','Laptop'],['smartphone','Smartphone'],['monitor','Monitor'],
+  ['cpu-bolt','CPU'],['code-square','Code'],['server-path','Server'],
+  ['database','Database'],['cloud-storage','Cloud'],
+  ['__','Nature & Travel'],
+  ['tree','Tree'],['snowflake','Snowflake'],['leaf','Leaf'],['sun','Sun'],
+  ['airplane','Airplane'],['car','Car'],['bus','Bus'],['map','Map'],
+  ['__','Events & Arts'],
+  ['ticket','Ticket'],['confetti-minimalistic','Confetti'],['microphone','Microphone'],
+  ['headphones','Headphones'],['music-note-2','Music'],['clapperboard-play','Film'],
+  ['palette-round','Palette'],
+  ['__','Symbols'],
+  ['verified','Verified'],['shield-check','Shield'],['flag','Flag'],
+  ['crown-minimalistic','Crown'],['fire','Fire'],['infinity','Infinity'],
+  ['layers','Layers'],['box','Package'],['gift','Gift'],
 ];
 
 function addIcon(typeKey) {
@@ -3768,7 +4033,10 @@ function renderIcons() {
   const styles = [['line','Line'],['solid','Solid'],['broken','Broken']];
   const customStyles = [['linear','Linear'],['bold','Bold'],['broken','Broken'],['outline','Outline'],['line-duotone','Line Duo'],['bold-duotone','Bold Duo']];
   const filteredBasic = iconTypes.filter(([,label]) => label.toLowerCase().includes(iconSearch.toLowerCase()));
-  const filteredCustom = customIconBases.filter(([,label]) => label.toLowerCase().includes(iconSearch.toLowerCase()));
+  const iconQ = iconSearch.toLowerCase();
+  const filteredCustom = iconQ
+    ? customIconBases.filter(([key,label]) => key !== '__' && label.toLowerCase().includes(iconQ))
+    : customIconBases;
   return `
     <div style="padding:8px 12px;border-bottom:1px solid #f0f0f0;">
       <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;">Icon Library</div>
@@ -3787,17 +4055,19 @@ function renderIcons() {
     </div>
     <div style="padding:10px 12px;overflow-y:auto;flex:1;" class="thin-scroll">
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
-        ${iconLibrary === 'custom' ? filteredCustom.map(([key,label])=>`
-          <button onclick="addCustomIcon('${key}','${label}')" style="height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1.5px solid #e4e4e7;border-radius:6px;background:white;cursor:pointer;">
-            <img alt="" src="https://api.iconify.design/solar/${key}-${customIconStyle}.svg?color=%2318181b" style="width:23px;height:23px;">
-            <span style="font-size:9px;color:#52525b;text-align:center;line-height:1.1;">${label}</span>
-          </button>`).join('') : filteredBasic.map(([key,label,d])=>`
+        ${iconLibrary === 'custom' ? filteredCustom.map(([key,label])=> key === '__'
+            ? `<div style="grid-column:1/-1;font-size:9px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.06em;padding:8px 0 2px;margin-top:2px;">${label}</div>`
+            : `<button onclick="addCustomIcon('${key}','${label}')" style="height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1.5px solid #e4e4e7;border-radius:6px;background:white;cursor:pointer;">
+                <img alt="" src="https://api.iconify.design/solar/${key}-${customIconStyle}.svg?color=%2318181b" style="width:23px;height:23px;">
+                <span style="font-size:9px;color:#52525b;text-align:center;line-height:1.1;">${label}</span>
+              </button>`).join('')
+          : filteredBasic.map(([key,label,d])=>`
           <button onclick="addIcon('${key}')" style="height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1.5px solid #e4e4e7;border-radius:6px;background:white;cursor:pointer;">
             <svg width="22" height="22" viewBox="0 0 24 24"><path d="${d}" fill="${iconStyle==='solid'?'currentColor':'none'}" stroke="${iconStyle==='solid'?'none':'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${iconStyle==='broken'?'stroke-dasharray="4 4"':''}/></svg>
             <span style="font-size:9px;color:#52525b;">${label}</span>
           </button>`).join('')}
       </div>
-      ${(iconLibrary === 'custom' ? filteredCustom : filteredBasic).length === 0 ? `<div style="padding:24px 12px;text-align:center;font-size:12px;color:#a1a1aa;">No icons found.</div>` : ''}
+      ${(iconLibrary === 'custom' ? filteredCustom.filter(([k])=>k!=='__') : filteredBasic).length === 0 ? `<div style="padding:24px 12px;text-align:center;font-size:12px;color:#a1a1aa;">No icons found.</div>` : ''}
      </div>`;
 }
 
@@ -3965,6 +4235,7 @@ let currentTool = 'swap';
 let layers = [];
 let selLayer = -1;
 let rulerVisible = false;
+let clipboardLayer = null;
 let savedDesigns = [];
 let activeDesignDraftId = null;
 let undoStack = [];
@@ -4126,12 +4397,16 @@ function _applyTemplate(tpl) {
   selectLayer(0);
 }
 
-async function generateAIDesign() {
+async function generateAIDesign(regenerate = false) {
+  if (aiGenerating) return;
   const promptEl = document.getElementById('ai-design-prompt');
-  const prompt = promptEl?.value?.trim();
+  const prompt = regenerate && aiLastDesign?.prompt ? aiLastDesign.prompt : promptEl?.value?.trim();
   if (!prompt) { dnToast('Please describe your design first.', 'info'); return; }
+  aiGenerating = true;
   const statusEl = document.getElementById('ai-design-status');
-  if (statusEl) statusEl.textContent = 'Generating your design…';
+  const label = document.getElementById('ai-gen-label');
+  if (statusEl) statusEl.textContent = 'Generating…';
+  if (label) label.textContent = 'Generating…';
   const productNames = { bc:'Business Card', 'bc-h':'Business Card (Horizontal)', af:'A-Frame Sign', bn:'Banner', rs:'Rigid Sign', wa:'Wall Art', hat:'Hat', fl:'Flag' };
   const productType = productNames[currentProduct] || 'Print Product';
   try {
@@ -4140,12 +4415,51 @@ async function generateAIDesign() {
     const design = await res.json();
     if (design.error) throw new Error(design.error);
     _applyTemplate({ id:'ai-generated', name: design.name || 'AI Design', elements: design.elements || [] });
+    aiLastDesign = { prompt, style: aiDesignStyle };
+    if (!aiPromptHistory.includes(prompt)) {
+      aiPromptHistory.unshift(prompt);
+      if (aiPromptHistory.length > 5) aiPromptHistory.pop();
+    }
+    setTool('designs');
     closeMobileFlyout();
     dnToast('AI design applied! Tap any element to edit.', 'success');
-    if (statusEl) statusEl.textContent = '';
   } catch(err) {
     if (statusEl) statusEl.textContent = '';
     dnToast('Generation failed — please try again.', 'error');
+  } finally {
+    aiGenerating = false;
+    if (label) label.textContent = 'Generate Design';
+    if (statusEl) statusEl.textContent = '';
+  }
+}
+
+function openAIRefine() {
+  const box = document.getElementById('ai-refine-box');
+  if (box) { box.style.display = box.style.display === 'none' ? 'block' : 'none'; }
+}
+
+async function refineAIDesign() {
+  if (aiGenerating || !aiLastDesign) return;
+  const refineEl = document.getElementById('ai-refine-prompt');
+  const refinement = refineEl?.value?.trim();
+  if (!refinement) { dnToast('Describe what to change.', 'info'); return; }
+  const combinedPrompt = `${aiLastDesign.prompt}. Refinement: ${refinement}`;
+  const promptEl = document.getElementById('ai-design-prompt');
+  if (promptEl) promptEl.value = combinedPrompt;
+  await generateAIDesign();
+}
+
+function insertBizInfo() {
+  const name = document.getElementById('ai-biz-name')?.value?.trim();
+  const tag = document.getElementById('ai-biz-tag')?.value?.trim();
+  const contact = document.getElementById('ai-biz-contact')?.value?.trim();
+  const parts = [name && `Business: ${name}`, tag && `Tagline: "${tag}"`, contact && `Contact: ${contact}`].filter(Boolean);
+  if (!parts.length) { dnToast('Fill in at least one field.', 'info'); return; }
+  const promptEl = document.getElementById('ai-design-prompt');
+  if (promptEl) {
+    const existing = promptEl.value.trim();
+    promptEl.value = existing ? `${existing}. ${parts.join(', ')}` : parts.join('. ') + '.';
+    promptEl.focus();
   }
 }
 
@@ -4652,6 +4966,70 @@ function deleteLayer(i) {
   selLayer = -1; updateSelectionBox(); setTool('layers');
 }
 
+function copyLayer() {
+  if (selLayer < 0 || !layers[selLayer]) return;
+  clipboardLayer = layerToSnapshot(layers[selLayer]);
+  dnToast('Layer copied.', 'success');
+}
+
+function pasteLayer(offset = true) {
+  if (!clipboardLayer) return;
+  const g = document.getElementById('canvas-design');
+  if (!g) return;
+  saveHistory();
+  const wrap = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  wrap.innerHTML = clipboardLayer.html;
+  const el = wrap.firstElementChild;
+  if (!el) return;
+  g.insertBefore(el, g.firstChild);
+  const meta = JSON.parse(JSON.stringify(clipboardLayer.meta));
+  if (offset) { meta.x += 10; meta.y += 10; }
+  meta.name = meta.name?.replace(/ copy\d*$/, '') + ' copy';
+  const layer = { ...meta, el };
+  layers.unshift(layer);
+  refreshLayerIndexes();
+  registerLayerElement(layer, 0);
+  applyLayerTransform(layer);
+  selLayer = 0;
+  updateSelectionBox();
+  setTool('layers');
+}
+
+function duplicateLayer() {
+  if (selLayer < 0 || !layers[selLayer]) return;
+  clipboardLayer = layerToSnapshot(layers[selLayer]);
+  pasteLayer(true);
+}
+
+function nudgeLayer(dx, dy) {
+  if (selLayer < 0 || !layers[selLayer] || layers[selLayer].locked) return;
+  saveHistory();
+  layers[selLayer].x += dx;
+  layers[selLayer].y += dy;
+  applyLayerTransform(layers[selLayer]);
+  updateSelectionBox();
+}
+
+function alignLayer(dir) {
+  if (selLayer < 0 || !layers[selLayer] || layers[selLayer].locked) return;
+  saveHistory();
+  const layer = layers[selLayer];
+  const { ax, ay, aw, ah } = getPrintAreaBounds();
+  const sx = layer.scaleX ?? layer.scale ?? 1;
+  const sy = layer.scaleY ?? layer.scale ?? 1;
+  const hw = layer.w * sx / 2;
+  const hh = layer.h * sy / 2;
+  if (dir === 'left')   layer.x = ax + hw;
+  if (dir === 'cx')     layer.x = ax + aw / 2;
+  if (dir === 'right')  layer.x = ax + aw - hw;
+  if (dir === 'top')    layer.y = ay + hh;
+  if (dir === 'cy')     layer.y = ay + ah / 2;
+  if (dir === 'bottom') layer.y = ay + ah - hh;
+  applyLayerTransform(layer);
+  updateSelectionBox();
+  setTool('layers');
+}
+
 function escapeHtml(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -4676,7 +5054,8 @@ function designerProductLabel() {
     bn: 'Banner',
     rs: 'Rigid sign',
     af: 'A-frame sign',
-    fl: 'Flag'
+    fl: 'Flag',
+    po: 'Poster',
   };
   return labels[currentProduct] || 'Custom design';
 }
@@ -5012,6 +5391,9 @@ function handleDone() {
     const s = FL_SIZES[fl.size];
     const flBaseLabel = FL_PRICES.base[fl.base]?.label || 'No Base';
     item = { product_id: 'fl', sku: `fl-${fl.size}-${fl.sides}-${fl.base}`, name: `Feather Flag — ${s.label} · ${fl.sides === 'double' ? 'Double-Sided' : 'Single-Sided'} · ${flBaseLabel}`, unit_price: calcFlPrice(), quantity: fl.quantity, image: null };
+  } else if (currentProduct === 'po') {
+    const s = PO_SIZES[po.size];
+    item = { product_id: 'po', sku: `po-${po.size}-${po.finish}`, name: `Poster — ${s.label} · ${PO_FINISH_LABELS[po.finish]}`, unit_price: calcPoPrice() / po.quantity, quantity: po.quantity, image: null };
   } else {
     const s = SIZES[bc.size];
     item = { product_id: 'bc', sku: `bc-${bc.size}`, name: `Business Cards — ${s?.label || bc.size}`, unit_price: calcPrice(), quantity: bc.quantity, image: null };
@@ -5029,7 +5411,7 @@ function handleDone() {
   }
   // Also honour a direct ?key= param (e.g. ?key=af) for deep-linking
   const directKey = new URLSearchParams(window.location.search).get('key') || '';
-  if (!key && ['hat','bc','wa','bn','rs','af','fl'].includes(directKey)) {
+  if (!key && ['hat','bc','wa','bn','rs','af','fl','po'].includes(directKey)) {
     currentProduct = directKey;
   }
 })();
@@ -5040,14 +5422,24 @@ loadDesignDraftFromUrl();
 document.addEventListener('keydown', e => {
   const tag = (e.target && e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+  const ctrl = e.ctrlKey || e.metaKey;
+  const key = e.key.toLowerCase();
+  if (ctrl && key === 'z') { e.preventDefault(); e.shiftKey ? redoDesign() : undoDesign(); return; }
+  if (ctrl && key === 'y') { e.preventDefault(); redoDesign(); return; }
+  if (ctrl && key === 'c') { e.preventDefault(); copyLayer(); return; }
+  if (ctrl && key === 'v') { e.preventDefault(); pasteLayer(); return; }
+  if (ctrl && key === 'd') { e.preventDefault(); duplicateLayer(); return; }
+  if ((key === 'delete' || key === 'backspace') && selLayer >= 0) {
     e.preventDefault();
-    e.shiftKey ? redoDesign() : undoDesign();
+    deleteLayer(selLayer);
+    return;
   }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-    e.preventDefault();
-    redoDesign();
-  }
+  if (key === 'escape') { selectLayer(-1, false); return; }
+  const nudge = e.shiftKey ? 10 : 1;
+  if (key === 'arrowleft')  { e.preventDefault(); nudgeLayer(-nudge, 0); return; }
+  if (key === 'arrowright') { e.preventDefault(); nudgeLayer(nudge, 0);  return; }
+  if (key === 'arrowup')    { e.preventDefault(); nudgeLayer(0, -nudge); return; }
+  if (key === 'arrowdown')  { e.preventDefault(); nudgeLayer(0, nudge);  return; }
 });
 </script>
 
