@@ -2515,23 +2515,200 @@ function renderImage() {
 
 let designStyleTab = 'business';
 let designSearch = '';
-const designStyles = {
-  business: ['Classic Typography','Bold Name + Title','Minimalist Line','Monogram Initial','Double-Rule Border','Modern Grid'],
-  promo: ['Sale Banner','Grand Opening','Event Flyer','Coupon Layout','Bold Offer','QR Code Promo'],
-  signage: ['Directional Sign','Hours + Logo','Menu Board','Window Decal','Yard Sign','Safety Notice'],
-  luxury: ['Script Name','Gold Accent','Editorial Frame','Center Badge','Minimal Foil','Gallery Label']
-};
+let aiDesignStyle = 'Minimal';
+
+const designTemplates = [
+  // ── Business ──────────────────────────────────────────────────────────────
+  { id:'classic-typography', name:'Classic Typography', category:'business', elements:[
+    { type:'text', text:'YOUR NAME', xr:.5, yr:.33, sizer:.068, font:'Georgia, serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'JOB TITLE', xr:.5, yr:.49, sizer:.032, font:'Inter, sans-serif', align:'center', color:'#71717a', letterSpacing:2 },
+    { type:'rule', xr:.5, yr:.59, wr:.36, color:'#d4d4d8' },
+    { type:'text', text:'email@company.com', xr:.5, yr:.69, sizer:.027, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+    { type:'text', text:'(555) 000-0000  ·  yoursite.com', xr:.5, yr:.79, sizer:.025, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+  ]},
+  { id:'bold-name-title', name:'Bold Name + Title', category:'business', elements:[
+    { type:'text', text:'YOUR NAME', xr:.5, yr:.38, sizer:.088, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Creative Director', xr:.5, yr:.62, sizer:.034, font:'Inter, sans-serif', align:'center', color:'#6b7280' },
+  ]},
+  { id:'minimalist-line', name:'Minimalist Line', category:'business', elements:[
+    { type:'text', text:'YOUR NAME', xr:.5, yr:.40, sizer:.055, font:'Inter, sans-serif', align:'center', color:'#18181b', letterSpacing:4 },
+    { type:'rule', xr:.5, yr:.52, wr:.5, color:'#a3e635', thick:2 },
+    { type:'text', text:'yourwebsite.com', xr:.5, yr:.64, sizer:.027, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+  ]},
+  { id:'monogram-initial', name:'Monogram Initial', category:'business', elements:[
+    { type:'text', text:'J', xr:.5, yr:.32, sizer:.16, font:'Georgia, serif', bold:true, align:'center', color:'#18181b' },
+    { type:'rule', xr:.5, yr:.54, wr:.22, color:'#d4d4d8' },
+    { type:'text', text:'YOUR FULL NAME', xr:.5, yr:.65, sizer:.030, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:2 },
+    { type:'text', text:'Title  ·  Company', xr:.5, yr:.76, sizer:.025, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+  ]},
+  { id:'double-rule-border', name:'Double-Rule Border', category:'business', elements:[
+    { type:'rule', xr:.5, yr:.20, wr:.82, color:'#18181b', thick:2 },
+    { type:'rule', xr:.5, yr:.25, wr:.82, color:'#18181b', thick:.6 },
+    { type:'text', text:'YOUR NAME', xr:.5, yr:.47, sizer:.062, font:'Georgia, serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'COMPANY  ·  TITLE', xr:.5, yr:.63, sizer:.026, font:'Inter, sans-serif', align:'center', color:'#71717a', letterSpacing:2 },
+    { type:'rule', xr:.5, yr:.76, wr:.82, color:'#18181b', thick:.6 },
+    { type:'rule', xr:.5, yr:.81, wr:.82, color:'#18181b', thick:2 },
+  ]},
+  { id:'modern-grid', name:'Modern Grid', category:'business', elements:[
+    { name:'Accent Bar', type:'rect', xr:.08, yr:.5, wr:.012, hr:.55, color:'#a3e635' },
+    { type:'text', text:'YOUR NAME', xr:.16, yr:.34, sizer:.055, font:'Inter, sans-serif', bold:true, align:'left', color:'#18181b' },
+    { type:'text', text:'Job Title', xr:.16, yr:.49, sizer:.030, font:'Inter, sans-serif', align:'left', color:'#71717a' },
+    { type:'text', text:'email@company.com', xr:.16, yr:.63, sizer:.024, font:'Inter, sans-serif', align:'left', color:'#a1a1aa' },
+    { type:'text', text:'(555) 000-0000', xr:.16, yr:.73, sizer:.024, font:'Inter, sans-serif', align:'left', color:'#a1a1aa' },
+  ]},
+  // ── Promo ─────────────────────────────────────────────────────────────────
+  { id:'sale-banner', name:'Sale Banner', category:'promo', elements:[
+    { type:'text', text:'SALE', xr:.5, yr:.27, sizer:.17, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'50% OFF', xr:.5, yr:.53, sizer:.10, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635' },
+    { type:'rule', xr:.5, yr:.65, wr:.55, color:'#d4d4d8' },
+    { type:'text', text:'Limited Time Only', xr:.5, yr:.76, sizer:.033, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+  ]},
+  { id:'grand-opening', name:'Grand Opening', category:'promo', elements:[
+    { type:'text', text:'GRAND', xr:.5, yr:.26, sizer:.062, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:6 },
+    { type:'text', text:'OPENING', xr:.5, yr:.42, sizer:.062, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:6 },
+    { type:'rule', xr:.5, yr:.53, wr:.5, color:'#a3e635', thick:2 },
+    { type:'text', text:'You\'re Invited!', xr:.5, yr:.65, sizer:.034, font:'Georgia, serif', italic:true, align:'center', color:'#52525b' },
+    { type:'text', text:'Date · Time · Location', xr:.5, yr:.78, sizer:.026, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+  ]},
+  { id:'flash-deal', name:'Flash Deal', category:'promo', elements:[
+    { name:'Top Bar', type:'rect', xr:.5, yr:.14, wr:1, hr:.22, color:'#18181b' },
+    { type:'text', text:'FLASH DEAL', xr:.5, yr:.14, sizer:.052, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:3 },
+    { type:'text', text:'BUY 2 GET 1 FREE', xr:.5, yr:.45, sizer:.07, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Today Only — While Supplies Last', xr:.5, yr:.64, sizer:.027, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+    { type:'text', text:'controlp.io', xr:.5, yr:.80, sizer:.025, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+  ]},
+  { id:'new-arrival', name:'New Arrival', category:'promo', elements:[
+    { type:'text', text:'NEW ARRIVAL', xr:.5, yr:.27, sizer:.052, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:4 },
+    { type:'rule', xr:.5, yr:.37, wr:.6, color:'#a3e635', thick:1.5 },
+    { type:'text', text:'Product Name Here', xr:.5, yr:.52, sizer:.052, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Available Now In-Store & Online', xr:.5, yr:.68, sizer:.027, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+    { type:'text', text:'yourstore.com', xr:.5, yr:.80, sizer:.027, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+  ]},
+  { id:'event-invite', name:'Event Invite', category:'promo', elements:[
+    { type:'text', text:'You Are Invited', xr:.5, yr:.23, sizer:.052, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'rule', xr:.5, yr:.33, wr:.45, color:'#d4d4d8' },
+    { type:'text', text:'EVENT NAME', xr:.5, yr:.47, sizer:.070, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Saturday, July 4th  ·  7:00 PM', xr:.5, yr:.62, sizer:.029, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+    { type:'text', text:'123 Venue Street, City', xr:.5, yr:.73, sizer:.026, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+    { type:'text', text:'RSVP by June 25th', xr:.5, yr:.84, sizer:.024, font:'Inter, sans-serif', align:'center', color:'#a3e635' },
+  ]},
+  { id:'shop-now-cta', name:'Shop Now CTA', category:'promo', elements:[
+    { name:'Background', type:'rect', xr:.5, yr:.5, wr:1, hr:1, color:'#18181b' },
+    { type:'text', text:'EVERYTHING MUST GO', xr:.5, yr:.29, sizer:.052, font:'Inter, sans-serif', bold:true, align:'center', color:'white', letterSpacing:2 },
+    { type:'text', text:'UP TO 70% OFF', xr:.5, yr:.50, sizer:.10, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635' },
+    { name:'CTA Button', type:'rect', xr:.5, yr:.73, wr:.38, hr:.12, color:'white', rx:.015 },
+    { type:'text', text:'SHOP NOW', xr:.5, yr:.73, sizer:.038, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+  ]},
+  // ── Signage ───────────────────────────────────────────────────────────────
+  { id:'directional-sign', name:'Directional Sign', category:'signage', elements:[
+    { type:'text', text:'→  MAIN ENTRANCE', xr:.5, yr:.38, sizer:.063, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:2 },
+    { type:'rule', xr:.5, yr:.52, wr:.75, color:'#a3e635', thick:3 },
+    { type:'text', text:'100 METRES AHEAD', xr:.5, yr:.65, sizer:.034, font:'Inter, sans-serif', align:'center', color:'#71717a', letterSpacing:3 },
+  ]},
+  { id:'hours-board', name:'Hours Board', category:'signage', elements:[
+    { type:'text', text:'HOURS OF OPERATION', xr:.5, yr:.17, sizer:.046, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:2 },
+    { type:'rule', xr:.5, yr:.26, wr:.8, color:'#a3e635', thick:2 },
+    { type:'text', text:'Mon – Fri:  9:00 AM – 6:00 PM', xr:.5, yr:.40, sizer:.032, font:'Inter, sans-serif', align:'center', color:'#18181b' },
+    { type:'text', text:'Saturday:  10:00 AM – 4:00 PM', xr:.5, yr:.53, sizer:.032, font:'Inter, sans-serif', align:'center', color:'#18181b' },
+    { type:'text', text:'Sunday:  Closed', xr:.5, yr:.66, sizer:.032, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+    { type:'text', text:'(555) 000-0000', xr:.5, yr:.82, sizer:.030, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+  ]},
+  { id:'todays-special', name:"Today's Special", category:'signage', elements:[
+    { type:'text', text:"TODAY'S SPECIAL", xr:.5, yr:.18, sizer:.048, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:3 },
+    { type:'rule', xr:.5, yr:.27, wr:.7, color:'#a3e635', thick:2 },
+    { type:'text', text:'Seasonal Item Name', xr:.5, yr:.44, sizer:.068, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Fresh · Local · Delicious', xr:.5, yr:.61, sizer:.027, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+    { type:'rule', xr:.5, yr:.71, wr:.4, color:'#d4d4d8' },
+    { type:'text', text:'ONLY $12.99', xr:.5, yr:.82, sizer:.048, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635' },
+  ]},
+  { id:'coming-soon', name:'Coming Soon', category:'signage', elements:[
+    { type:'text', text:'COMING', xr:.5, yr:.30, sizer:.09, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'SOON', xr:.5, yr:.50, sizer:.09, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635' },
+    { type:'text', text:'Something exciting is on its way.', xr:.5, yr:.68, sizer:.030, font:'Georgia, serif', italic:true, align:'center', color:'#71717a' },
+    { type:'text', text:'yoursite.com', xr:.5, yr:.82, sizer:.030, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+  ]},
+  { id:'welcome-sign', name:'Welcome Sign', category:'signage', elements:[
+    { type:'text', text:'Welcome', xr:.5, yr:.33, sizer:.11, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'rule', xr:.5, yr:.47, wr:.5, color:'#a3e635', thick:2 },
+    { type:'text', text:'TO OUR STORE', xr:.5, yr:.60, sizer:.038, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:4 },
+    { type:'text', text:'We are glad you are here', xr:.5, yr:.74, sizer:.026, font:'Inter, sans-serif', align:'center', color:'#71717a' },
+  ]},
+  { id:'safety-notice', name:'Safety Notice', category:'signage', elements:[
+    { name:'Header Bar', type:'rect', xr:.5, yr:.13, wr:1, hr:.20, color:'#18181b' },
+    { type:'text', text:'NOTICE', xr:.5, yr:.13, sizer:.072, font:'Inter, sans-serif', bold:true, align:'center', color:'#a3e635', letterSpacing:5 },
+    { type:'text', text:'HARD HAT AREA', xr:.5, yr:.42, sizer:.062, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Protective equipment required beyond this point.', xr:.5, yr:.61, sizer:.029, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+    { type:'text', text:'THANK YOU FOR YOUR COOPERATION', xr:.5, yr:.83, sizer:.021, font:'Inter, sans-serif', bold:true, align:'center', color:'#a1a1aa', letterSpacing:1 },
+  ]},
+  // ── Luxury ────────────────────────────────────────────────────────────────
+  { id:'script-elegance', name:'Script Elegance', category:'luxury', elements:[
+    { type:'text', text:'Your Name', xr:.5, yr:.35, sizer:.092, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'rule', xr:.5, yr:.50, wr:.28, color:'#d4a22a', thick:1 },
+    { type:'text', text:'FINE GOODS & SERVICES', xr:.5, yr:.63, sizer:.023, font:'Inter, sans-serif', bold:true, align:'center', color:'#d4a22a', letterSpacing:3 },
+    { type:'text', text:'yoursite.com', xr:.5, yr:.76, sizer:.024, font:'Georgia, serif', italic:true, align:'center', color:'#71717a' },
+  ]},
+  { id:'gold-accent', name:'Gold Accent', category:'luxury', elements:[
+    { type:'rule', xr:.5, yr:.22, wr:.65, color:'#d4a22a', thick:1 },
+    { type:'text', text:'YOUR NAME', xr:.5, yr:.38, sizer:.056, font:'Georgia, serif', bold:true, align:'center', color:'#18181b', letterSpacing:3 },
+    { type:'text', text:'Title', xr:.5, yr:.53, sizer:.028, font:'Georgia, serif', italic:true, align:'center', color:'#d4a22a' },
+    { type:'rule', xr:.5, yr:.65, wr:.65, color:'#d4a22a', thick:1 },
+    { type:'text', text:'yoursite.com  ·  (555) 000-0000', xr:.5, yr:.80, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+  ]},
+  { id:'editorial-frame', name:'Editorial Frame', category:'luxury', elements:[
+    { type:'rule', xr:.5, yr:.12, wr:.88, color:'#18181b', thick:1.5 },
+    { type:'rule', xr:.5, yr:.88, wr:.88, color:'#18181b', thick:1.5 },
+    { type:'text', text:'VOLUME I  ·  NO. 1', xr:.5, yr:.22, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#a1a1aa', letterSpacing:3 },
+    { type:'text', text:'The Name', xr:.5, yr:.46, sizer:.092, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'BRAND  &  CO.', xr:.5, yr:.66, sizer:.028, font:'Inter, sans-serif', bold:true, align:'center', color:'#18181b', letterSpacing:5 },
+    { type:'text', text:'EST. 2024', xr:.5, yr:.80, sizer:.021, font:'Inter, sans-serif', align:'center', color:'#a1a1aa', letterSpacing:2 },
+  ]},
+  { id:'minimal-monogram', name:'Minimal Monogram', category:'luxury', elements:[
+    { type:'text', text:'AB', xr:.5, yr:.40, sizer:.18, font:'Georgia, serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'COMPANY NAME', xr:.5, yr:.70, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#a1a1aa', letterSpacing:5 },
+  ]},
+  { id:'gallery-label', name:'Gallery Label', category:'luxury', elements:[
+    { type:'rule', xr:.5, yr:.28, wr:.55, color:'#18181b', thick:.8 },
+    { type:'text', text:'ARTWORK TITLE', xr:.5, yr:.40, sizer:.042, font:'Georgia, serif', bold:true, align:'center', color:'#18181b' },
+    { type:'text', text:'Artist Name, Year', xr:.5, yr:.53, sizer:.028, font:'Georgia, serif', italic:true, align:'center', color:'#52525b' },
+    { type:'text', text:'Medium · Dimensions', xr:.5, yr:.65, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#a1a1aa' },
+    { type:'rule', xr:.5, yr:.74, wr:.55, color:'#18181b', thick:.8 },
+  ]},
+  { id:'champagne', name:'Champagne', category:'luxury', elements:[
+    { type:'rule', xr:.5, yr:.18, wr:.3, color:'#d4a22a', thick:.8 },
+    { type:'text', text:'CELEBRATING', xr:.5, yr:.28, sizer:.028, font:'Inter, sans-serif', bold:true, align:'center', color:'#d4a22a', letterSpacing:4 },
+    { type:'text', text:'The Occasion', xr:.5, yr:.46, sizer:.080, font:'Georgia, serif', italic:true, align:'center', color:'#18181b' },
+    { type:'text', text:'A Special Event', xr:.5, yr:.62, sizer:.030, font:'Inter, sans-serif', align:'center', color:'#52525b' },
+    { type:'rule', xr:.5, yr:.73, wr:.3, color:'#d4a22a', thick:.8 },
+    { type:'text', text:'DATE  ·  VENUE', xr:.5, yr:.83, sizer:.022, font:'Inter, sans-serif', align:'center', color:'#a1a1aa', letterSpacing:3 },
+  ]},
+];
+
+function getTemplatePreview(tpl) {
+  const W = 52, H = 34;
+  const shapes = tpl.elements.map(el => {
+    const cx = W * (el.xr ?? .5), cy = H * (el.yr ?? .5);
+    if (el.type === 'text') {
+      const th = Math.max(1.5, H * (el.sizer ?? .04) * .85);
+      const tw = Math.min(W * .9, (el.text||'').length * th * .46);
+      const x = el.align === 'left' ? cx : el.align === 'right' ? cx - tw : cx - tw / 2;
+      return `<rect x="${x.toFixed(1)}" y="${(cy-th/2).toFixed(1)}" width="${Math.max(tw,2).toFixed(1)}" height="${th.toFixed(1)}" rx=".4" fill="${el.color||'#18181b'}" opacity="${el.bold?'1':'.55'}"/>`;
+    } else if (el.type === 'rule') {
+      const rw = W*(el.wr??.4), t = Math.max(.4,(el.thick??1)*.45);
+      return `<rect x="${(cx-rw/2).toFixed(1)}" y="${(cy-t/2).toFixed(1)}" width="${rw.toFixed(1)}" height="${t.toFixed(1)}" fill="${el.color||'#d4d4d8'}"/>`;
+    } else if (el.type === 'rect') {
+      const rw = W*(el.wr??.5), rh = H*(el.hr??.1);
+      return `<rect x="${(cx-rw/2).toFixed(1)}" y="${(cy-rh/2).toFixed(1)}" width="${rw.toFixed(1)}" height="${rh.toFixed(1)}" fill="${el.color||'#18181b'}"/>`;
+    }
+    return '';
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;">${shapes}</svg>`;
+}
 
 function renderDesigns() {
-  const styleTabs = [
-    ['business','Business'],
-    ['promo','Promo'],
-    ['signage','Signage'],
-    ['luxury','Luxury'],
-    ['ai','AI']
-  ];
-  const list = designStyleTab === 'ai' ? [] : (designStyles[designStyleTab] || []);
-  const filtered = list.filter(d => d.toLowerCase().includes(designSearch.toLowerCase()));
+  const tabs = [['business','Business'],['promo','Promo'],['signage','Signage'],['luxury','Luxury'],['ai','AI ✦']];
+  const list = designStyleTab === 'ai' ? [] : designTemplates.filter(t =>
+    t.category === designStyleTab && (!designSearch || t.name.toLowerCase().includes(designSearch.toLowerCase()))
+  );
   return `
     <div style="padding:8px 10px 6px;border-bottom:1px solid #f0f0f0;">
       <div style="display:flex;align-items:center;gap:6px;border:1px solid #e4e4e7;border-radius:6px;padding:6px 10px;">
@@ -2539,26 +2716,35 @@ function renderDesigns() {
         <input value="${escAttr(designSearch)}" oninput="designSearch=this.value;setTool('designs');" placeholder="Search designs..." style="border:none;outline:none;font-size:12px;color:#52525b;width:100%;background:none;"/>
       </div>
       <div style="display:flex;gap:5px;overflow-x:auto;margin-top:8px;padding-bottom:2px;" class="thin-scroll">
-        ${styleTabs.map(([key,label])=>`<button onclick="designStyleTab='${key}';setTool('designs');" style="padding:5px 8px;border:1px solid ${designStyleTab===key?'#18181b':'#e4e4e7'};border-radius:5px;background:${designStyleTab===key?'#18181b':'white'};color:${designStyleTab===key?'white':'#52525b'};font-size:11px;white-space:nowrap;cursor:pointer;">${label}</button>`).join('')}
+        ${tabs.map(([k,l])=>`<button onclick="designStyleTab='${k}';designSearch='';setTool('designs');" style="padding:5px 9px;border:1px solid ${designStyleTab===k?'#18181b':'#e4e4e7'};border-radius:5px;background:${designStyleTab===k?'#18181b':'white'};color:${designStyleTab===k?'white':'#52525b'};font-size:11px;font-weight:${designStyleTab===k?'600':'400'};white-space:nowrap;cursor:pointer;">${l}</button>`).join('')}
       </div>
     </div>
-    <div style="padding:8px;overflow-y:auto;" class="thin-scroll">
+    <div style="padding:8px;overflow-y:auto;flex:1;" class="thin-scroll">
       ${designStyleTab === 'ai' ? `
-        <div style="padding:28px 14px;text-align:center;">
-          <div style="font-size:13px;font-weight:700;color:#18181b;margin-bottom:4px;">AI Design Studio</div>
-          <div style="font-size:12px;color:#71717a;line-height:1.45;">Coming soon. This panel will connect to the AI Design API later.</div>
+        <div style="padding:2px 2px 6px;">
+          <div style="font-size:11px;font-weight:700;color:#3f3f46;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Describe your design</div>
+          <textarea id="ai-design-prompt" placeholder="e.g. A bold business card for a photographer — dark background, white text, clean minimal layout with a lime green accent line..." style="width:100%;box-sizing:border-box;height:82px;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:12px;color:#18181b;resize:none;outline:none;font-family:Inter,sans-serif;line-height:1.4;display:block;"></textarea>
+          <div style="font-size:11px;font-weight:700;color:#3f3f46;margin:8px 0 5px;text-transform:uppercase;letter-spacing:.04em;">Style</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+            ${['Minimal','Bold','Luxury','Playful','Corporate'].map(s=>`<button onclick="aiDesignStyle='${s}';document.querySelectorAll('.ai-style-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');" class="ai-style-btn opt-btn${s==='Minimal'?' active':''}" style="font-size:11px;">${s}</button>`).join('')}
+          </div>
+          <button onclick="generateAIDesign()" style="width:100%;padding:11px;border-radius:7px;background:#18181b;color:white;border:none;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Generate Design
+          </button>
+          <div id="ai-design-status" style="margin-top:8px;font-size:12px;color:#71717a;text-align:center;min-height:18px;"></div>
+          <div style="margin-top:12px;padding:10px;background:#fafafa;border:1px solid #f0f0f0;border-radius:7px;font-size:11px;color:#a1a1aa;line-height:1.5;">
+            AI generates a unique editable layout from your description. Each element can be moved, resized, and styled after generation.
+          </div>
         </div>` : `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-        ${filtered.map((d,i) => `
-          <div onclick="applyDesign(${i},'${d}')" id="dc-${i}" class="design-card" style="height:72px;flex-direction:column;gap:4px;">
-            <div style="width:48px;height:30px;background:${['#f4f4f5','#eff6ff','#fef3c7','#fdf2f8'][i%4]};border-radius:3px;border:1px solid #e4e4e7;position:relative;">
-              <div style="position:absolute;left:7px;top:8px;width:34px;height:3px;background:#18181b;border-radius:2px;"></div>
-              <div style="position:absolute;left:12px;top:16px;width:24px;height:2px;background:#a1a1aa;border-radius:2px;"></div>
-            </div>
-            <span style="font-size:9.5px;font-weight:500;color:#52525b;text-align:center;">${d}</span>
-          </div>`).join('')}
-        </div>
-        ${filtered.length === 0 ? `<div style="padding:24px 12px;text-align:center;font-size:12px;color:#a1a1aa;">No designs found.</div>` : ''}`}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+          ${list.map(tpl=>`
+            <div onclick="applyDesign('${tpl.id}')" id="dc-${tpl.id}" class="design-card" style="height:80px;flex-direction:column;gap:5px;padding:7px 5px;">
+              <div style="background:#fafafa;border:1px solid #f0f0f0;border-radius:4px;padding:3px;display:flex;align-items:center;justify-content:center;flex:1;">${getTemplatePreview(tpl)}</div>
+              <span style="font-size:9px;font-weight:500;color:#52525b;text-align:center;line-height:1.2;">${tpl.name}</span>
+            </div>`).join('')}
+          ${list.length===0?`<div style="grid-column:1/-1;padding:24px 12px;text-align:center;font-size:12px;color:#a1a1aa;">No designs found.</div>`:''}
+        </div>`}
     </div>`;
 }
 
@@ -3628,33 +3814,96 @@ function switchTab(btn) {
   btn.classList.add('active');
 }
 
-function applyDesign(i, name) {
+function applyDesign(templateId) {
+  const tpl = designTemplates.find(t => t.id === templateId);
+  if (!tpl) return;
   document.querySelectorAll('.design-card').forEach(c => c.classList.remove('selected'));
-  const card = document.getElementById('dc-' + i);
+  const card = document.getElementById('dc-' + templateId);
   if (card) card.classList.add('selected');
+  _applyTemplate(tpl);
+}
+
+function _applyTemplate(tpl) {
   const g = document.getElementById('canvas-design');
   if (!g) return;
   saveHistory();
-  const { cw, ch } = getCardDimensions();
-  g.innerHTML = '';
+  // Remove any existing template layers, preserve user-added layers
+  layers.filter(l => l._tpl).forEach(l => { try { l.el?.parentNode?.removeChild(l.el); } catch(e){} });
+  layers = layers.filter(l => !l._tpl);
+  const { ax, ay, aw, ah } = getPrintAreaBounds();
   const ns = 'http://www.w3.org/2000/svg';
-  const wrapper = document.createElementNS(ns, 'g');
-  wrapper.innerHTML = `
-    <text x="0" y="${ch*0.38 - ch/2}" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="${Math.max(10,cw*0.06)}" fill="#18181b">JOHN WATERS</text>
-    <text x="0" y="${ch*0.52 - ch/2}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(7,cw*0.038)}" fill="#71717a" letter-spacing="2">CREATIVE DIRECTOR</text>
-    <line x1="${cw*0.3 - cw/2}" y1="${ch*0.6 - ch/2}" x2="${cw*0.7 - cw/2}" y2="${ch*0.6 - ch/2}" stroke="#e4e4e7" stroke-width="1"/>
-    <text x="0" y="${ch*0.73 - ch/2}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(6,cw*0.032)}" fill="#a1a1aa">hello@controlp.io  ·  (480) 999-9906</text>
-    <text x="0" y="${ch*0.84 - ch/2}" text-anchor="middle" font-family="Inter,sans-serif" font-size="${Math.max(6,cw*0.030)}" fill="#a1a1aa">controlp.io</text>`;
-  g.appendChild(wrapper);
-  const sg = document.getElementById('selection-group');
-  if (sg) sg.setAttribute('opacity', '1');
-  layers = layers.filter(l => l.type !== 'design');
-  layers.unshift({ name, type: 'design', color: '#18181b', opacity: 1, visible: true, el: wrapper, x: cw/2, y: ch/2, w: cw * 0.7, h: ch * 0.55, scale: 1 });
+  const newLayers = [];
+  for (const el of (tpl.elements || [])) {
+    const cx = ax + (el.xr ?? .5) * aw;
+    const cy = ay + (el.yr ?? .5) * ah;
+    let wrapper = null, layer = null;
+    if (el.type === 'text') {
+      const fontSize = Math.max(8, aw * (el.sizer ?? .04));
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', '0'); t.setAttribute('y', '0');
+      t.setAttribute('text-anchor', el.align === 'right' ? 'end' : el.align === 'left' ? 'start' : 'middle');
+      t.setAttribute('font-family', el.font || 'Inter, sans-serif');
+      t.setAttribute('font-size', String(fontSize));
+      t.setAttribute('fill', el.color || '#18181b');
+      t.setAttribute('dominant-baseline', 'middle');
+      if (el.bold) t.setAttribute('font-weight', '700');
+      if (el.italic) t.setAttribute('font-style', 'italic');
+      if (el.letterSpacing) t.setAttribute('letter-spacing', String(el.letterSpacing));
+      const dispText = el.uppercase ? (el.text||'').toUpperCase() : (el.text||'');
+      t.textContent = dispText;
+      wrapper = document.createElementNS(ns, 'g');
+      wrapper.appendChild(t); g.appendChild(wrapper);
+      layer = { name: el.name || dispText.slice(0,22), type:'text', color: el.color||'#18181b', visible:true, el:wrapper, x:cx, y:cy, w: fontSize * dispText.length * 0.55, h: fontSize * 1.4, scale:1, text: dispText, fontFamily: (el.font||'Inter').split(',')[0].trim().replace(/['"]/g,''), fontSize, align: el.align||'center', letterSpacing: el.letterSpacing||0, opacity:1, rotation:0, bold:!!el.bold, italic:!!el.italic, underline:false, uppercase:!!el.uppercase, lineHeight:1.25, arch:'none', archBend:55, shadow:false, shadowBlur:3, shadowOffset:2, outlineWidth:0, outlineColor:'#ffffff', background:false, backgroundColor:'#ffffff', backgroundPadding:8, _tpl:true };
+    } else if (el.type === 'rule') {
+      const rw = aw * (el.wr ?? .4), thick = el.thick ?? 1;
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', String(-rw/2)); rect.setAttribute('y', String(-thick/2));
+      rect.setAttribute('width', String(rw)); rect.setAttribute('height', String(thick));
+      rect.setAttribute('fill', el.color||'#e4e4e7'); rect.setAttribute('rx', '.5');
+      wrapper = document.createElementNS(ns, 'g'); wrapper.appendChild(rect); g.appendChild(wrapper);
+      layer = { name: el.name||'Rule', type:'shape', color: el.color||'#e4e4e7', visible:true, el:wrapper, x:cx, y:cy, w:rw, h:thick, scale:1, scaleX:1, scaleY:1, opacity:1, rotation:0, _tpl:true };
+    } else if (el.type === 'rect') {
+      const rw = aw * (el.wr ?? .6), rh = ah * (el.hr ?? .15);
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', String(-rw/2)); rect.setAttribute('y', String(-rh/2));
+      rect.setAttribute('width', String(rw)); rect.setAttribute('height', String(rh));
+      rect.setAttribute('fill', el.color||'#18181b');
+      if (el.rx) rect.setAttribute('rx', String(aw * el.rx));
+      wrapper = document.createElementNS(ns, 'g'); wrapper.appendChild(rect); g.appendChild(wrapper);
+      layer = { name: el.name||'Background', type:'shape', color: el.color||'#18181b', visible:true, el:wrapper, x:cx, y:cy, w:rw, h:rh, scale:1, scaleX:1, scaleY:1, opacity:1, rotation:0, _tpl:true };
+    }
+    if (layer) newLayers.push(layer);
+  }
+  // Insert in reverse so newLayers[0] (back) ends deepest in array; newLayers[last] (front) is layers[0]
+  for (let i = newLayers.length - 1; i >= 0; i--) layers.unshift(newLayers[i]);
   refreshLayerIndexes();
-  registerLayerElement(layers[0], 0);
-  applyLayerTransform(layers[0]);
+  newLayers.forEach(layer => { const idx = layers.indexOf(layer); registerLayerElement(layer, idx); applyLayerTransform(layer); });
   document.getElementById('btn-undo').disabled = false;
+  hideProductPlaceholder();
   selectLayer(0);
+}
+
+async function generateAIDesign() {
+  const promptEl = document.getElementById('ai-design-prompt');
+  const prompt = promptEl?.value?.trim();
+  if (!prompt) { dnToast('Please describe your design first.', 'info'); return; }
+  const statusEl = document.getElementById('ai-design-status');
+  if (statusEl) statusEl.textContent = 'Generating your design…';
+  const productNames = { bc:'Business Card', 'bc-h':'Business Card (Horizontal)', af:'A-Frame Sign', bn:'Banner', rs:'Rigid Sign', wa:'Wall Art', hat:'Hat', fl:'Flag' };
+  const productType = productNames[currentProduct] || 'Print Product';
+  try {
+    const res = await fetch('/api/ai-design', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt, productType, style: aiDesignStyle }) });
+    if (!res.ok) throw new Error('API ' + res.status);
+    const design = await res.json();
+    if (design.error) throw new Error(design.error);
+    _applyTemplate({ id:'ai-generated', name: design.name || 'AI Design', elements: design.elements || [] });
+    closeMobileFlyout();
+    dnToast('AI design applied! Tap any element to edit.', 'success');
+    if (statusEl) statusEl.textContent = '';
+  } catch(err) {
+    if (statusEl) statusEl.textContent = '';
+    dnToast('Generation failed — please try again.', 'error');
+  }
 }
 
 function addTextLayer() {
