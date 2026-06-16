@@ -3826,7 +3826,27 @@ const patternTypes = [
   { key:'scallop', label:'Scallop', tile:24 },
   { key:'confetti', label:'Confetti', tile:30 },
   { key:'sprinkles', label:'Sprinkles', tile:26 },
-  { key:'memphis', label:'Memphis', tile:34 }
+  { key:'memphis', label:'Memphis', tile:34 },
+  { key:'checker', label:'Checker', tile:16 },
+  { key:'stripes-h', label:'Stripes H', tile:14 },
+  { key:'stripes-v', label:'Stripes V', tile:14 },
+  { key:'triangles', label:'Triangles', tile:22 },
+  { key:'herringbone', label:'Herringbone', tile:22 },
+  { key:'bricks', label:'Bricks', tile:24 },
+  { key:'polkadot', label:'Polka Dot', tile:28 },
+  { key:'rings', label:'Rings', tile:20 },
+  { key:'stars', label:'Stars', tile:26 },
+  { key:'zigzag', label:'Zigzag', tile:20 },
+  { key:'plaid', label:'Plaid', tile:24 },
+  { key:'hexagons', label:'Hexagons', tile:28 },
+  { key:'houndstooth', label:'Houndstooth', tile:20 },
+  { key:'floral', label:'Floral', tile:30 },
+  { key:'leaves', label:'Leaves', tile:28 },
+  { key:'moroccan', label:'Moroccan', tile:26 },
+  { key:'argyle', label:'Argyle', tile:26 },
+  { key:'crosses', label:'Crosses', tile:20 },
+  { key:'bubbles', label:'Bubbles', tile:26 },
+  { key:'blueprint', label:'Blueprint', tile:24 },
 ];
 
 function patternTileContent(key, tile, fg, accent) {
@@ -3843,6 +3863,26 @@ function patternTileContent(key, tile, fg, accent) {
   if (key === 'scallop') return `<path d="M 0 ${tile*.54} A ${tile*.25} ${tile*.25} 0 0 1 ${tile*.5} ${tile*.54} A ${tile*.25} ${tile*.25} 0 0 1 ${tile} ${tile*.54}" fill="none" stroke="${f}" stroke-width="2"/><path d="M ${-tile*.5} ${tile*.04} A ${tile*.25} ${tile*.25} 0 0 1 0 ${tile*.04} A ${tile*.25} ${tile*.25} 0 0 1 ${tile*.5} ${tile*.04} A ${tile*.25} ${tile*.25} 0 0 1 ${tile} ${tile*.04}" fill="none" stroke="${a}" stroke-width="1.4" opacity=".8"/>`;
   if (key === 'confetti') return `<circle cx="${tile*.22}" cy="${tile*.24}" r="2.5" fill="${f}"/><rect x="${tile*.62}" y="${tile*.18}" width="8" height="3" rx="1.5" fill="${a}" transform="rotate(28 ${tile*.66} ${tile*.2})"/><path d="M ${tile*.22} ${tile*.72} l4 -5 l4 5" fill="none" stroke="${a}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="${tile*.65}" y="${tile*.68}" width="4" height="4" fill="${f}" transform="rotate(18 ${tile*.67} ${tile*.7})"/>`;
   if (key === 'sprinkles') return `<path d="M ${tile*.18} ${tile*.28} l7 3 M ${tile*.62} ${tile*.2} l-4 7 M ${tile*.24} ${tile*.72} l8 -2 M ${tile*.72} ${tile*.72} l5 5" stroke="${f}" stroke-width="2.5" stroke-linecap="round"/><path d="M ${tile*.48} ${tile*.5} l5 -4" stroke="${a}" stroke-width="2.5" stroke-linecap="round"/>`;
+  if (key === 'checker') return `<rect x="0" y="0" width="${tile/2}" height="${tile/2}" fill="${f}"/><rect x="${tile/2}" y="${tile/2}" width="${tile/2}" height="${tile/2}" fill="${f}"/>`;
+  if (key === 'stripes-h') return `<path d="M0 ${tile*.35} H${tile}" stroke="${f}" stroke-width="${tile*.22}"/>`;
+  if (key === 'stripes-v') return `<path d="M${tile*.35} 0 V${tile}" stroke="${f}" stroke-width="${tile*.22}"/>`;
+  if (key === 'triangles') return `<path d="M${tile*.5} ${tile*.08} L${tile*.96} ${tile*.92} H${tile*.04} Z" fill="none" stroke="${f}" stroke-width="1.7" stroke-linejoin="round"/>`;
+  if (key === 'herringbone') return `<path d="M0 ${tile} L${tile*.5} ${tile*.5} L${tile} ${tile} M0 ${tile*.5} L${tile*.5} 0 L${tile} ${tile*.5}" fill="none" stroke="${f}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if (key === 'bricks') return `<rect x="1" y="1" width="${tile*.46}" height="${tile*.46}" fill="none" stroke="${f}" stroke-width="1.5"/><rect x="${tile*.52}" y="${tile*.26}" width="${tile*.46}" height="${tile*.46}" fill="none" stroke="${a}" stroke-width="1.5" opacity=".65"/>`;
+  if (key === 'polkadot') return `<circle cx="${tile*.25}" cy="${tile*.25}" r="${tile*.15}" fill="${f}"/><circle cx="${tile*.75}" cy="${tile*.75}" r="${tile*.15}" fill="${f}"/><circle cx="${tile*.75}" cy="${tile*.25}" r="${tile*.07}" fill="${a}" opacity=".55"/><circle cx="${tile*.25}" cy="${tile*.75}" r="${tile*.07}" fill="${a}" opacity=".55"/>`;
+  if (key === 'rings') return `<circle cx="${tile/2}" cy="${tile/2}" r="${tile*.36}" fill="none" stroke="${f}" stroke-width="2.2"/><circle cx="${tile/2}" cy="${tile/2}" r="${tile*.16}" fill="${a}" opacity=".45"/>`;
+  if (key === 'stars') { const t=tile; return `<path d="M${t*.5} ${t*.06} L${t*.61} ${t*.38} L${t*.96} ${t*.38} L${t*.68} ${t*.58} L${t*.79} ${t*.9} L${t*.5} ${t*.7} L${t*.21} ${t*.9} L${t*.32} ${t*.58} L${t*.04} ${t*.38} L${t*.39} ${t*.38} Z" fill="${a}" stroke="${f}" stroke-width="1.5" stroke-linejoin="round" opacity=".8"/>`; }
+  if (key === 'zigzag') return `<path d="M0 ${tile*.5} L${tile*.25} ${tile*.15} L${tile*.5} ${tile*.5} L${tile*.75} ${tile*.15} L${tile} ${tile*.5}" fill="none" stroke="${f}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M0 ${tile*.85} L${tile*.25} ${tile*.5} L${tile*.5} ${tile*.85} L${tile*.75} ${tile*.5} L${tile} ${tile*.85}" fill="none" stroke="${a}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>`;
+  if (key === 'plaid') return `<path d="M0 ${tile*.33} H${tile}" stroke="${f}" stroke-width="2.5"/><path d="M0 ${tile*.67} H${tile}" stroke="${f}" stroke-width="1.2" opacity=".45"/><path d="M${tile*.33} 0 V${tile}" stroke="${a}" stroke-width="2.5"/><path d="M${tile*.67} 0 V${tile}" stroke="${a}" stroke-width="1.2" opacity=".45"/>`;
+  if (key === 'hexagons') { const h=tile*.5,q=tile*.25,r=tile*.5; return `<path d="M${r} ${q} L${tile*.92} ${tile*.38} L${tile*.92} ${tile*.63} L${r} ${tile*.75} L${tile*.08} ${tile*.63} L${tile*.08} ${tile*.38} Z" fill="none" stroke="${f}" stroke-width="1.8"/>`; }
+  if (key === 'houndstooth') { const t=tile; return `<path d="M0 0 L${t*.5} 0 L${t*.5} ${t*.5} L${t} ${t*.5} L${t} ${t} L${t*.5} ${t} L${t*.5} ${t*.5} L0 ${t*.5} Z" fill="${f}"/>`; }
+  if (key === 'floral') return `<circle cx="${tile*.5}" cy="${tile*.5}" r="${tile*.1}" fill="${f}"/><circle cx="${tile*.5}" cy="${tile*.2}" r="${tile*.1}" fill="${a}" opacity=".7"/><circle cx="${tile*.5}" cy="${tile*.8}" r="${tile*.1}" fill="${a}" opacity=".7"/><circle cx="${tile*.2}" cy="${tile*.5}" r="${tile*.1}" fill="${a}" opacity=".7"/><circle cx="${tile*.8}" cy="${tile*.5}" r="${tile*.1}" fill="${a}" opacity=".7"/><circle cx="${tile*.29}" cy="${tile*.29}" r="${tile*.07}" fill="${f}" opacity=".45"/><circle cx="${tile*.71}" cy="${tile*.29}" r="${tile*.07}" fill="${f}" opacity=".45"/><circle cx="${tile*.29}" cy="${tile*.71}" r="${tile*.07}" fill="${f}" opacity=".45"/><circle cx="${tile*.71}" cy="${tile*.71}" r="${tile*.07}" fill="${f}" opacity=".45"/>`;
+  if (key === 'leaves') return `<path d="M${tile*.5} ${tile*.12} C${tile*.18} ${tile*.12} ${tile*.08} ${tile*.6} ${tile*.5} ${tile*.88} C${tile*.92} ${tile*.6} ${tile*.82} ${tile*.12} ${tile*.5} ${tile*.12} Z" fill="none" stroke="${f}" stroke-width="1.8"/><path d="M${tile*.5} ${tile*.12} L${tile*.5} ${tile*.88}" stroke="${f}" stroke-width="1" opacity=".35"/>`;
+  if (key === 'moroccan') return `<path d="M${tile*.5} ${tile*.08} L${tile*.85} ${tile*.31} L${tile*.85} ${tile*.69} L${tile*.5} ${tile*.92} L${tile*.15} ${tile*.69} L${tile*.15} ${tile*.31} Z M${tile*.5} ${tile*.27} L${tile*.69} ${tile*.38} L${tile*.69} ${tile*.62} L${tile*.5} ${tile*.73} L${tile*.31} ${tile*.62} L${tile*.31} ${tile*.38} Z" fill="none" stroke="${f}" stroke-width="1.4"/>`;
+  if (key === 'argyle') return `<path d="M${tile*.5} ${tile*.04} L${tile*.96} ${tile*.5} L${tile*.5} ${tile*.96} L${tile*.04} ${tile*.5} Z" fill="none" stroke="${f}" stroke-width="1.8"/><path d="M${tile*.5} ${tile*.23} L${tile*.77} ${tile*.5} L${tile*.5} ${tile*.77} L${tile*.23} ${tile*.5} Z" fill="${a}" opacity=".38"/><path d="M${tile*.04} ${tile*.5} H${tile*.96} M${tile*.5} ${tile*.04} V${tile*.96}" stroke="${f}" stroke-width=".8" opacity=".35"/>`;
+  if (key === 'crosses') return `<path d="M${tile*.5} ${tile*.2} V${tile*.8} M${tile*.2} ${tile*.5} H${tile*.8}" stroke="${f}" stroke-width="3" stroke-linecap="round"/>`;
+  if (key === 'bubbles') return `<circle cx="${tile*.28}" cy="${tile*.28}" r="${tile*.2}" fill="none" stroke="${f}" stroke-width="1.8"/><circle cx="${tile*.72}" cy="${tile*.72}" r="${tile*.2}" fill="none" stroke="${a}" stroke-width="1.8"/><circle cx="${tile*.72}" cy="${tile*.28}" r="${tile*.08}" fill="${f}" opacity=".45"/><circle cx="${tile*.28}" cy="${tile*.72}" r="${tile*.08}" fill="${a}" opacity=".45"/>`;
+  if (key === 'blueprint') return `<path d="M0 ${tile/2} H${tile} M${tile/2} 0 V${tile}" stroke="${f}" stroke-width=".9"/><circle cx="${tile/2}" cy="${tile/2}" r="${tile*.26}" fill="none" stroke="${a}" stroke-width=".9" opacity=".65"/><circle cx="${tile/2}" cy="${tile/2}" r="${tile*.08}" fill="${f}" opacity=".6"/>`;
   return `<circle cx="${tile*.2}" cy="${tile*.24}" r="3" fill="${f}"/><path d="M ${tile*.62} ${tile*.18} h8 v8 h-8 z" fill="none" stroke="${a}" stroke-width="2"/><path d="M ${tile*.15} ${tile*.72} c5 -7 10 7 15 0" fill="none" stroke="${f}" stroke-width="2" stroke-linecap="round"/><path d="M ${tile*.68} ${tile*.72} l8 -8 M ${tile*.68} ${tile*.64} l8 8" stroke="${a}" stroke-width="2" stroke-linecap="round"/>`;
 }
 
