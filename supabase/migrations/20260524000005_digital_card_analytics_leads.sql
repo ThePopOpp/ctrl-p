@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS digital_card_events (
     'share',
     'like',
     'qr_scan',
+    'nfc_tap',
     'link_click',
     'copy_link',
     'save_contact',
