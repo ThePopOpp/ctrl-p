@@ -318,7 +318,7 @@ function ProductDetailContent({ slug }: { slug: string }) {
   const descLines = (product.description || "").split("\n").filter(Boolean);
 
   const categoryLabel: Record<string, string> = {
-    banners: "Large Format Banner", signage: "Sign", displays: "Display", print: "Business Card", flags: "Flag", "wall-art": "Wall Art",
+    banners: "Large Format Banner", signage: "Sign", displays: "Display", print: "Business Card", flags: "Flag", "wall-art": "Wall Art", "custom-merch": "Custom Merch", "custom-art": "Custom Art",
   };
 
   return (

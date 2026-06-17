@@ -526,6 +526,8 @@ const SLUG_TO_PRODUCT = {
   'die-cut-business-cards': 'bc', 'vision-art-chart': 'bc',
   // Posters
   'posters': 'po', 'poster-printing': 'po', 'flyers': 'po',
+  // Bike Bottle
+  'tundra-bike-bottle': 'bb', 'bike-bottle': 'bb', 'aluminum-bike-bottle': 'bb',
 };
 let currentProduct = null; // resolved from URL param; null shows the product picker
 let canvasZoom = 1.0;
@@ -741,6 +743,40 @@ function calcPoPrice() {
   const validTier = PO_QTY_TIERS.filter(t => t <= po.quantity).pop() || 1;
   const unitPrice = tiers[validTier] / validTier;
   return +(unitPrice * po.quantity).toFixed(2);
+}
+
+// ─── 25 oz. Tundra Bike Bottle ───────────────────────────
+const BB_COLORS = {
+  white:  { label:'White',  hex:'#EFEFEF' },
+  black:  { label:'Black',  hex:'#252525' },
+  silver: { label:'Silver', hex:'#B0B4BC' },
+  blue:   { label:'Blue',   hex:'#2563EB' },
+  red:    { label:'Red',    hex:'#DC2626' },
+  green:  { label:'Green',  hex:'#16A34A' },
+  orange: { label:'Orange', hex:'#EA580C' },
+};
+const BB_IMPRINT = {
+  'silkscreen':     { label:'Silk-Screen',             w:2.5,  h:4.5, note:'2½" × 4½"' },
+  'wraparound':     { label:'Wraparound (Silk-Screen)', w:6.0,  h:4.5, note:'6" × 4½" wrap' },
+  '4cp-standard':   { label:'4-Color Process — Std',   w:3.75, h:4.0, note:'3¾" × 4"' },
+  '4cp-large':      { label:'4-Color Process — Large',  w:5.75, h:4.0, note:'5¾" × 4"' },
+};
+const BB_PRICES = { 36:14.99, 72:11.99, 108:10.49, 144:9.49 };
+const BB_QTY_TIERS = [36, 72, 108, 144];
+let bb = { color:'white', imprint:'silkscreen', imprintColors:1, quantity:36 };
+
+function calcBbPrice() {
+  const qty = bb.quantity;
+  const validTier = BB_QTY_TIERS.filter(t => t <= qty).pop() || 36;
+  const unitPrice = BB_PRICES[validTier];
+  const colorUp = bb.imprint === 'silkscreen' ? (bb.imprintColors - 1) * 0.50 : 0;
+  return +((unitPrice + colorUp) * qty).toFixed(2);
+}
+function setbb(key, val) {
+  if (key === 'quantity') bb.quantity = Math.max(36, Math.round((Number(val)||36)/36)*36);
+  else if (key === 'imprintColors') bb.imprintColors = Number(val);
+  else bb[key] = val;
+  buildCanvas(); setTool('swap');
 }
 
 // ─── Hat designer model ───
@@ -1019,6 +1055,7 @@ function updatePrice() {
   else if (currentProduct === 'af') p = calcAfPrice();
   else if (currentProduct === 'fl') p = calcFlPrice();
   else if (currentProduct === 'po') p = calcPoPrice();
+  else if (currentProduct === 'bb') p = calcBbPrice();
   else p = calcPrice();
   document.getElementById('price-badge').textContent = '$' + p.toFixed(2);
   const _mp = document.getElementById('mobile-cart-price');
@@ -1615,6 +1652,73 @@ function getPoPrintArea() {
   return { ox:0, oy:0, iw:cw, ih:ch };
 }
 
+function getBbPrintArea() {
+  const imp = BB_IMPRINT[bb.imprint] || BB_IMPRINT['silkscreen'];
+  const bodyTop = 68, bodyH = 290, cx = 110;
+  const scaleW = 40, scaleH = 32;
+  const iw = Math.min(Math.round(imp.w * scaleW), 118);
+  const ih = Math.min(Math.round(imp.h * scaleH), bodyH - 20);
+  return { ox: cx - iw/2, oy: bodyTop + (bodyH - ih)/2, iw, ih };
+}
+
+function buildBottleSVG() {
+  const cw = 220, ch = 420;
+  const svgEl = document.getElementById('card-svg');
+  svgEl.setAttribute('viewBox', `0 0 ${cw} ${ch}`);
+  svgEl.setAttribute('width', String(cw));
+  svgEl.setAttribute('height', String(ch));
+  svgEl.style.filter = 'drop-shadow(0 6px 20px rgba(0,0,0,0.22))';
+  const cx = 110;
+  const bodyTop = 68, bodyH = 290, bodyW = 118, bodyRx = 16;
+  const lidTop = 28, lidH = 44, lidW = 64, lidRx = 8;
+  const nubTop = 14, nubH = 18, nubW = 22;
+  const bodyColor = BB_COLORS[bb.color]?.hex || '#EFEFEF';
+  const isDark = bb.color === 'black';
+  const highlight = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.48)';
+  const shadow   = isDark ? 'rgba(0,0,0,0.45)'       : 'rgba(0,0,0,0.13)';
+  const { ox, oy, iw, ih } = getBbPrintArea();
+  const impNote = BB_IMPRINT[bb.imprint]?.note || '';
+  svgEl.innerHTML = `
+    <defs>
+      <linearGradient id="bb-body" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="${shadow}"/>
+        <stop offset="16%"  stop-color="${highlight}"/>
+        <stop offset="48%"  stop-color="rgba(255,255,255,0)"/>
+        <stop offset="100%" stop-color="${shadow}"/>
+      </linearGradient>
+      <linearGradient id="bb-lid" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="rgba(0,0,0,0.55)"/>
+        <stop offset="38%"  stop-color="rgba(255,255,255,0.14)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0.55)"/>
+      </linearGradient>
+      <clipPath id="bb-clip">
+        <rect x="${cx-bodyW/2}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${bodyRx}"/>
+      </clipPath>
+    </defs>
+    <!-- nub / spout -->
+    <rect x="${cx-nubW/2}" y="${nubTop}" width="${nubW}" height="${nubH}" rx="5" fill="#111"/>
+    <!-- lid -->
+    <rect x="${cx-lidW/2}" y="${lidTop}" width="${lidW}" height="${lidH}" rx="${lidRx}" fill="#18181b"/>
+    <rect x="${cx-lidW/2}" y="${lidTop}" width="${lidW}" height="${lidH}" rx="${lidRx}" fill="url(#bb-lid)"/>
+    <!-- body -->
+    <rect x="${cx-bodyW/2}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${bodyRx}" fill="${bodyColor}"/>
+    <rect x="${cx-bodyW/2}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${bodyRx}" fill="url(#bb-body)"/>
+    <!-- design layers clipped to body -->
+    <g id="canvas-design" clip-path="url(#bb-clip)"></g>
+    <!-- imprint zone -->
+    <g id="bb-placeholder">
+      <rect x="${ox}" y="${oy}" width="${iw}" height="${ih}" fill="rgba(163,230,53,0.07)" stroke="#a3e635" stroke-width="1.5" stroke-dasharray="5 3" rx="5"/>
+      <text x="${cx}" y="${oy + ih/2 - 7}" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#a3a3a3" font-weight="500">Add your design</text>
+      <text x="${cx}" y="${oy + ih/2 + 9}" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#a3a3a3">${impNote}</text>
+    </g>
+    <!-- bottom rim -->
+    <ellipse cx="${cx}" cy="${bodyTop+bodyH-4}" rx="${bodyW/2-4}" ry="6" fill="${isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.07)'}"/>
+    <!-- body outline -->
+    <rect x="${cx-bodyW/2}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${bodyRx}" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/>
+  `;
+  updateSizeLabel();
+}
+
 function getHatCanvasGeometry() {
   const product = getHatProduct();
   const zone = getHatZone(product);
@@ -1722,6 +1826,7 @@ function buildCanvas() {
   else if (currentProduct === 'af') buildAFrameSVG();
   else if (currentProduct === 'fl') buildFlagSVG();
   else if (currentProduct === 'po') buildPosterSVG();
+  else if (currentProduct === 'bb') buildBottleSVG();
   else buildCardSVG();
   reattachPreservedLayers(preservedLayers);
   initCanvasInteractions();
@@ -1776,6 +1881,10 @@ function updateSizeLabel() {
   if (currentProduct === 'po') {
     const s = PO_SIZES[po.size];
     el.textContent = `${s.label}  ·  ${PO_FINISH_LABELS[po.finish]}  ·  Qty ${po.quantity}`;
+    return;
+  }
+  if (currentProduct === 'bb') {
+    el.textContent = `25oz Bike Bottle  ·  ${BB_COLORS[bb.color]?.label}  ·  ${BB_IMPRINT[bb.imprint]?.label}  ·  Qty ${bb.quantity}`;
     return;
   }
   if (currentProduct === 'hat') {
@@ -1927,6 +2036,7 @@ function renderSwap() {
   if (currentProduct === 'af') return renderAFrame();
   if (currentProduct === 'fl') return renderFlag();
   if (currentProduct === 'po') return renderPoster();
+  if (currentProduct === 'bb') return renderBottle();
   return renderBC();
 }
 
@@ -2216,6 +2326,57 @@ function renderWallArt() {
         </button>
       </div>
 
+    </div>`;
+}
+
+function renderBottle() {
+  const sec = (t, b, o=false) => `<div class="cfg-section"><div class="cfg-header${o?' open':''}" onclick="toggleSection(this)"><span>${t}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="cfg-body" style="${o?'':'display:none'}">${b}</div></div>`;
+  const total = calcBbPrice();
+  const unitPx = (total / bb.quantity).toFixed(2);
+  return `
+    <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button onclick="showProductPicker()" style="display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Products</button>
+      <span style="color:#d4d4d8;">›</span><span style="font-size:11.5px;font-weight:600;color:#18181b;">Bike Bottles</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;" class="thin-scroll">
+      ${sec('Color', `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          ${Object.entries(BB_COLORS).map(([k,c])=>`
+            <button onclick="setbb('color','${k}')" title="${c.label}" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;padding:4px;">
+              <div style="width:30px;height:30px;border-radius:50%;background:${c.hex};border:${bb.color===k?'2.5px solid #2563eb':'2px solid #d4d4d8'};box-shadow:${bb.color===k?'0 0 0 2px #bfdbfe':'none'};"></div>
+              <span style="font-size:9.5px;color:${bb.color===k?'#2563eb':'#71717a'};font-weight:${bb.color===k?'700':'400'};">${c.label}</span>
+            </button>`).join('')}
+        </div>
+        <div style="font-size:10.5px;color:#71717a;margin-top:8px;">All colors include a black lid.</div>`, true)}
+      ${sec('Imprint Method', `
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          ${Object.entries(BB_IMPRINT).map(([k,m])=>`
+            <button onclick="setbb('imprint','${k}')" class="opt-btn${bb.imprint===k?' active':''}" style="width:100%;text-align:left;padding:7px 10px;font-size:11.5px;">
+              <div style="font-weight:600;">${m.label}</div>
+              <div style="font-size:10px;color:#71717a;margin-top:1px;">Print area: ${m.note}</div>
+            </button>`).join('')}
+        </div>`, true)}
+      ${bb.imprint === 'silkscreen' ? sec('Imprint Colors', `
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;">
+          ${[1,2,3,4,5,6].map(n=>`<button onclick="setbb('imprintColors',${n})" class="opt-btn${bb.imprintColors===n?' active':''}" style="font-size:12px;padding:6px 0;">${n}</button>`).join('')}
+        </div>
+        <div style="font-size:10.5px;color:#71717a;margin-top:6px;">+$0.50/unit per extra color over 1.</div>`) : ''}
+      ${sec('Quantity', `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px;">
+          ${BB_QTY_TIERS.map(q=>`<button onclick="setbb('quantity',${q})" class="opt-btn${bb.quantity===q?' active':''}" style="font-size:11.5px;">${q}</button>`).join('')}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:#71717a;">Or enter qty:</span>
+          <input type="number" min="36" step="36" value="${bb.quantity}" oninput="setbb('quantity',this.value)" style="width:80px;border:1px solid #e4e4e7;border-radius:5px;padding:5px 7px;font-size:12px;outline:none;"/>
+        </div>
+        <div style="font-size:10.5px;color:#71717a;margin-top:6px;">Min. 36 units (1 carton). Must order in carton increments of 36.</div>`, true)}
+      <div style="padding:10px 12px;border-top:1px solid #f0f0f0;margin-top:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+          <span style="font-size:11.5px;color:#71717a;">$${unitPx}/ea × ${bb.quantity}</span>
+          <span style="font-size:16px;font-weight:700;color:#18181b;">$${total.toFixed(2)}</span>
+        </div>
+        <button onclick="handleDone()" style="width:100%;padding:10px;border-radius:7px;font-size:13.5px;font-weight:700;background:#18181b;color:white;border:none;cursor:pointer;">Add to Cart — $${total.toFixed(2)}</button>
+      </div>
     </div>`;
 }
 
@@ -3420,6 +3581,8 @@ function getPrintAreaBounds() {
     const p = getFlPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
   } else if (currentProduct === 'po') {
     const p = getPoPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
+  } else if (currentProduct === 'bb') {
+    const p = getBbPrintArea(); ax = p.ox; ay = p.oy; aw = p.iw; ah = p.ih;
   } else {
     const { cw, ch } = getCardDimensions();
     ax = 0; ay = 0; aw = cw; ah = ch;
@@ -3463,7 +3626,7 @@ function applyLayerTransform(layer) {
 }
 
 function hideProductPlaceholder() {
-  ['wa', 'bn', 'rs', 'af', 'fl', 'hat', 'po'].forEach(id => {
+  ['wa', 'bn', 'rs', 'af', 'fl', 'hat', 'po', 'bb'].forEach(id => {
     const ph = document.getElementById(`${id}-placeholder`);
     if (ph) ph.setAttribute('display', 'none');
   });
@@ -5394,6 +5557,8 @@ function handleDone() {
   } else if (currentProduct === 'po') {
     const s = PO_SIZES[po.size];
     item = { product_id: 'po', sku: `po-${po.size}-${po.finish}`, name: `Poster — ${s.label} · ${PO_FINISH_LABELS[po.finish]}`, unit_price: calcPoPrice() / po.quantity, quantity: po.quantity, image: null };
+  } else if (currentProduct === 'bb') {
+    item = { product_id: 'bb', sku: `bb-${bb.color}-${bb.imprint}`, name: `25oz Tundra Bike Bottle — ${BB_COLORS[bb.color]?.label} · ${BB_IMPRINT[bb.imprint]?.label}`, unit_price: calcBbPrice() / bb.quantity, quantity: bb.quantity, image: null };
   } else {
     const s = SIZES[bc.size];
     item = { product_id: 'bc', sku: `bc-${bc.size}`, name: `Business Cards — ${s?.label || bc.size}`, unit_price: calcPrice(), quantity: bc.quantity, image: null };
@@ -5411,7 +5576,7 @@ function handleDone() {
   }
   // Also honour a direct ?key= param (e.g. ?key=af) for deep-linking
   const directKey = new URLSearchParams(window.location.search).get('key') || '';
-  if (!key && ['hat','bc','wa','bn','rs','af','fl','po'].includes(directKey)) {
+  if (!key && ['hat','bc','wa','bn','rs','af','fl','po','bb'].includes(directKey)) {
     currentProduct = directKey;
   }
 })();

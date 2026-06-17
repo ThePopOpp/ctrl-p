@@ -23,7 +23,8 @@ INSERT INTO products (sku, slug, name, category, base_cost, vendor, sort_order) 
   ('rs',  'rigid-signs',      'Rigid Signs',             'signage',    6.12,  'b2sign',   4),
   ('af',  'a-frame-signs',    'A-Frame Signs',           'signage',    13.26, 'b2sign',   5),
   ('fl',  'flags',            'Flags',                   'flags',      16.66, 'b2sign',   6),
-  ('vac', 'vision-art-chart', 'Vision Art Chart',        'custom-art', 12.00, 'in_house', 7);
+  ('vac', 'vision-art-chart', 'Vision Art Chart',        'custom-art', 12.00, 'in_house', 7),
+  ('bb',  'tundra-bike-bottle','25 oz. Aluminum Tundra Bike Bottle','custom-merch',7.00,'b2sign',8);
 
 -- ─── BUSINESS CARDS: VARIANTS (sizes) ─────────────────────
 -- BC sizes don't change the base price; cost_delta = 0.
@@ -338,6 +339,20 @@ SELECT p.id, v.sku, v.name, v.w, v.h, v.delta, v.s FROM p, (VALUES
   ('vac-60x72', '60" × 72"',  60, 72,  90.00, 16),
   ('vac-72x72', '72" × 72"',  72, 72, 106.00, 17)
 ) AS v(sku, name, w, h, delta, s);
+
+-- ─── BIKE BOTTLE: COLOR VARIANTS ─────────────────────────
+WITH p AS (SELECT id FROM products WHERE sku = 'bb')
+INSERT INTO product_variants (product_id, sku, name, cost_delta, sort_order)
+SELECT p.id, v.sku, v.name, 0, v.s
+FROM p, (VALUES
+  ('bb-white',  'White',  1),
+  ('bb-black',  'Black',  2),
+  ('bb-silver', 'Silver', 3),
+  ('bb-blue',   'Blue',   4),
+  ('bb-red',    'Red',    5),
+  ('bb-green',  'Green',  6),
+  ('bb-orange', 'Orange', 7)
+) AS v(sku, name, s);
 
 -- ─── VISION ART CHART: PHOTO GALLERY ─────────────────────
 UPDATE products SET photo_gallery = '[
