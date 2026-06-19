@@ -10,6 +10,7 @@ import { CartProvider, useCart } from "@/lib/cart/cart-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SiteNav } from "@/components/site-nav";
+import { DesignerBookingModal } from "@/components/shop/designer-booking-modal";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────
@@ -196,6 +197,7 @@ function ProductDetailContent({ slug }: { slug: string }) {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadFileBack, setUploadFileBack] = useState<File | null>(null);
   const [artworkMode, setArtworkMode] = useState<"upload" | "design" | "hire" | null>(null);
+  const [designerModalOpen, setDesignerModalOpen] = useState(false);
   const [selectedQtyTier, setSelectedQtyTier] = useState<ProductOption | null>(null);
 
   // Cart
@@ -322,6 +324,7 @@ function ProductDetailContent({ slug }: { slug: string }) {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       <SiteNav />
 
@@ -692,24 +695,30 @@ function ProductDetailContent({ slug }: { slug: string }) {
 
                 {artworkMode === "hire" && (
                   <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-                    <div className="mb-1 font-semibold text-sm">Hire a designer — from $85</div>
+                    <div className="mb-1 font-semibold text-sm">Hire a designer — from $100/hr</div>
                     <p className="mb-3 text-xs text-muted-foreground leading-relaxed">
-                      Our team creates a print-ready design matched to your brand. Includes up to 3 revisions. Typical turnaround 24–48 hours.
+                      Book a session with one of our designers. They'll create print-ready artwork matched to your brand, with direct communication throughout.
                     </p>
                     <ul className="mb-4 space-y-1.5">
-                      {["Logo placement & brand matching", "Up to 3 revisions included", "Print-ready file delivered", "Direct communication with your designer"].map((item) => (
+                      {[
+                        "Logo placement & brand matching",
+                        "Print-ready file delivered",
+                        "Direct communication with your designer",
+                        "Sessions from 1 to 4 hours",
+                      ].map((item) => (
                         <li key={item} className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
                           {item}
                         </li>
                       ))}
                     </ul>
-                    <a
-                      href="/contact"
+                    <button
+                      onClick={() => setDesignerModalOpen(true)}
                       className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
                     >
-                      Request design help →
-                    </a>
+                      <UserCheck className="h-4 w-4" />
+                      Book a designer session →
+                    </button>
                   </div>
                 )}
 
@@ -946,6 +955,12 @@ function ProductDetailContent({ slug }: { slug: string }) {
         )}
       </div>
     </div>
+
+    <DesignerBookingModal
+      open={designerModalOpen}
+      onClose={() => setDesignerModalOpen(false)}
+    />
+    </>
   );
 }
 
