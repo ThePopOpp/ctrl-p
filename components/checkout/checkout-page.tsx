@@ -7,6 +7,7 @@ import { CartProvider, useCart } from "@/lib/cart/cart-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { SiteNav } from "@/components/site-nav";
 import { cn } from "@/lib/utils";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -123,28 +124,32 @@ function CheckoutContent() {
 
   if (!items.length) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
-        <div className="mb-4 text-5xl">&#128722;</div>
-        <h1 className="mb-2 text-2xl font-bold">Your cart is empty</h1>
-        <p className="mb-6 text-muted-foreground">Add products from the shop to continue.</p>
-        <Button asChild><a href="/shop">Browse products</a></Button>
+      <div className="min-h-screen bg-background text-foreground">
+        <SiteNav />
+        <div className="flex flex-col items-center justify-center py-24 px-4">
+          <div className="mb-4 text-5xl">🛒</div>
+          <h1 className="mb-2 text-2xl font-bold">Your cart is empty</h1>
+          <p className="mb-6 text-muted-foreground">Add products from the shop to continue.</p>
+          <Button asChild><a href="/shop">Browse products</a></Button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4">
-          <a href="/"><img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-7 w-auto dark:hidden" /><img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-7 w-auto dark:block" /></a>
-          <span className="text-muted-foreground">/</span>
-          <a href="/shop" className="text-sm text-muted-foreground hover:text-foreground">Shop</a>
-          <span className="text-muted-foreground">/</span>
-          <span className="text-sm font-medium">Checkout</span>
-        </div>
-      </header>
+      <SiteNav />
 
       <main className="mx-auto max-w-5xl px-4 py-8">
+        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <a href="/" className="hover:text-foreground">Home</a>
+          <span>›</span>
+          <a href="/shop" className="hover:text-foreground">Shop</a>
+          <span>›</span>
+          <a href="/cart" className="hover:text-foreground">Cart</a>
+          <span>›</span>
+          <span className="font-medium text-foreground">Checkout</span>
+        </nav>
         <h1 className="mb-6 text-2xl font-bold">Checkout</h1>
 
         <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
