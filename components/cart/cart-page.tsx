@@ -5,13 +5,17 @@ import {
   ArrowRight,
   CheckCircle2,
   Loader2,
+  Lock,
   LogIn,
   Minus,
   Package,
   Plus,
+  ShieldCheck,
   ShoppingBag,
+  ShoppingCart,
   Tag,
   Trash2,
+  Truck,
   User,
   X,
 } from "lucide-react";
@@ -311,7 +315,9 @@ function CartContent() {
       <div className="min-h-screen bg-background text-foreground">
         <SiteNav />
         <div className="mx-auto max-w-5xl px-4 py-16 text-center">
-          <div className="mb-4 text-6xl">🛒</div>
+          <div className="mb-6 flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-secondary">
+            <ShoppingCart className="h-9 w-9 text-muted-foreground" />
+          </div>
           <h1 className="mb-2 text-2xl font-bold">Your cart is empty</h1>
           <p className="mb-8 text-muted-foreground">Looks like you haven't added anything yet.</p>
           <Button asChild className="h-11 px-8 text-base">
@@ -469,14 +475,14 @@ function CartContent() {
 
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-2 text-center text-[11px] text-muted-foreground">
-              {[
-                { icon: "🔒", label: "Secure", sub: "SSL checkout" },
-                { icon: "🚚", label: "Free ship", sub: "orders $75+" },
-                { icon: "🛡️", label: "Guarantee", sub: "or reprint free" },
-              ].map((b) => (
+              {([
+                { Icon: Lock, label: "Secure", sub: "SSL checkout" },
+                { Icon: Truck, label: "Free ship", sub: "orders $75+" },
+                { Icon: ShieldCheck, label: "Guarantee", sub: "or reprint free" },
+              ] as const).map((b) => (
                 <div key={b.label} className="rounded-lg border bg-card py-3">
-                  <div className="text-lg">{b.icon}</div>
-                  <div className="mt-1 font-medium text-foreground">{b.label}</div>
+                  <b.Icon className="mx-auto h-5 w-5 text-muted-foreground" />
+                  <div className="mt-1.5 font-medium text-foreground">{b.label}</div>
                   <div>{b.sub}</div>
                 </div>
               ))}
