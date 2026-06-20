@@ -314,7 +314,7 @@ function CartContent() {
           <div className="mb-4 text-6xl">🛒</div>
           <h1 className="mb-2 text-2xl font-bold">Your cart is empty</h1>
           <p className="mb-8 text-muted-foreground">Looks like you haven't added anything yet.</p>
-          <Button asChild size="lg">
+          <Button asChild className="h-11 px-8 text-base">
             <a href="/shop">Browse products</a>
           </Button>
 
