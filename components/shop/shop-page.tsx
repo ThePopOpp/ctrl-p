@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, Grid3X3, List, Minus, Plus, ShoppingCart, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Grid3X3, List, Minus, Plus, ShoppingCart, Table2, X } from "lucide-react";
 
 import { CartProvider, useCart } from "@/lib/cart/cart-context";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ type Product = {
   sale_price: number | string | null;
   featured: boolean | null;
   stock_status: string | null;
+  availability?: string | null;
   photo_gallery: unknown;
   materials?: unknown;
 };
@@ -367,13 +368,13 @@ function ShopContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(params.get("q") ?? "");
   const [category, setCategory] = useState(params.get("category") ?? "all");
   const [availFilter, setAvailFilter] = useState<Set<string>>(new Set());
   const [priceMax, setPriceMax] = useState<number | null>(null);
   const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState("featured");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
   const [page, setPage] = useState(1);
   const [showMoreMaterials, setShowMoreMaterials] = useState(false);
 
@@ -710,6 +711,16 @@ function ShopContent() {
                   >
                     <List className="h-3.5 w-3.5" />
                   </button>
+                  <button
+                    onClick={() => setViewMode("table")}
+                    aria-label="Table view"
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center border-l transition-colors",
+                      viewMode === "table" ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+                    )}
+                  >
+                    <Table2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
 
                 {/* Sort */}
@@ -746,11 +757,82 @@ function ShopContent() {
             {!loading && !error && (
               <>
                 {pageProducts.length ? (
+                  viewMode === "table" ? (
+                    <div className="rounded-xl border overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-secondary/40 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            <th className="px-4 py-3">Product</th>
+                            <th className="px-4 py-3 hidden sm:table-cell">Category</th>
+                            <th className="px-4 py-3 hidden md:table-cell">Availability</th>
+                            <th className="px-4 py-3 text-right">Price</th>
+                            <th className="px-4 py-3"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {pageProducts.map((product) => {
+                            const price = Number(product.sale_price || product.base_price || 0);
+                            const imageUrl = (() => {
+                              const g = product.photo_gallery;
+                              if (!g) return null;
+                              if (typeof g === "string") return g;
+                              if (Array.isArray(g) && g.length) return String(g[0]);
+                              if (typeof g === "object") {
+                                const obj = g as Record<string, unknown>;
+                                if (obj.url) return String(obj.url);
+                                const first = Object.values(obj)[0];
+                                if (typeof first === "string") return first;
+                                if (Array.isArray(first) && first.length) return String(first[0]);
+                              }
+                              return null;
+                            })();
+                            return (
+                              <tr key={product.id} className="hover:bg-accent/30 transition-colors">
+                                <td className="px-4 py-3">
+                                  <a href={`/shop/${product.slug}`} className="flex items-center gap-3 group">
+                                    <div className="h-10 w-10 shrink-0 rounded-lg overflow-hidden bg-secondary/40">
+                                      {imageUrl
+                                        ? <img src={imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                                        : <div className="h-full w-full" />}
+                                    </div>
+                                    <div>
+                                      <div className="font-medium group-hover:underline underline-offset-2 line-clamp-1">{product.name}</div>
+                                      {product.tagline && <div className="text-xs text-muted-foreground line-clamp-1">{product.tagline}</div>}
+                                    </div>
+                                  </a>
+                                </td>
+                                <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground capitalize">{product.category?.replace(/_/g, " ")}</td>
+                                <td className="px-4 py-3 hidden md:table-cell">
+                                  <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+                                    product.availability === "in_stock" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                                    product.availability === "same_day" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
+                                    "bg-secondary text-muted-foreground")}>
+                                    {product.availability === "in_stock" ? "In stock" : product.availability === "same_day" ? "Same day" : "Made to order"}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">
+                                  {product.sale_price && Number(product.sale_price) < Number(product.base_price) ? (
+                                    <span className="text-destructive">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(product.sale_price))}</span>
+                                  ) : (
+                                    price ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(price) : "—"
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <a href={`/shop/${product.slug}`} className="text-xs font-medium text-primary hover:underline underline-offset-2">View →</a>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
                   <div className={cn("grid gap-5", viewMode === "grid" ? "sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1")}>
                     {pageProducts.map((product) => (
-                      <ProductCard key={product.id} product={product} view={viewMode} />
+                      <ProductCard key={product.id} product={product} view={viewMode === "list" ? "list" : "grid"} />
                     ))}
                   </div>
+                  )
                 ) : (
                   <div className="py-16 text-center text-muted-foreground">
                     <div className="mb-2 text-4xl">🛒</div>

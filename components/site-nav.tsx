@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ChevronDown, MapPin, Menu, Moon, Search, ShoppingCart, Sun, Truck, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, ChevronDown, MapPin, Menu, Moon, Search, ShoppingCart, Sun, Truck, X } from "lucide-react";
 
 const CART_KEY = "ctrlp_cart";
 
@@ -138,9 +139,13 @@ const DISCOVER_SUPPORT = [
 ];
 
 export function SiteNav() {
+  const router = useRouter();
   const [cartCount, setCartCount] = useState(0);
   const [isDark, setIsDark] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
@@ -154,6 +159,33 @@ export function SiteNav() {
     };
   }, []);
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+      if (e.key === "Escape") setSearchOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (searchOpen) {
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    } else {
+      setSearchInput("");
+    }
+  }, [searchOpen]);
+
+  function submitSearch(q: string) {
+    const trimmed = q.trim();
+    setSearchOpen(false);
+    if (trimmed) router.push(`/shop?q=${encodeURIComponent(trimmed)}`);
+    else router.push("/shop");
+  }
+
   function toggleDark() {
     const next = !isDark;
     setIsDark(next);
@@ -163,6 +195,52 @@ export function SiteNav() {
 
   return (
     <>
+      {/* Search overlay */}
+      {searchOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-start justify-center pt-[12vh] px-4"
+          onClick={() => setSearchOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-xl rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <form
+              onSubmit={(e) => { e.preventDefault(); submitSearch(searchInput); }}
+              className="flex items-center gap-3 px-4 py-3.5 border-b border-zinc-200 dark:border-zinc-700"
+            >
+              <Search className="h-5 w-5 shrink-0 text-zinc-400" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search products..."
+                className="flex-1 bg-transparent text-base text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 outline-none"
+              />
+              {searchInput && (
+                <button type="button" onClick={() => setSearchInput("")} className="text-zinc-400 hover:text-zinc-600">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </form>
+            <div className="px-4 py-3 flex items-center justify-between text-xs text-zinc-400">
+              <span>Press <kbd className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-600">↵</kbd> to search</span>
+              {searchInput.trim() && (
+                <button
+                  onClick={() => submitSearch(searchInput)}
+                  className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300 font-medium hover:text-zinc-900 dark:hover:text-white transition-colors"
+                >
+                  Search for "{searchInput.trim()}"
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Announcement bar */}
       <div className="w-full bg-zinc-900 text-zinc-50 text-[12.5px] py-2 px-4 text-center">
         <div className="flex items-center justify-center gap-3 flex-wrap">
@@ -276,7 +354,7 @@ export function SiteNav() {
                 {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
               </button>
 
-              <button type="button" className="hidden md:flex items-center gap-2 text-zinc-500 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 w-[220px] justify-start hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+              <button type="button" onClick={() => setSearchOpen(true)} className="hidden md:flex items-center gap-2 text-zinc-500 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 w-[220px] justify-start hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
                 <Search className="h-3.5 w-3.5" />
                 <span className="text-[13px]">Search products...</span>
                 <kbd className="ml-auto text-[10.5px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-600">⌘K</kbd>
