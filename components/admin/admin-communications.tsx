@@ -8,8 +8,11 @@ import {
   Bot,
   ChevronDown,
   ChevronRight,
+  Circle,
   Clock,
+  Disc,
   Download,
+  FileText,
   LogOut,
   Mail,
   MessageSquare,
@@ -29,6 +32,7 @@ import {
   Send,
   Sparkles,
   Sun,
+  Trash2,
   Users,
   Voicemail,
   X,
@@ -187,6 +191,10 @@ export function AdminCommunications() {
   const [availableNumbers, setAvailableNumbers] = useState<string[]>([]);
   const [selectedCallerId, setSelectedCallerId] = useState("");
 
+  // Active call tracking
+  const [activeCallSid, setActiveCallSid] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+
   // Call history state
   const [calls, setCalls] = useState<TwilioCall[]>([]);
   const [callsLoading, setCallsLoading] = useState(false);
@@ -196,6 +204,13 @@ export function AdminCommunications() {
   const [loadingRecordings, setLoadingRecordings] = useState<Record<string, boolean>>({});
   const [transcripts, setTranscripts] = useState<Record<string, string>>({});
   const [transcribing, setTranscribing] = useState<Record<string, boolean>>({});
+
+  // Notes state
+  type CallNote = { id: string; details: { note: string }; created_at: string };
+  const [callNotes, setCallNotes] = useState<Record<string, CallNote[]>>({});
+  const [noteInput, setNoteInput] = useState<Record<string, string>>({});
+  const [savingNote, setSavingNote] = useState<Record<string, boolean>>({});
+  const [deletingNote, setDeletingNote] = useState<Record<string, boolean>>({});
 
   // Contacts state
   const [contacts, setContacts] = useState<ContactRow[]>([]);
@@ -309,6 +324,8 @@ export function AdminCommunications() {
     setIsMuted(false);
     setIsOnHold(false);
     setCallDuration(0);
+    setActiveCallSid("");
+    setIsRecording(false);
     // Refresh call history after a short delay
     setTimeout(() => loadCalls(), 3000);
   }
@@ -320,13 +337,32 @@ export function AdminCommunications() {
       const call = await deviceRef.current.connect({ params: { To: dialInput.trim(), callerId: selectedCallerId } });
       activeCallRef.current = call;
       call.on("ringing", () => setCallState("ringing"));
-      call.on("accept", () => { setCallState("active"); startCallTimer(); });
+      call.on("accept", () => {
+        setCallState("active");
+        startCallTimer();
+        setActiveCallSid(call.parameters?.CallSid || "");
+      });
       call.on("disconnect", endCall);
       call.on("cancel", endCall);
       call.on("reject", endCall);
     } catch (err) {
       setCallState("idle");
       setDeviceError(err instanceof Error ? err.message : "Call failed.");
+    }
+  }
+
+  async function startRecording() {
+    if (!activeCallSid || isRecording) return;
+    setIsRecording(true);
+    try {
+      const token = await getAdminToken();
+      await fetch("/api/admin/communications/calls/record", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ callSid: activeCallSid }),
+      });
+    } catch {
+      setIsRecording(false);
     }
   }
 
@@ -389,6 +425,9 @@ export function AdminCommunications() {
         setLoadingRecordings((prev) => ({ ...prev, [sid]: false }));
       }
     }
+    if (!callNotes[sid]) {
+      loadNotes(sid);
+    }
   }
 
   async function transcribeRecording(recordingSid: string) {
@@ -408,6 +447,52 @@ export function AdminCommunications() {
       }
     } finally {
       setTranscribing((prev) => ({ ...prev, [recordingSid]: false }));
+    }
+  }
+
+  // Notes
+  async function loadNotes(callSid: string) {
+    try {
+      const token = await getAdminToken();
+      const res = await fetch(`/api/admin/communications/calls/notes?callSid=${encodeURIComponent(callSid)}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCallNotes((prev) => ({ ...prev, [callSid]: data.notes ?? [] }));
+      }
+    } catch { /* silent */ }
+  }
+
+  async function saveNote(callSid: string) {
+    const note = (noteInput[callSid] || "").trim();
+    if (!note) return;
+    setSavingNote((prev) => ({ ...prev, [callSid]: true }));
+    try {
+      const token = await getAdminToken();
+      await fetch("/api/admin/communications/calls/notes", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ callSid, note }),
+      });
+      setNoteInput((prev) => ({ ...prev, [callSid]: "" }));
+      await loadNotes(callSid);
+    } finally {
+      setSavingNote((prev) => ({ ...prev, [callSid]: false }));
+    }
+  }
+
+  async function deleteNote(callSid: string, noteId: string) {
+    setDeletingNote((prev) => ({ ...prev, [noteId]: true }));
+    try {
+      const token = await getAdminToken();
+      await fetch(`/api/admin/communications/calls/notes?id=${encodeURIComponent(noteId)}`, {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      await loadNotes(callSid);
+    } finally {
+      setDeletingNote((prev) => ({ ...prev, [noteId]: false }));
     }
   }
 
@@ -690,7 +775,7 @@ export function AdminCommunications() {
 
                       {/* In-call actions */}
                       {isCallActive && (
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-4 gap-2">
                           <button
                             onClick={toggleMute}
                             className={cn(
@@ -698,7 +783,7 @@ export function AdminCommunications() {
                               isMuted ? "bg-red-500/15 border-red-400 text-red-600" : "bg-secondary/30 hover:bg-accent",
                             )}
                           >
-                            {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                             {isMuted ? "Unmute" : "Mute"}
                           </button>
                           <button
@@ -708,11 +793,26 @@ export function AdminCommunications() {
                               isOnHold ? "bg-orange-500/15 border-orange-400 text-orange-600" : "bg-secondary/30 hover:bg-accent",
                             )}
                           >
-                            <Pause className="h-5 w-5" />
+                            <Pause className="h-4 w-4" />
                             {isOnHold ? "Resume" : "Hold"}
                           </button>
+                          <button
+                            onClick={startRecording}
+                            disabled={isRecording || !activeCallSid}
+                            className={cn(
+                              "flex h-14 flex-col items-center justify-center rounded-xl border gap-1 text-xs font-medium transition-colors",
+                              isRecording
+                                ? "bg-red-500/15 border-red-400 text-red-600"
+                                : "bg-secondary/30 hover:bg-accent disabled:opacity-40",
+                            )}
+                          >
+                            {isRecording
+                              ? <Circle className="h-4 w-4 fill-red-500 text-red-500 animate-pulse" />
+                              : <Disc className="h-4 w-4" />}
+                            {isRecording ? "Recording" : "Record"}
+                          </button>
                           <button className="flex h-14 flex-col items-center justify-center rounded-xl border bg-secondary/30 gap-1 text-xs font-medium hover:bg-accent">
-                            <Phone className="h-5 w-5" />
+                            <Phone className="h-4 w-4" />
                             Keypad
                           </button>
                         </div>
@@ -923,14 +1023,19 @@ export function AdminCommunications() {
                                   </Button>
                                 </div>
 
-                                {/* Recordings */}
+                                {/* Recordings & Transcription */}
                                 {loadingRec && (
-                                  <div className="px-4 pb-3 text-xs text-muted-foreground">Loading recordings...</div>
+                                  <div className="border-t px-4 py-3 text-xs text-muted-foreground">Loading recordings...</div>
                                 )}
-                                {!loadingRec && hasRecording && recordings.map((rec) => (
+                                {!loadingRec && recordings.length === 0 && (
+                                  <div className="border-t px-4 py-2.5">
+                                    <p className="text-xs text-muted-foreground italic">No recording for this call.</p>
+                                  </div>
+                                )}
+                                {!loadingRec && recordings.map((rec) => (
                                   <div key={rec.sid} className="border-t bg-background/30">
                                     <div className="flex items-center gap-3 px-4 py-2.5">
-                                      <Play className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                      <Disc className="h-4 w-4 shrink-0 text-muted-foreground" />
                                       <audio
                                         controls
                                         src={rec.audioUrl}
@@ -941,33 +1046,85 @@ export function AdminCommunications() {
                                       <a
                                         href={rec.audioUrl}
                                         download={`recording-${rec.sid}.mp3`}
-                                        className="text-xs font-medium text-primary hover:underline"
+                                        className="grid h-6 w-6 place-items-center rounded-md border text-muted-foreground hover:text-foreground"
                                       >
                                         <Download className="h-3.5 w-3.5" />
                                       </a>
                                     </div>
-
-                                    {/* Transcription */}
                                     <div className="border-t px-4 py-2.5">
                                       {transcripts[rec.sid] ? (
                                         <div>
-                                          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Transcript</div>
+                                          <div className="mb-1.5 flex items-center gap-1.5">
+                                            <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">AI Transcript</span>
+                                          </div>
                                           <p className="text-sm leading-5 text-foreground/80">{transcripts[rec.sid]}</p>
                                         </div>
                                       ) : (
                                         <button
                                           onClick={() => transcribeRecording(rec.sid)}
                                           disabled={transcribing[rec.sid]}
-                                          className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline disabled:opacity-60"
+                                          className="flex items-center gap-1.5 rounded-lg border bg-secondary/30 px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
                                         >
-                                          <Sparkles className="h-3.5 w-3.5" />
-                                          {transcribing[rec.sid] ? "Transcribing..." : "Transcribe Call"}
+                                          <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                          {transcribing[rec.sid] ? "Transcribing..." : "Transcribe with AI"}
                                         </button>
                                       )}
-                                      <p className="mt-1 text-[10px] text-muted-foreground">Uses AI to convert recording to text</p>
                                     </div>
                                   </div>
                                 ))}
+
+                                {/* Notes */}
+                                <div className="border-t bg-background/20 px-4 py-3">
+                                  <div className="mb-2 flex items-center gap-1.5">
+                                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Call Notes</span>
+                                  </div>
+
+                                  {/* Saved notes */}
+                                  {(callNotes[call.sid] ?? []).length > 0 && (
+                                    <div className="mb-2 space-y-1.5">
+                                      {(callNotes[call.sid] ?? []).map((n) => (
+                                        <div key={n.id} className="group flex items-start gap-2 rounded-lg border bg-secondary/30 px-3 py-2">
+                                          <p className="flex-1 text-xs leading-5 text-foreground/90">{n.details.note}</p>
+                                          <div className="flex shrink-0 items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span className="text-[10px] text-muted-foreground">
+                                              {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(n.created_at))}
+                                            </span>
+                                            <button
+                                              onClick={() => deleteNote(call.sid, n.id)}
+                                              disabled={deletingNote[n.id]}
+                                              className="grid h-5 w-5 place-items-center rounded text-muted-foreground hover:text-red-500 disabled:opacity-40"
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* New note input */}
+                                  <div className="flex gap-2">
+                                    <textarea
+                                      value={noteInput[call.sid] || ""}
+                                      onChange={(e) => setNoteInput((prev) => ({ ...prev, [call.sid]: e.target.value }))}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveNote(call.sid);
+                                      }}
+                                      placeholder="Add a note... (⌘↵ to save)"
+                                      rows={2}
+                                      className="flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                    />
+                                    <button
+                                      onClick={() => saveNote(call.sid)}
+                                      disabled={savingNote[call.sid] || !(noteInput[call.sid] || "").trim()}
+                                      className="shrink-0 self-end rounded-lg border bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+                                    >
+                                      {savingNote[call.sid] ? "Saving..." : "Save"}
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </Card>
