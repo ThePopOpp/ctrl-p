@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -8,7 +8,7 @@ import {
   ChevronRight,
   Image,
   ImagePlus,
-  Link,
+  Link as LinkIcon,
   Moon,
   Palette,
   Plus,
@@ -154,7 +154,7 @@ export function AdminProducts() {
                 {group.label !== "Main" && <div className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</div>}
                 <div className="space-y-0.5">
                   {group.items.map(([label, Icon, href]) => (
-                    <Link
+                    <NextLink
                       href={href}
                       key={label}
                       className={cn(
@@ -167,7 +167,7 @@ export function AdminProducts() {
                       {label === "Orders" && <Badge className="ml-auto h-5 bg-primary/20 px-1.5 text-[10px] text-foreground">{orders.length}</Badge>}
                       {label === "Payments" && <Badge className="ml-auto h-5 bg-primary/20 px-1.5 text-[10px] text-foreground">{payments.length}</Badge>}
                       {label === "Messages" && <Badge className="ml-auto h-5 bg-red-500/10 px-1.5 text-[10px] text-red-600 dark:text-red-300">{messages.length}</Badge>}
-                    </Link>
+                    </NextLink>
                   ))}
                 </div>
               </div>
@@ -615,6 +615,11 @@ function ProductSheet({
             <Field label="Video URL" value={videoUrl} onChange={setVideoUrl} placeholder="https://..." />
           </div>
 
+          <div className="grid gap-4 xl:grid-cols-2">
+            <ImageGalleryField label="Photo gallery" value={photoGallery} onChange={setPhotoGallery} sku={sku} />
+            <ImageGalleryField label="Gallery (storefront media)" value={gallery} onChange={setGallery} sku={sku} />
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Status</div>
@@ -714,7 +719,6 @@ function ProductSheet({
             <JsonField label="Brands" value={brands} onChange={setBrands} />
             <JsonField label="Accessories" value={accessories} onChange={setAccessories} />
             <JsonField label="Specifications" value={specifications} onChange={setSpecifications} />
-            <ImageGalleryField label="Photo gallery" value={photoGallery} onChange={setPhotoGallery} sku={sku} />
             <JsonField label="FAQ" value={faqs} onChange={setFaqs} />
             <JsonField label="Tips" value={tips} onChange={setTips} />
             <JsonField label="Attributes" value={attributes} onChange={setAttributes} />
@@ -738,7 +742,6 @@ function ProductSheet({
             <JsonField label="Proofing settings" value={proofingSettings} onChange={setProofingSettings} />
             <JsonField label="Production requirements" value={productionRequirements} onChange={setProductionRequirements} />
             <JsonField label="Product assets" value={productAssets} onChange={setProductAssets} />
-            <ImageGalleryField label="Gallery (storefront media)" value={gallery} onChange={setGallery} sku={sku} />
             <JsonField label="Meta" value={meta} onChange={setMeta} />
           </div>
 
@@ -899,7 +902,7 @@ function ImageGalleryField({
       {/* URL input row */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Link className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <LinkIcon className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
