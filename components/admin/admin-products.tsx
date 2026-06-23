@@ -930,25 +930,29 @@ function ImageGalleryField({
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     setUploading(true);
     setUploadError("");
     try {
       const db = getSupabaseBrowserClient();
       const session = db ? (await db.auth.getSession()).data.session : null;
       if (!session?.access_token) throw new Error("Sign in required.");
-      const form = new FormData();
-      form.append("file", file);
-      form.append("sku", sku || "product");
-      const res = await fetch("/api/admin/products/upload-image", {
-        method: "POST",
-        headers: { authorization: `Bearer ${session.access_token}` },
-        body: form,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Upload failed.");
-      setUrls([...urls, data.url]);
+      const added: string[] = [];
+      for (const file of files) {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("sku", sku || "product");
+        const res = await fetch("/api/admin/products/upload-image", {
+          method: "POST",
+          headers: { authorization: `Bearer ${session.access_token}` },
+          body: form,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Upload failed for ${file.name}.`);
+        added.push(data.url);
+      }
+      setUrls([...urls, ...added]);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -958,7 +962,7 @@ function ImageGalleryField({
   }
 
   return (
-    <div className="col-span-2">
+    <div>
       <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
 
       {/* Thumbnail grid */}
@@ -1006,7 +1010,7 @@ function ImageGalleryField({
         </div>
       )}
 
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
 
       {/* URL input row */}
       <div className="flex gap-2">

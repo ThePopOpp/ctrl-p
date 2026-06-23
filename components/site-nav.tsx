@@ -273,9 +273,9 @@ export function SiteNav() {
               <nav className="hidden lg:flex items-center gap-1 text-[14px]">
                 {/* Shop mega menu */}
                 <div className="group/shop relative">
-                  <button type="button" className="flex items-center gap-1 rounded-md px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                  <Link href="/shop" className="flex items-center gap-1 rounded-md px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
                     Shop <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
+                  </Link>
                   <div className="absolute top-full left-0 z-50 mt-0 grid w-[560px] grid-cols-2 gap-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-2 shadow-xl opacity-0 pointer-events-none group-hover/shop:opacity-100 group-hover/shop:pointer-events-auto transition-all duration-150 -translate-y-1 group-hover/shop:translate-y-0">
                     {SHOP_CATEGORIES.map((item) => (
                       <Link key={item.title} href={item.href} className="flex items-start gap-3 p-3 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-colors">
