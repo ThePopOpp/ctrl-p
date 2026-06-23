@@ -18,6 +18,7 @@ import { LogOut } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData, saveAdminProduct } from "@/lib/admin/admin-api";
 import type { ProductPayload } from "@/lib/admin/admin-api";
+import { ImportProductsSheet } from "@/components/admin/import-products-sheet";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import type { AdminDashboardData, Product } from "@/lib/admin/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -64,6 +65,7 @@ export function AdminProducts() {
   const [query, setQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [wooSyncing, setWooSyncing] = useState(false);
   const [notice, setNotice] = useState("");
 
@@ -224,7 +226,7 @@ export function AdminProducts() {
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add product</Button>
-                  <Button variant="outline"><SlidersHorizontal className="h-4 w-4" /> Import CSV</Button>
+                  <Button variant="outline" onClick={() => setImportOpen(true)}><SlidersHorizontal className="h-4 w-4" /> Import CSV</Button>
                   <Button variant="outline" onClick={importWooProducts} disabled={wooSyncing}>
                     <SlidersHorizontal className="h-4 w-4" /> {wooSyncing ? "Syncing..." : "Woo sync"}
                   </Button>
@@ -318,6 +320,7 @@ export function AdminProducts() {
           mode="edit"
         />
         <ProductSheet product={null} open={addOpen} onOpenChange={setAddOpen} onSaved={refreshProducts} mode="add" />
+        <ImportProductsSheet open={importOpen} onClose={() => setImportOpen(false)} onImported={refreshProducts} />
       </div>
     </div>
   );

@@ -3,6 +3,20 @@ import twilio from "twilio";
 
 import { jsonError, verifyAdminRequest } from "@/lib/admin/server-auth";
 
+function getOwnedNumbers(): string[] {
+  const fromEnv = process.env.TWILIO_PHONE_NUMBERS || "";
+  if (fromEnv) return fromEnv.split(",").map((n) => n.trim()).filter(Boolean);
+  const single = process.env.TWILIO_PHONE_NUMBER || "";
+  return single ? [single] : [];
+}
+
+function getSmsNumbers(): string[] {
+  const fromEnv = process.env.TWILIO_SMS_NUMBERS || "";
+  if (fromEnv) return fromEnv.split(",").map((n) => n.trim()).filter(Boolean);
+  const owned = getOwnedNumbers();
+  return owned.length ? [owned[0]] : [];
+}
+
 export async function GET(request: Request) {
   const verified = await verifyAdminRequest(request);
   if (verified.error) return verified.error;
@@ -17,7 +31,6 @@ export async function GET(request: Request) {
     return jsonError("Twilio credentials not configured (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN).", 501);
   }
 
-  // Use API Key if available, otherwise fall back to Account SID/Auth Token
   const keySid = apiKeySid || accountSid;
   const keySecret = apiKeySecret || authToken;
 
@@ -35,15 +48,19 @@ export async function GET(request: Request) {
   });
   token.addGrant(voiceGrant);
 
-  const webhookUrl = process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/twilio/voice`
-    : null;
+  const ownedNumbers = getOwnedNumbers();
+  const smsNumbers = getSmsNumbers();
+  const defaultNumber = process.env.TWILIO_PHONE_NUMBER || ownedNumbers[0] || null;
 
   return NextResponse.json({
     token: token.toJwt(),
     identity: "ctrl-p-admin",
-    phoneNumber: process.env.TWILIO_PHONE_NUMBER || null,
     twimlAppSid: twimlAppSid || null,
-    webhookUrl,
+    // All numbers available for voice dialing
+    phoneNumbers: ownedNumbers,
+    // Default caller ID for outbound calls
+    defaultPhoneNumber: defaultNumber,
+    // Numbers allowed for SMS (only the two 480s)
+    smsPhoneNumbers: smsNumbers,
   });
 }
