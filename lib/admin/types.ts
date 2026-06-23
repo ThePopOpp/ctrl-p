@@ -198,6 +198,7 @@ export type Product = {
   coupon_code?: string | null;
   accessories?: unknown;
   specifications?: unknown;
+  image_url?: string | null;
   video_url?: string | null;
   photo_gallery?: unknown;
   faqs?: unknown;

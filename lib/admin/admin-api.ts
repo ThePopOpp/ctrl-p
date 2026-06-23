@@ -953,6 +953,7 @@ export type ProductPayload = {
   coupon_code: string;
   accessories: unknown;
   specifications: unknown;
+  image_url: string;
   video_url: string;
   photo_gallery: unknown;
   faqs: unknown;

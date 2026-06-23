@@ -387,6 +387,7 @@ function ProductSheet({
   const [taxStatus, setTaxStatus] = useState("taxable");
   const [taxClass, setTaxClass] = useState("");
   const [couponCode, setCouponCode] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [weightLbs, setWeightLbs] = useState("");
   const [dimensionLengthIn, setDimensionLengthIn] = useState("");
@@ -452,6 +453,7 @@ function ProductSheet({
     setTaxStatus(product?.tax_status || "taxable");
     setTaxClass(product?.tax_class || "");
     setCouponCode(product?.coupon_code || "");
+    setImageUrl(product?.image_url || "");
     setVideoUrl(product?.video_url || "");
     setWeightLbs(product?.weight_lbs ? String(product.weight_lbs) : "");
     setDimensionLengthIn(product?.dimension_length_in ? String(product.dimension_length_in) : "");
@@ -540,6 +542,7 @@ function ProductSheet({
         tax_status: taxStatus,
         tax_class: taxClass,
         coupon_code: couponCode,
+        image_url: imageUrl,
         accessories: parseJson("Accessories", accessories),
         specifications: parseJson("Specifications", specifications),
         video_url: videoUrl,
@@ -616,8 +619,8 @@ function ProductSheet({
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
+            <SingleImageField label="Featured image" value={imageUrl} onChange={setImageUrl} sku={sku} />
             <ImageGalleryField label="Photo gallery" value={photoGallery} onChange={setPhotoGallery} sku={sku} />
-            <ImageGalleryField label="Gallery (storefront media)" value={gallery} onChange={setGallery} sku={sku} />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
@@ -771,6 +774,112 @@ function JsonField({ label, value, onChange }: { label: string; value: string; o
     <div>
       <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
       <Textarea className="min-h-[150px] font-mono text-xs" value={value} onChange={(event) => onChange(event.target.value)} />
+    </div>
+  );
+}
+
+function SingleImageField({
+  label,
+  value,
+  onChange,
+  sku,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  sku: string;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [urlInput, setUrlInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      const db = getSupabaseBrowserClient();
+      const session = db ? (await db.auth.getSession()).data.session : null;
+      if (!session?.access_token) throw new Error("Sign in required.");
+      const form = new FormData();
+      form.append("file", file);
+      form.append("sku", sku || "product");
+      const res = await fetch("/api/admin/products/upload-image", {
+        method: "POST",
+        headers: { authorization: `Bearer ${session.access_token}` },
+        body: form,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Upload failed.");
+      onChange(data.url);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  function applyUrl() {
+    const url = urlInput.trim();
+    if (!url) return;
+    onChange(url);
+    setUrlInput("");
+  }
+
+  return (
+    <div>
+      <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
+
+      {value ? (
+        <div className="group relative mb-3 overflow-hidden rounded-lg border bg-secondary/40" style={{ aspectRatio: "16/9" }}>
+          <img src={value} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          <div className="absolute inset-0 flex items-end justify-between bg-gradient-to-t from-black/50 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Featured</span>
+            <div className="flex gap-1.5">
+              <button type="button" onClick={() => fileRef.current?.click()} className="rounded bg-white/20 px-2 py-1 text-[10px] text-white backdrop-blur hover:bg-white/30">
+                Replace
+              </button>
+              <button type="button" onClick={() => onChange("")} className="rounded bg-red-500/70 px-2 py-1 text-[10px] text-white backdrop-blur hover:bg-red-600/80">
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => fileRef.current?.click()}
+          className="mb-3 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-10 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          <Upload className="h-6 w-6" />
+          <div className="text-center text-xs">
+            <p className="font-medium">{uploading ? "Uploading…" : "Click to upload featured image"}</p>
+            <p className="text-muted-foreground">PNG, JPG, WebP, SVG — max 10 MB</p>
+          </div>
+        </div>
+      )}
+
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <LinkIcon className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyUrl())}
+            placeholder="Or paste an image URL and press Enter"
+            className="pl-8 text-xs"
+          />
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={applyUrl} disabled={!urlInput.trim()} className="shrink-0">
+          Use URL
+        </Button>
+      </div>
+
+      {uploadError && <p className="mt-1.5 text-xs text-red-500">{uploadError}</p>}
     </div>
   );
 }

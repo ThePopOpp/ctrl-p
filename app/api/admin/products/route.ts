@@ -112,6 +112,7 @@ function productPayload(body: Record<string, unknown>) {
     coupon_code: String(body.coupon_code || "").trim() || null,
     accessories: body.accessories ?? [],
     specifications: body.specifications ?? {},
+    image_url: String(body.image_url || "").trim() || null,
     video_url: String(body.video_url || "").trim() || null,
     photo_gallery: body.photo_gallery ?? [],
     faqs: body.faqs ?? [],
@@ -151,7 +152,7 @@ function productPayload(body: Record<string, unknown>) {
   };
 }
 
-const productSelect = "id, sku, slug, name, category, tagline, description, short_description, product_type, base_cost, base_price, sale_price, vendor, active, status, stock_status, featured, customizer_enabled, alternate_skus, tags, brands, tax_status, tax_class, coupon_code, accessories, specifications, video_url, photo_gallery, faqs, tips, attributes, similar_products, linked_products, weight_lbs, dimension_length_in, dimension_width_in, dimension_height_in, shipping_class, template_files, import_sources, woo_product_id, woo_permalink, woo_sync_enabled, woo_sync_status, woo_last_synced_at, gallery, sizes, materials, print_options, finishing_options, quantity_tiers, turnaround_times, shipping_options, file_upload_requirements, price_rules, designer_template, designer_surfaces, designer_constraints, personalization_schema, proofing_settings, production_requirements, product_assets, meta, created_at";
+const productSelect = "id, sku, slug, name, category, tagline, description, short_description, product_type, base_cost, base_price, sale_price, vendor, active, status, stock_status, featured, customizer_enabled, alternate_skus, tags, brands, tax_status, tax_class, coupon_code, accessories, specifications, image_url, video_url, photo_gallery, faqs, tips, attributes, similar_products, linked_products, weight_lbs, dimension_length_in, dimension_width_in, dimension_height_in, shipping_class, template_files, import_sources, woo_product_id, woo_permalink, woo_sync_enabled, woo_sync_status, woo_last_synced_at, gallery, sizes, materials, print_options, finishing_options, quantity_tiers, turnaround_times, shipping_options, file_upload_requirements, price_rules, designer_template, designer_surfaces, designer_constraints, personalization_schema, proofing_settings, production_requirements, product_assets, meta, created_at";
 
 export async function POST(request: Request) {
   const config = getSupabaseEnv();
