@@ -184,6 +184,8 @@ export function AdminCommunications() {
   const [isOnHold, setIsOnHold] = useState(false);
   const [deviceError, setDeviceError] = useState("");
   const [phoneNumber, setPhoneNumber] = useState(process.env.NEXT_PUBLIC_TWILIO_PHONE || "");
+  const [availableNumbers, setAvailableNumbers] = useState<string[]>([]);
+  const [selectedCallerId, setSelectedCallerId] = useState("");
 
   // Call history state
   const [calls, setCalls] = useState<TwilioCall[]>([]);
@@ -250,6 +252,11 @@ export function AdminCommunications() {
       }
       const data = await res.json();
       if (data.phoneNumber) setPhoneNumber(data.phoneNumber);
+      if (data.phoneNumbers?.length) {
+        setAvailableNumbers(data.phoneNumbers);
+        const defaultId = data.defaultPhoneNumber || data.phoneNumbers[0];
+        setSelectedCallerId((prev) => prev || defaultId);
+      }
 
       const { Device, Call } = await import("@twilio/voice-sdk");
       void Call; // imported for type resolution
@@ -310,7 +317,7 @@ export function AdminCommunications() {
     if (!deviceRef.current || !dialInput.trim()) return;
     setCallState("connecting");
     try {
-      const call = await deviceRef.current.connect({ params: { To: dialInput.trim() } });
+      const call = await deviceRef.current.connect({ params: { To: dialInput.trim(), callerId: selectedCallerId } });
       activeCallRef.current = call;
       call.on("ringing", () => setCallState("ringing"));
       call.on("accept", () => { setCallState("active"); startCallTimer(); });
@@ -748,6 +755,34 @@ export function AdminCommunications() {
 
                   {/* Call history */}
                   <div>
+                    {/* Caller ID selector */}
+                    {availableNumbers.length > 0 && (
+                      <div className="mb-3">
+                        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Dial out from</div>
+                        <div className="flex flex-wrap gap-2">
+                          {availableNumbers.map((num) => {
+                            const isSelected = num === selectedCallerId;
+                            return (
+                              <button
+                                key={num}
+                                onClick={() => setSelectedCallerId(num)}
+                                disabled={isCallActive}
+                                className={cn(
+                                  "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50",
+                                  isSelected
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-border bg-secondary/30 text-muted-foreground hover:bg-accent hover:text-foreground",
+                                )}
+                              >
+                                <Phone className={cn("h-3 w-3", isSelected && "text-primary")} />
+                                {formatPhone(num)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="mb-3 flex items-center justify-between">
                       {/* Sub-tabs: Call History / Voicemail */}
                       <div className="flex items-center gap-1 rounded-lg border bg-secondary/40 p-1">
