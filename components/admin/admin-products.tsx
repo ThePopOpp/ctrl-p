@@ -2,17 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   ChevronRight,
   Image,
+  ImagePlus,
+  Link,
   Moon,
   Palette,
   Plus,
   Search,
   SlidersHorizontal,
   Sun,
+  Trash2,
+  Upload,
+  X,
 } from "lucide-react";
 import { LogOut } from "lucide-react";
 
@@ -709,7 +714,7 @@ function ProductSheet({
             <JsonField label="Brands" value={brands} onChange={setBrands} />
             <JsonField label="Accessories" value={accessories} onChange={setAccessories} />
             <JsonField label="Specifications" value={specifications} onChange={setSpecifications} />
-            <JsonField label="Photo gallery" value={photoGallery} onChange={setPhotoGallery} />
+            <ImageGalleryField label="Photo gallery" value={photoGallery} onChange={setPhotoGallery} sku={sku} />
             <JsonField label="FAQ" value={faqs} onChange={setFaqs} />
             <JsonField label="Tips" value={tips} onChange={setTips} />
             <JsonField label="Attributes" value={attributes} onChange={setAttributes} />
@@ -733,7 +738,7 @@ function ProductSheet({
             <JsonField label="Proofing settings" value={proofingSettings} onChange={setProofingSettings} />
             <JsonField label="Production requirements" value={productionRequirements} onChange={setProductionRequirements} />
             <JsonField label="Product assets" value={productAssets} onChange={setProductAssets} />
-            <JsonField label="Gallery" value={gallery} onChange={setGallery} />
+            <ImageGalleryField label="Gallery (storefront media)" value={gallery} onChange={setGallery} sku={sku} />
             <JsonField label="Meta" value={meta} onChange={setMeta} />
           </div>
 
@@ -766,3 +771,152 @@ function JsonField({ label, value, onChange }: { label: string; value: string; o
     </div>
   );
 }
+
+function ImageGalleryField({
+  label,
+  value,
+  onChange,
+  sku,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  sku: string;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [urlInput, setUrlInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const urls: string[] = useMemo(() => {
+    try {
+      const parsed = JSON.parse(value || "[]");
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item: unknown) => (typeof item === "string" ? item : (item as { url?: string })?.url || ""))
+          .filter(Boolean);
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }, [value]);
+
+  function setUrls(next: string[]) {
+    onChange(JSON.stringify(next));
+  }
+
+  function addUrl() {
+    const url = urlInput.trim();
+    if (!url || urls.includes(url)) return;
+    setUrls([...urls, url]);
+    setUrlInput("");
+  }
+
+  function removeUrl(index: number) {
+    setUrls(urls.filter((_, i) => i !== index));
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      const db = getSupabaseBrowserClient();
+      const session = db ? (await db.auth.getSession()).data.session : null;
+      if (!session?.access_token) throw new Error("Sign in required.");
+      const form = new FormData();
+      form.append("file", file);
+      form.append("sku", sku || "product");
+      const res = await fetch("/api/admin/products/upload-image", {
+        method: "POST",
+        headers: { authorization: `Bearer ${session.access_token}` },
+        body: form,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Upload failed.");
+      setUrls([...urls, data.url]);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <div className="col-span-2">
+      <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
+
+      {/* Thumbnail grid */}
+      {urls.length > 0 && (
+        <div className="mb-3 grid grid-cols-5 gap-2">
+          {urls.map((url, i) => (
+            <div key={i} className="group relative aspect-square overflow-hidden rounded-lg border bg-secondary/40">
+              <img src={url} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <button
+                type="button"
+                onClick={() => removeUrl(i)}
+                className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100"
+              >
+                <Trash2 className="h-4 w-4 text-white" />
+              </button>
+              {i === 0 && (
+                <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">Cover</span>
+              )}
+            </div>
+          ))}
+          {/* Add slot */}
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+          >
+            <ImagePlus className="h-5 w-5" />
+            <span className="text-[10px]">{uploading ? "Uploading…" : "Add"}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {urls.length === 0 && (
+        <div
+          onClick={() => fileRef.current?.click()}
+          className="mb-3 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-8 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          <Upload className="h-6 w-6" />
+          <div className="text-center text-xs">
+            <p className="font-medium">Click to upload an image</p>
+            <p className="text-muted-foreground">PNG, JPG, WebP, SVG — max 10 MB</p>
+          </div>
+        </div>
+      )}
+
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+      {/* URL input row */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Link className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addUrl())}
+            placeholder="Or paste an image URL and press Enter"
+            className="pl-8 text-xs"
+          />
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={addUrl} disabled={!urlInput.trim()} className="shrink-0">
+          Add URL
+        </Button>
+      </div>
+
+      {uploadError && (
+        <p className="mt-1.5 text-xs text-red-500">{uploadError}</p>
+      )}
+    </div>
+  );
+}
+
