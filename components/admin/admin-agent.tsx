@@ -1,56 +1,170 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, Bot, BrainCircuit, ChevronRight, Clock, Copy, KeyRound, Loader2, Moon, PlugZap, Search, Send, ShieldCheck, Sun, Workflow } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Bell,
+  Bot,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Copy,
+  FileText,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Moon,
+  Plus,
+  Send,
+  Settings2,
+  Sparkles,
+  Sun,
+  Wrench,
+  X,
+  Zap,
+} from "lucide-react";
 import { LogOut } from "lucide-react";
 
 import { getCurrentAdminProfile, loadAdminDashboardData } from "@/lib/admin/admin-api";
 import { AdminNotificationBell } from "@/components/admin/admin-notification-bell";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { AdminDashboardData, AdminProfile } from "@/lib/admin/types";
+import type { AdminDashboardData } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-const integrations = [
+// ─── Model config ─────────────────────────────────────────────────────────────
+
+const AGENT_MODELS = [
+  { id: "gpt-4o", label: "GPT-4o", provider: "openai", badge: "Active", tools: true },
+  { id: "gpt-4o-mini", label: "GPT-4o Mini", provider: "openai", badge: "Fast", tools: true },
+  { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", provider: "anthropic", badge: "Active", tools: false },
+  { id: "claude-opus-4-8", label: "Claude Opus 4.8", provider: "anthropic", badge: "Powerful", tools: false },
+  { id: "openrouter/auto", label: "OpenRouter Auto", provider: "openrouter", badge: "Soon", tools: false, disabled: true },
+  { id: "gemini-1.5-pro", label: "Gemini Pro", provider: "google", badge: "Soon", tools: false, disabled: true },
+  { id: "hermes", label: "Hermes AI", provider: "hermes", badge: "Soon", tools: false, disabled: true },
+] as const;
+
+// ─── Skills ───────────────────────────────────────────────────────────────────
+
+const SKILLS = [
   {
-    name: "Paperclip",
-    status: "Planned",
-    description: "Document intake, invoice/proof parsing, file summaries, and structured handoff workflows.",
-    next: "Add credentials and choose first document automation.",
+    category: "Operations",
+    items: [
+      { icon: Zap, label: "Daily briefing", prompt: "Give me a daily operations summary: what's due today, what's overdue, upcoming appointments, unread messages, and the top 3 things needing immediate attention." },
+      { icon: Clock, label: "Overdue review", prompt: "List all overdue orders and overdue production tasks. For each, include the customer, how many days late, and a recommended next action." },
+      { icon: Wrench, label: "Production blockers", prompt: "What's currently blocking production? List all blocked items with their blocker type and suggest a resolution for each." },
+    ],
   },
   {
-    name: "Hermes",
-    status: "Planned",
-    description: "Message routing, outbound campaign assist, conversation summaries, and customer follow-up queues.",
-    next: "Connect messaging permissions and define send guardrails.",
+    category: "Communications",
+    items: [
+      { icon: MessageSquare, label: "Draft order update", prompt: "Review recent orders and draft a professional customer update for any order that most urgently needs customer communication. Wrap the draft in <draft> tags." },
+      { icon: Bell, label: "Proof reminders", prompt: "List all orders pending proof approval. Draft an SMS reminder for the most overdue one. Wrap the SMS text in <draft> tags." },
+      { icon: Mail, label: "Follow-up email", prompt: "Find customers who have unread messages or pending orders older than 3 days. Draft a follow-up email for the most urgent case." },
+    ],
   },
   {
-    name: "Open Claw",
-    status: "Optional",
-    description: "Computer-use style operational assistant for controlled dashboard workflows and QA passes.",
-    next: "Decide whether this should run as supervised-only.",
+    category: "Content",
+    items: [
+      { icon: FileText, label: "Blog post idea", prompt: "Suggest 5 blog post ideas for the Ctrl+P website that would attract Phoenix-area businesses looking for print, signs, or vehicle wraps. For each, include the title, target keyword, and a 2-sentence outline." },
+      { icon: Sparkles, label: "SMS campaign", prompt: "Draft a promotional SMS campaign for business cards targeting local Phoenix businesses. Create 3 variations under 160 characters each. Wrap each in <draft> tags. Then save the best one as a draft." },
+      { icon: Mail, label: "Email template", prompt: "Create a professional order confirmation email template for Ctrl+P. Use {customer_name}, {order_number}, {product_name}, and {due_date} as placeholders. Save it as a draft when done." },
+    ],
   },
-];
+  {
+    category: "Analytics",
+    items: [
+      { icon: Zap, label: "Revenue overview", prompt: "Pull the business overview and summarize this month's revenue, order volume by status, and the top 3 actionable insights." },
+      { icon: MessageSquare, label: "Inbox summary", prompt: "List all unread inbound messages. Summarize the topics and draft a response plan for the top 3 most urgent ones." },
+      { icon: Wrench, label: "Product performance", prompt: "List all active products sorted by category. Identify which categories have the most products and which might need better coverage." },
+    ],
+  },
+] as const;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ToolCallRecord = {
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+  result: unknown;
+  error?: string;
+};
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  toolCalls?: ToolCallRecord[];
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function human(value: string | null | undefined) {
-  return String(value || "unknown").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return String(value || "unknown").replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
+async function handleSignOut() {
+  const db = getSupabaseBrowserClient();
+  if (db) await db.auth.signOut();
+  window.location.href = "/login";
+}
 
-const QUICK_PROMPTS = [
-  { label: "Daily summary", prompt: "Give me a daily operations summary: what's due today, what's overdue, upcoming appointments, and the top 3 things that need immediate attention." },
-  { label: "Overdue items", prompt: "List all overdue production tasks and overdue orders. For each, include the customer, how many days late, and a recommended next action." },
-  { label: "Draft customer update", prompt: "Draft a professional customer update message for the order that most urgently needs customer communication. Use <draft>...</draft> tags around the message." },
-  { label: "Blocked items", prompt: "What's currently blocking production? List all blocked items with their blocker type and suggested resolution steps." },
-];
+// ─── Tool call card ───────────────────────────────────────────────────────────
+
+function ToolCallCard({ call }: { call: ToolCallRecord }) {
+  const [open, setOpen] = useState(false);
+
+  const icons: Record<string, React.ElementType> = {
+    get_business_overview: Zap,
+    list_orders: FileText,
+    get_order_details: FileText,
+    list_customers: Bell,
+    list_messages: MessageSquare,
+    list_products: Wrench,
+    list_production_items: Clock,
+    send_sms: MessageSquare,
+    send_email: Mail,
+    save_content_draft: Sparkles,
+  };
+  const Icon = icons[call.name] ?? Wrench;
+  const isError = call.error || (typeof call.result === "object" && call.result !== null && "error" in (call.result as Record<string, unknown>));
+
+  return (
+    <div className={cn("my-1 rounded-lg border text-[12px]", isError ? "border-red-500/30 bg-red-500/5" : "border-primary/20 bg-primary/5")}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left"
+      >
+        <Icon className={cn("h-3.5 w-3.5 shrink-0", isError ? "text-red-500" : "text-primary")} />
+        <span className="font-medium text-foreground">{human(call.name)}</span>
+        {isError && <Badge className="ml-1 h-4 bg-red-500/15 px-1 text-[10px] text-red-600 dark:text-red-400">Error</Badge>}
+        <ChevronDown className={cn("ml-auto h-3 w-3 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="border-t border-primary/10 px-3 pb-2 pt-2 space-y-1.5">
+          <div>
+            <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Input</div>
+            <pre className="overflow-x-auto whitespace-pre-wrap rounded bg-background/60 px-2 py-1 text-[11px] text-foreground">{JSON.stringify(call.args, null, 2)}</pre>
+          </div>
+          <div>
+            <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Result</div>
+            <pre className="max-h-[200px] overflow-y-auto whitespace-pre-wrap rounded bg-background/60 px-2 py-1 text-[11px] text-foreground">{JSON.stringify(call.result, null, 2)}</pre>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Draft block ──────────────────────────────────────────────────────────────
 
 function DraftBlock({ content }: { content: string }) {
   const [copied, setCopied] = useState(false);
@@ -62,11 +176,8 @@ function DraftBlock({ content }: { content: string }) {
   return (
     <div className="my-2 rounded-lg border border-primary/30 bg-primary/5">
       <div className="flex items-center justify-between gap-2 border-b border-primary/20 px-3 py-1.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-primary">Draft message</span>
-        <button
-          onClick={copy}
-          className="flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-        >
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-primary">Draft</span>
+        <button onClick={copy} className="flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary">
           <Copy className="h-3 w-3" />
           {copied ? "Copied!" : "Copy"}
         </button>
@@ -76,7 +187,7 @@ function DraftBlock({ content }: { content: string }) {
   );
 }
 
-function renderMessageContent(content: string) {
+function renderContent(content: string) {
   const parts = content.split(/(<draft>[\s\S]*?<\/draft>)/g);
   return parts.map((part, i) => {
     const match = part.match(/^<draft>([\s\S]*?)<\/draft>$/);
@@ -91,67 +202,30 @@ function renderMessageContent(content: string) {
   });
 }
 
-async function handleSignOut() {
-  const db = getSupabaseBrowserClient();
-  if (db) await db.auth.signOut();
-  window.location.href = "/login";
-}
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function AdminAgent() {
   const pathname = usePathname();
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [authState, setAuthState] = useState<"checking" | "allowed" | "denied">("checking");
-  const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [data, setData] = useState<AdminDashboardData | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [model, setModel] = useState("gpt-4o");
+  const [skillsOpen, setSkillsOpen] = useState(true);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages, thinking]);
-
-  async function sendMessage() {
-    const text = chatInput.trim();
-    if (!text || thinking) return;
-    setChatInput("");
-    const nextHistory: ChatMessage[] = [...chatMessages, { role: "user", content: text }];
-    setChatMessages(nextHistory);
-    setThinking(true);
-    try {
-      const db = getSupabaseBrowserClient();
-      const token = (await db?.auth.getSession())?.data.session?.access_token;
-      const res = await fetch("/api/admin/agent", {
-        method: "POST",
-        headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({
-          message: text,
-          history: chatMessages.slice(-10),
-        }),
-      });
-      const payload = await res.json().catch(() => ({})) as { response?: string; error?: string };
-      if (!res.ok) throw new Error(payload.error || "Agent request failed.");
-      setChatMessages([...nextHistory, { role: "assistant", content: payload.response ?? "(no response)" }]);
-    } catch (error) {
-      setChatMessages([...nextHistory, { role: "assistant", content: error instanceof Error ? `Error: ${error.message}` : "Could not reach the agent." }]);
-    } finally {
-      setThinking(false);
-    }
-  }
+  }, [messages, thinking]);
 
   useEffect(() => {
     async function boot() {
-      const currentProfile = await getCurrentAdminProfile();
-      setProfile(currentProfile);
-      if (!currentProfile && process.env.NEXT_PUBLIC_SUPABASE_URL) {
-        setAuthState("denied");
-        return;
-      }
-      if (currentProfile?.role !== "super_admin") {
-        setAuthState("denied");
-        return;
-      }
+      const profile = await getCurrentAdminProfile();
+      if (!profile && process.env.NEXT_PUBLIC_SUPABASE_URL) { setAuthState("denied"); return; }
+      if (profile?.role !== "super_admin") { setAuthState("denied"); return; }
       setAuthState("allowed");
       setData(await loadAdminDashboardData());
     }
@@ -159,25 +233,47 @@ export function AdminAgent() {
   }, []);
 
   const orders = data?.orders ?? [];
+  const msgList = data?.messages ?? [];
   const payments = data?.payments ?? [];
-  const messages = data?.messages ?? [];
-  const users = data?.users ?? [];
-  const agentSignals = useMemo(() => {
-    const now = new Date().toISOString();
-    const unpaid = orders.filter((order) => ["unpaid", "pending", "partially_paid"].includes(order.payment_status)).length;
-    const proofing = orders.filter((order) => ["file_review", "proofing", "awaiting_approval"].includes(order.status)).length;
-    const unread = messages.filter((message) => !message.read_at && message.direction === "inbound").length;
-    const missingContact = users.filter((user) => !user.phone || !user.email).length;
-    const overdueOrders = orders.filter((order) =>
-      order.due_at && order.due_at < now &&
-      !["completed", "shipped", "canceled", "archived"].includes(String(order.status ?? "")),
-    ).length;
-    return { unpaid, proofing, unread, missingContact, overdueOrders };
-  }, [messages, orders, users]);
+
+  async function sendMessage(text?: string) {
+    const content = (text ?? input).trim();
+    if (!content || thinking) return;
+    setInput("");
+
+    const next: ChatMessage[] = [...messages, { role: "user", content }];
+    setMessages(next);
+    setThinking(true);
+
+    try {
+      const db = getSupabaseBrowserClient();
+      const token = (await db?.auth.getSession())?.data.session?.access_token;
+      const res = await fetch("/api/admin/agent", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          message: content,
+          model,
+          history: messages.slice(-20).map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+      const payload = await res.json().catch(() => ({})) as { response?: string; toolCalls?: ToolCallRecord[]; error?: string };
+      if (!res.ok) throw new Error(payload.error || "Agent request failed.");
+      setMessages([...next, { role: "assistant", content: payload.response ?? "(no response)", toolCalls: payload.toolCalls ?? [] }]);
+    } catch (err) {
+      setMessages([...next, { role: "assistant", content: err instanceof Error ? `Error: ${err.message}` : "Could not reach the agent.", toolCalls: [] }]);
+    } finally {
+      setThinking(false);
+      textareaRef.current?.focus();
+    }
+  }
+
+  const selectedModelConfig = AGENT_MODELS.find((m) => m.id === model);
 
   return (
     <div className={cn(theme === "dark" && "dark")}>
       <div className="min-h-screen bg-background text-foreground">
+        {/* Sidebar */}
         <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
           <div className="mb-[45px] px-2 pt-[5px]">
             <a href="/admin">
@@ -196,7 +292,7 @@ export function AdminAgent() {
                       {label}
                       {label === "Orders" && <Badge className="ml-auto h-5 bg-primary/20 px-1.5 text-[10px] text-foreground">{orders.length}</Badge>}
                       {label === "Payments" && <Badge className="ml-auto h-5 bg-primary/20 px-1.5 text-[10px] text-foreground">{payments.length}</Badge>}
-                      {label === "Messages" && <Badge className="ml-auto h-5 bg-red-500/10 px-1.5 text-[10px] text-red-600 dark:text-red-300">{messages.length}</Badge>}
+                      {label === "Messages" && <Badge className="ml-auto h-5 bg-red-500/10 px-1.5 text-[10px] text-red-600 dark:text-red-300">{msgList.length}</Badge>}
                       {label === "Agent" && <Badge className="ml-auto h-5 bg-primary/20 px-1.5 text-[10px] text-foreground">SA</Badge>}
                     </Link>
                   ))}
@@ -204,20 +300,20 @@ export function AdminAgent() {
               </div>
             ))}
           </nav>
-
           <div className="absolute bottom-3 left-3 right-3">
             <div className="mb-3 border-t border-border" />
             <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2">
               <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold">JW</div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xs font-medium">Jeremy Waters</div>
-                <div className="truncate text-[10px] text-muted-foreground">Owner - Super Admin</div>
+                <div className="truncate text-[10px] text-muted-foreground">Owner — Super Admin</div>
               </div>
               <button onClick={handleSignOut} aria-label="Sign out" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button>
             </div>
           </div>
         </aside>
 
+        {/* Header */}
         <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">
           <div className="flex h-12 items-center gap-3 px-5">
             <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
@@ -226,211 +322,216 @@ export function AdminAgent() {
               <span className="font-medium text-foreground">Agent</span>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <div className="relative hidden w-[380px] md:block">
-                <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
-                <Input className="h-8 rounded-lg pl-9 text-xs" placeholder="Search agents, automations, workflows..." />
-              </div>
               <AdminNotificationBell />
-              <Button variant="outline" size="icon" aria-label="Toggle theme" className="h-8 w-8" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
+              <Button variant="outline" size="icon" aria-label="Toggle theme" className="h-8 w-8" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              </Button>
             </div>
           </div>
         </header>
 
-        <main className="px-4 py-5 lg:pl-[258px] lg:pr-6">
-          {authState === "checking" && <Card><CardContent className="p-5 text-sm text-muted-foreground">Checking super admin access...</CardContent></Card>}
+        <main className="flex h-[calc(100vh-48px)] lg:pl-[238px]">
+          {authState === "checking" && (
+            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking access...
+            </div>
+          )}
           {authState === "denied" && (
-            <Card className="border-red-500/30">
-              <CardContent className="p-5">
-                <div className="font-semibold text-red-600 dark:text-red-300">Super Admin access required</div>
-                <p className="mt-2 text-sm text-muted-foreground">Agent controls are restricted to Super Admin for now. Current role: {human(profile?.role)}.</p>
-                <Button className="mt-4" asChild><a href="/admin">Back to dashboard</a></Button>
-              </CardContent>
-            </Card>
+            <div className="flex flex-1 items-center justify-center p-6">
+              <Card className="max-w-md border-red-500/30">
+                <CardContent className="p-5">
+                  <div className="font-semibold text-red-600 dark:text-red-300">Super Admin access required</div>
+                  <p className="mt-2 text-sm text-muted-foreground">Agent controls are restricted to Super Admin only.</p>
+                  <Button className="mt-4" asChild><a href="/admin">Back to dashboard</a></Button>
+                </CardContent>
+              </Card>
+            </div>
           )}
           {authState === "allowed" && (
-            <>
-              <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <h1 className="text-[25px] font-semibold tracking-tight">Agent command center</h1>
-                  <p className="mt-1 max-w-3xl text-sm leading-5 text-muted-foreground">Prepare supervised automation for Paperclip, Hermes, and optional Open Claw workflows. This section is Super Admin-only while integrations are being connected.</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button disabled><PlugZap className="h-4 w-4" /> Connect agent</Button>
-                  <Button variant="outline" disabled><KeyRound className="h-4 w-4" /> Manage keys</Button>
+            <div className="flex flex-1 overflow-hidden">
+              {/* Skills panel */}
+              <div className={cn("flex-none border-r bg-card/50 transition-all duration-200", skillsOpen ? "w-[240px]" : "w-0 overflow-hidden")}>
+                <div className="h-full overflow-y-auto p-3">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Skills</span>
+                    <button onClick={() => setSkillsOpen(false)} className="rounded p-0.5 text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                  <div className="space-y-4">
+                    {SKILLS.map((group) => (
+                      <div key={group.category}>
+                        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group.category}</div>
+                        <div className="space-y-1">
+                          {group.items.map((skill) => (
+                            <button
+                              key={skill.label}
+                              disabled={thinking}
+                              onClick={() => sendMessage(skill.prompt)}
+                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12px] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
+                            >
+                              <skill.icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+                              {skill.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <Stat label="Overdue orders" value={String(agentSignals.overdueOrders)} hint="Orders past their due date" urgent={agentSignals.overdueOrders > 0} />
-                <Stat label="Payment follow-up" value={String(agentSignals.unpaid)} hint="Orders unpaid or partially paid" urgent={agentSignals.unpaid > 0} />
-                <Stat label="Proof workflows" value={String(agentSignals.proofing)} hint="Orders waiting on proof approval" />
-                <Stat label="Unread messages" value={String(agentSignals.unread)} hint="Inbound messages from customers" urgent={agentSignals.unread > 0} />
-                <Stat label="Contact gaps" value={String(agentSignals.missingContact)} hint="Users missing email or phone" />
-              </section>
-
-              <section className="mb-5 grid gap-4 xl:grid-cols-3">
-                {integrations.map((item) => (
-                  <Card key={item.name}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <CardTitle className="flex items-center gap-2 text-base"><Bot className="h-4 w-4 text-primary" /> {item.name}</CardTitle>
-                        <Badge variant="outline">{item.status}</Badge>
-                      </div>
-                      <CardDescription>{item.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{item.next}</div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </section>
-
-              <section className="grid gap-4 xl:grid-cols-[1fr_380px]">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base"><Workflow className="h-4 w-4 text-primary" /> Workflow guardrails</CardTitle>
-                    <CardDescription>Initial scope before live automation is connected.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-2 md:grid-cols-2">
-                    {[
-                      "Super Admin approval required for first run",
-                      "No customer-facing sends without preview",
-                      "No order/payment changes without audit log",
-                      "Read-only analysis mode before write mode",
-                      "Separate Paperclip document parsing from Hermes messaging",
-                      "Keep Open Claw supervised if enabled",
-                    ].map((item) => <div key={item} className="rounded-lg border bg-background/35 px-3 py-2 text-sm">{item}</div>)}
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base"><BrainCircuit className="h-4 w-4 text-primary" /> Suggested first agents</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <AgentTask title="Invoice intake" detail="Paperclip parses uploads into payment/invoice fields." />
-                    <AgentTask title="Proof reminder" detail="Hermes drafts SMS/email reminders for stale proofs." />
-                    <AgentTask title="Order triage" detail="Summarize new orders with payment, artwork, and shipping gaps." />
-                    <AgentTask title="Contact hygiene" detail="Find missing phone/email records before campaigns." />
-                  </CardContent>
-                </Card>
-              </section>
-
-              <section className="mt-5">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4 text-primary" /> Access model</CardTitle>
-                    <CardDescription>Agent controls are currently locked to Super Admin only. We can later add granular employee permissions once the connectors are live.</CardDescription>
-                  </CardHeader>
-                </Card>
-              </section>
-
-              <section className="mt-5">
-                <Card className="flex flex-col" style={{ height: "580px" }}>
-                  <CardHeader className="flex-none pb-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <CardTitle className="flex items-center gap-2 text-base"><Bot className="h-4 w-4 text-primary" /> Operations agent</CardTitle>
-                      {chatMessages.length > 0 && (
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => setChatMessages([])}>
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                    <CardDescription>Ask about orders, overdue tasks, proofs, appointments, or draft customer messages. Read-only analysis only.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex min-h-0 flex-1 flex-col gap-3 pb-4">
-                    {/* Quick-prompt shortcuts */}
-                    <div className="flex flex-none flex-wrap gap-1.5">
-                      {QUICK_PROMPTS.map((qp) => (
-                        <button
-                          key={qp.label}
-                          disabled={thinking}
-                          onClick={() => { setChatInput(qp.prompt); }}
-                          className="flex items-center gap-1 rounded-full border bg-background/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:opacity-40"
-                        >
-                          <Clock className="h-3 w-3" />
-                          {qp.label}
-                        </button>
+              {/* Chat area */}
+              <div className="flex flex-1 flex-col overflow-hidden">
+                {/* Chat toolbar */}
+                <div className="flex items-center gap-2 border-b bg-background/50 px-4 py-2">
+                  {!skillsOpen && (
+                    <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => setSkillsOpen(true)}>
+                      <Settings2 className="h-3.5 w-3.5" /> Skills
+                    </Button>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    <Bot className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs font-medium">Model</span>
+                  </div>
+                  <Select value={model} onValueChange={setModel}>
+                    <SelectTrigger className="h-7 w-[180px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AGENT_MODELS.map((m) => (
+                        <SelectItem key={m.id} value={m.id} disabled={m.disabled}>
+                          <span className="flex items-center gap-2">
+                            {m.label}
+                            <Badge className={cn("h-4 px-1 text-[9px]",
+                              m.badge === "Soon" ? "bg-muted text-muted-foreground" :
+                              m.badge === "Fast" ? "bg-green-500/20 text-green-700 dark:text-green-400" :
+                              "bg-primary/20 text-foreground"
+                            )}>{m.badge}</Badge>
+                            {m.tools && <Badge className="h-4 bg-blue-500/20 px-1 text-[9px] text-blue-700 dark:text-blue-400">Tools</Badge>}
+                          </span>
+                        </SelectItem>
                       ))}
-                    </div>
-                    <div className="flex-1 overflow-y-auto rounded-lg border bg-background/35 p-3">
-                      {chatMessages.length === 0 && !thinking && (
-                        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                          Ask the agent anything about your current operations.
-                        </div>
-                      )}
-                      <div className="space-y-3">
-                        {chatMessages.map((msg, i) => (
-                          <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
-                            <div
-                              className={cn(
-                                "max-w-[82%] rounded-xl px-3.5 py-2 text-sm leading-relaxed",
-                                msg.role === "user"
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted text-foreground",
-                              )}
-                            >
-                              {msg.role === "assistant" ? renderMessageContent(msg.content) : msg.content.split("\n").map((line, j) => (
-                                <span key={j}>{line}{j < msg.content.split("\n").length - 1 && <br />}</span>
-                              ))}
-                            </div>
-                          </div>
+                    </SelectContent>
+                  </Select>
+                  {!selectedModelConfig?.tools && (
+                    <span className="text-[11px] text-amber-600 dark:text-amber-400">⚠ This model doesn&apos;t support tools</span>
+                  )}
+                  {messages.length > 0 && (
+                    <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs text-muted-foreground" onClick={() => setMessages([])}>
+                      <Plus className="mr-1 h-3 w-3" /> New chat
+                    </Button>
+                  )}
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {messages.length === 0 && !thinking && (
+                    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+                      <div className="rounded-full border bg-primary/10 p-4">
+                        <Bot className="h-8 w-8 text-primary" />
+                      </div>
+                      <div>
+                        <div className="text-base font-semibold">ControlP.io Agent</div>
+                        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                          Your AI operations assistant. Ask about orders, draft customer messages, create content, or get business insights.
+                        </p>
+                      </div>
+                      <div className="grid max-w-sm gap-2 sm:grid-cols-2">
+                        {[
+                          { label: "What's overdue?", prompt: "What orders and production items are overdue today?" },
+                          { label: "Draft follow-up SMS", prompt: "Find the most urgent customer follow-up and draft an SMS for it." },
+                          { label: "Revenue this month", prompt: "Pull the business overview and tell me about revenue and order trends." },
+                          { label: "Write a blog post", prompt: "Write a 400-word blog post about the benefits of vehicle wraps for local businesses in Phoenix. Make it SEO-friendly." },
+                        ].map((s) => (
+                          <button
+                            key={s.label}
+                            onClick={() => sendMessage(s.prompt)}
+                            className="rounded-lg border bg-card/50 px-3 py-2 text-left text-sm transition-colors hover:border-primary/40 hover:bg-primary/5"
+                          >
+                            {s.label}
+                          </button>
                         ))}
-                        {thinking && (
-                          <div className="flex justify-start">
-                            <div className="flex items-center gap-2 rounded-xl bg-muted px-3.5 py-2 text-sm text-muted-foreground">
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Thinking...
-                            </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {messages.map((msg, i) => (
+                      <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                        {msg.role === "assistant" && (
+                          <div className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border bg-primary/10">
+                            <Bot className="h-3.5 w-3.5 text-primary" />
                           </div>
                         )}
-                        <div ref={chatEndRef} />
+                        <div className="max-w-[80%]">
+                          {msg.role === "assistant" && msg.toolCalls?.length ? (
+                            <div className="mb-2 space-y-1">
+                              {msg.toolCalls.map((tc) => (
+                                <ToolCallCard key={tc.id} call={tc} />
+                              ))}
+                            </div>
+                          ) : null}
+                          <div className={cn("rounded-xl px-3.5 py-2.5 text-sm leading-relaxed",
+                            msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                          )}>
+                            {msg.role === "assistant" ? renderContent(msg.content) : msg.content.split("\n").map((line, j) => (
+                              <span key={j}>{line}{j < msg.content.split("\n").length - 1 && <br />}</span>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-none gap-2">
-                      <Textarea
-                        className="min-h-[60px] resize-none text-sm"
-                        placeholder="Ask about orders, blockers, proofs, appointments..."
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            sendMessage();
-                          }
-                        }}
-                        disabled={thinking}
-                      />
-                      <Button
-                        className="h-auto self-stretch px-3"
-                        onClick={sendMessage}
-                        disabled={thinking || !chatInput.trim()}
-                        aria-label="Send message"
-                      >
-                        {thinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </section>
-            </>
+                    ))}
+                    {thinking && (
+                      <div className="flex justify-start">
+                        <div className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border bg-primary/10">
+                          <Bot className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <div className="flex items-center gap-2 rounded-xl bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Thinking...
+                        </div>
+                      </div>
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+                </div>
+
+                {/* Input */}
+                <div className="border-t bg-background/80 p-3 backdrop-blur">
+                  <div className="flex gap-2">
+                    <Textarea
+                      ref={textareaRef}
+                      className="min-h-[52px] max-h-[140px] resize-none text-sm"
+                      placeholder="Ask about orders, draft an SMS, write a blog post, analyze revenue..."
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          sendMessage();
+                        }
+                      }}
+                      disabled={thinking}
+                    />
+                    <Button
+                      className="h-auto self-stretch px-3"
+                      onClick={() => sendMessage()}
+                      disabled={thinking || !input.trim()}
+                      aria-label="Send"
+                    >
+                      {thinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <span className="text-[11px] text-muted-foreground">Enter to send · Shift+Enter for new line</span>
+                    {selectedModelConfig?.tools && (
+                      <span className="text-[11px] text-primary/70">⚡ Tool calling enabled — agent can read data and send SMS/email</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </main>
       </div>
     </div>
   );
-}
-
-function Stat({ label, value, hint, urgent }: { label: string; value: string; hint: string; urgent?: boolean }) {
-  return (
-    <Card className={cn(urgent && value !== "0" && "border-red-500/30")}>
-      <CardContent className="p-4">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className={cn("mt-2 text-[22px] font-semibold leading-none", urgent && value !== "0" && "text-red-600 dark:text-red-400")}>{value}</div>
-        <div className="mt-2 text-[11px] text-muted-foreground">{hint}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function AgentTask({ title, detail }: { title: string; detail: string }) {
-  return <div className="rounded-lg border bg-background/35 p-3"><div className="text-sm font-medium">{title}</div><div className="mt-1 text-xs text-muted-foreground">{detail}</div></div>;
 }

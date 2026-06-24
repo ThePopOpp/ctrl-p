@@ -1,7 +1,89 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { createClient } from "@supabase/supabase-js";
+import OpenAI from "openai";
 import { getServerSupabaseConfig, jsonError, verifyAdminRequest } from "@/lib/admin/server-auth";
+import { AGENT_TOOL_DEFINITIONS, executeTool, type ToolCallRecord } from "@/lib/admin/agent-tools";
+
+// ─── System prompt ────────────────────────────────────────────────────────────
+
+const SYSTEM_PROMPT = `You are the ControlP.io AI Operations Agent — a full-capability business assistant for Ctrl+P, a premium print, signs, and vehicle wrap shop based in Chandler, Arizona.
+
+You help owner Jeremy Waters (Super Admin) run the business efficiently. You can analyze data, communicate with customers, create content, and manage operations.
+
+## Business Overview
+- Name: Ctrl+P / ControlP.io
+- Location: Chandler, AZ (Metro Phoenix area)
+- Platform: my.controlp.io
+- Support email: hello@controlp.io
+- Primary support line: (480) 999-9906
+
+## Products & Services
+- Vinyl Banners (standard, mesh, indoor/outdoor, step-and-repeat)
+- Business Cards (standard, premium, spot UV, thick, foil)
+- Signs & Yard Signs (coroplast, foam board, A-frame, real estate)
+- Vehicle Wraps (full, partial, spot graphics, fleet)
+- Flags (feather, teardrop, pole banners)
+- Retractable Banners & Trade Show Displays
+- Wall Art (framed prints, canvas, foam board)
+- Apparel (screen printing, DTG)
+- Stickers & Labels
+
+## Pricing Philosophy
+- Premium quality at competitive prices
+- Volume discounts via quantity tiers
+- Rush orders available at premium pricing
+- Free shipping on qualifying orders
+
+## Communication Channels
+You have access to 4 Twilio phone numbers:
+- (480) 999-9906 — primary SMS & voice
+- (480) 999-9926 — SMS & voice
+- (602) 777-3303 — voice only
+- (425) 600-1455 — voice only
+
+Default email: hello@controlp.io (Hostinger SMTP)
+
+## Your Capabilities
+You have tools to:
+1. READ business data — orders, customers, messages, products, production queue
+2. SEND SMS via Twilio — order updates, proof reminders, follow-ups
+3. SEND EMAIL via SMTP — quotes, invoices, custom comms
+4. SAVE content drafts — blog posts, email templates, SMS campaigns, social posts
+
+## Tone & Communication Style
+- Friendly, professional, and responsive
+- Use customer names when available
+- Be direct and clear about timelines and requirements
+- Lead with the most important information
+- For customer-facing messages, be warm but concise
+- SMS messages should be under 160 characters unless necessary
+
+## Guardrails
+- Always proofread before sending customer-facing communications
+- Include order numbers and customer names in messages where possible
+- Flag unusual situations that need human review
+- For sensitive communications, confirm the message before sending
+
+## Content Creation
+When creating content:
+- Blog posts: SEO-friendly, helpful, focused on the print/sign industry
+- Email templates: Clear subject, personal greeting, specific CTA
+- SMS campaigns: Concise, actionable, include a call-back number
+- Social posts: Engaging, visual-focused, include relevant hashtags
+
+Today's date: ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`;
+
+// ─── Model configs ────────────────────────────────────────────────────────────
+
+const OPENAI_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"];
+const ANTHROPIC_MODELS = ["claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5-20251001"];
+
+function getProvider(model: string): "openai" | "anthropic" {
+  if (ANTHROPIC_MODELS.includes(model)) return "anthropic";
+  return "openai";
+}
+
+// ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   const auth = await verifyAdminRequest(request, ["super_admin", "admin"]);
@@ -10,175 +92,139 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({})) as {
     message?: string;
     history?: { role: "user" | "assistant"; content: string }[];
+    model?: string;
+    conversationId?: string;
   };
 
   const message = String(body.message || "").trim();
-  const history = Array.isArray(body.history) ? body.history : [];
+  const history = Array.isArray(body.history) ? body.history.slice(-20) : [];
+  const model = String(body.model || "gpt-4o");
+  const conversationId = body.conversationId;
 
   if (!message) return jsonError("message is required.");
 
   const config = getServerSupabaseConfig();
   if ("error" in config) return config.error;
 
-  const db = createClient(config.supabaseUrl, config.serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const toolCtx = {
+    supabaseUrl: config.supabaseUrl,
+    serviceRoleKey: config.serviceRoleKey,
+    actorId: auth.actorId,
+    conversationId,
+  };
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const nowIso = new Date().toISOString();
+  const provider = getProvider(model);
 
-  const [orders, blockers, pendingProofs, appointments, scheduleStats, overdueItems, todayItems, overdueOrders] = await Promise.all([
-    db
-      .from("orders")
-      .select("order_number, status, payment_status, production_status, total, company, customer_email, customer_phone, due_at")
-      .order("created_at", { ascending: false })
-      .limit(25),
-    db
-      .from("production_schedule_items")
-      .select("title, status, blocker_type, blocker_reason, phase, due_date, project_name, orders(order_number, company, customer_email)")
-      .eq("is_blocked", true)
-      .limit(15),
-    db
-      .from("proofs")
-      .select("id, status, sent_at, revision_number, orders(order_number, company, customer_email)")
-      .neq("status", "approved")
-      .limit(15),
-    db
-      .from("booking_appointments")
-      .select("title, start_time, status, customer_first_name, customer_last_name, customer_email, customer_phone")
-      .gte("start_time", nowIso)
-      .order("start_time", { ascending: true })
-      .limit(8),
-    db
-      .from("production_schedule_items")
-      .select("status, is_blocked")
-      .limit(300),
-    // Items past due and not closed
-    db
-      .from("production_schedule_items")
-      .select("title, status, phase, due_date, project_name, orders(order_number, company, customer_email)")
-      .lt("due_date", todayStr)
-      .not("status", "in", '("completed","approved","on_hold","canceled")')
-      .order("due_date", { ascending: true })
-      .limit(20),
-    // Items due today
-    db
-      .from("production_schedule_items")
-      .select("title, status, phase, project_name, orders(order_number, company, customer_email)")
-      .eq("due_date", todayStr)
-      .not("status", "in", '("completed","approved")')
-      .limit(20),
-    // Orders with a past due date that aren't shipped/completed
-    db
-      .from("orders")
-      .select("order_number, company, customer_email, customer_phone, status, production_status, payment_status, due_at")
-      .lt("due_at", nowIso)
-      .not("status", "in", '("completed","shipped","canceled","archived")')
-      .order("due_at", { ascending: true })
-      .limit(10),
-  ]);
+  try {
+    if (provider === "openai") {
+      const result = await runOpenAI(message, history, model, toolCtx);
+      return NextResponse.json(result);
+    } else {
+      const result = await runAnthropic(message, history, model);
+      return NextResponse.json(result);
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Agent request failed.";
+    return jsonError(msg, 500);
+  }
+}
 
-  const items = scheduleStats.data ?? [];
-  const totalItems = items.length;
-  const openItems = items.filter((i) => !["completed", "approved", "on_hold"].includes(i.status ?? "")).length;
-  const blockedCount = items.filter((i) => i.is_blocked).length;
+// ─── OpenAI with tool-calling loop ────────────────────────────────────────────
 
-  type OrderRef = { order_number?: string | null; company?: string | null; customer_email?: string | null } | null;
+async function runOpenAI(
+  message: string,
+  history: { role: "user" | "assistant"; content: string }[],
+  model: string,
+  ctx: typeof import("@/lib/admin/agent-tools").executeTool extends (n: string, a: Record<string, unknown>, c: infer C) => unknown ? C : never,
+) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
 
-  const systemPrompt = [
-    "You are the Ctrl+P operations agent.",
-    "Ctrl+P is a print shop and production management platform.",
-    "You have read-only access to live business data summarized below.",
-    "Be concise, direct, and actionable. Flag urgent issues clearly.",
-    "Do not take actions (send messages, change data, delete records) — your role is analysis and recommendations only.",
-    "",
-    "## Drafting customer messages",
-    "When asked to draft a customer update, write a professional, friendly message.",
-    "Wrap the draft in <draft> and </draft> tags so the UI can highlight it for easy copying.",
-    "Include the customer name or company, order reference, current status, and a clear next step or ETA if available.",
-    "",
-    `## Today: ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`,
-    "",
-    `## Orders (${orders.data?.length ?? 0} most recent)`,
-    ...(orders.data?.map(
-      (o) => `- #${o.order_number}: status=${o.status}, payment=${o.payment_status}, production=${o.production_status}` +
-        `, ${o.company || o.customer_email || "customer"}` +
-        (o.due_at ? `, due ${new Date(o.due_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""),
-    ) ?? ["No orders loaded."]),
-    "",
-    `## Overdue Orders (${overdueOrders.data?.length ?? 0} past their due date)`,
-    overdueOrders.data?.length
-      ? overdueOrders.data.map(
-          (o) => `- #${o.order_number} (${o.company || o.customer_email || "customer"}): status=${o.status}, payment=${o.payment_status}` +
-            (o.due_at ? `, was due ${new Date(o.due_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""),
-        ).join("\n")
-      : "No overdue orders.",
-    "",
-    `## Production Schedule (${totalItems} items, ${openItems} open, ${blockedCount} blocked)`,
-    blockers.data?.length
-      ? blockers.data.map(
-          (b) => {
-            const ref = (b as unknown as { orders?: OrderRef }).orders;
-            const order = ref ? `order #${ref.order_number} (${ref.company || ref.customer_email || "customer"})` : null;
-            return `- BLOCKED: ${b.project_name ?? b.title} (${b.phase ?? "no phase"}) — ${b.blocker_type ?? b.status}${b.blocker_reason ? `: ${b.blocker_reason}` : ""}${b.due_date ? `, due ${b.due_date}` : ""}${order ? `, ${order}` : ""}`;
-          },
-        ).join("\n")
-      : "No production blockers.",
-    "",
-    `## Overdue Production Items (${overdueItems.data?.length ?? 0} past due date)`,
-    overdueItems.data?.length
-      ? overdueItems.data.map(
-          (i) => {
-            const ref = (i as unknown as { orders?: OrderRef }).orders;
-            const daysLate = i.due_date ? Math.round((Date.now() - new Date(i.due_date).getTime()) / 86400000) : null;
-            return `- OVERDUE ${daysLate != null ? `(${daysLate}d)` : ""}: ${i.project_name ?? i.title} (${i.phase ?? "no phase"}), status=${i.status}${ref ? `, order #${ref.order_number} (${ref.company || ref.customer_email || ""})` : ""}`;
-          },
-        ).join("\n")
-      : "No overdue production items.",
-    "",
-    `## Due Today (${todayItems.data?.length ?? 0} items)`,
-    todayItems.data?.length
-      ? todayItems.data.map(
-          (i) => {
-            const ref = (i as unknown as { orders?: OrderRef }).orders;
-            return `- ${i.project_name ?? i.title} (${i.phase ?? "no phase"}), status=${i.status}${ref ? `, order #${ref.order_number} (${ref.company || ref.customer_email || ""})` : ""}`;
-          },
-        ).join("\n")
-      : "Nothing due today.",
-    "",
-    `## Proofs Pending Approval (${pendingProofs.data?.length ?? 0})`,
-    ...(pendingProofs.data?.map(
-      (p) => {
-        const ref = (p as unknown as { orders?: OrderRef }).orders;
-        return `- Proof ${p.id.slice(0, 8)}: v${p.revision_number ?? 1}, status=${p.status}, sent=${p.sent_at ? new Date(p.sent_at).toLocaleDateString() : "not sent yet"}${ref ? `, order #${ref.order_number} (${ref.company || ref.customer_email || ""})` : ""}`;
-      },
-    ) ?? ["No pending proofs."]),
-    "",
-    `## Upcoming Appointments (${appointments.data?.length ?? 0})`,
-    ...(appointments.data?.map(
-      (a) => `- ${a.title} — ${[a.customer_first_name, a.customer_last_name].filter(Boolean).join(" ") || "Customer"} at ${new Date(a.start_time).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}, status=${a.status}`,
-    ) ?? ["No upcoming appointments."]),
-  ].join("\n");
+  const client = new OpenAI({ apiKey });
+  const toolCalls: ToolCallRecord[] = [];
 
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    ...history.map((h) => ({ role: h.role, content: h.content } as OpenAI.Chat.ChatCompletionMessageParam)),
+    { role: "user", content: message },
+  ];
+
+  let iterations = 0;
+  while (iterations < 8) {
+    iterations++;
+    const response = await client.chat.completions.create({
+      model,
+      messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+      tools: AGENT_TOOL_DEFINITIONS,
+      tool_choice: "auto",
+      max_tokens: 4096,
+    });
+
+    const choice = response.choices[0];
+    const assistantMsg = choice.message;
+
+    if (!assistantMsg.tool_calls?.length) {
+      return {
+        response: assistantMsg.content ?? "",
+        toolCalls,
+        model,
+        usage: response.usage,
+      };
+    }
+
+    messages.push(assistantMsg);
+
+    for (const tc of assistantMsg.tool_calls) {
+      let args: Record<string, unknown> = {};
+      try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* empty args */ }
+
+      let result: unknown;
+      let errorMsg: string | undefined;
+      try {
+        result = await executeTool(tc.function.name, args, ctx);
+      } catch (err) {
+        errorMsg = err instanceof Error ? err.message : "Tool execution failed.";
+        result = { error: errorMsg };
+      }
+
+      toolCalls.push({ id: tc.id, name: tc.function.name, args, result, error: errorMsg });
+
+      messages.push({
+        role: "tool",
+        tool_call_id: tc.id,
+        content: JSON.stringify(result),
+      });
+    }
+  }
+
+  return {
+    response: "I reached the maximum number of steps. Please try a more specific question.",
+    toolCalls,
+    model,
+  };
+}
+
+// ─── Anthropic (chat-only, no tool calling yet) ───────────────────────────────
+
+async function runAnthropic(
+  message: string,
+  history: { role: "user" | "assistant"; content: string }[],
+  model: string,
+) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return jsonError("ANTHROPIC_API_KEY is not configured on the server.", 500);
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured.");
 
   const client = new Anthropic({ apiKey });
 
-  const validHistory = history.filter(
-    (h) => (h.role === "user" || h.role === "assistant") && typeof h.content === "string",
-  );
-
   const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 2048,
-    system: systemPrompt,
+    model,
+    max_tokens: 4096,
+    system: SYSTEM_PROMPT,
     messages: [
-      ...validHistory.map((h) => ({ role: h.role, content: h.content })),
+      ...history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
       { role: "user", content: message },
     ],
   });
 
   const text = response.content.find((c) => c.type === "text")?.text ?? "";
-  return NextResponse.json({ response: text, usage: response.usage });
+  return { response: text, toolCalls: [], model, usage: response.usage };
 }
