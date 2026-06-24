@@ -174,6 +174,8 @@ async function runOpenAI(
     messages.push(assistantMsg);
 
     for (const tc of assistantMsg.tool_calls) {
+      if (tc.type !== "function") continue;
+
       let args: Record<string, unknown> = {};
       try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* empty args */ }
 
