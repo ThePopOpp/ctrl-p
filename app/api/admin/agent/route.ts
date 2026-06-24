@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { getServerSupabaseConfig, jsonError, verifyAdminRequest } from "@/lib/admin/server-auth";
-import { AGENT_TOOL_DEFINITIONS, executeTool, type ToolCallRecord } from "@/lib/admin/agent-tools";
+import { AGENT_TOOL_DEFINITIONS, executeTool, type ToolCallRecord, type ToolContext } from "@/lib/admin/agent-tools";
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 
@@ -135,7 +135,7 @@ async function runOpenAI(
   message: string,
   history: { role: "user" | "assistant"; content: string }[],
   model: string,
-  ctx: typeof import("@/lib/admin/agent-tools").executeTool extends (n: string, a: Record<string, unknown>, c: infer C) => unknown ? C : never,
+  ctx: ToolContext,
 ) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
@@ -154,7 +154,7 @@ async function runOpenAI(
     const response = await client.chat.completions.create({
       model,
       messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
-      tools: AGENT_TOOL_DEFINITIONS,
+      tools: [...AGENT_TOOL_DEFINITIONS],
       tool_choice: "auto",
       max_tokens: 4096,
     });
