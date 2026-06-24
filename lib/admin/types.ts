@@ -271,6 +271,44 @@ export type ActivityLog = {
   created_at: string;
 };
 
+export type ContentType =
+  | "blog_post"
+  | "email_template"
+  | "social_facebook"
+  | "social_linkedin"
+  | "social_instagram"
+  | "social_pinterest";
+
+export type ContentStatus = "draft" | "scheduled" | "published" | "archived";
+
+export type GalleryItem = { url: string; alt: string; caption: string };
+
+export type ContentItem = {
+  id: string;
+  author_id: string | null;
+  content_type: ContentType;
+  source_id: string | null;
+  title: string;
+  slug: string | null;
+  subject: string | null;
+  preheader: string | null;
+  content: string;
+  excerpt: string | null;
+  featured_image_url: string | null;
+  gallery: GalleryItem[];
+  video_url: string | null;
+  image_url: string | null;
+  hashtags: string[];
+  tags: string[];
+  categories: string[];
+  status: ContentStatus;
+  published_at: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export type AdminDashboardData = {
   orders: Order[];
   orderItems: OrderItem[];

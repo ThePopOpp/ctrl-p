@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Bot,
   Boxes,
   CalendarCheck,
@@ -52,6 +53,7 @@ export const adminNavGroups: readonly {
       ["Artwork", FileText, "/admin/artwork"],
       ["Shipping", Truck, "/admin/shipments"],
       ["Marketing", Megaphone, "/admin/marketing"],
+      ["Content", BookOpen, "/admin/content"],
     ],
   },
   {
