@@ -41,6 +41,7 @@ import {
 import { getCurrentAdminProfile } from "@/lib/admin/admin-api";
 import { AdminNotificationBell } from "@/components/admin/admin-notification-bell";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
+import { AdminEmail } from "@/components/admin/admin-email";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -87,7 +88,7 @@ type ContactRow = {
 type DeviceStatus = "unregistered" | "registering" | "registered" | "error";
 type ActiveCallState = "idle" | "connecting" | "ringing" | "active" | "disconnecting";
 
-type CommunicationsTab = "calls" | "sms" | "contacts" | "ai-voice";
+type CommunicationsTab = "calls" | "sms" | "contacts" | "ai-voice" | "email";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -682,6 +683,7 @@ export function AdminCommunications() {
                   ["sms", MessageSquare, "SMS"],
                   ["contacts", Users, "Contacts"],
                   ["ai-voice", Bot, "AI Voice"],
+                  ["email", Mail, "Email"],
                 ] as const).map(([tab, Icon, label]) => (
                   <button
                     key={tab}
@@ -1233,6 +1235,11 @@ export function AdminCommunications() {
               {/* ─── AI VOICE TAB ─── */}
               {activeTab === "ai-voice" && (
                 <AiVoicePanel phoneNumber={phoneNumber} />
+              )}
+
+              {/* ─── EMAIL TAB ─── */}
+              {activeTab === "email" && (
+                <AdminEmail />
               )}
             </>
           )}
