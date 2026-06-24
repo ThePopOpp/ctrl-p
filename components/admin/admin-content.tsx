@@ -15,7 +15,7 @@ import { getCurrentAdminProfile } from "@/lib/admin/admin-api";
 import { AdminNotificationBell } from "@/components/admin/admin-notification-bell";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { ContentItem, ContentStatus, ContentType, GalleryItem } from "@/lib/admin/types";
+import type { AdminUser, ContentItem, ContentStatus, ContentType, GalleryItem } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -764,7 +764,7 @@ export function AdminContent() {
 
         {/* ── Editor Sheet ── */}
         <Sheet open={editorOpen} onOpenChange={setEditorOpen}>
-          <SheetContent side="right" className="flex w-full max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+          <SheetContent className="flex w-full max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
             <SheetHeader className="shrink-0 border-b px-5 py-3.5">
               <div className="flex items-center gap-3">
                 <SheetTitle className="text-base">{editItem ? "Edit Content" : "New Content"}</SheetTitle>
