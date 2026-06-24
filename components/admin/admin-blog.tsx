@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  AlignLeft, Archive, BookOpen, Bot, Calendar, CalendarClock,
-  ChevronLeft, ChevronRight, Edit2, EyeOff, Image,
-  LayoutGrid, LayoutList, Layers, LogOut, Mail, Moon,
-  Plus, Send, Share2, Sun, Trash2, Video, X, Zap,
+  AlignCenter, AlignLeft, AlignRight, Archive, BookOpen, Bot, Calendar, CalendarClock,
+  ChevronLeft, ChevronRight, Edit2, EyeOff, GripVertical, Image,
+  LayoutGrid, LayoutList, Layers, LogOut, Mail, Minus, Moon,
+  Plus, Send, Share2, Sun, Trash2, Type, Video, X, Zap,
 } from "lucide-react";
 
 import { getCurrentAdminProfile } from "@/lib/admin/admin-api";
@@ -37,20 +37,177 @@ const STATUS_STYLE: Record<ContentStatus, string> = {
   archived:  "bg-muted/60 text-muted-foreground",
 };
 
-const TOOLBAR_SNIPPETS = [
-  { label: "Row",       html: '<div style="display:block;width:100%;padding:8px 0;">\n  \n</div>' },
-  { label: "2 Columns", html: '<div style="display:flex;gap:20px;">\n  <div style="flex:1;">Column 1</div>\n  <div style="flex:1;">Column 2</div>\n</div>' },
-  { label: "Text",      html: "<p>Your text here</p>" },
-  { label: "Bold Text", html: "<p><strong>Bold text here</strong></p>" },
-  { label: "Italic",    html: "<p><em>Italic text here</em></p>" },
-  { label: "Left",      html: '<div style="text-align:left;">Left-aligned content</div>' },
-  { label: "Center",    html: '<div style="text-align:center;">Centered content</div>' },
-  { label: "Right",     html: '<div style="text-align:right;">Right-aligned content</div>' },
-  { label: "Image",     html: '<img src="your-image-url" alt="Description" style="max-width:100%;height:auto;" />' },
-  { label: "Link",      html: '<a href="https://your-url.com">Link text</a>' },
-  { label: "Button",    html: '<a href="https://your-url.com" style="display:inline-block;padding:12px 24px;background:#2f6848;color:#fff;text-decoration:none;border-radius:4px;font-weight:600;">Click Here</a>' },
-  { label: "Divider",   html: '<hr style="border:none;border-top:1px solid #eee;margin:16px 0;" />' },
+// ─── Blog Block Builder types & helpers ───────────────────────────────────────
+
+type BlogBlockType = "heading" | "paragraph" | "image" | "video" | "quote" | "code" | "button" | "divider" | "spacer" | "columns";
+
+type BlogBlockProps = {
+  level?: "h1" | "h2" | "h3";
+  content?: string; fontSize?: number; color?: string;
+  align?: "left" | "center" | "right";
+  src?: string; alt?: string; caption?: string; linkUrl?: string; imgWidth?: string;
+  videoUrl?: string;
+  author?: string;
+  language?: string;
+  buttonText?: string; buttonUrl?: string; buttonBgColor?: string; buttonColor?: string;
+  height?: number;
+  padTop?: number; padBottom?: number;
+  col1?: string; col2?: string;
+};
+
+type BlogBlock = { id: string; type: BlogBlockType; props: BlogBlockProps };
+
+const BLOG_BLOCK_DEFS: { type: BlogBlockType; label: string; icon: React.ElementType; defaults: BlogBlockProps }[] = [
+  { type: "heading",   label: "Heading",   icon: Type,      defaults: { level: "h2", content: "Section Heading", color: "#0f1f1a", fontSize: 28, align: "left" } },
+  { type: "paragraph", label: "Paragraph", icon: AlignLeft, defaults: { content: "Your paragraph text here.", color: "#333333", fontSize: 16, align: "left" } },
+  { type: "image",     label: "Image",     icon: Image,     defaults: { src: "", alt: "", caption: "", imgWidth: "100%", align: "center" } },
+  { type: "video",     label: "Video",     icon: Video,     defaults: { videoUrl: "" } },
+  { type: "quote",     label: "Quote",     icon: AlignRight, defaults: { content: "An inspiring quote or callout.", author: "", align: "left" } },
+  { type: "button",    label: "Button",    icon: Send,      defaults: { buttonText: "Click Here", buttonUrl: "#", buttonBgColor: "#2f6848", buttonColor: "#ffffff", align: "center" } },
+  { type: "columns",   label: "2 Columns", icon: Layers,    defaults: { col1: "Left column content.", col2: "Right column content." } },
+  { type: "code",      label: "Code",      icon: Minus,     defaults: { content: "// your code here", language: "javascript" } },
+  { type: "divider",   label: "Divider",   icon: Minus,     defaults: { padTop: 16, padBottom: 16 } },
+  { type: "spacer",    label: "Spacer",    icon: Minus,     defaults: { height: 40 } },
 ];
+
+function blogUid() { return Math.random().toString(36).slice(2, 9); }
+
+function blogBlockToHtml(block: BlogBlock): string {
+  const { type, props } = block;
+  const style = [
+    props.align && `text-align:${props.align}`,
+    props.color && `color:${props.color}`,
+    props.fontSize && `font-size:${props.fontSize}px`,
+  ].filter(Boolean).join(";");
+  switch (type) {
+    case "heading": return `<${props.level ?? "h2"} style="${style};margin:0 0 0.75em;">${props.content ?? ""}</${props.level ?? "h2"}>`;
+    case "paragraph": return `<p style="${style};line-height:1.7;margin:0 0 1em;">${props.content ?? ""}</p>`;
+    case "image": {
+      const img = `<img src="${props.src ?? ""}" alt="${props.alt ?? ""}" style="max-width:${props.imgWidth ?? "100%"};height:auto;display:block;${props.align === "center" ? "margin:0 auto;" : ""}" />`;
+      const wrapped = props.linkUrl ? `<a href="${props.linkUrl}">${img}</a>` : img;
+      return `<div style="margin:0 0 1.5em;">${wrapped}${props.caption ? `<p style="text-align:center;color:#666;font-size:13px;margin:4px 0 0;">${props.caption}</p>` : ""}</div>`;
+    }
+    case "video": return `<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin:0 0 1.5em;"><iframe src="${props.videoUrl ?? ""}" style="position:absolute;top:0;left:0;width:100%;height:100%;border-radius:8px;" frameborder="0" allowfullscreen></iframe></div>`;
+    case "quote": return `<blockquote style="border-left:4px solid #2f6848;padding:1em 1.5em;margin:0 0 1.5em;background:#f0f7f3;border-radius:0 8px 8px 0;"><p style="margin:0;font-style:italic;${style}">${props.content ?? ""}</p>${props.author ? `<cite style="display:block;margin-top:0.5em;font-size:13px;color:#666;">— ${props.author}</cite>` : ""}</blockquote>`;
+    case "code": return `<pre style="background:#1a1a2e;color:#e0e0e0;padding:1.5em;border-radius:8px;overflow-x:auto;margin:0 0 1.5em;font-size:14px;"><code class="language-${props.language ?? "javascript"}">${(props.content ?? "").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</code></pre>`;
+    case "button": return `<div style="text-align:${props.align ?? "center"};margin:0 0 1.5em;"><a href="${props.buttonUrl ?? "#"}" style="display:inline-block;padding:14px 28px;background:${props.buttonBgColor ?? "#2f6848"};color:${props.buttonColor ?? "#fff"};text-decoration:none;border-radius:6px;font-weight:600;font-size:16px;">${props.buttonText ?? "Click Here"}</a></div>`;
+    case "columns": return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:0 0 1.5em;"><div>${props.col1 ?? ""}</div><div>${props.col2 ?? ""}</div></div>`;
+    case "divider": return `<hr style="border:none;border-top:1px solid #e5e7eb;margin:${props.padTop ?? 16}px 0 ${props.padBottom ?? 16}px;" />`;
+    case "spacer": return `<div style="height:${props.height ?? 40}px;"></div>`;
+    default: return "";
+  }
+}
+
+function blogBlocksToHtml(blocks: BlogBlock[]): string {
+  return blocks.map(blogBlockToHtml).join("\n");
+}
+
+// ─── Blog block preview (center panel) ────────────────────────────────────────
+
+function BlogBlockPreview({ block }: { block: BlogBlock }) {
+  const { type, props } = block;
+  const textStyle: React.CSSProperties = { textAlign: props.align as React.CSSProperties["textAlign"], color: props.color, fontSize: props.fontSize };
+  switch (type) {
+    case "heading":
+      return props.level === "h1" ? <h1 style={{ ...textStyle, margin: 0 }}>{props.content || "Heading"}</h1>
+           : props.level === "h3" ? <h3 style={{ ...textStyle, margin: 0 }}>{props.content || "Heading"}</h3>
+           :                        <h2 style={{ ...textStyle, margin: 0 }}>{props.content || "Heading"}</h2>;
+    case "paragraph":
+      return <p style={{ ...textStyle, lineHeight: 1.7, margin: 0 }}>{props.content || "Paragraph text…"}</p>;
+    case "image":
+      return props.src
+        ? <div style={{ textAlign: props.align as React.CSSProperties["textAlign"] }}><img src={props.src} alt={props.alt ?? ""} style={{ maxWidth: props.imgWidth ?? "100%", height: "auto" }} />{props.caption && <p style={{ textAlign: "center", color: "#666", fontSize: 13, marginTop: 4 }}>{props.caption}</p>}</div>
+        : <div className="flex h-14 items-center justify-center rounded border-2 border-dashed text-sm text-muted-foreground"><Image className="mr-2 h-4 w-4" />Set image URL in settings</div>;
+    case "video":
+      return <div className="flex h-14 items-center justify-center rounded border-2 border-dashed text-sm text-muted-foreground"><Video className="mr-2 h-4 w-4" />{props.videoUrl || "Set video URL in settings"}</div>;
+    case "quote":
+      return <blockquote style={{ borderLeft: "4px solid #2f6848", padding: "0.75em 1em", margin: 0, background: "#f0f7f3", borderRadius: "0 8px 8px 0" }}><p style={{ margin: 0, fontStyle: "italic", color: props.color }}>{props.content || "Quote text…"}</p>{props.author && <cite style={{ display: "block", marginTop: 4, fontSize: 13, color: "#666" }}>— {props.author}</cite>}</blockquote>;
+    case "code":
+      return <pre style={{ background: "#1a1a2e", color: "#e0e0e0", padding: "0.75em 1em", borderRadius: 8, margin: 0, fontSize: 13, overflowX: "auto" }}><code>{props.content || "// code here"}</code></pre>;
+    case "button":
+      return <div style={{ textAlign: props.align as React.CSSProperties["textAlign"] ?? "center" }}><span style={{ display: "inline-block", padding: "10px 24px", background: props.buttonBgColor ?? "#2f6848", color: props.buttonColor ?? "#fff", borderRadius: 6, fontWeight: 600, fontSize: 15 }}>{props.buttonText || "Click Here"}</span></div>;
+    case "columns":
+      return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}><div style={{ background: "#f0f7f3", borderRadius: 6, padding: 8, fontSize: 13 }}>{props.col1 || "Column 1"}</div><div style={{ background: "#f0f7f3", borderRadius: 6, padding: 8, fontSize: 13 }}>{props.col2 || "Column 2"}</div></div>;
+    case "divider":
+      return <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: `${props.padTop ?? 8}px 0 ${props.padBottom ?? 8}px` }} />;
+    case "spacer":
+      return <div style={{ height: props.height ?? 40, background: "repeating-linear-gradient(45deg,transparent,transparent 4px,#f0f0f0 4px,#f0f0f0 8px)", borderRadius: 4 }} />;
+    default: return null;
+  }
+}
+
+// ─── Blog block settings (right panel) ────────────────────────────────────────
+
+function BlogBlockSettings({ block, onChange }: { block: BlogBlock; onChange: (props: Partial<BlogBlockProps>) => void }) {
+  const p = block.props;
+  const lbl = (t: string) => <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t}</span>;
+  const ic = "h-7 text-xs";
+  const alignButtons = (val: string | undefined) => (
+    <div className="flex gap-1">
+      {(["left", "center", "right"] as const).map((a) => (
+        <Button key={a} size="icon" variant="outline" className={cn("h-7 w-7", val === a && "border-primary bg-primary/10")} onClick={() => onChange({ align: a })}>
+          {a === "left" ? <AlignLeft className="h-3.5 w-3.5" /> : a === "center" ? <AlignCenter className="h-3.5 w-3.5" /> : <AlignRight className="h-3.5 w-3.5" />}
+        </Button>
+      ))}
+    </div>
+  );
+  const colorField = (label: string, key: keyof BlogBlockProps, fallback: string) => (
+    <div>{lbl(label)}<div className="flex gap-1"><input type="color" value={String(p[key] ?? fallback)} onChange={(e) => onChange({ [key]: e.target.value } as Partial<BlogBlockProps>)} className="h-7 w-8 cursor-pointer rounded border p-0.5" /><Input className={ic} value={String(p[key] ?? "")} onChange={(e) => onChange({ [key]: e.target.value } as Partial<BlogBlockProps>)} /></div></div>
+  );
+  return (
+    <div className="space-y-3">
+      {block.type === "heading" && <>
+        <div>{lbl("Level")}<Select value={p.level ?? "h2"} onValueChange={(v) => onChange({ level: v as "h1"|"h2"|"h3" })}><SelectTrigger className={ic}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="h1">H1</SelectItem><SelectItem value="h2">H2</SelectItem><SelectItem value="h3">H3</SelectItem></SelectContent></Select></div>
+        <div>{lbl("Text")}<Textarea className="min-h-[60px] resize-none text-xs" value={p.content ?? ""} onChange={(e) => onChange({ content: e.target.value })} /></div>
+        <div>{lbl("Font size (px)")}<Input className={ic} type="number" value={p.fontSize ?? 28} onChange={(e) => onChange({ fontSize: parseInt(e.target.value) })} /></div>
+        {colorField("Color", "color", "#0f1f1a")}
+        <div>{lbl("Align")}{alignButtons(p.align)}</div>
+      </>}
+      {block.type === "paragraph" && <>
+        <div>{lbl("Text")}<Textarea className="min-h-[100px] resize-none text-xs" value={p.content ?? ""} onChange={(e) => onChange({ content: e.target.value })} /></div>
+        <div>{lbl("Font size (px)")}<Input className={ic} type="number" value={p.fontSize ?? 16} onChange={(e) => onChange({ fontSize: parseInt(e.target.value) })} /></div>
+        {colorField("Color", "color", "#333333")}
+        <div>{lbl("Align")}{alignButtons(p.align)}</div>
+      </>}
+      {block.type === "image" && <>
+        <div>{lbl("Image URL")}<Input className={ic} value={p.src ?? ""} onChange={(e) => onChange({ src: e.target.value })} placeholder="https://…" /></div>
+        <div>{lbl("Alt text")}<Input className={ic} value={p.alt ?? ""} onChange={(e) => onChange({ alt: e.target.value })} /></div>
+        <div>{lbl("Caption")}<Input className={ic} value={p.caption ?? ""} onChange={(e) => onChange({ caption: e.target.value })} /></div>
+        <div>{lbl("Link URL")}<Input className={ic} value={p.linkUrl ?? ""} onChange={(e) => onChange({ linkUrl: e.target.value })} placeholder="https://…" /></div>
+        <div>{lbl("Width")}<Input className={ic} value={p.imgWidth ?? "100%"} onChange={(e) => onChange({ imgWidth: e.target.value })} placeholder="100%" /></div>
+      </>}
+      {block.type === "video" && <>
+        <div>{lbl("Embed URL (YouTube / Vimeo)")}<Input className={ic} value={p.videoUrl ?? ""} onChange={(e) => onChange({ videoUrl: e.target.value })} placeholder="https://www.youtube.com/embed/…" /></div>
+      </>}
+      {block.type === "quote" && <>
+        <div>{lbl("Quote text")}<Textarea className="min-h-[80px] resize-none text-xs" value={p.content ?? ""} onChange={(e) => onChange({ content: e.target.value })} /></div>
+        <div>{lbl("Author")}<Input className={ic} value={p.author ?? ""} onChange={(e) => onChange({ author: e.target.value })} placeholder="Author name" /></div>
+      </>}
+      {block.type === "code" && <>
+        <div>{lbl("Code")}<Textarea className="min-h-[120px] resize-none font-mono text-xs" value={p.content ?? ""} onChange={(e) => onChange({ content: e.target.value })} /></div>
+        <div>{lbl("Language")}<Input className={ic} value={p.language ?? "javascript"} onChange={(e) => onChange({ language: e.target.value })} /></div>
+      </>}
+      {block.type === "button" && <>
+        <div>{lbl("Button text")}<Input className={ic} value={p.buttonText ?? ""} onChange={(e) => onChange({ buttonText: e.target.value })} /></div>
+        <div>{lbl("URL")}<Input className={ic} value={p.buttonUrl ?? ""} onChange={(e) => onChange({ buttonUrl: e.target.value })} placeholder="https://…" /></div>
+        {colorField("Background color", "buttonBgColor", "#2f6848")}
+        {colorField("Text color", "buttonColor", "#ffffff")}
+        <div>{lbl("Align")}{alignButtons(p.align)}</div>
+      </>}
+      {block.type === "columns" && <>
+        <div>{lbl("Left column")}<Textarea className="min-h-[80px] resize-none text-xs" value={p.col1 ?? ""} onChange={(e) => onChange({ col1: e.target.value })} placeholder="Left column content…" /></div>
+        <div>{lbl("Right column")}<Textarea className="min-h-[80px] resize-none text-xs" value={p.col2 ?? ""} onChange={(e) => onChange({ col2: e.target.value })} placeholder="Right column content…" /></div>
+      </>}
+      {block.type === "divider" && <>
+        <div>{lbl("Pad top (px)")}<Input className={ic} type="number" value={p.padTop ?? 16} onChange={(e) => onChange({ padTop: parseInt(e.target.value) })} /></div>
+        <div>{lbl("Pad bottom (px)")}<Input className={ic} type="number" value={p.padBottom ?? 16} onChange={(e) => onChange({ padBottom: parseInt(e.target.value) })} /></div>
+      </>}
+      {block.type === "spacer" && <>
+        <div>{lbl("Height (px)")}<Input className={ic} type="number" value={p.height ?? 40} onChange={(e) => onChange({ height: parseInt(e.target.value) })} /></div>
+      </>}
+    </div>
+  );
+}
 
 const EMPTY_FORM = {
   title: "", slug: "", excerpt: "", featured_image_url: "",
@@ -168,15 +325,14 @@ export function AdminBlog() {
 
   // Editor state
   const [editorTab, setEditorTab] = useState<EditorTab>("simple");
-  const [simpleContent, setSimpleContent] = useState("<p>Build your post content here...</p>");
+  const [blogBlocks, setBlogBlocks] = useState<BlogBlock[]>([]);
+  const [selectedBlogBlockId, setSelectedBlogBlockId] = useState<string | null>(null);
+  const [blogDragIdx, setBlogDragIdx] = useState<number | null>(null);
+  const [blogDropIdx, setBlogDropIdx] = useState<number | null>(null);
   const [htmlContent, setHtmlContent] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [fontSize, setFontSize] = useState("18");
-  const [textColor, setTextColor] = useState("#0f1f1a");
-  const [btnColor, setBtnColor] = useState("#2f6848");
   const [showAdvancedUrl, setShowAdvancedUrl] = useState(false);
-  const simpleRef = useRef<HTMLTextAreaElement>(null);
   const wysiwygRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -214,10 +370,32 @@ export function AdminBlog() {
     return `${form.publish_date}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
   }
 
+  const selectedBlogBlock = blogBlocks.find((b) => b.id === selectedBlogBlockId) ?? null;
+
+  function addBlogBlock(type: BlogBlockType, defaults: BlogBlockProps) {
+    const block: BlogBlock = { id: blogUid(), type, props: { ...defaults } };
+    setBlogBlocks((prev) => [...prev, block]);
+    setSelectedBlogBlockId(block.id);
+  }
+  function removeBlogBlock(id: string) {
+    setBlogBlocks((prev) => prev.filter((b) => b.id !== id));
+    if (selectedBlogBlockId === id) setSelectedBlogBlockId(null);
+  }
+  function updateBlogBlockProps(id: string, props: Partial<BlogBlockProps>) {
+    setBlogBlocks((prev) => prev.map((b) => b.id === id ? { ...b, props: { ...b.props, ...props } } : b));
+  }
+  function moveBlogBlock(from: number, to: number) {
+    const next = [...blogBlocks];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setBlogBlocks(next);
+  }
+
   function openNew() {
     setEditPost(null);
     setForm(EMPTY_FORM);
-    setSimpleContent("<p>Build your post content here...</p>");
+    setBlogBlocks([]);
+    setSelectedBlogBlockId(null);
     setHtmlContent("");
     setGallery([]);
     setEditorTab("simple");
@@ -240,17 +418,18 @@ export function AdminBlog() {
       publish_hour: String(h).padStart(2, "0"), publish_minute: pub ? String(pub.getMinutes()).padStart(2, "0") : "00",
       publish_ampm: ampm, meta_title: post.meta_title ?? "", meta_description: post.meta_description ?? "",
     });
-    setSimpleContent(post.content);
+    setBlogBlocks([]);
+    setSelectedBlogBlockId(null);
     setHtmlContent(post.content);
     setGallery(post.gallery ?? []);
-    setEditorTab("simple");
+    setEditorTab("html");
     setPage("editor");
   }
 
   function getContent() {
     if (editorTab === "wysiwyg") return wysiwygRef.current?.innerHTML ?? "";
     if (editorTab === "html") return htmlContent;
-    return simpleContent;
+    return blogBlocksToHtml(blogBlocks);
   }
 
   async function save(statusOverride?: ContentStatus) {
@@ -308,19 +487,6 @@ export function AdminBlog() {
   function removeGalleryItem(i: number) { setGallery(gallery.filter((_, idx) => idx !== i)); }
   function updateGalleryItem(i: number, patch: Partial<GalleryItem>) {
     setGallery(gallery.map((g, idx) => idx === i ? { ...g, ...patch } : g));
-  }
-
-  function insertSnippet(raw: string) {
-    const snippet = raw
-      .replace("Your text here", `<span style="font-size:${fontSize}px;color:${textColor};">Your text here</span>`)
-      .replace(/#2f6848/g, btnColor);
-    const ta = simpleRef.current;
-    if (!ta) { setSimpleContent((c) => c + "\n" + snippet); return; }
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const next = ta.value.slice(0, start) + snippet + ta.value.slice(end);
-    setSimpleContent(next);
-    setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = start + snippet.length; }, 0);
   }
 
   function doWysiwyg(cmd: string, val?: string) {
@@ -711,9 +877,8 @@ export function AdminBlog() {
                     <button
                       key={t}
                       onClick={() => {
-                        if (t === "html") setHtmlContent(simpleContent);
-                        if (t === "simple" && editorTab === "html") setSimpleContent(htmlContent);
-                        if (t === "wysiwyg" && wysiwygRef.current) wysiwygRef.current.innerHTML = simpleContent;
+                        if (t === "html" && editorTab === "simple") setHtmlContent(blogBlocksToHtml(blogBlocks));
+                        if (t === "wysiwyg" && wysiwygRef.current) wysiwygRef.current.innerHTML = editorTab === "simple" ? blogBlocksToHtml(blogBlocks) : htmlContent;
                         setEditorTab(t);
                       }}
                       className={cn(
@@ -721,47 +886,104 @@ export function AdminBlog() {
                         editorTab === t ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      {t === "simple" ? "Simple Builder" : t === "html" ? "Advanced HTML" : "WYSIWYG"}
+                      {t === "simple" ? "Block Builder" : t === "html" ? "Advanced HTML" : "WYSIWYG"}
                     </button>
                   ))}
                 </div>
 
-                {/* Simple Builder */}
-                {(editorTab === "simple" || editorTab === "html") && (
-                  <div className="overflow-hidden rounded-xl border">
-                    {editorTab === "simple" && (
-                      <>
-                        <div className="flex flex-wrap items-center gap-4 border-b px-3 py-2.5">
-                          <div className="flex items-center gap-1.5 text-[12px]">
-                            <span className="text-muted-foreground">Font size</span>
-                            <Input value={fontSize} onChange={(e) => setFontSize(e.target.value)} className="h-7 w-12 text-center text-xs" />
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[12px]">
-                            <span className="text-muted-foreground">Text color</span>
-                            <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="h-7 w-7 cursor-pointer rounded border p-0.5" />
-                            <Input value={textColor} onChange={(e) => setTextColor(e.target.value)} className="h-7 w-20 font-mono text-xs" />
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[12px]">
-                            <span className="text-muted-foreground">Button color</span>
-                            <input type="color" value={btnColor} onChange={(e) => setBtnColor(e.target.value)} className="h-7 w-7 cursor-pointer rounded border p-0.5" />
-                            <Input value={btnColor} onChange={(e) => setBtnColor(e.target.value)} className="h-7 w-20 font-mono text-xs" />
+                {/* Block Builder (Simple) */}
+                {editorTab === "simple" && (
+                  <div className="flex h-[560px] overflow-hidden rounded-xl border">
+                    {/* Left: block library */}
+                    <div className="w-36 shrink-0 overflow-y-auto border-r bg-muted/20 p-2">
+                      <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Blocks</div>
+                      <div className="space-y-1">
+                        {BLOG_BLOCK_DEFS.map(({ type, label, icon: Icon, defaults }) => (
+                          <button
+                            key={type}
+                            onClick={() => addBlogBlock(type, defaults)}
+                            className="flex w-full items-center gap-2 rounded-lg border border-transparent bg-card px-2 py-2 text-[12px] font-medium transition-colors hover:border-primary/30 hover:bg-accent"
+                          >
+                            <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Center: canvas */}
+                    <div className="flex-1 overflow-y-auto bg-white p-4 dark:bg-background">
+                      {blogBlocks.length === 0 ? (
+                        <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
+                          <Type className="h-10 w-10 opacity-20" />
+                          <div className="text-center">
+                            <div className="text-sm font-medium">Start building your post</div>
+                            <div className="text-xs">Click blocks on the left to add them.</div>
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-1 border-b px-3 py-2">
-                          {TOOLBAR_SNIPPETS.map(({ label, html }) => (
-                            <button key={label} onClick={() => insertSnippet(html)} className="rounded border bg-muted px-2 py-1 text-[12px] font-medium hover:bg-accent transition-colors">
-                              {label}
-                            </button>
+                      ) : (
+                        <div className="space-y-1">
+                          {blogBlocks.map((block, idx) => (
+                            <div
+                              key={block.id}
+                              draggable
+                              onDragStart={() => setBlogDragIdx(idx)}
+                              onDragOver={(e) => { e.preventDefault(); setBlogDropIdx(idx); }}
+                              onDrop={() => {
+                                if (blogDragIdx !== null && blogDragIdx !== idx) moveBlogBlock(blogDragIdx, idx);
+                                setBlogDragIdx(null); setBlogDropIdx(null);
+                              }}
+                              onDragEnd={() => { setBlogDragIdx(null); setBlogDropIdx(null); }}
+                              onClick={() => setSelectedBlogBlockId(block.id)}
+                              className={cn(
+                                "group relative cursor-pointer rounded-lg border-2 p-3 transition-colors",
+                                selectedBlogBlockId === block.id ? "border-primary bg-primary/5" : "border-transparent hover:border-primary/30",
+                                blogDropIdx === idx && blogDragIdx !== null && "border-primary/60 bg-primary/10",
+                              )}
+                            >
+                              <div className="absolute -left-1 top-1/2 -translate-y-1/2 cursor-grab opacity-0 group-hover:opacity-100">
+                                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); removeBlogBlock(block.id); }}
+                                className="absolute right-1 top-1 rounded p-0.5 opacity-0 hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                              <BlogBlockPreview block={block} />
+                            </div>
                           ))}
                         </div>
-                      </>
-                    )}
+                      )}
+                    </div>
+
+                    {/* Right: settings */}
+                    <div className="w-52 shrink-0 overflow-y-auto border-l bg-muted/10 p-3">
+                      {selectedBlogBlock ? (
+                        <>
+                          <div className="mb-3 flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground capitalize">{selectedBlogBlock.type}</span>
+                            <button onClick={() => setSelectedBlogBlockId(null)} className="rounded p-0.5 hover:bg-muted"><X className="h-3.5 w-3.5" /></button>
+                          </div>
+                          <BlogBlockSettings block={selectedBlogBlock} onChange={(props) => updateBlogBlockProps(selectedBlogBlock.id, props)} />
+                        </>
+                      ) : (
+                        <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                          <Layers className="h-8 w-8 opacity-20" />
+                          <div className="text-center text-[11px]">Select a block to edit its settings</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Advanced HTML */}
+                {editorTab === "html" && (
+                  <div className="overflow-hidden rounded-xl border">
                     <Textarea
-                      ref={simpleRef}
-                      value={editorTab === "simple" ? simpleContent : htmlContent}
-                      onChange={(e) => editorTab === "simple" ? setSimpleContent(e.target.value) : setHtmlContent(e.target.value)}
-                      className="min-h-[320px] resize-none rounded-none rounded-b-xl border-0 font-mono text-[13px] leading-relaxed focus-visible:ring-0"
-                      placeholder="<p>Build your post content here...</p>"
+                      value={htmlContent}
+                      onChange={(e) => setHtmlContent(e.target.value)}
+                      className="min-h-[400px] resize-none rounded-xl border-0 font-mono text-[13px] leading-relaxed focus-visible:ring-0"
+                      placeholder="<p>Write raw HTML here…</p>"
                     />
                   </div>
                 )}
@@ -783,7 +1005,7 @@ export function AdminBlog() {
                       <button onMouseDown={(e) => { e.preventDefault(); doWysiwyg("insertHorizontalRule"); }} className="rounded border bg-muted px-2 py-1 text-[12px] hover:bg-accent">Divider</button>
                       <button onMouseDown={(e) => { e.preventDefault(); const u = window.prompt("Link URL:"); if (u) doWysiwyg("createLink", u); }} className="rounded border bg-muted px-2 py-1 text-[12px] hover:bg-accent">Link</button>
                     </div>
-                    <div ref={wysiwygRef} contentEditable suppressContentEditableWarning className="min-h-[320px] p-4 text-sm leading-relaxed focus:outline-none" dangerouslySetInnerHTML={{ __html: simpleContent }} />
+                    <div ref={wysiwygRef} contentEditable suppressContentEditableWarning className="min-h-[320px] p-4 text-sm leading-relaxed focus:outline-none" dangerouslySetInnerHTML={{ __html: htmlContent }} />
                   </div>
                 )}
               </div>

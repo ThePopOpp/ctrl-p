@@ -535,7 +535,7 @@ export function AdminEmail() {
   const [sendFrom, setSendFrom] = useState("Ctrl+P <noreply@ctrlp.io>");
   const [sendSubject, setSendSubject] = useState("");
   const [sendBody, setSendBody] = useState("");
-  const [sendTemplateId, setSendTemplateId] = useState("");
+  const [sendTemplateId, setSendTemplateId] = useState("__none__");
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -653,7 +653,7 @@ export function AdminEmail() {
       });
       if (!res.ok) throw new Error("Send failed");
       alert("Email sent!");
-      setSendTo(""); setSendSubject(""); setSendBody(""); setSendTemplateId("");
+      setSendTo(""); setSendSubject(""); setSendBody(""); setSendTemplateId("__none__");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to send email");
     } finally { setSending(false); }
@@ -797,7 +797,7 @@ export function AdminEmail() {
               <Select value={sendTemplateId} onValueChange={setSendTemplateId}>
                 <SelectTrigger><SelectValue placeholder="Select a saved template…" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None — compose below</SelectItem>
+                  <SelectItem value="__none__">None — compose below</SelectItem>
                   {templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -1071,7 +1071,7 @@ export function AdminEmail() {
                         <Select value={(autoForm.action_data as Record<string,string>)?.template_name ?? ""} onValueChange={(v) => setAutoForm((f) => ({ ...f!, action_data: { ...(f!.action_data ?? {}), template_name: v } }))}>
                           <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select template…" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None (compose inline)</SelectItem>
+                            <SelectItem value="__none__">None (compose inline)</SelectItem>
                             {templates.map((t) => <SelectItem key={t.id} value={t.title}>{t.title}</SelectItem>)}
                           </SelectContent>
                         </Select>
