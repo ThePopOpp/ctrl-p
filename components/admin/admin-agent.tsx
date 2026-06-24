@@ -41,7 +41,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 // ─── Model config ─────────────────────────────────────────────────────────────
 
-const AGENT_MODELS = [
+type AgentModel = { id: string; label: string; provider: string; badge: string; tools: boolean; disabled?: boolean };
+
+const AGENT_MODELS: AgentModel[] = [
   { id: "gpt-4o", label: "GPT-4o", provider: "openai", badge: "Active", tools: true },
   { id: "gpt-4o-mini", label: "GPT-4o Mini", provider: "openai", badge: "Fast", tools: true },
   { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", provider: "anthropic", badge: "Active", tools: false },
@@ -49,7 +51,7 @@ const AGENT_MODELS = [
   { id: "openrouter/auto", label: "OpenRouter Auto", provider: "openrouter", badge: "Soon", tools: false, disabled: true },
   { id: "gemini-1.5-pro", label: "Gemini Pro", provider: "google", badge: "Soon", tools: false, disabled: true },
   { id: "hermes", label: "Hermes AI", provider: "hermes", badge: "Soon", tools: false, disabled: true },
-] as const;
+];
 
 // ─── Skills ───────────────────────────────────────────────────────────────────
 
