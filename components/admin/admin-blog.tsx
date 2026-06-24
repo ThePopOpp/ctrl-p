@@ -39,84 +39,139 @@ const STATUS_STYLE: Record<ContentStatus, string> = {
 
 // ─── Blog Block Builder types & helpers ───────────────────────────────────────
 
-type BlogBlockType = "heading" | "paragraph" | "image" | "video" | "quote" | "code" | "button" | "divider" | "spacer" | "columns";
+type BlogBlockType = "heading" | "paragraph" | "image" | "video" | "quote" | "code" | "button" | "divider" | "spacer" | "columns" | "columns3" | "columns4";
 
 type BlogBlockProps = {
+  // Text
   level?: "h1" | "h2" | "h3";
   content?: string; fontSize?: number; color?: string;
   align?: "left" | "center" | "right";
+  // Image
   src?: string; alt?: string; caption?: string; linkUrl?: string; imgWidth?: string;
+  // Video
   videoUrl?: string;
-  author?: string;
-  language?: string;
+  // Quote / Code
+  author?: string; language?: string;
+  // Button
   buttonText?: string; buttonUrl?: string; buttonBgColor?: string; buttonColor?: string;
-  height?: number;
-  padTop?: number; padBottom?: number;
-  col1?: string; col2?: string;
+  // Spacer / Divider
+  height?: number; padTop?: number; padBottom?: number;
+  // Columns
+  col1?: string; col2?: string; col3?: string; col4?: string; colGap?: number;
+  // Section (per-block spacing + background)
+  marginTop?: number; marginBottom?: number;
+  paddingTop?: number; paddingBottom?: number; paddingSide?: number;
+  bgColor?: string;
 };
 
 type BlogBlock = { id: string; type: BlogBlockType; props: BlogBlockProps };
 
 const BLOG_BLOCK_DEFS: { type: BlogBlockType; label: string; icon: React.ElementType; defaults: BlogBlockProps }[] = [
-  { type: "heading",   label: "Heading",   icon: Type,      defaults: { level: "h2", content: "Section Heading", color: "#0f1f1a", fontSize: 28, align: "left" } },
-  { type: "paragraph", label: "Paragraph", icon: AlignLeft, defaults: { content: "Your paragraph text here.", color: "#333333", fontSize: 16, align: "left" } },
-  { type: "image",     label: "Image",     icon: Image,     defaults: { src: "", alt: "", caption: "", imgWidth: "100%", align: "center" } },
-  { type: "video",     label: "Video",     icon: Video,     defaults: { videoUrl: "" } },
-  { type: "quote",     label: "Quote",     icon: AlignRight, defaults: { content: "An inspiring quote or callout.", author: "", align: "left" } },
-  { type: "button",    label: "Button",    icon: Send,      defaults: { buttonText: "Click Here", buttonUrl: "#", buttonBgColor: "#2f6848", buttonColor: "#ffffff", align: "center" } },
-  { type: "columns",   label: "2 Columns", icon: Layers,    defaults: { col1: "Left column content.", col2: "Right column content." } },
-  { type: "code",      label: "Code",      icon: Minus,     defaults: { content: "// your code here", language: "javascript" } },
-  { type: "divider",   label: "Divider",   icon: Minus,     defaults: { padTop: 16, padBottom: 16 } },
-  { type: "spacer",    label: "Spacer",    icon: Minus,     defaults: { height: 40 } },
+  { type: "heading",   label: "Heading",    icon: Type,      defaults: { level: "h2", content: "Section Heading", color: "#0f1f1a", fontSize: 28, align: "left" } },
+  { type: "paragraph", label: "Paragraph",  icon: AlignLeft, defaults: { content: "Your paragraph text here.", color: "#333333", fontSize: 16, align: "left" } },
+  { type: "image",     label: "Image",      icon: Image,     defaults: { src: "", alt: "", caption: "", imgWidth: "100%", align: "center" } },
+  { type: "video",     label: "Video",      icon: Video,     defaults: { videoUrl: "" } },
+  { type: "quote",     label: "Quote",      icon: AlignRight, defaults: { content: "An inspiring quote or callout.", author: "", align: "left" } },
+  { type: "button",    label: "Button",     icon: Send,      defaults: { buttonText: "Click Here", buttonUrl: "#", buttonBgColor: "#2f6848", buttonColor: "#ffffff", align: "center" } },
+  { type: "columns",   label: "2 Columns",  icon: Layers,    defaults: { col1: "Left column content.", col2: "Right column content.", colGap: 24 } },
+  { type: "columns3",  label: "3 Columns",  icon: Layers,    defaults: { col1: "Column 1.", col2: "Column 2.", col3: "Column 3.", colGap: 20 } },
+  { type: "columns4",  label: "4 Columns",  icon: Layers,    defaults: { col1: "Col 1.", col2: "Col 2.", col3: "Col 3.", col4: "Col 4.", colGap: 16 } },
+  { type: "code",      label: "Code",       icon: Minus,     defaults: { content: "// your code here", language: "javascript" } },
+  { type: "divider",   label: "Divider",    icon: Minus,     defaults: { padTop: 16, padBottom: 16 } },
+  { type: "spacer",    label: "Spacer",     icon: Minus,     defaults: { height: 40 } },
 ];
 
 function blogUid() { return Math.random().toString(36).slice(2, 9); }
 
 function blogBlockToHtml(block: BlogBlock): string {
   const { type, props } = block;
-  const style = [
+  if (type === "spacer") return `<div style="height:${props.height ?? 40}px;"></div>`;
+
+  const textStyle = [
     props.align && `text-align:${props.align}`,
     props.color && `color:${props.color}`,
     props.fontSize && `font-size:${props.fontSize}px`,
   ].filter(Boolean).join(";");
+
+  let inner = "";
   switch (type) {
-    case "heading": return `<${props.level ?? "h2"} style="${style};margin:0 0 0.75em;">${props.content ?? ""}</${props.level ?? "h2"}>`;
-    case "paragraph": return `<p style="${style};line-height:1.7;margin:0 0 1em;">${props.content ?? ""}</p>`;
+    case "heading":
+      inner = `<${props.level ?? "h2"} style="${textStyle};margin:0;">${props.content ?? ""}</${props.level ?? "h2"}>`;
+      break;
+    case "paragraph":
+      inner = `<p style="${textStyle};line-height:1.7;margin:0;">${props.content ?? ""}</p>`;
+      break;
     case "image": {
       const img = `<img src="${props.src ?? ""}" alt="${props.alt ?? ""}" style="max-width:${props.imgWidth ?? "100%"};height:auto;display:block;${props.align === "center" ? "margin:0 auto;" : ""}" />`;
-      const wrapped = props.linkUrl ? `<a href="${props.linkUrl}">${img}</a>` : img;
-      return `<div style="margin:0 0 1.5em;">${wrapped}${props.caption ? `<p style="text-align:center;color:#666;font-size:13px;margin:4px 0 0;">${props.caption}</p>` : ""}</div>`;
+      inner = `${props.linkUrl ? `<a href="${props.linkUrl}">${img}</a>` : img}${props.caption ? `<p style="text-align:center;color:#666;font-size:13px;margin:6px 0 0;">${props.caption}</p>` : ""}`;
+      break;
     }
-    case "video": return `<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin:0 0 1.5em;"><iframe src="${props.videoUrl ?? ""}" style="position:absolute;top:0;left:0;width:100%;height:100%;border-radius:8px;" frameborder="0" allowfullscreen></iframe></div>`;
-    case "quote": return `<blockquote style="border-left:4px solid #2f6848;padding:1em 1.5em;margin:0 0 1.5em;background:#f0f7f3;border-radius:0 8px 8px 0;"><p style="margin:0;font-style:italic;${style}">${props.content ?? ""}</p>${props.author ? `<cite style="display:block;margin-top:0.5em;font-size:13px;color:#666;">— ${props.author}</cite>` : ""}</blockquote>`;
-    case "code": return `<pre style="background:#1a1a2e;color:#e0e0e0;padding:1.5em;border-radius:8px;overflow-x:auto;margin:0 0 1.5em;font-size:14px;"><code class="language-${props.language ?? "javascript"}">${(props.content ?? "").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</code></pre>`;
-    case "button": return `<div style="text-align:${props.align ?? "center"};margin:0 0 1.5em;"><a href="${props.buttonUrl ?? "#"}" style="display:inline-block;padding:14px 28px;background:${props.buttonBgColor ?? "#2f6848"};color:${props.buttonColor ?? "#fff"};text-decoration:none;border-radius:6px;font-weight:600;font-size:16px;">${props.buttonText ?? "Click Here"}</a></div>`;
-    case "columns": return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:0 0 1.5em;"><div>${props.col1 ?? ""}</div><div>${props.col2 ?? ""}</div></div>`;
-    case "divider": return `<hr style="border:none;border-top:1px solid #e5e7eb;margin:${props.padTop ?? 16}px 0 ${props.padBottom ?? 16}px;" />`;
-    case "spacer": return `<div style="height:${props.height ?? 40}px;"></div>`;
+    case "video":
+      inner = `<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;"><iframe src="${props.videoUrl ?? ""}" style="position:absolute;top:0;left:0;width:100%;height:100%;border-radius:8px;" frameborder="0" allowfullscreen></iframe></div>`;
+      break;
+    case "quote":
+      inner = `<blockquote style="border-left:4px solid #2f6848;padding:1em 1.5em;background:#f0f7f3;border-radius:0 8px 8px 0;margin:0;"><p style="margin:0;font-style:italic;${textStyle}">${props.content ?? ""}</p>${props.author ? `<cite style="display:block;margin-top:0.5em;font-size:13px;color:#666;">— ${props.author}</cite>` : ""}</blockquote>`;
+      break;
+    case "code":
+      inner = `<pre style="background:#1a1a2e;color:#e0e0e0;padding:1.5em;border-radius:8px;overflow-x:auto;font-size:14px;margin:0;"><code class="language-${props.language ?? "javascript"}">${(props.content ?? "").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</code></pre>`;
+      break;
+    case "button":
+      inner = `<div style="text-align:${props.align ?? "center"};"><a href="${props.buttonUrl ?? "#"}" style="display:inline-block;padding:14px 28px;background:${props.buttonBgColor ?? "#2f6848"};color:${props.buttonColor ?? "#fff"};text-decoration:none;border-radius:6px;font-weight:600;font-size:16px;">${props.buttonText ?? "Click Here"}</a></div>`;
+      break;
+    case "columns":
+      inner = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:${props.colGap ?? 24}px;"><div>${props.col1 ?? ""}</div><div>${props.col2 ?? ""}</div></div>`;
+      break;
+    case "columns3":
+      inner = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:${props.colGap ?? 20}px;"><div>${props.col1 ?? ""}</div><div>${props.col2 ?? ""}</div><div>${props.col3 ?? ""}</div></div>`;
+      break;
+    case "columns4":
+      inner = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:${props.colGap ?? 16}px;"><div>${props.col1 ?? ""}</div><div>${props.col2 ?? ""}</div><div>${props.col3 ?? ""}</div><div>${props.col4 ?? ""}</div></div>`;
+      break;
+    case "divider":
+      inner = `<hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" />`;
+      break;
     default: return "";
   }
+
+  const mt = props.marginTop ?? 0;
+  const mb = props.marginBottom ?? 24;
+  const pt = props.paddingTop ?? 0;
+  const pb = props.paddingBottom ?? 0;
+  const ps = props.paddingSide ?? 0;
+  const sectionStyle = [
+    `margin-top:${mt}px`,
+    `margin-bottom:${mb}px`,
+    props.bgColor && `background:${props.bgColor}`,
+    `padding:${pt}px ${ps}px ${pb}px`,
+    props.bgColor && `border-radius:4px`,
+  ].filter(Boolean).join(";");
+  return `<div style="${sectionStyle}">${inner}</div>`;
 }
 
-function blogBlocksToHtml(blocks: BlogBlock[]): string {
-  return blocks.map(blogBlockToHtml).join("\n");
+function blogBlocksToHtml(blocks: BlogBlock[], maxWidth?: string): string {
+  const body = blocks.map(blogBlockToHtml).join("\n");
+  if (!maxWidth) return body;
+  return `<div style="max-width:${maxWidth};margin:0 auto;">${body}</div>`;
 }
 
 // ─── Blog block preview (center panel) ────────────────────────────────────────
 
 function BlogBlockPreview({ block }: { block: BlogBlock }) {
   const { type, props } = block;
-  const textStyle: React.CSSProperties = { textAlign: props.align as React.CSSProperties["textAlign"], color: props.color, fontSize: props.fontSize };
+  const ta = props.align as React.CSSProperties["textAlign"];
+  const ts: React.CSSProperties = { textAlign: ta, color: props.color, fontSize: props.fontSize };
+  const colStyle = (bg?: string): React.CSSProperties => ({ background: bg ?? "#f0f7f3", borderRadius: 6, padding: 8, fontSize: 13, minHeight: 40 });
+
   switch (type) {
     case "heading":
-      return props.level === "h1" ? <h1 style={{ ...textStyle, margin: 0 }}>{props.content || "Heading"}</h1>
-           : props.level === "h3" ? <h3 style={{ ...textStyle, margin: 0 }}>{props.content || "Heading"}</h3>
-           :                        <h2 style={{ ...textStyle, margin: 0 }}>{props.content || "Heading"}</h2>;
+      return props.level === "h1" ? <h1 style={{ ...ts, margin: 0 }}>{props.content || "Heading"}</h1>
+           : props.level === "h3" ? <h3 style={{ ...ts, margin: 0 }}>{props.content || "Heading"}</h3>
+           :                        <h2 style={{ ...ts, margin: 0 }}>{props.content || "Heading"}</h2>;
     case "paragraph":
-      return <p style={{ ...textStyle, lineHeight: 1.7, margin: 0 }}>{props.content || "Paragraph text…"}</p>;
+      return <p style={{ ...ts, lineHeight: 1.7, margin: 0 }}>{props.content || "Paragraph text…"}</p>;
     case "image":
       return props.src
-        ? <div style={{ textAlign: props.align as React.CSSProperties["textAlign"] }}><img src={props.src} alt={props.alt ?? ""} style={{ maxWidth: props.imgWidth ?? "100%", height: "auto" }} />{props.caption && <p style={{ textAlign: "center", color: "#666", fontSize: 13, marginTop: 4 }}>{props.caption}</p>}</div>
+        ? <div style={{ textAlign: ta }}><img src={props.src} alt={props.alt ?? ""} style={{ maxWidth: props.imgWidth ?? "100%", height: "auto" }} />{props.caption && <p style={{ textAlign: "center", color: "#666", fontSize: 13, marginTop: 4 }}>{props.caption}</p>}</div>
         : <div className="flex h-14 items-center justify-center rounded border-2 border-dashed text-sm text-muted-foreground"><Image className="mr-2 h-4 w-4" />Set image URL in settings</div>;
     case "video":
       return <div className="flex h-14 items-center justify-center rounded border-2 border-dashed text-sm text-muted-foreground"><Video className="mr-2 h-4 w-4" />{props.videoUrl || "Set video URL in settings"}</div>;
@@ -125,11 +180,15 @@ function BlogBlockPreview({ block }: { block: BlogBlock }) {
     case "code":
       return <pre style={{ background: "#1a1a2e", color: "#e0e0e0", padding: "0.75em 1em", borderRadius: 8, margin: 0, fontSize: 13, overflowX: "auto" }}><code>{props.content || "// code here"}</code></pre>;
     case "button":
-      return <div style={{ textAlign: props.align as React.CSSProperties["textAlign"] ?? "center" }}><span style={{ display: "inline-block", padding: "10px 24px", background: props.buttonBgColor ?? "#2f6848", color: props.buttonColor ?? "#fff", borderRadius: 6, fontWeight: 600, fontSize: 15 }}>{props.buttonText || "Click Here"}</span></div>;
+      return <div style={{ textAlign: ta ?? "center" }}><span style={{ display: "inline-block", padding: "10px 24px", background: props.buttonBgColor ?? "#2f6848", color: props.buttonColor ?? "#fff", borderRadius: 6, fontWeight: 600, fontSize: 15 }}>{props.buttonText || "Click Here"}</span></div>;
     case "columns":
-      return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}><div style={{ background: "#f0f7f3", borderRadius: 6, padding: 8, fontSize: 13 }}>{props.col1 || "Column 1"}</div><div style={{ background: "#f0f7f3", borderRadius: 6, padding: 8, fontSize: 13 }}>{props.col2 || "Column 2"}</div></div>;
+      return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: props.colGap ?? 12 }}><div style={colStyle()}>{props.col1 || "Column 1"}</div><div style={colStyle()}>{props.col2 || "Column 2"}</div></div>;
+    case "columns3":
+      return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: props.colGap ?? 10 }}>{[props.col1||"Col 1", props.col2||"Col 2", props.col3||"Col 3"].map((c,i) => <div key={i} style={colStyle()}>{c}</div>)}</div>;
+    case "columns4":
+      return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: props.colGap ?? 8 }}>{[props.col1||"Col 1", props.col2||"Col 2", props.col3||"Col 3", props.col4||"Col 4"].map((c,i) => <div key={i} style={colStyle()} className="text-[11px]">{c}</div>)}</div>;
     case "divider":
-      return <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: `${props.padTop ?? 8}px 0 ${props.padBottom ?? 8}px` }} />;
+      return <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: `${props.padTop ?? 4}px 0 ${props.padBottom ?? 4}px` }} />;
     case "spacer":
       return <div style={{ height: props.height ?? 40, background: "repeating-linear-gradient(45deg,transparent,transparent 4px,#f0f0f0 4px,#f0f0f0 8px)", borderRadius: 4 }} />;
     default: return null;
@@ -142,6 +201,7 @@ function BlogBlockSettings({ block, onChange }: { block: BlogBlock; onChange: (p
   const p = block.props;
   const lbl = (t: string) => <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t}</span>;
   const ic = "h-7 text-xs";
+
   const alignButtons = (val: string | undefined) => (
     <div className="flex gap-1">
       {(["left", "center", "right"] as const).map((a) => (
@@ -151,22 +211,40 @@ function BlogBlockSettings({ block, onChange }: { block: BlogBlock; onChange: (p
       ))}
     </div>
   );
-  const colorField = (label: string, key: keyof BlogBlockProps, fallback: string) => (
+  const colorPicker = (label: string, key: keyof BlogBlockProps, fallback: string) => (
     <div>{lbl(label)}<div className="flex gap-1"><input type="color" value={String(p[key] ?? fallback)} onChange={(e) => onChange({ [key]: e.target.value } as Partial<BlogBlockProps>)} className="h-7 w-8 cursor-pointer rounded border p-0.5" /><Input className={ic} value={String(p[key] ?? "")} onChange={(e) => onChange({ [key]: e.target.value } as Partial<BlogBlockProps>)} /></div></div>
   );
+
+  // Section spacing — shown at bottom of every block
+  const sectionControls = (
+    <div className="mt-3 space-y-2 border-t pt-3">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Section</div>
+      <div className="grid grid-cols-2 gap-1">
+        <div>{lbl("Margin top")}<Input className={ic} type="number" value={p.marginTop ?? 0} onChange={(e) => onChange({ marginTop: +e.target.value || 0 })} /></div>
+        <div>{lbl("Margin btm")}<Input className={ic} type="number" value={p.marginBottom ?? 24} onChange={(e) => onChange({ marginBottom: +e.target.value || 0 })} /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-1">
+        <div>{lbl("Pad top")}<Input className={ic} type="number" value={p.paddingTop ?? 0} onChange={(e) => onChange({ paddingTop: +e.target.value || 0 })} /></div>
+        <div>{lbl("Pad bottom")}<Input className={ic} type="number" value={p.paddingBottom ?? 0} onChange={(e) => onChange({ paddingBottom: +e.target.value || 0 })} /></div>
+      </div>
+      <div>{lbl("Pad sides")}<Input className={ic} type="number" value={p.paddingSide ?? 0} onChange={(e) => onChange({ paddingSide: +e.target.value || 0 })} /></div>
+      <div>{lbl("Background")}<div className="flex gap-1"><input type="color" value={p.bgColor ?? "#ffffff"} onChange={(e) => onChange({ bgColor: e.target.value })} className="h-7 w-8 cursor-pointer rounded border p-0.5" /><Input className={ic} value={p.bgColor ?? ""} onChange={(e) => onChange({ bgColor: e.target.value || undefined })} placeholder="none" /></div></div>
+    </div>
+  );
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 text-xs">
       {block.type === "heading" && <>
-        <div>{lbl("Level")}<Select value={p.level ?? "h2"} onValueChange={(v) => onChange({ level: v as "h1"|"h2"|"h3" })}><SelectTrigger className={ic}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="h1">H1</SelectItem><SelectItem value="h2">H2</SelectItem><SelectItem value="h3">H3</SelectItem></SelectContent></Select></div>
+        <div>{lbl("Level")}<Select value={p.level ?? "h2"} onValueChange={(v) => onChange({ level: v as "h1"|"h2"|"h3" })}><SelectTrigger className={ic}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="h1">H1 — Page title</SelectItem><SelectItem value="h2">H2 — Section</SelectItem><SelectItem value="h3">H3 — Sub-section</SelectItem></SelectContent></Select></div>
         <div>{lbl("Text")}<Textarea className="min-h-[60px] resize-none text-xs" value={p.content ?? ""} onChange={(e) => onChange({ content: e.target.value })} /></div>
         <div>{lbl("Font size (px)")}<Input className={ic} type="number" value={p.fontSize ?? 28} onChange={(e) => onChange({ fontSize: parseInt(e.target.value) })} /></div>
-        {colorField("Color", "color", "#0f1f1a")}
+        {colorPicker("Color", "color", "#0f1f1a")}
         <div>{lbl("Align")}{alignButtons(p.align)}</div>
       </>}
       {block.type === "paragraph" && <>
         <div>{lbl("Text")}<Textarea className="min-h-[100px] resize-none text-xs" value={p.content ?? ""} onChange={(e) => onChange({ content: e.target.value })} /></div>
         <div>{lbl("Font size (px)")}<Input className={ic} type="number" value={p.fontSize ?? 16} onChange={(e) => onChange({ fontSize: parseInt(e.target.value) })} /></div>
-        {colorField("Color", "color", "#333333")}
+        {colorPicker("Color", "color", "#333333")}
         <div>{lbl("Align")}{alignButtons(p.align)}</div>
       </>}
       {block.type === "image" && <>
@@ -174,10 +252,12 @@ function BlogBlockSettings({ block, onChange }: { block: BlogBlock; onChange: (p
         <div>{lbl("Alt text")}<Input className={ic} value={p.alt ?? ""} onChange={(e) => onChange({ alt: e.target.value })} /></div>
         <div>{lbl("Caption")}<Input className={ic} value={p.caption ?? ""} onChange={(e) => onChange({ caption: e.target.value })} /></div>
         <div>{lbl("Link URL")}<Input className={ic} value={p.linkUrl ?? ""} onChange={(e) => onChange({ linkUrl: e.target.value })} placeholder="https://…" /></div>
-        <div>{lbl("Width")}<Input className={ic} value={p.imgWidth ?? "100%"} onChange={(e) => onChange({ imgWidth: e.target.value })} placeholder="100%" /></div>
+        <div>{lbl("Width (px or %)")}<Input className={ic} value={p.imgWidth ?? "100%"} onChange={(e) => onChange({ imgWidth: e.target.value })} placeholder="100%" /></div>
+        <div>{lbl("Align")}{alignButtons(p.align)}</div>
       </>}
       {block.type === "video" && <>
-        <div>{lbl("Embed URL (YouTube / Vimeo)")}<Input className={ic} value={p.videoUrl ?? ""} onChange={(e) => onChange({ videoUrl: e.target.value })} placeholder="https://www.youtube.com/embed/…" /></div>
+        <div>{lbl("Embed URL")}<Input className={ic} value={p.videoUrl ?? ""} onChange={(e) => onChange({ videoUrl: e.target.value })} placeholder="https://www.youtube.com/embed/…" /></div>
+        <p className="text-[11px] text-muted-foreground">Paste a YouTube or Vimeo embed URL.</p>
       </>}
       {block.type === "quote" && <>
         <div>{lbl("Quote text")}<Textarea className="min-h-[80px] resize-none text-xs" value={p.content ?? ""} onChange={(e) => onChange({ content: e.target.value })} /></div>
@@ -185,26 +265,30 @@ function BlogBlockSettings({ block, onChange }: { block: BlogBlock; onChange: (p
       </>}
       {block.type === "code" && <>
         <div>{lbl("Code")}<Textarea className="min-h-[120px] resize-none font-mono text-xs" value={p.content ?? ""} onChange={(e) => onChange({ content: e.target.value })} /></div>
-        <div>{lbl("Language")}<Input className={ic} value={p.language ?? "javascript"} onChange={(e) => onChange({ language: e.target.value })} /></div>
+        <div>{lbl("Language")}<Input className={ic} value={p.language ?? "javascript"} onChange={(e) => onChange({ language: e.target.value })} placeholder="javascript" /></div>
       </>}
       {block.type === "button" && <>
         <div>{lbl("Button text")}<Input className={ic} value={p.buttonText ?? ""} onChange={(e) => onChange({ buttonText: e.target.value })} /></div>
         <div>{lbl("URL")}<Input className={ic} value={p.buttonUrl ?? ""} onChange={(e) => onChange({ buttonUrl: e.target.value })} placeholder="https://…" /></div>
-        {colorField("Background color", "buttonBgColor", "#2f6848")}
-        {colorField("Text color", "buttonColor", "#ffffff")}
+        {colorPicker("Button color", "buttonBgColor", "#2f6848")}
+        {colorPicker("Text color", "buttonColor", "#ffffff")}
         <div>{lbl("Align")}{alignButtons(p.align)}</div>
       </>}
-      {block.type === "columns" && <>
-        <div>{lbl("Left column")}<Textarea className="min-h-[80px] resize-none text-xs" value={p.col1 ?? ""} onChange={(e) => onChange({ col1: e.target.value })} placeholder="Left column content…" /></div>
-        <div>{lbl("Right column")}<Textarea className="min-h-[80px] resize-none text-xs" value={p.col2 ?? ""} onChange={(e) => onChange({ col2: e.target.value })} placeholder="Right column content…" /></div>
+      {(block.type === "columns" || block.type === "columns3" || block.type === "columns4") && <>
+        <div>{lbl("Column gap (px)")}<Input className={ic} type="number" value={p.colGap ?? (block.type === "columns4" ? 16 : block.type === "columns3" ? 20 : 24)} onChange={(e) => onChange({ colGap: parseInt(e.target.value) })} /></div>
+        <div>{lbl("Column 1")}<Textarea className="min-h-[60px] resize-none text-xs" value={p.col1 ?? ""} onChange={(e) => onChange({ col1: e.target.value })} placeholder="Column 1 content…" /></div>
+        <div>{lbl("Column 2")}<Textarea className="min-h-[60px] resize-none text-xs" value={p.col2 ?? ""} onChange={(e) => onChange({ col2: e.target.value })} placeholder="Column 2 content…" /></div>
+        {(block.type === "columns3" || block.type === "columns4") && <div>{lbl("Column 3")}<Textarea className="min-h-[60px] resize-none text-xs" value={p.col3 ?? ""} onChange={(e) => onChange({ col3: e.target.value })} placeholder="Column 3 content…" /></div>}
+        {block.type === "columns4" && <div>{lbl("Column 4")}<Textarea className="min-h-[60px] resize-none text-xs" value={p.col4 ?? ""} onChange={(e) => onChange({ col4: e.target.value })} placeholder="Column 4 content…" /></div>}
       </>}
       {block.type === "divider" && <>
-        <div>{lbl("Pad top (px)")}<Input className={ic} type="number" value={p.padTop ?? 16} onChange={(e) => onChange({ padTop: parseInt(e.target.value) })} /></div>
-        <div>{lbl("Pad bottom (px)")}<Input className={ic} type="number" value={p.padBottom ?? 16} onChange={(e) => onChange({ padBottom: parseInt(e.target.value) })} /></div>
+        <div>{lbl("Space above (px)")}<Input className={ic} type="number" value={p.padTop ?? 16} onChange={(e) => onChange({ padTop: parseInt(e.target.value) })} /></div>
+        <div>{lbl("Space below (px)")}<Input className={ic} type="number" value={p.padBottom ?? 16} onChange={(e) => onChange({ padBottom: parseInt(e.target.value) })} /></div>
       </>}
       {block.type === "spacer" && <>
         <div>{lbl("Height (px)")}<Input className={ic} type="number" value={p.height ?? 40} onChange={(e) => onChange({ height: parseInt(e.target.value) })} /></div>
       </>}
+      {sectionControls}
     </div>
   );
 }
@@ -329,6 +413,7 @@ export function AdminBlog() {
   const [selectedBlogBlockId, setSelectedBlogBlockId] = useState<string | null>(null);
   const [blogDragIdx, setBlogDragIdx] = useState<number | null>(null);
   const [blogDropIdx, setBlogDropIdx] = useState<number | null>(null);
+  const [canvasWidth, setCanvasWidth] = useState<string>("full");
   const [htmlContent, setHtmlContent] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
@@ -429,7 +514,8 @@ export function AdminBlog() {
   function getContent() {
     if (editorTab === "wysiwyg") return wysiwygRef.current?.innerHTML ?? "";
     if (editorTab === "html") return htmlContent;
-    return blogBlocksToHtml(blogBlocks);
+    const mw = canvasWidth === "full" ? undefined : canvasWidth === "wide" ? "1200px" : canvasWidth === "article" ? "880px" : "640px";
+    return blogBlocksToHtml(blogBlocks, mw);
   }
 
   async function save(statusOverride?: ContentStatus) {
@@ -748,7 +834,7 @@ export function AdminBlog() {
 
           {/* ══ EDITOR PAGE ══ */}
           {authState === "allowed" && page === "editor" && (
-            <div className="p-5 space-y-5 max-w-5xl">
+            <div className="p-5 space-y-5">
               <div>
                 <h1 className="text-2xl font-bold">{editPost ? "Edit Blog Post" : "New Blog Post"}</h1>
                 <p className="text-sm text-muted-foreground">Create a public post and optionally convert it into an email template or social media cards.</p>
@@ -877,8 +963,8 @@ export function AdminBlog() {
                     <button
                       key={t}
                       onClick={() => {
-                        if (t === "html" && editorTab === "simple") setHtmlContent(blogBlocksToHtml(blogBlocks));
-                        if (t === "wysiwyg" && wysiwygRef.current) wysiwygRef.current.innerHTML = editorTab === "simple" ? blogBlocksToHtml(blogBlocks) : htmlContent;
+                        if (t === "html" && editorTab === "simple") { const mw = canvasWidth === "full" ? undefined : canvasWidth === "wide" ? "1200px" : canvasWidth === "article" ? "880px" : "640px"; setHtmlContent(blogBlocksToHtml(blogBlocks, mw)); }
+                        if (t === "wysiwyg" && wysiwygRef.current) { const mw = canvasWidth === "full" ? undefined : canvasWidth === "wide" ? "1200px" : canvasWidth === "article" ? "880px" : "640px"; wysiwygRef.current.innerHTML = editorTab === "simple" ? blogBlocksToHtml(blogBlocks, mw) : htmlContent; }
                         setEditorTab(t);
                       }}
                       className={cn(
@@ -893,85 +979,111 @@ export function AdminBlog() {
 
                 {/* Block Builder (Simple) */}
                 {editorTab === "simple" && (
-                  <div className="flex h-[560px] overflow-hidden rounded-xl border">
-                    {/* Left: block library */}
-                    <div className="w-36 shrink-0 overflow-y-auto border-r bg-muted/20 p-2">
-                      <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Blocks</div>
-                      <div className="space-y-1">
-                        {BLOG_BLOCK_DEFS.map(({ type, label, icon: Icon, defaults }) => (
+                  <div className="overflow-hidden rounded-xl border">
+                    {/* Toolbar: canvas width selector */}
+                    <div className="flex items-center gap-3 border-b bg-muted/30 px-3 py-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Canvas width</span>
+                      <div className="flex gap-1">
+                        {([
+                          { id: "full", label: "Full" },
+                          { id: "wide", label: "Wide (1200)" },
+                          { id: "article", label: "Article (880)" },
+                          { id: "narrow", label: "Narrow (640)" },
+                        ] as const).map(({ id, label }) => (
                           <button
-                            key={type}
-                            onClick={() => addBlogBlock(type, defaults)}
-                            className="flex w-full items-center gap-2 rounded-lg border border-transparent bg-card px-2 py-2 text-[12px] font-medium transition-colors hover:border-primary/30 hover:bg-accent"
-                          >
-                            <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{label}
-                          </button>
+                            key={id}
+                            onClick={() => setCanvasWidth(id)}
+                            className={cn("rounded px-2 py-0.5 text-[11px] font-medium transition-colors", canvasWidth === id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground")}
+                          >{label}</button>
                         ))}
                       </div>
+                      <span className="ml-auto text-[10px] text-muted-foreground">{blogBlocks.length} block{blogBlocks.length !== 1 ? "s" : ""}</span>
                     </div>
 
-                    {/* Center: canvas */}
-                    <div className="flex-1 overflow-y-auto bg-white p-4 dark:bg-background">
-                      {blogBlocks.length === 0 ? (
-                        <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-                          <Type className="h-10 w-10 opacity-20" />
-                          <div className="text-center">
-                            <div className="text-sm font-medium">Start building your post</div>
-                            <div className="text-xs">Click blocks on the left to add them.</div>
-                          </div>
-                        </div>
-                      ) : (
+                    <div className="flex h-[680px]">
+                      {/* Left: block library */}
+                      <div className="w-44 shrink-0 overflow-y-auto border-r bg-muted/20 p-2">
+                        <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Blocks</div>
                         <div className="space-y-1">
-                          {blogBlocks.map((block, idx) => (
-                            <div
-                              key={block.id}
-                              draggable
-                              onDragStart={() => setBlogDragIdx(idx)}
-                              onDragOver={(e) => { e.preventDefault(); setBlogDropIdx(idx); }}
-                              onDrop={() => {
-                                if (blogDragIdx !== null && blogDragIdx !== idx) moveBlogBlock(blogDragIdx, idx);
-                                setBlogDragIdx(null); setBlogDropIdx(null);
-                              }}
-                              onDragEnd={() => { setBlogDragIdx(null); setBlogDropIdx(null); }}
-                              onClick={() => setSelectedBlogBlockId(block.id)}
-                              className={cn(
-                                "group relative cursor-pointer rounded-lg border-2 p-3 transition-colors",
-                                selectedBlogBlockId === block.id ? "border-primary bg-primary/5" : "border-transparent hover:border-primary/30",
-                                blogDropIdx === idx && blogDragIdx !== null && "border-primary/60 bg-primary/10",
-                              )}
+                          {BLOG_BLOCK_DEFS.map(({ type, label, icon: Icon, defaults }) => (
+                            <button
+                              key={type}
+                              onClick={() => addBlogBlock(type, defaults)}
+                              className="flex w-full items-center gap-2 rounded-lg border border-transparent bg-card px-2 py-2 text-[12px] font-medium transition-colors hover:border-primary/30 hover:bg-accent"
                             >
-                              <div className="absolute -left-1 top-1/2 -translate-y-1/2 cursor-grab opacity-0 group-hover:opacity-100">
-                                <GripVertical className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); removeBlogBlock(block.id); }}
-                                className="absolute right-1 top-1 rounded p-0.5 opacity-0 hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                              <BlogBlockPreview block={block} />
-                            </div>
+                              <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{label}
+                            </button>
                           ))}
                         </div>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Right: settings */}
-                    <div className="w-52 shrink-0 overflow-y-auto border-l bg-muted/10 p-3">
-                      {selectedBlogBlock ? (
-                        <>
-                          <div className="mb-3 flex items-center justify-between">
-                            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground capitalize">{selectedBlogBlock.type}</span>
-                            <button onClick={() => setSelectedBlogBlockId(null)} className="rounded p-0.5 hover:bg-muted"><X className="h-3.5 w-3.5" /></button>
+                      {/* Center: canvas */}
+                      <div className="flex-1 overflow-y-auto bg-white dark:bg-background">
+                        <div className={cn("min-h-full p-6", canvasWidth !== "full" && "flex justify-center")}>
+                          <div className={cn("w-full", canvasWidth === "wide" && "max-w-[1200px]", canvasWidth === "article" && "max-w-[880px]", canvasWidth === "narrow" && "max-w-[640px]")}>
+                            {blogBlocks.length === 0 ? (
+                              <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-3 text-muted-foreground">
+                                <Type className="h-10 w-10 opacity-20" />
+                                <div className="text-center">
+                                  <div className="text-sm font-medium">Start building your post</div>
+                                  <div className="text-xs">Click blocks on the left to add them.</div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                {blogBlocks.map((block, idx) => (
+                                  <div
+                                    key={block.id}
+                                    draggable
+                                    onDragStart={() => setBlogDragIdx(idx)}
+                                    onDragOver={(e) => { e.preventDefault(); setBlogDropIdx(idx); }}
+                                    onDrop={() => {
+                                      if (blogDragIdx !== null && blogDragIdx !== idx) moveBlogBlock(blogDragIdx, idx);
+                                      setBlogDragIdx(null); setBlogDropIdx(null);
+                                    }}
+                                    onDragEnd={() => { setBlogDragIdx(null); setBlogDropIdx(null); }}
+                                    onClick={() => setSelectedBlogBlockId(block.id)}
+                                    className={cn(
+                                      "group relative cursor-pointer rounded-lg border-2 p-3 transition-colors",
+                                      selectedBlogBlockId === block.id ? "border-primary bg-primary/5" : "border-transparent hover:border-primary/30",
+                                      blogDropIdx === idx && blogDragIdx !== null && "border-primary/60 bg-primary/10",
+                                    )}
+                                  >
+                                    <div className="absolute -left-1 top-1/2 -translate-y-1/2 cursor-grab opacity-0 group-hover:opacity-100">
+                                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); removeBlogBlock(block.id); }}
+                                      className="absolute right-1 top-1 rounded p-0.5 opacity-0 hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                    <BlogBlockPreview block={block} />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          <BlogBlockSettings block={selectedBlogBlock} onChange={(props) => updateBlogBlockProps(selectedBlogBlock.id, props)} />
-                        </>
-                      ) : (
-                        <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                          <Layers className="h-8 w-8 opacity-20" />
-                          <div className="text-center text-[11px]">Select a block to edit its settings</div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Right: settings */}
+                      <div className="w-64 shrink-0 overflow-y-auto border-l bg-muted/10 p-3">
+                        {selectedBlogBlock ? (
+                          <>
+                            <div className="mb-3 flex items-center justify-between">
+                              <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground capitalize">{selectedBlogBlock.type.replace(/(\d)/, " $1")}</span>
+                              <button onClick={() => setSelectedBlogBlockId(null)} className="rounded p-0.5 hover:bg-muted"><X className="h-3.5 w-3.5" /></button>
+                            </div>
+                            <BlogBlockSettings block={selectedBlogBlock} onChange={(props) => updateBlogBlockProps(selectedBlogBlock.id, props)} />
+                          </>
+                        ) : (
+                          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                            <Layers className="h-8 w-8 opacity-20" />
+                            <div className="text-center text-[11px]">Select a block to edit its settings</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
