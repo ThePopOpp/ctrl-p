@@ -2367,18 +2367,46 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
           {/* ── Video tab ── */}
           {splashTab === "video" && <div className="space-y-4">
             <p className="text-xs text-muted-foreground">A full-screen video shown on the splash before the card reveals. MP4 recommended.</p>
+
+            {/* Preset animations */}
+            <div className="rounded-lg border bg-background/35 p-3">
+              <div className="mb-1 text-sm font-semibold">Preset animations</div>
+              <p className="mb-3 text-xs text-muted-foreground">Select a built-in branded animation or upload your own below.</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { label: "Dark mode", url: "/animations/jw-card-animation-dark.mp4" },
+                  { label: "Light mode", url: "/animations/jw-card-animation-light.mp4" },
+                ] as const).map(({ label, url }) => (
+                  <button key={url} type="button"
+                    onClick={() => onChange({ background_video_url: url })}
+                    className={cn(
+                      "group relative overflow-hidden rounded-lg border-2 transition-colors",
+                      content.background_video_url === url
+                        ? "border-primary bg-primary/10"
+                        : "border-input bg-background hover:border-primary/50"
+                    )}
+                  >
+                    <video className="h-20 w-full object-cover opacity-80 group-hover:opacity-100" src={url} muted playsInline preload="metadata" />
+                    <div className={cn(
+                      "absolute bottom-0 left-0 right-0 py-1 text-center text-[11px] font-semibold",
+                      content.background_video_url === url ? "bg-primary text-primary-foreground" : "bg-background/80 text-foreground"
+                    )}>{label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {uploadMedia && (
               <MediaUploadField
-                label="Splash video"
+                label="Custom splash video"
                 mediaType="splash-video"
                 accept="video/*"
-                value={content.background_video_url || ""}
+                value={content.background_video_url?.startsWith("/animations/") ? "" : (content.background_video_url || "")}
                 uploading={uploadingMedia ?? null}
                 onUpload={uploadMedia}
                 onUploaded={(url) => onChange({ background_video_url: url })}
               />
             )}
-            <Field label="Or paste video URL" value={content.background_video_url || ""} onChange={(v) => onChange({ background_video_url: v })} />
 
             {/* Video play timer */}
             <div className="rounded-lg border bg-background/35 p-3">
