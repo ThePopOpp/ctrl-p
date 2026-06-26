@@ -2743,6 +2743,10 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
   const frontId = `${fieldId}-front`;
   const rearId = `${fieldId}-rear`;
   const handleFile = (file?: File) => { if (file) onUpload(file, mediaType, onUploaded); };
+  // video/* is unreliable on Windows — explicit MIME types + extensions ensure the picker shows MP4/MOV/etc.
+  const inputAccept = isVideo
+    ? "video/mp4,video/quicktime,video/webm,video/x-msvideo,video/x-matroska,.mp4,.mov,.webm,.avi,.mkv,.m4v"
+    : accept;
   const handleUrlSave = () => {
     if (urlDraft.trim()) onUploaded(urlDraft.trim());
     setUrlDraft("");
@@ -2813,9 +2817,9 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
             <Camera className="h-3 w-3 shrink-0" />Rear cam
           </label>
         </div>
-        <input id={fieldId} type="file" accept={accept} className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
-        <input id={frontId} type="file" accept={accept} capture="user" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
-        <input id={rearId} type="file" accept={accept} capture="environment" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+        <input id={fieldId} type="file" accept={inputAccept} className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+        <input id={frontId} type="file" accept={inputAccept} capture="user" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+        <input id={rearId} type="file" accept={inputAccept} capture="environment" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
         {value && <div className="mt-2 w-full min-w-0 truncate rounded-md bg-secondary px-2 py-1 text-[10px] text-muted-foreground">{value}</div>}
       </div>
     </>
