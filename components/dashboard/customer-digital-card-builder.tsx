@@ -160,8 +160,11 @@ const colorPresets = [
 type OpenerButton = { label: string; action: "open_card" | "call" | "sms" | "email" | "url"; url?: string };
 type OpenerContent = {
   digital_product?: string;
-  splash_mode?: "standard" | "animation" | "video";
-  enabled?: boolean;
+  // Independent feature flags — each tab has its own on/off
+  standard_enabled?: boolean;   // show text overlay (title/subtitle/buttons)
+  animation_enabled?: boolean;  // apply custom open/close CSS animations
+  video_enabled?: boolean;      // show background video layer
+  enabled?: boolean;            // master splash on/off
   title?: string;
   subtitle?: string;
   typography?: TypographySettings;
@@ -488,6 +491,9 @@ function defaultOpenerContent(): OpenerContent {
   return {
     digital_product: "opener",
     enabled: true,
+    standard_enabled: true,
+    animation_enabled: false,
+    video_enabled: false,
     title: "Welcome",
     subtitle: "Tap to view my digital business card.",
     typography: { font_family: "Inter", font_size: 44, color: "#f7fff2", alignment: "center", font_weight: 700, italic: false, underline: false, letter_spacing: 0, line_height: 1.05 },
@@ -2190,9 +2196,7 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
   uploadMedia?: (file: File, mediaType: string, onUploaded: (url: string) => void) => void;
   uploadingMedia?: string | null;
 }) {
-  const [splashTab, setSplashTab] = useState<"standard" | "animation" | "video" | "slideshow">(
-    (content.splash_mode as "standard" | "animation" | "video" | "slideshow") || "standard"
-  );
+  const [splashTab, setSplashTab] = useState<"standard" | "animation" | "video" | "slideshow">("standard");
   const [audioModalOpen, setAudioModalOpen] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
@@ -2308,7 +2312,7 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
           {/* Tab bar */}
           <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
             {(["standard", "animation", "video", "slideshow"] as const).map((tab) => (
-              <button key={tab} type="button" onClick={() => { setSplashTab(tab); if (tab !== "slideshow") onChange({ splash_mode: tab as "standard" | "animation" | "video" }); }}
+              <button key={tab} type="button" onClick={() => setSplashTab(tab)}
                 className={cn("rounded-md py-1.5 text-xs font-medium capitalize transition-colors",
                   splashTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
               >{tab}</button>
@@ -2317,6 +2321,14 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
 
           {/* ── Standard tab ── */}
           {splashTab === "standard" && <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border bg-background/35 px-3 py-2">
+              <div>
+                <div className="text-sm font-semibold">Text overlay</div>
+                <div className="text-[11px] text-muted-foreground">Show title, subtitle, and buttons on the splash</div>
+              </div>
+              <SplashPillToggle checked={content.standard_enabled !== false} onToggle={(v) => onChange({ standard_enabled: v })} labelOn="On" labelOff="Off" />
+            </div>
+            <div className={cn("space-y-4", content.standard_enabled === false && "pointer-events-none opacity-40")}>
             <div className="grid gap-3">
               <Field label="Splash title" value={content.title || ""} onChange={(v) => onChange({ title: v })} />
               <Field label="Subtitle" value={content.subtitle || ""} onChange={(v) => onChange({ subtitle: v })} />
@@ -2389,11 +2401,20 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
                 </div>
               </div>
             </div>
+            </div> {/* end opacity wrapper */}
             {audioSection}
           </div>}
 
           {/* ── Animation tab ── */}
           {splashTab === "animation" && <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border bg-background/35 px-3 py-2">
+              <div>
+                <div className="text-sm font-semibold">Animations</div>
+                <div className="text-[11px] text-muted-foreground">Apply custom open and close animations to the splash</div>
+              </div>
+              <SplashPillToggle checked={content.animation_enabled === true} onToggle={(v) => onChange({ animation_enabled: v })} labelOn="On" labelOff="Off" />
+            </div>
+            <div className={cn("space-y-4", content.animation_enabled !== true && "pointer-events-none opacity-40")}>
             <div className="rounded-lg border bg-background/35 p-3">
               <div className="mb-1 text-sm font-semibold">Open animation</div>
               <p className="mb-3 text-xs text-muted-foreground">How the splash appears when first loaded.</p>
@@ -2440,11 +2461,20 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
                 onUploaded={(url) => onChange({ background_video_url: url })}
               />
             )}
+            </div> {/* end opacity wrapper */}
             {audioSection}
           </div>}
 
           {/* ── Video tab ── */}
           {splashTab === "video" && <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border bg-background/35 px-3 py-2">
+              <div>
+                <div className="text-sm font-semibold">Video background</div>
+                <div className="text-[11px] text-muted-foreground">Play a video behind the splash screen</div>
+              </div>
+              <SplashPillToggle checked={content.video_enabled === true} onToggle={(v) => onChange({ video_enabled: v })} labelOn="On" labelOff="Off" />
+            </div>
+            <div className={cn("space-y-4", content.video_enabled !== true && "pointer-events-none opacity-40")}>
             <p className="text-xs text-muted-foreground">A full-screen video shown on the splash before the card reveals. MP4 recommended.</p>
 
             {/* Preset animations */}
@@ -2549,6 +2579,7 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
                 <span className="w-8 shrink-0 text-right text-xs text-muted-foreground">{Math.round((content.video_volume ?? 1) * 100)}%</span>
               </div>
             )}
+            </div> {/* end opacity wrapper */}
             {audioSection}
           </div>}
 

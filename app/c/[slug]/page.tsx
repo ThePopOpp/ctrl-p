@@ -46,7 +46,9 @@ type PublicLeadFormSettings = { enabled?: boolean; title?: string; description?:
 
 type OpenerContent = {
   digital_product?: string;
-  splash_mode?: "standard" | "animation" | "video";
+  standard_enabled?: boolean;
+  animation_enabled?: boolean;
+  video_enabled?: boolean;
   title?: string;
   subtitle?: string;
   typography?: TypographySettings;

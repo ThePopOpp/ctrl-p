@@ -22,7 +22,9 @@ type TypographySettings = {
 
 export type OpenerContent = {
   digital_product?: string;
-  splash_mode?: "standard" | "animation" | "video";
+  standard_enabled?: boolean;
+  animation_enabled?: boolean;
+  video_enabled?: boolean;
   title?: string;
   subtitle?: string;
   typography?: TypographySettings;
@@ -127,9 +129,12 @@ export function PublicOpener({
   const duration      = Math.max(1, Math.min(60, Number(content.duration_seconds || 7)));
   const openAnim      = content.open_animation  || "fade_up";
   const closeAnim     = content.close_animation || "fade_out";
-  const splashMode    = content.splash_mode || "standard";
-  const isVideoMode   = splashMode === "video";
-  const hasVideo      = !!content.background_video_url;
+  const showText      = content.standard_enabled !== false;   // default on
+  const useAnimation  = content.animation_enabled === true;   // default off
+  const showVideo     = content.video_enabled === true && !!content.background_video_url;
+  // "video-only" mode: video on + text off → fullscreen feel, tap to dismiss
+  const isVideoOnly   = showVideo && !showText;
+  const hasVideo      = showVideo;
   const btnPosition   = content.button_position || "center";
   const btnMarginTop  = content.button_margin_top  ?? 32;
   const btnMarginBot  = content.button_margin_bottom ?? 0;
@@ -150,12 +155,16 @@ export function PublicOpener({
   const accentColor = content.accent_color || card.accent_color || "#a3e635";
 
   const overlayStyle: CSSProperties = {
-    background: isVideoMode ? "#000" : (content.background_color || card.background_color || "#07130b"),
+    background: isVideoOnly ? "#000" : (content.background_color || card.background_color || "#07130b"),
     color: textColor,
-    backgroundImage: isVideoMode ? undefined : bgImage,
+    backgroundImage: isVideoOnly ? undefined : bgImage,
     backgroundSize: "cover",
     backgroundPosition: "center",
   };
+
+  // When animations disabled, fall back to a simple fade so the splash still appears/disappears cleanly
+  const effectiveOpenAnim  = useAnimation ? openAnim  : "fade_in";
+  const effectiveCloseAnim = useAnimation ? closeAnim : "fade_out";
 
   function dismiss() {
     setDismissed(true);
@@ -176,7 +185,7 @@ export function PublicOpener({
 
   return (
     <>
-      <style>{animCss(openAnim, closeAnim, duration)}</style>
+      <style>{animCss(effectiveOpenAnim, effectiveCloseAnim, duration)}</style>
       <div
         className={`_opener_overlay fixed inset-0 z-50 flex flex-col overflow-hidden px-5${
           btnPosition === "top"    ? " justify-start pt-12"  :
@@ -184,13 +193,13 @@ export function PublicOpener({
           " justify-center"
         }${dismissed ? " dismissed" : ""}`}
         style={overlayStyle}
-        onClick={isVideoMode ? dismiss : undefined}
+        onClick={isVideoOnly ? dismiss : undefined}
       >
         {/* Background video */}
         {hasVideo && (
           <video
             className="absolute inset-0 h-full w-full"
-            style={{ objectFit: content.video_fit || "cover", opacity: isVideoMode ? 1 : 0.45 }}
+            style={{ objectFit: content.video_fit || "cover", opacity: isVideoOnly ? 1 : 0.45 }}
             src={content.background_video_url!}
             autoPlay
             muted={content.video_muted !== false}
@@ -204,8 +213,8 @@ export function PublicOpener({
           className="_opener_content relative z-10 mx-auto w-full max-w-lg"
           style={{ textAlign, fontFamily: typo.font_family || undefined, letterSpacing }}
         >
-          {/* Standard + Animation mode: show title/subtitle */}
-          {!isVideoMode && (
+          {/* Text overlay — only when Standard is enabled */}
+          {showText && (
             <>
               <div className="text-xs uppercase tracking-[0.35em] opacity-70">Digital card</div>
               <h1
@@ -223,8 +232,8 @@ export function PublicOpener({
             </>
           )}
 
-          {/* Video mode: minimal label */}
-          {isVideoMode && (
+          {/* Video-only mode: minimal label when text is off but video is on */}
+          {isVideoOnly && (
             <div className="mb-6 text-center text-sm font-semibold uppercase tracking-[0.3em] opacity-80" style={{ color: textColor }}>
               {content.title || card.display_name || "Tap to view card"}
             </div>
@@ -261,11 +270,11 @@ export function PublicOpener({
             })}
           </div>
 
-          {!isVideoMode && (
+          {showText && (
             <div className="mt-5 text-xs opacity-50" style={{ textAlign }}>{publicUrl}</div>
           )}
 
-          {isVideoMode && (
+          {isVideoOnly && (
             <div className="mt-4 text-center text-[11px] opacity-40" style={{ color: textColor }}>Tap anywhere to continue</div>
           )}
         </div>
