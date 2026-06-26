@@ -159,6 +159,7 @@ const colorPresets = [
 type OpenerButton = { label: string; action: "open_card" | "call" | "sms" | "email" | "url"; url?: string };
 type OpenerContent = {
   digital_product?: string;
+  enabled?: boolean;
   title?: string;
   subtitle?: string;
   typography?: TypographySettings;
@@ -168,8 +169,12 @@ type OpenerContent = {
   background_image_url?: string;
   background_video_url?: string;
   duration_seconds?: number;
+  transition_effect?: string;
   open_animation?: string;
   close_animation?: string;
+  video_loop?: boolean;
+  video_muted?: boolean;
+  video_fit?: "cover" | "contain";
   buttons?: OpenerButton[];
 };
 type LeadField = { key: string; label: string; enabled: boolean; required: boolean };
@@ -470,6 +475,7 @@ function newLink(type: string): DigitalCardLink {
 function defaultOpenerContent(): OpenerContent {
   return {
     digital_product: "opener",
+    enabled: true,
     title: "Welcome",
     subtitle: "Tap to view my digital business card.",
     typography: { font_family: "Inter", font_size: 44, color: "#f7fff2", alignment: "center", font_weight: 700, italic: false, underline: false, letter_spacing: 0, line_height: 1.05 },
@@ -479,8 +485,12 @@ function defaultOpenerContent(): OpenerContent {
     background_image_url: "",
     background_video_url: "",
     duration_seconds: 7,
+    transition_effect: "fade",
     open_animation: "fade_up",
     close_animation: "fade_out",
+    video_loop: true,
+    video_muted: true,
+    video_fit: "cover",
     buttons: [
       { label: "View card", action: "open_card" },
       { label: "Call me", action: "call" },
@@ -1277,7 +1287,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 </CardContent>
               </Card>}
 
-              {activePanel === "splash" && <OpenerPanel content={getOpenerContent()} primaryPhone={form.primary_phone || ""} onChange={updateOpenerContent} />}
+              {activePanel === "splash" && <OpenerPanel content={getOpenerContent()} primaryPhone={form.primary_phone || ""} onChange={updateOpenerContent} uploadMedia={uploadMedia} uploadingMedia={uploadingMedia} />}
 
               {activePanel === "slideshow" && <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base">Slideshow</CardTitle><CardDescription>Add intro, services, gallery, testimonials, and contact slides for slider-based card experiences.</CardDescription></CardHeader>
@@ -1709,9 +1719,34 @@ function LeadCaptureSectionEditor({ settings, onChange, onFieldChange }: { setti
   );
 }
 
-function OpenerPanel({ content, primaryPhone, onChange }: { content: OpenerContent; primaryPhone: string; onChange: (patch: Partial<OpenerContent>) => void }) {
+// Small pill toggle for OpenerPanel — defined at module scope to avoid nested component rules
+function SplashPillToggle({ checked, onToggle, labelOn, labelOff }: { checked: boolean; onToggle: (v: boolean) => void; labelOn: string; labelOff: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} onClick={() => onToggle(!checked)}
+      className={cn("flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+        checked ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background text-muted-foreground hover:bg-muted")}
+    ><span className={cn("h-2 w-2 rounded-full", checked ? "bg-primary-foreground" : "bg-muted-foreground")} />{checked ? labelOn : labelOff}</button>
+  );
+}
+
+const SPLASH_TRANSITIONS  = ["fade", "slide_up", "slide_down", "slide_left", "slide_right", "wipe_left", "wipe_right", "zoom_in", "zoom_out", "flip", "none"];
+const OPEN_ANIMATIONS     = ["fade_up", "fade_in", "zoom_in", "slide_up", "slide_down", "slide_left", "slide_right", "flip_in", "bounce_in"];
+const CLOSE_ANIMATIONS    = ["fade_out", "zoom_out", "slide_up", "slide_down", "slide_left", "slide_right", "flip_out", "dissolve"];
+
+function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMedia }: {
+  content: OpenerContent;
+  primaryPhone: string;
+  onChange: (patch: Partial<OpenerContent>) => void;
+  uploadMedia?: (file: File, mediaType: string, onUploaded: (url: string) => void) => void;
+  uploadingMedia?: string | null;
+}) {
+  const [splashTab, setSplashTab] = useState<"standard" | "animation" | "video" | "slideshow">("standard");
   const buttons = (content.buttons || []).slice(0, 2);
   const splashTypography = typographyFrom(content.typography, content.text_color || "#f7fff2");
+  const isEnabled = content.enabled !== false;
+  const totalSec = Number(content.duration_seconds ?? 7);
+  const durMin = Math.floor(totalSec / 60);
+  const durSec = totalSec % 60;
 
   function updateButton(index: number, patch: Partial<OpenerButton>) {
     const next = [...buttons];
@@ -1723,44 +1758,136 @@ function OpenerPanel({ content, primaryPhone, onChange }: { content: OpenerConte
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base"><PlayCircle className="h-4 w-4" /> Splash page customizer</CardTitle>
-        <CardDescription>Create a short intro slide before the visitor opens the business card.</CardDescription>
+        <CardDescription>Create a short intro before the visitor opens the business card.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3">
-          <Field label="Splash title" value={content.title || ""} onChange={(value) => onChange({ title: value })} />
-          <Field label="Subtitle" value={content.subtitle || ""} onChange={(value) => onChange({ subtitle: value })} />
-        </div>
-        <div className="rounded-lg border bg-background/35 p-3">
-          <div className="mb-3 text-sm font-semibold">Splash typography</div>
-          <TypographyControls value={splashTypography} onChange={(patch) => onChange({ typography: { ...splashTypography, ...patch } })} />
-        </div>
-        <div className="grid gap-3 md:grid-cols-3">
-          <ColorField label="Background" value={content.background_color || "#07130b"} onChange={(value) => onChange({ background_color: value })} />
-          <ColorField label="Accent" value={content.accent_color || "#a3ff12"} onChange={(value) => onChange({ accent_color: value })} />
-          <ColorField label="Text" value={content.text_color || "#f7fff2"} onChange={(value) => onChange({ text_color: value })} />
-        </div>
-        <div className="grid gap-3">
-          <Field label="Background image URL" value={content.background_image_url || ""} onChange={(value) => onChange({ background_image_url: value })} />
-          <Field label="Background video URL" value={content.background_video_url || ""} onChange={(value) => onChange({ background_video_url: value })} />
-        </div>
-        <div className="grid gap-3 md:grid-cols-3">
-          <NumberField label="Duration seconds" value={Number(content.duration_seconds || 7)} onChange={(value) => onChange({ duration_seconds: Math.max(1, Math.min(30, value)) })} />
-          <SelectField label="Open animation" value={content.open_animation || "fade_up"} values={["fade_up", "fade_in", "zoom_in", "slide_left", "flip_in"]} onChange={(value) => onChange({ open_animation: value })} />
-          <SelectField label="Close animation" value={content.close_animation || "fade_out"} values={["fade_out", "zoom_out", "slide_up", "slide_left", "flip_out"]} onChange={(value) => onChange({ close_animation: value })} />
-        </div>
-        <div className="space-y-2">
-          <div className="text-xs font-semibold text-muted-foreground">Splash buttons, max 2</div>
-          {[0, 1].map((index) => {
-            const button = buttons[index] || { label: index === 0 ? "View card" : "Call me", action: index === 0 ? "open_card" : "call" };
-            return (
-              <div key={index} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-[1fr_160px_1fr]">
-                <Field label={`Button ${index + 1}`} value={button.label || ""} onChange={(value) => updateButton(index, { label: value })} />
-                <SelectField label="Action" value={button.action || "open_card"} values={["open_card", "call", "sms", "email", "url"]} onChange={(value) => updateButton(index, { action: value as OpenerButton["action"] })} />
-                <Field label="URL override" value={button.url || (button.action === "call" ? primaryPhone : "")} onChange={(value) => updateButton(index, { url: value })} />
+        {/* Global controls — always visible */}
+        <div className="grid gap-4 rounded-lg border bg-background/35 p-3 sm:grid-cols-2">
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Show splash before card</div>
+            <SplashPillToggle checked={isEnabled} onToggle={(v) => onChange({ enabled: v })} labelOn="Enabled" labelOff="Disabled" />
+          </div>
+          <SelectField label="Transition effect" value={content.transition_effect || "fade"} values={SPLASH_TRANSITIONS} onChange={(v) => onChange({ transition_effect: v })} />
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Auto-dismiss timer</div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1"><div className="mb-0.5 text-[10px] text-muted-foreground">Min</div>
+                <Input type="number" min={0} max={10} className="h-8 text-center text-sm" value={durMin}
+                  onChange={(e) => onChange({ duration_seconds: Math.max(0, parseInt(e.target.value) || 0) * 60 + durSec })} />
               </div>
-            );
-          })}
+              <span className="mt-4 select-none text-sm font-bold text-muted-foreground">:</span>
+              <div className="flex-1"><div className="mb-0.5 text-[10px] text-muted-foreground">Sec</div>
+                <Input type="number" min={0} max={59} className="h-8 text-center text-sm" value={String(durSec).padStart(2, "0")}
+                  onChange={(e) => onChange({ duration_seconds: durMin * 60 + Math.min(59, Math.max(0, parseInt(e.target.value) || 0)) })} />
+              </div>
+            </div>
+          </div>
         </div>
+        {/* Tabs */}
+        <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
+          {(["standard", "animation", "video", "slideshow"] as const).map((tab) => (
+            <button key={tab} type="button" onClick={() => setSplashTab(tab)}
+              className={cn("rounded-md py-1.5 text-xs font-medium capitalize transition-colors",
+                splashTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            >{tab}</button>
+          ))}
+        </div>
+        {/* Standard tab */}
+        {splashTab === "standard" && <div className="space-y-4">
+          <div className="grid gap-3">
+            <Field label="Splash title" value={content.title || ""} onChange={(v) => onChange({ title: v })} />
+            <Field label="Subtitle" value={content.subtitle || ""} onChange={(v) => onChange({ subtitle: v })} />
+        </div>
+          <div className="rounded-lg border bg-background/35 p-3">
+            <div className="mb-3 text-sm font-semibold">Splash typography</div>
+            <TypographyControls value={splashTypography} onChange={(patch) => onChange({ typography: { ...splashTypography, ...patch } })} />
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <ColorField label="Background" value={content.background_color || "#07130b"} onChange={(v) => onChange({ background_color: v })} />
+            <ColorField label="Accent" value={content.accent_color || "#a3ff12"} onChange={(v) => onChange({ accent_color: v })} />
+            <ColorField label="Text" value={content.text_color || "#f7fff2"} onChange={(v) => onChange({ text_color: v })} />
+          </div>
+          <Field label="Background image URL" value={content.background_image_url || ""} onChange={(v) => onChange({ background_image_url: v })} />
+          <div className="space-y-2">
+            <div className="text-xs font-semibold text-muted-foreground">Buttons (max 2)</div>
+            {[0, 1].map((index) => {
+              const button = buttons[index] || { label: index === 0 ? "View card" : "Call me", action: index === 0 ? "open_card" as const : "call" as const };
+              return (
+                <div key={index} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-[1fr_160px_1fr]">
+                  <Field label={`Button ${index + 1}`} value={button.label || ""} onChange={(v) => updateButton(index, { label: v })} />
+                  <SelectField label="Action" value={button.action || "open_card"} values={["open_card", "call", "sms", "email", "url"]} onChange={(v) => updateButton(index, { action: v as OpenerButton["action"] })} />
+                  <Field label="URL override" value={button.url || (button.action === "call" ? primaryPhone : "")} onChange={(v) => updateButton(index, { url: v })} />
+                </div>
+              );
+            })}
+          </div>
+        </div>}
+
+        {/* Animation tab */}
+        {splashTab === "animation" && <div className="space-y-4">
+          <div className="rounded-lg border bg-background/35 p-3">
+            <div className="mb-1 text-sm font-semibold">Open animation</div>
+            <p className="mb-3 text-xs text-muted-foreground">How the splash appears when first loaded.</p>
+            <div className="grid grid-cols-3 gap-2">
+              {OPEN_ANIMATIONS.map((anim) => (
+                <button key={anim} type="button" onClick={() => onChange({ open_animation: anim })}
+                  className={cn("rounded-lg border px-2 py-2 text-[11px] font-medium capitalize transition-colors",
+                    (content.open_animation || "fade_up") === anim ? "border-primary bg-primary/10 text-primary" : "border-input bg-background hover:border-primary/50")}
+                >{human(anim)}</button>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-lg border bg-background/35 p-3">
+            <div className="mb-1 text-sm font-semibold">Close / dismiss animation</div>
+            <p className="mb-3 text-xs text-muted-foreground">How the splash exits when dismissed.</p>
+            <div className="grid grid-cols-3 gap-2">
+              {CLOSE_ANIMATIONS.map((anim) => (
+                <button key={anim} type="button" onClick={() => onChange({ close_animation: anim })}
+                  className={cn("rounded-lg border px-2 py-2 text-[11px] font-medium capitalize transition-colors",
+                    (content.close_animation || "fade_out") === anim ? "border-primary bg-primary/10 text-primary" : "border-input bg-background hover:border-primary/50")}
+                >{human(anim)}</button>
+              ))}
+            </div>
+          </div>
+        </div>}
+
+        {/* Video tab */}
+        {splashTab === "video" && <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">A full-screen video shown on the splash before the card reveals. MP4 recommended. The auto-dismiss timer above controls when the card appears.</p>
+          {uploadMedia && (
+            <MediaUploadField
+              label="Splash video"
+              mediaType="splash-video"
+              accept="video/*"
+              value={content.background_video_url || ""}
+              uploading={uploadingMedia ?? null}
+              onUpload={uploadMedia}
+              onUploaded={(url) => onChange({ background_video_url: url })}
+            />
+          )}
+          <Field label="Or paste video URL" value={content.background_video_url || ""} onChange={(v) => onChange({ background_video_url: v })} />
+          <div className="grid gap-4 rounded-lg border bg-background/35 p-3 sm:grid-cols-3">
+            <SelectField label="Video fit" value={content.video_fit || "cover"} values={["cover", "contain"]} onChange={(v) => onChange({ video_fit: v as "cover" | "contain" })} />
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Loop video</div>
+              <SplashPillToggle checked={content.video_loop !== false} onToggle={(v) => onChange({ video_loop: v })} labelOn="Loop on" labelOff="No loop" />
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Mute audio</div>
+              <SplashPillToggle checked={content.video_muted !== false} onToggle={(v) => onChange({ video_muted: v })} labelOn="Muted" labelOff="Audio on" />
+            </div>
+          </div>
+        </div>}
+
+        {/* Slideshow tab */}
+        {splashTab === "slideshow" && (
+          <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-center">
+            <Layers className="mx-auto mb-3 h-8 w-8 text-muted-foreground opacity-40" />
+            <div className="text-sm font-semibold">Multi-slide splash cards</div>
+            <p className="mt-1.5 text-xs text-muted-foreground">Build multi-page slides with individual titles, media, and call-to-action buttons using the <strong>Slideshow</strong> panel in the left sidebar. Each slide inherits the transition effect set above.</p>
+          </div>
+        )}
+
       </CardContent>
     </Card>
   );
