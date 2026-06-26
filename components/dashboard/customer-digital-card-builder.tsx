@@ -2361,6 +2361,28 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
                 ))}
               </div>
             </div>
+            {uploadMedia && (
+              <MediaUploadField
+                label="Background image"
+                mediaType="splash-bg-image"
+                accept="image/*"
+                value={content.background_image_url || ""}
+                uploading={uploadingMedia ?? null}
+                onUpload={uploadMedia}
+                onUploaded={(url) => onChange({ background_image_url: url })}
+              />
+            )}
+            {uploadMedia && (
+              <MediaUploadField
+                label="Background video"
+                mediaType="splash-bg-video"
+                accept="video/*"
+                value={content.background_video_url?.startsWith("/animations/") ? "" : (content.background_video_url || "")}
+                uploading={uploadingMedia ?? null}
+                onUpload={uploadMedia}
+                onUploaded={(url) => onChange({ background_video_url: url })}
+              />
+            )}
             {audioSection}
           </div>}
 
