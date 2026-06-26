@@ -962,7 +962,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 if (panel === "forms") ensureLeadCaptureSection();
               }}
             />
-            <section className="max-h-[calc(100vh-9rem)] overflow-y-auto border-r bg-background/45 p-4">
+            <section className="max-h-[calc(100vh-9rem)] overflow-x-hidden overflow-y-auto border-r bg-background/45 p-4">
               {activePanel === "settings" && (
                 <div className="space-y-4">
                   <ProductChooser onSelect={(panel) => {
@@ -2439,20 +2439,20 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="rounded-lg border bg-background/35 p-3">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold">{label}</div>
-            <div className="text-xs text-muted-foreground">{isVideo ? "Upload or record video" : "Upload or take a photo"}</div>
+      <div className="overflow-hidden rounded-lg border bg-background/35 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold">{label}</div>
+            <div className="text-[11px] text-muted-foreground">{isVideo ? "Upload or record video" : "Upload or take a photo"}</div>
           </div>
           {value ? (
-            <div className="flex items-center gap-1.5">
-              <Badge variant="outline">Added</Badge>
-              <button type="button" onClick={() => onUploaded("")} className="text-muted-foreground hover:text-destructive transition-colors">
-                <X className="h-3.5 w-3.5" />
+            <div className="flex shrink-0 items-center gap-1">
+              <Badge variant="outline" className="text-[10px]">Added</Badge>
+              <button type="button" onClick={() => onUploaded("")} className="text-muted-foreground transition-colors hover:text-destructive">
+                <X className="h-3 w-3" />
               </button>
             </div>
-          ) : <Badge variant="secondary">Empty</Badge>}
+          ) : <Badge variant="secondary" className="shrink-0 text-[10px]">Empty</Badge>}
         </div>
         {value && (
           <div className="mb-3 overflow-hidden rounded-lg border bg-black/10">
@@ -2463,26 +2463,26 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
             )}
           </div>
         )}
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" asChild disabled={isUploading} className="flex-1">
-            <label htmlFor={fieldId} className="cursor-pointer"><Upload className="h-3.5 w-3.5" /> {isUploading ? "Uploading…" : "Upload"}</label>
+        <div className="grid grid-cols-2 gap-1.5">
+          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 gap-1 px-2 text-xs">
+            <label htmlFor={fieldId} className="cursor-pointer"><Upload className="h-3 w-3" />{isUploading ? "Uploading…" : "Upload"}</label>
           </Button>
-          <Button variant="outline" size="sm" disabled={isUploading} className="flex-1" onClick={() => { setUrlDraft(""); setUrlModalOpen(true); }}>
-            <LinkIcon className="h-3.5 w-3.5" /> URL
+          <Button variant="outline" size="sm" disabled={isUploading} className="h-7 gap-1 px-2 text-xs" onClick={() => { setUrlDraft(""); setUrlModalOpen(true); }}>
+            <LinkIcon className="h-3 w-3" />URL
           </Button>
         </div>
-        <div className="mt-2 flex gap-2">
-          <Button variant="outline" size="sm" asChild disabled={isUploading} className="flex-1 text-xs">
-            <label htmlFor={frontId} className="cursor-pointer"><Camera className="h-3.5 w-3.5" /> Front</label>
+        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 gap-1 px-2 text-xs">
+            <label htmlFor={frontId} className="cursor-pointer"><Camera className="h-3 w-3" />Front</label>
           </Button>
-          <Button variant="outline" size="sm" asChild disabled={isUploading} className="flex-1 text-xs">
-            <label htmlFor={rearId} className="cursor-pointer"><Camera className="h-3.5 w-3.5" /> Rear</label>
+          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 gap-1 px-2 text-xs">
+            <label htmlFor={rearId} className="cursor-pointer"><Camera className="h-3 w-3" />Rear</label>
           </Button>
         </div>
         <input id={fieldId} type="file" accept={accept} className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
         <input id={frontId} type="file" accept={accept} capture="user" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
         <input id={rearId} type="file" accept={accept} capture="environment" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
-        {value && <div className="mt-2 truncate rounded-md bg-secondary px-2 py-1 text-[11px] text-muted-foreground">{value}</div>}
+        {value && <div className="mt-2 min-w-0 truncate rounded-md bg-secondary px-2 py-1 text-[10px] text-muted-foreground">{value}</div>}
       </div>
     </>
   );
