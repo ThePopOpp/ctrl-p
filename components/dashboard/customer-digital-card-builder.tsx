@@ -2455,28 +2455,28 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
           ) : <Badge variant="secondary" className="shrink-0 text-[10px]">Empty</Badge>}
         </div>
         {value && (
-          <div className="mb-3 overflow-hidden rounded-lg border bg-black/10">
+          <div className="mb-3 overflow-hidden rounded-lg border bg-black/5">
             {isVideo ? (
               <video className="h-28 w-full object-cover" src={value} controls muted />
             ) : (
-              <img className="h-28 w-full object-cover" src={value} alt={`${label} preview`} />
+              <img className="h-28 w-full object-contain" src={value} alt={`${label} preview`} />
             )}
           </div>
         )}
         <div className="grid grid-cols-2 gap-1.5">
-          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 gap-1 px-2 text-xs">
-            <label htmlFor={fieldId} className="cursor-pointer"><Upload className="h-3 w-3" />{isUploading ? "Uploading…" : "Upload"}</label>
+          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 w-full gap-1 px-2 text-xs">
+            <label htmlFor={fieldId} className="w-full cursor-pointer"><Upload className="h-3 w-3 shrink-0" />{isUploading ? "…" : "Upload"}</label>
           </Button>
-          <Button variant="outline" size="sm" disabled={isUploading} className="h-7 gap-1 px-2 text-xs" onClick={() => { setUrlDraft(""); setUrlModalOpen(true); }}>
-            <LinkIcon className="h-3 w-3" />URL
+          <Button variant="outline" size="sm" disabled={isUploading} className="h-7 w-full gap-1 px-2 text-xs" onClick={() => { setUrlDraft(""); setUrlModalOpen(true); }}>
+            <LinkIcon className="h-3 w-3 shrink-0" />URL
           </Button>
         </div>
         <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 gap-1 px-2 text-xs">
-            <label htmlFor={frontId} className="cursor-pointer"><Camera className="h-3 w-3" />Front</label>
+          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 w-full gap-1 px-2 text-xs">
+            <label htmlFor={frontId} className="w-full cursor-pointer"><Camera className="h-3 w-3 shrink-0" />Front</label>
           </Button>
-          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 gap-1 px-2 text-xs">
-            <label htmlFor={rearId} className="cursor-pointer"><Camera className="h-3 w-3" />Rear</label>
+          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 w-full gap-1 px-2 text-xs">
+            <label htmlFor={rearId} className="w-full cursor-pointer"><Camera className="h-3 w-3 shrink-0" />Rear</label>
           </Button>
         </div>
         <input id={fieldId} type="file" accept={accept} className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
