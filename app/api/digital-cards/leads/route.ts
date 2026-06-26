@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError } from "@/lib/admin/server-auth";
+import { runCardAutomations } from "@/lib/automations/runner";
 
 function clean(value: unknown) {
   return String(value || "").trim();
@@ -64,6 +65,8 @@ export async function POST(request: Request) {
   const message = nullable(body?.message);
   if (!name && !email && !phone && !message) return jsonError("Add at least one lead field before submitting.", 400);
 
+  const source = nullable(body?.fields && typeof body.fields === "object" ? (body.fields as Record<string, unknown>).source : null) || "public_card";
+
   const leadResult = await adminClient.from("digital_card_leads").insert({
     digital_card_id: card.id,
     owner_user_id: card.user_id,
@@ -73,9 +76,12 @@ export async function POST(request: Request) {
     company: nullable(body?.company),
     message,
     preferred_contact: nullable(body?.preferred_contact),
-    source: "public_card",
+    source,
+    utm_source: nullable(body?.fields && typeof body.fields === "object" ? (body.fields as Record<string, unknown>).utm_source : null),
+    utm_medium: nullable(body?.fields && typeof body.fields === "object" ? (body.fields as Record<string, unknown>).utm_medium : null),
+    utm_campaign: nullable(body?.fields && typeof body.fields === "object" ? (body.fields as Record<string, unknown>).utm_campaign : null),
     payload: body?.fields && typeof body.fields === "object" ? body.fields : {},
-  });
+  }).select("id").single();
 
   if (leadResult.error) return jsonError(leadResult.error.message, 400);
 
@@ -83,10 +89,26 @@ export async function POST(request: Request) {
     digital_card_id: card.id,
     user_id: card.user_id,
     event_type: "lead_submit",
-    source: "public_card",
+    source,
     device_type: "unknown",
     metadata: { card_name: card.display_name || card.card_name },
   });
+
+  // Fire card automations (non-blocking — failures don't affect the lead submission)
+  const slug = await adminClient.from("digital_cards").select("slug").eq("id", card.id).maybeSingle();
+  runCardAutomations(adminClient, "lead_submit", {
+    card_id: card.id,
+    card_name: card.display_name || card.card_name || "",
+    card_owner_id: card.user_id || undefined,
+    card_slug: slug.data?.slug,
+    lead_id: leadResult.data.id,
+    lead_name: name,
+    lead_email: email,
+    lead_phone: phone,
+    lead_message: message,
+    lead_company: nullable(body?.company),
+    lead_source: source,
+  }).catch(() => { /* non-fatal */ });
 
   return NextResponse.json({ ok: true });
 }

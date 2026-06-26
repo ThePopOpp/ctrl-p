@@ -1381,17 +1381,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 </CardContent>
               </Card>}
 
-              {activePanel === "automate" && <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base"><Zap className="h-4 w-4" /> Automations</CardTitle>
-                  <CardDescription>Coming soon: notifications, lead routing, Square subscription triggers, follow-up messages, and product upsell automations.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {["Lead notification emails and SMS alerts", "Square payment or subscription status triggers", "NFC activation and QR product fulfillment handoffs", "Follow-up reminders for new leads", "Customer tags, source tracking, and CRM-style workflows"].map((item) => (
-                    <div key={item} className="rounded-lg border bg-background/35 p-3 text-sm text-muted-foreground">{item}</div>
-                  ))}
-                </CardContent>
-              </Card>}
+              {activePanel === "automate" && form.id && <AutomatePanel cardId={form.id} />}
 
               {activePanel === "wizard" && (
                 <Card>
@@ -1726,6 +1716,299 @@ function LeadCaptureSectionEditor({ settings, onChange, onFieldChange }: { setti
       <div className="rounded-md border border-dashed bg-background/30 p-3 text-xs text-muted-foreground">
         Automations for notifications, lead routing, and follow-up messages are staged under the new Automations tab.
       </div>
+    </div>
+  );
+}
+
+// ─── Automate Panel ──────────────────────────────────────────────────────────
+
+type AutomatePreset = {
+  name: string;
+  description: string;
+  trigger_type: string;
+  action_type: string;
+  delay_minutes: number;
+};
+
+type CardAutomation = {
+  id: string;
+  preset_key: string;
+  name: string;
+  enabled: boolean;
+  last_run_at: string | null;
+  run_count: number;
+};
+
+type CardLead = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  message: string | null;
+  status: string;
+  source: string | null;
+  tags: string[];
+  utm_source: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+type AutomationLog = {
+  id: string;
+  automation_id: string;
+  status: string;
+  error_message: string | null;
+  executed_at: string;
+  automations: { name: string } | null;
+};
+
+const PRESET_DESCRIPTIONS: Record<string, { icon: string; label: string; detail: string; badge: string }> = {
+  lead_email:           { icon: "✉️", label: "Email me on new lead", detail: "Instant email to you whenever someone submits the lead form.", badge: "Lead" },
+  lead_sms:             { icon: "💬", label: "SMS me on new lead", detail: "Text alert to your phone number when a lead comes in.", badge: "Lead" },
+  lead_followup:        { icon: "⏰", label: "24h lead follow-up email", detail: "Auto-send a follow-up email to the lead 24 hours later.", badge: "Lead" },
+  nfc_alert:            { icon: "📲", label: "Alert me on NFC tap", detail: "Email you each time someone taps your NFC card.", badge: "NFC" },
+  qr_alert:             { icon: "🔲", label: "Alert me on QR scan", detail: "Email you each time someone scans your QR code.", badge: "QR" },
+  payment_thankyou:     { icon: "💳", label: "Payment received thank-you", detail: "Send an automatic thank-you to the customer after Square payment.", badge: "Square" },
+  auto_tag_source:      { icon: "🏷️", label: "Auto-tag lead by source", detail: "Tag each lead with their traffic source automatically.", badge: "CRM" },
+  subscription_welcome: { icon: "⭐", label: "Subscription welcome email", detail: "Welcome email when a Square subscription activates.", badge: "Square" },
+};
+
+const LEAD_STATUSES = ["new", "contacted", "qualified", "archived"];
+
+function AutomatePanel({ cardId }: { cardId: string }) {
+  const [tab, setTab] = useState<"automations" | "leads" | "logs">("automations");
+  const [automations, setAutomations] = useState<CardAutomation[]>([]);
+  const [presets, setPresets] = useState<Record<string, AutomatePreset>>({});
+  const [leads, setLeads] = useState<CardLead[]>([]);
+  const [logs, setLogs] = useState<AutomationLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [expandedLead, setExpandedLead] = useState<string | null>(null);
+  const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
+
+  const apiBase = "/api/dashboard/customer/digital-cards/automations";
+
+  async function fetchData() {
+    try {
+      const token = await customerToken();
+      const res = await fetch(`${apiBase}?card_id=${cardId}`, { headers: { authorization: `Bearer ${token}` } });
+      if (!res.ok) return;
+      const data = await res.json();
+      setAutomations(data.automations ?? []);
+      setPresets(data.presets ?? {});
+      setLeads(data.leads ?? []);
+      setLogs(data.logs ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void fetchData(); }, [cardId]);
+
+  async function togglePreset(presetKey: string, currentlyEnabled: boolean) {
+    setToggling(presetKey);
+    try {
+      const token = await customerToken();
+      const existing = automations.find((a) => a.preset_key === presetKey);
+
+      if (existing && currentlyEnabled) {
+        await fetch(apiBase, {
+          method: "PATCH",
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          body: JSON.stringify({ id: existing.id, card_id: cardId, enabled: false }),
+        });
+        setAutomations((prev) => prev.map((a) => a.id === existing.id ? { ...a, enabled: false } : a));
+      } else if (existing && !currentlyEnabled) {
+        await fetch(apiBase, {
+          method: "PATCH",
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          body: JSON.stringify({ id: existing.id, card_id: cardId, enabled: true }),
+        });
+        setAutomations((prev) => prev.map((a) => a.id === existing.id ? { ...a, enabled: true } : a));
+      } else {
+        const res = await fetch(apiBase, {
+          method: "POST",
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          body: JSON.stringify({ card_id: cardId, preset_key: presetKey }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          const preset = presets[presetKey];
+          setAutomations((prev) => [...prev, { id: data.id, preset_key: presetKey, name: preset?.name ?? presetKey, enabled: true, last_run_at: null, run_count: 0 }]);
+        }
+      }
+    } finally {
+      setToggling(null);
+    }
+  }
+
+  async function patchLead(leadId: string, patch: { status?: string; notes?: string; tags?: string[] }) {
+    const token = await customerToken();
+    await fetch(apiBase, {
+      method: "PATCH",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ card_id: cardId, lead_id: leadId, lead_patch: patch }),
+    });
+    setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, ...patch } : l));
+  }
+
+  if (loading) {
+    return <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Loading automations…</CardContent></Card>;
+  }
+
+  const presetKeys = Object.keys(PRESET_DESCRIPTIONS);
+  const statusColor: Record<string, string> = { new: "bg-primary/20 text-primary", contacted: "bg-blue-500/20 text-blue-400", qualified: "bg-emerald-500/20 text-emerald-400", archived: "bg-muted text-muted-foreground" };
+
+  return (
+    <div className="space-y-4">
+      {/* Tab bar */}
+      <div className="flex gap-1 rounded-xl border bg-background/40 p-1">
+        {(["automations", "leads", "logs"] as const).map((t) => (
+          <button key={t} type="button" onClick={() => setTab(t)}
+            className={cn("flex-1 rounded-lg py-1.5 text-xs font-semibold capitalize transition-colors",
+              tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+            {t}{t === "leads" && leads.length > 0 && <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-[10px]">{leads.length}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Automations tab ── */}
+      {tab === "automations" && (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Toggle automations on to activate them for this card. Changes save instantly.</p>
+          {presetKeys.map((key) => {
+            const meta = PRESET_DESCRIPTIONS[key];
+            const record = automations.find((a) => a.preset_key === key);
+            const isOn = record?.enabled ?? false;
+            const isToggling = toggling === key;
+            return (
+              <div key={key} className={cn("rounded-lg border p-3 transition-colors", isOn ? "border-primary/40 bg-primary/5" : "bg-background/35")}>
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 text-lg">{meta.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{meta.label}</span>
+                      <span className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{meta.badge}</span>
+                      {record?.last_run_at && (
+                        <span className="text-[10px] text-muted-foreground">Last ran {new Date(record.last_run_at).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{meta.detail}</p>
+                  </div>
+                  <button type="button" disabled={isToggling} onClick={() => togglePreset(key, isOn)}
+                    className={cn("relative h-6 w-10 shrink-0 rounded-full border-2 transition-all",
+                      isOn ? "border-primary bg-primary" : "border-input bg-input/30",
+                      isToggling && "opacity-50")}>
+                    <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-all", isOn ? "left-4" : "left-0.5")} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Leads / CRM tab ── */}
+      {tab === "leads" && (
+        <div className="space-y-3">
+          {leads.length === 0 && (
+            <div className="rounded-lg border border-dashed bg-background/30 py-10 text-center text-sm text-muted-foreground">No leads yet. Share your card to start collecting them.</div>
+          )}
+          {leads.map((lead) => {
+            const isOpen = expandedLead === lead.id;
+            return (
+              <div key={lead.id} className="overflow-hidden rounded-lg border bg-background/35">
+                <button type="button" className="flex w-full items-center gap-3 p-3 text-left" onClick={() => setExpandedLead(isOpen ? null : lead.id)}>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary">
+                    {(lead.name || lead.email || "?")[0].toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-semibold">{lead.name || lead.email || "Anonymous"}</span>
+                      <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", statusColor[lead.status] ?? statusColor.new)}>{lead.status}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      {lead.email && <span className="truncate">{lead.email}</span>}
+                      {lead.source && <span className="rounded border px-1">{lead.source}</span>}
+                      <span>{new Date(lead.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+                </button>
+                {isOpen && (
+                  <div className="border-t p-3 space-y-3">
+                    {lead.message && <p className="rounded-md bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">{lead.message}</p>}
+                    <div className="grid grid-cols-2 gap-2">
+                      {lead.phone && <a href={`tel:${lead.phone}`} className="flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs hover:bg-accent"><span>📞</span>{lead.phone}</a>}
+                      {lead.email && <a href={`mailto:${lead.email}`} className="flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs hover:bg-accent"><span>✉️</span>Email</a>}
+                    </div>
+                    {/* Tags */}
+                    <div>
+                      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tags</div>
+                      <div className="flex flex-wrap gap-1">
+                        {lead.tags?.map((tag) => (
+                          <span key={tag} className="flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
+                            {tag}
+                            <button type="button" onClick={() => patchLead(lead.id, { tags: lead.tags.filter((t) => t !== tag) })} className="hover:text-destructive"><X className="h-2.5 w-2.5" /></button>
+                          </span>
+                        ))}
+                        <form onSubmit={async (e) => { e.preventDefault(); const v = (e.currentTarget.elements.namedItem("tag") as HTMLInputElement).value.trim(); if (v) { await patchLead(lead.id, { tags: [...(lead.tags ?? []), v] }); (e.currentTarget.elements.namedItem("tag") as HTMLInputElement).value = ""; } }}>
+                          <input name="tag" placeholder="+ tag" className="h-5 w-16 rounded-full border bg-transparent px-2 text-[10px] outline-none focus:border-primary" />
+                        </form>
+                      </div>
+                    </div>
+                    {/* Status */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Status</span>
+                      <div className="flex gap-1">
+                        {LEAD_STATUSES.map((s) => (
+                          <button key={s} type="button" onClick={() => patchLead(lead.id, { status: s })}
+                            className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize transition-colors", lead.status === s ? statusColor[s] : "border text-muted-foreground hover:bg-accent")}>
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Notes */}
+                    <div>
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Notes</div>
+                      <textarea
+                        rows={2}
+                        defaultValue={lead.notes ?? ""}
+                        onChange={(e) => setLeadNotes((p) => ({ ...p, [lead.id]: e.target.value }))}
+                        onBlur={() => { if (leadNotes[lead.id] !== undefined) patchLead(lead.id, { notes: leadNotes[lead.id] }); }}
+                        placeholder="Internal notes…"
+                        className="w-full resize-none rounded-md border bg-background/50 px-2 py-1.5 text-xs outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Logs tab ── */}
+      {tab === "logs" && (
+        <div className="space-y-2">
+          {logs.length === 0 && (
+            <div className="rounded-lg border border-dashed bg-background/30 py-10 text-center text-sm text-muted-foreground">No automation runs yet.</div>
+          )}
+          {logs.map((log) => (
+            <div key={log.id} className="flex items-start gap-3 rounded-lg border bg-background/35 p-3">
+              <span className={cn("mt-0.5 h-2 w-2 shrink-0 rounded-full", log.status === "success" ? "bg-primary" : "bg-destructive")} />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold">{log.automations?.name ?? "Automation"}</div>
+                <div className="text-[10px] text-muted-foreground">{new Date(log.executed_at).toLocaleString()}</div>
+                {log.error_message && <div className="mt-1 text-[10px] text-destructive">{log.error_message}</div>}
+              </div>
+              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", log.status === "success" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive")}>{log.status}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

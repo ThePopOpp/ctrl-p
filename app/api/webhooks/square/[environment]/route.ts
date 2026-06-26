@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError, serverEnv } from "@/lib/admin/server-auth";
 import { sendPaymentConfirmed } from "@/lib/email/order-emails";
+import { runCardAutomations } from "@/lib/automations/runner";
 
 type SquareEnvironment = "sandbox" | "production";
 
@@ -186,6 +187,13 @@ async function handlePaymentEvent(adminClient: any, payload: SquareWebhookPayloa
       .from("orders")
       .update({ payment_status: "paid", status: "paid" })
       .eq("id", updateResult.data.order_id);
+
+    // Fire global payment_received automations (non-blocking)
+    runCardAutomations(adminClient, "payment_received", {
+      order_id: updateResult.data.order_id,
+      amount: updateResult.data.amount,
+      event_type: "payment_received",
+    }).catch(() => { /* non-fatal */ });
 
     // Send payment confirmed email (non-blocking)
     const orderForEmail = await adminClient

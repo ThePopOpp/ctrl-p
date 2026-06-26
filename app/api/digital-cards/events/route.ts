@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError } from "@/lib/admin/server-auth";
+import { runCardAutomations } from "@/lib/automations/runner";
 
 const EVENT_TYPES = new Set(["view", "share", "like", "qr_scan", "nfc_tap", "link_click", "copy_link", "save_contact", "lead_submit"]);
 
@@ -80,5 +81,19 @@ export async function POST(request: Request) {
   });
 
   if (insertResult.error) return jsonError(insertResult.error.message, 400);
+
+  // Fire automations for scan events (non-blocking)
+  if (eventType === "nfc_tap" || eventType === "qr_scan") {
+    const slugResult = await adminClient.from("digital_cards").select("slug").eq("id", cardId).maybeSingle();
+    runCardAutomations(adminClient, eventType, {
+      card_id: cardId,
+      card_owner_id: ownerId || undefined,
+      card_slug: slugResult.data?.slug,
+      event_type: eventType,
+      device_type: deviceType(userAgent),
+      lead_source: eventType,
+    }).catch(() => { /* non-fatal */ });
+  }
+
   return NextResponse.json({ ok: true });
 }
