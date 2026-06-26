@@ -2402,6 +2402,8 @@ function SelectField({ label, value, values, onChange }: { label: string; value:
 }
 
 function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload, onUploaded }: { label: string; mediaType: string; accept: string; value: string; uploading: string | null; onUpload: (file: File, mediaType: string, onUploaded: (url: string) => void) => void; onUploaded: (url: string) => void }) {
+  const [urlModalOpen, setUrlModalOpen] = useState(false);
+  const [urlDraft, setUrlDraft] = useState("");
   const isVideo = accept.includes("video");
   const isUploading = uploading === mediaType;
   const fieldId = `media-${mediaType}`;
@@ -2410,41 +2412,79 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
   const handleFile = (file?: File) => {
     if (file) onUpload(file, mediaType, onUploaded);
   };
+  const handleUrlSave = () => {
+    if (urlDraft.trim()) onUploaded(urlDraft.trim());
+    setUrlDraft("");
+    setUrlModalOpen(false);
+  };
 
   return (
-    <div className="rounded-lg border bg-background/35 p-3">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <div>
-          <div className="text-sm font-semibold">{label}</div>
-          <div className="text-xs text-muted-foreground">{isVideo ? "Upload or record video" : "Upload or take a photo"}</div>
+    <>
+      <Dialog open={urlModalOpen} onOpenChange={setUrlModalOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add media URL</DialogTitle>
+            <DialogDescription>Paste a direct URL to your {isVideo ? "video" : "image"}.</DialogDescription>
+          </DialogHeader>
+          <Input
+            value={urlDraft}
+            onChange={(e) => setUrlDraft(e.target.value)}
+            placeholder="https://..."
+            onKeyDown={(e) => e.key === "Enter" && handleUrlSave()}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setUrlModalOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleUrlSave} disabled={!urlDraft.trim()}>Save URL</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <div className="rounded-lg border bg-background/35 p-3">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">{label}</div>
+            <div className="text-xs text-muted-foreground">{isVideo ? "Upload or record video" : "Upload or take a photo"}</div>
+          </div>
+          {value ? (
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline">Added</Badge>
+              <button type="button" onClick={() => onUploaded("")} className="text-muted-foreground hover:text-destructive transition-colors">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : <Badge variant="secondary">Empty</Badge>}
         </div>
-        {value ? <Badge variant="outline">Added</Badge> : <Badge variant="secondary">Empty</Badge>}
-      </div>
-      {value && (
-        <div className="mb-3 overflow-hidden rounded-lg border bg-black/10">
-          {isVideo ? (
-            <video className="h-28 w-full object-cover" src={value} controls muted />
-          ) : (
-            <img className="h-28 w-full object-cover" src={value} alt={`${label} preview`} />
-          )}
+        {value && (
+          <div className="mb-3 overflow-hidden rounded-lg border bg-black/10">
+            {isVideo ? (
+              <video className="h-28 w-full object-cover" src={value} controls muted />
+            ) : (
+              <img className="h-28 w-full object-cover" src={value} alt={`${label} preview`} />
+            )}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild disabled={isUploading} className="flex-1">
+            <label htmlFor={fieldId} className="cursor-pointer"><Upload className="h-3.5 w-3.5" /> {isUploading ? "Uploading…" : "Upload"}</label>
+          </Button>
+          <Button variant="outline" size="sm" disabled={isUploading} className="flex-1" onClick={() => { setUrlDraft(""); setUrlModalOpen(true); }}>
+            <LinkIcon className="h-3.5 w-3.5" /> URL
+          </Button>
         </div>
-      )}
-      <div className="grid gap-2 sm:grid-cols-3">
-        <Button variant="outline" size="sm" asChild disabled={isUploading}>
-          <label htmlFor={fieldId} className="cursor-pointer"><Upload className="h-4 w-4" /> {isUploading ? "Uploading..." : "Upload"}</label>
-        </Button>
-        <Button variant="outline" size="sm" asChild disabled={isUploading}>
-          <label htmlFor={frontId} className="cursor-pointer"><Camera className="h-4 w-4" /> Front</label>
-        </Button>
-        <Button variant="outline" size="sm" asChild disabled={isUploading}>
-          <label htmlFor={rearId} className="cursor-pointer"><Camera className="h-4 w-4" /> Rear</label>
-        </Button>
+        <div className="mt-2 flex gap-2">
+          <Button variant="outline" size="sm" asChild disabled={isUploading} className="flex-1 text-xs">
+            <label htmlFor={frontId} className="cursor-pointer"><Camera className="h-3.5 w-3.5" /> Front</label>
+          </Button>
+          <Button variant="outline" size="sm" asChild disabled={isUploading} className="flex-1 text-xs">
+            <label htmlFor={rearId} className="cursor-pointer"><Camera className="h-3.5 w-3.5" /> Rear</label>
+          </Button>
+        </div>
+        <input id={fieldId} type="file" accept={accept} className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
+        <input id={frontId} type="file" accept={accept} capture="user" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
+        <input id={rearId} type="file" accept={accept} capture="environment" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
+        {value && <div className="mt-2 truncate rounded-md bg-secondary px-2 py-1 text-[11px] text-muted-foreground">{value}</div>}
       </div>
-      <input id={fieldId} type="file" accept={accept} className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
-      <input id={frontId} type="file" accept={accept} capture="user" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
-      <input id={rearId} type="file" accept={accept} capture="environment" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
-      {value && <div className="mt-2 truncate rounded-md bg-secondary px-2 py-1 text-[11px] text-muted-foreground">{value}</div>}
-    </div>
+    </>
   );
 }
 
