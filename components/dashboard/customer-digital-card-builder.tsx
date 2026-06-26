@@ -160,6 +160,7 @@ const colorPresets = [
 type OpenerButton = { label: string; action: "open_card" | "call" | "sms" | "email" | "url"; url?: string };
 type OpenerContent = {
   digital_product?: string;
+  splash_mode?: "standard" | "animation" | "video";
   enabled?: boolean;
   title?: string;
   subtitle?: string;
@@ -1167,11 +1168,15 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 <CardContent className="grid gap-4 overflow-hidden">
                   <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">Your headshot or professional photo shown at the top of your card.</p>
-                    <MediaUploadField label="Profile photo" mediaType="profile-photo" accept="image/*" value={form.profile_photo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("profile_photo_url", url)} />
+                    <MediaUploadField label="Profile photo" mediaType="profile-photo" accept="image/*" value={form.profile_photo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("profile_photo_url", url)}
+                      position={(form.media_settings?.profile_image_style as { position?: "left" | "center" | "right" } | undefined)?.position || "center"}
+                      onPositionChange={(pos) => update("media_settings", { ...(form.media_settings || {}), profile_image_style: { ...((form.media_settings?.profile_image_style as object) || {}), position: pos } })} />
                   </div>
                   <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">Your company or brand logo shown in the top-left corner of the card.</p>
-                    <MediaUploadField label="Logo" mediaType="logo" accept="image/*" value={form.logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("logo_url", url)} />
+                    <MediaUploadField label="Logo" mediaType="logo" accept="image/*" value={form.logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("logo_url", url)}
+                      position={(form.media_settings?.logo_position as "left" | "center" | "right" | undefined) || "left"}
+                      onPositionChange={(pos) => update("media_settings", { ...(form.media_settings || {}), logo_position: pos })} />
                   </div>
                   <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">A full-card background image. A dark overlay is applied automatically so text stays readable.</p>
@@ -2180,7 +2185,9 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
   uploadMedia?: (file: File, mediaType: string, onUploaded: (url: string) => void) => void;
   uploadingMedia?: string | null;
 }) {
-  const [splashTab, setSplashTab] = useState<"standard" | "animation" | "video" | "slideshow">("standard");
+  const [splashTab, setSplashTab] = useState<"standard" | "animation" | "video" | "slideshow">(
+    (content.splash_mode as "standard" | "animation" | "video" | "slideshow") || "standard"
+  );
   const [audioModalOpen, setAudioModalOpen] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
@@ -2296,7 +2303,7 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
           {/* Tab bar */}
           <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
             {(["standard", "animation", "video", "slideshow"] as const).map((tab) => (
-              <button key={tab} type="button" onClick={() => setSplashTab(tab)}
+              <button key={tab} type="button" onClick={() => { setSplashTab(tab); if (tab !== "slideshow") onChange({ splash_mode: tab as "standard" | "animation" | "video" }); }}
                 className={cn("rounded-md py-1.5 text-xs font-medium capitalize transition-colors",
                   splashTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
               >{tab}</button>
@@ -2414,6 +2421,20 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
                       content.background_video_url === url ? "bg-primary text-primary-foreground" : "bg-background/80 text-foreground"
                     )}>{label}</div>
                   </button>
+                ))}
+              </div>
+              <div className="mt-2 space-y-1 rounded-md border bg-muted/40 px-2 py-1.5">
+                <p className="text-[10px] text-muted-foreground font-medium mb-1">Direct URLs (for external use)</p>
+                {[
+                  { label: "Dark", url: "/animations/jw-card-animation-dark.mp4" },
+                  { label: "Light", url: "/animations/jw-card-animation-light.mp4" },
+                ].map(({ label, url }) => (
+                  <div key={url} className="flex items-center gap-1.5">
+                    <span className="w-8 shrink-0 text-[10px] text-muted-foreground">{label}</span>
+                    <code className="flex-1 truncate rounded bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground">{url}</code>
+                    <button type="button" className="shrink-0 text-[10px] text-muted-foreground hover:text-foreground"
+                      onClick={() => navigator.clipboard?.writeText(url)}>Copy</button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -2734,7 +2755,7 @@ function SelectField({ label, value, values, onChange }: { label: string; value:
   return <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div><Select value={value} onValueChange={onChange}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{values.map((item) => <SelectItem key={item} value={item}>{human(item)}</SelectItem>)}</SelectContent></Select></div>;
 }
 
-function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload, onUploaded }: { label: string; mediaType: string; accept: string; value: string; uploading: string | null; onUpload: (file: File, mediaType: string, onUploaded: (url: string) => void) => void; onUploaded: (url: string) => void }) {
+function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload, onUploaded, position, onPositionChange }: { label: string; mediaType: string; accept: string; value: string; uploading: string | null; onUpload: (file: File, mediaType: string, onUploaded: (url: string) => void) => void; onUploaded: (url: string) => void; position?: "left" | "center" | "right"; onPositionChange?: (pos: "left" | "center" | "right") => void }) {
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [urlDraft, setUrlDraft] = useState("");
   const isVideo = accept.includes("video");
@@ -2821,6 +2842,18 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
         <input id={frontId} type="file" accept={inputAccept} capture="user" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
         <input id={rearId} type="file" accept={inputAccept} capture="environment" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
         {value && <div className="mt-2 w-full min-w-0 truncate rounded-md bg-secondary px-2 py-1 text-[10px] text-muted-foreground">{value}</div>}
+        {onPositionChange && (
+          <div className="mt-2 flex items-center gap-1.5">
+            <span className="text-[10px] text-muted-foreground">Position</span>
+            {(["left", "center", "right"] as const).map((pos) => (
+              <button key={pos} type="button"
+                onClick={() => onPositionChange(pos)}
+                className={cn("flex-1 rounded border py-0.5 text-[10px] font-medium capitalize transition-colors",
+                  position === pos ? "border-primary bg-primary/10 text-primary" : "border-input bg-transparent text-muted-foreground hover:text-foreground")}
+              >{pos}</button>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

@@ -7,6 +7,7 @@ import { ExternalLink, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
 import { getServerSupabaseConfig } from "@/lib/admin/server-auth";
 import { cn } from "@/lib/utils";
 import { PublicCardActions, PublicThemeToggle, PublicTrackedLinks } from "./public-card-actions";
+import { PublicOpener } from "./public-opener";
 
 type PublicCardLink = {
   id: string;
@@ -45,6 +46,7 @@ type PublicLeadFormSettings = { enabled?: boolean; title?: string; description?:
 
 type OpenerContent = {
   digital_product?: string;
+  splash_mode?: "standard" | "animation" | "video";
   title?: string;
   subtitle?: string;
   typography?: TypographySettings;
@@ -56,6 +58,9 @@ type OpenerContent = {
   duration_seconds?: number;
   open_animation?: string;
   close_animation?: string;
+  video_muted?: boolean;
+  video_loop?: boolean;
+  video_fit?: "cover" | "contain";
   buttons?: OpenerButton[];
 };
 type TypographySettings = {
@@ -367,7 +372,13 @@ export default async function PublicDigitalCardPage({ params, searchParams }: { 
 
   return (
     <main id="public-card-page" className="min-h-screen px-4 py-6" style={pageStyle}>
-      {!isEmbed && opener && <PublicOpener section={opener} card={card} publicUrl={publicUrl} />}
+      {!isEmbed && opener && (
+        <PublicOpener
+          content={{ ...defaultOpenerContent(), ...(opener.content || {}) } as OpenerContent}
+          card={card}
+          publicUrl={publicUrl}
+        />
+      )}
       {!isEmbed && <PublicCardActions cardId={card.id} slug={card.slug} publicUrl={publicUrl} position={fabPosition} accent="var(--public-accent)" background="var(--public-bg)" />}
       <section className="mx-auto max-w-md">
         <div id="card" className="rounded-[2rem] border border-white/15 bg-black/25 p-5 shadow-2xl backdrop-blur">
@@ -379,61 +390,6 @@ export default async function PublicDigitalCardPage({ params, searchParams }: { 
   );
 }
 
-function openerButtonHref(button: OpenerButton, card: PublicCard) {
-  if (button.action === "call") return `tel:${button.url || card.primary_phone || ""}`;
-  if (button.action === "sms") return `sms:${button.url || card.sms_phone || card.primary_phone || ""}`;
-  if (button.action === "email") return `mailto:${button.url || card.primary_email || ""}`;
-  if (button.action === "url") return safeHref(button.url);
-  return "#card";
-}
-
-function PublicOpener({ section, card, publicUrl }: { section: PublicCardSection; card: PublicCard; publicUrl: string }) {
-  const content = { ...defaultOpenerContent(), ...(section.content || {}) } as OpenerContent;
-  const duration = Math.max(1, Math.min(30, Number(content.duration_seconds || 7)));
-  const backgroundImage = content.background_image_url ? `linear-gradient(rgba(0,0,0,.38), rgba(0,0,0,.38)), url(${content.background_image_url})` : undefined;
-  const splashTypography = typographyFrom(content.typography, content.text_color || card.text_color);
-  const splashStyle = typographyStyle(splashTypography);
-  const splashSize = Number(splashTypography.font_size || 44);
-  return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center px-5"
-      style={{
-        background: content.background_color || card.background_color,
-        color: content.text_color || card.text_color,
-        backgroundImage,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        animation: `public-opener-hide 450ms ease ${duration}s forwards`,
-      }}
-    >
-      {content.background_video_url && (
-        <video className="absolute inset-0 h-full w-full object-cover opacity-45" src={content.background_video_url} autoPlay muted playsInline loop />
-      )}
-      <style>{`
-        @keyframes public-opener-hide {
-          to { opacity: 0; visibility: hidden; pointer-events: none; }
-        }
-        @keyframes public-opener-enter {
-          from { opacity: 0; transform: translateY(18px) scale(.98); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-      `}</style>
-      <div className="relative z-10 mx-auto max-w-lg" style={{ ...splashStyle, animation: "public-opener-enter 650ms ease both" }}>
-        <div className="text-xs uppercase tracking-[0.35em] opacity-70">Digital card</div>
-        <h1 className="mt-5 tracking-tight" style={{ fontSize: splashSize, fontWeight: splashStyle.fontWeight, lineHeight: splashStyle.lineHeight }}>{content.title || card.display_name || card.card_name}</h1>
-        <p className="mx-auto mt-4 max-w-md opacity-80" style={{ fontSize: Math.max(14, splashSize * 0.38), lineHeight: splashStyle.lineHeight }}>{content.subtitle || `Connect with ${card.display_name || card.card_name}`}</p>
-        <div className="mt-8 grid gap-3 sm:grid-cols-2">
-          {(content.buttons || []).slice(0, 2).map((button, index) => (
-            <a key={index} href={openerButtonHref(button, card)} className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur" style={{ color: content.accent_color || card.accent_color }}>
-              {button.label || (index === 0 ? "View card" : "Contact")}
-            </a>
-          ))}
-        </div>
-        <div className="mt-5 text-xs opacity-60">{publicUrl}</div>
-      </div>
-    </div>
-  );
-}
 
 function IconLink({ href, label, icon, accent }: { href: string; label: string; icon: React.ReactNode; accent: string }) {
   return <a className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-white/15 bg-white/10 px-2 py-3 text-xs font-medium" href={href} style={{ color: accent }}>{icon}<span>{label}</span></a>;
