@@ -424,16 +424,35 @@ function PublicSection({
     const textStyle = typographyStyle(textSettings);
     const nameSize = Number(textSettings.font_size || 18);
     const imageSettings = imageStyleFrom(card.media_settings?.profile_image_style);
-    const imageClasses = cn("mx-auto h-28 w-28 object-cover shadow-xl transition-transform transition-shadow duration-200", imageShapeClass(imageSettings), imageHoverClass(imageSettings));
-    const fallbackImageClasses = cn("mx-auto grid h-28 w-28 place-items-center bg-white/10 text-3xl font-semibold shadow-xl transition-transform transition-shadow duration-200", imageShapeClass(imageSettings), imageHoverClass(imageSettings));
+
+    // Logo position: left (default) | center | right
+    const logoPos = (card.media_settings?.logo_position as string | undefined) || "left";
+    const logoJustify = logoPos === "center" ? "justify-center" : logoPos === "right" ? "justify-end" : "justify-start";
+
+    // Profile image position: center (default) | left | right
+    const profileImagePos = (imageSettings as { position?: string }).position || "center";
+    const imgMargin = profileImagePos === "left" ? "mr-auto ml-0" : profileImagePos === "right" ? "ml-auto mr-0" : "mx-auto";
+    const imageClasses = cn(`${imgMargin} h-28 w-28 object-cover shadow-xl transition-transform transition-shadow duration-200`, imageShapeClass(imageSettings), imageHoverClass(imageSettings));
+    const fallbackImageClasses = cn(`${imgMargin} grid h-28 w-28 place-items-center bg-white/10 text-3xl font-semibold shadow-xl transition-transform transition-shadow duration-200`, imageShapeClass(imageSettings), imageHoverClass(imageSettings));
+
+    // Text alignment follows profile image position when not explicitly set
+    const contentAlign = profileImagePos === "left" ? "text-left" : profileImagePos === "right" ? "text-right" : "text-center";
+
     return (
       <div style={sectionStyle(section)}>
-        <div className="flex items-center justify-between gap-3">
-          {card.logo_url ? <img className="max-h-12 max-w-[140px] object-contain" src={card.logo_url} alt={`${card.company_name || card.card_name} logo`} /> : <div className="text-sm font-semibold opacity-75">controlp.io card</div>}
-          <PublicThemeToggle mode={themeMode} dark={darkTheme} light={lightTheme} />
+        {/* Logo row — theme toggle always far right, logo position is independent */}
+        <div className="relative flex items-center">
+          <div className={cn("flex flex-1 items-center", logoJustify)}>
+            {card.logo_url
+              ? <img className="max-h-12 max-w-[140px] object-contain" src={card.logo_url} alt={`${card.company_name || card.card_name} logo`} />
+              : <div className="text-sm font-semibold opacity-75">controlp.io card</div>}
+          </div>
+          <div className="shrink-0">
+            <PublicThemeToggle mode={themeMode} dark={darkTheme} light={lightTheme} />
+          </div>
         </div>
 
-        <div className="mt-8" style={textStyle}>
+        <div className={cn("mt-8", contentAlign)} style={textStyle}>
           {card.profile_photo_url ? (
             <img className={imageClasses} style={imageBorderStyle(imageSettings)} src={card.profile_photo_url} alt={card.display_name || card.card_name} />
           ) : (
