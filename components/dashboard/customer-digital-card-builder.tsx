@@ -1164,28 +1164,28 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   <CardTitle className="flex items-center gap-2 text-base"><Camera className="h-4 w-4" /> Media</CardTitle>
                   <CardDescription>Upload or capture card photos, logos, backgrounds, and video media without needing URL fields.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-4">
-                  <div>
+                <CardContent className="grid gap-4 overflow-hidden">
+                  <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">Your headshot or professional photo shown at the top of your card.</p>
                     <MediaUploadField label="Profile photo" mediaType="profile-photo" accept="image/*" value={form.profile_photo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("profile_photo_url", url)} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">Your company or brand logo shown in the top-left corner of the card.</p>
                     <MediaUploadField label="Logo" mediaType="logo" accept="image/*" value={form.logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("logo_url", url)} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">A full-card background image. A dark overlay is applied automatically so text stays readable.</p>
                     <MediaUploadField label="Background image" mediaType="background-image" accept="image/*" value={form.background_image_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("background_image_url", url)} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">A looping video that plays behind the splash/opener screen (muted autoplay). MP4 recommended.</p>
                     <MediaUploadField label="Background video" mediaType="background-video" accept="video/*" value={String((form.media_settings?.background_video_url as string) || "")} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("media_settings", { ...(form.media_settings || {}), background_video_url: url })} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">A short intro reel or pitch video. Shown as a tappable link in the Intro Video section of the card.</p>
                     <MediaUploadField label="Intro video" mediaType="intro-video" accept="video/*" value={form.intro_video_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("intro_video_url", url)} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">A small image (logo or icon) overlaid in the center of your QR code. Configure colors in the QR Code panel.</p>
                     <MediaUploadField label="QR logo center" mediaType="qr-logo" accept="image/*" value={form.qr_logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("qr_logo_url", url)} />
                   </div>
@@ -2409,14 +2409,17 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
   const fieldId = `media-${mediaType}`;
   const frontId = `${fieldId}-front`;
   const rearId = `${fieldId}-rear`;
-  const handleFile = (file?: File) => {
-    if (file) onUpload(file, mediaType, onUploaded);
-  };
+  const handleFile = (file?: File) => { if (file) onUpload(file, mediaType, onUploaded); };
   const handleUrlSave = () => {
     if (urlDraft.trim()) onUploaded(urlDraft.trim());
     setUrlDraft("");
     setUrlModalOpen(false);
   };
+  const mediaBtnCls = cn(
+    "flex h-7 w-full select-none items-center justify-center gap-1 rounded-md border border-input bg-transparent px-2 text-xs font-medium transition-colors",
+    "hover:bg-accent hover:text-accent-foreground",
+    isUploading ? "pointer-events-none opacity-50" : "cursor-pointer"
+  );
 
   return (
     <>
@@ -2424,7 +2427,7 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Add media URL</DialogTitle>
-            <DialogDescription>Paste a direct URL to your {isVideo ? "video" : "image"}.</DialogDescription>
+            <DialogDescription>Paste a direct link to your {isVideo ? "video" : "image"}.</DialogDescription>
           </DialogHeader>
           <Input
             value={urlDraft}
@@ -2439,7 +2442,7 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="overflow-hidden rounded-lg border bg-background/35 p-3">
+      <div className="w-full min-w-0 overflow-hidden rounded-lg border bg-background/35 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold">{label}</div>
@@ -2455,34 +2458,32 @@ function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload
           ) : <Badge variant="secondary" className="shrink-0 text-[10px]">Empty</Badge>}
         </div>
         {value && (
-          <div className="mb-3 overflow-hidden rounded-lg border bg-black/5">
-            {isVideo ? (
-              <video className="h-28 w-full object-cover" src={value} controls muted />
-            ) : (
-              <img className="h-28 w-full object-contain" src={value} alt={`${label} preview`} />
-            )}
+          <div className="mb-3 w-full overflow-hidden rounded-lg border bg-black/5">
+            {isVideo
+              ? <video className="h-28 w-full object-cover" src={value} controls muted />
+              : <img className="h-28 w-full object-contain" src={value} alt={`${label} preview`} />}
           </div>
         )}
-        <div className="grid grid-cols-2 gap-1.5">
-          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 w-full gap-1 px-2 text-xs">
-            <label htmlFor={fieldId} className="w-full cursor-pointer"><Upload className="h-3 w-3 shrink-0" />{isUploading ? "…" : "Upload"}</label>
-          </Button>
-          <Button variant="outline" size="sm" disabled={isUploading} className="h-7 w-full gap-1 px-2 text-xs" onClick={() => { setUrlDraft(""); setUrlModalOpen(true); }}>
+        <div className="grid w-full grid-cols-2 gap-1.5">
+          <label htmlFor={fieldId} className={mediaBtnCls}>
+            <Upload className="h-3 w-3 shrink-0" />{isUploading ? "Uploading…" : "Upload"}
+          </label>
+          <button type="button" disabled={isUploading} className={mediaBtnCls} onClick={() => { setUrlDraft(""); setUrlModalOpen(true); }}>
             <LinkIcon className="h-3 w-3 shrink-0" />URL
-          </Button>
+          </button>
         </div>
-        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 w-full gap-1 px-2 text-xs">
-            <label htmlFor={frontId} className="w-full cursor-pointer"><Camera className="h-3 w-3 shrink-0" />Front</label>
-          </Button>
-          <Button variant="outline" size="sm" asChild disabled={isUploading} className="h-7 w-full gap-1 px-2 text-xs">
-            <label htmlFor={rearId} className="w-full cursor-pointer"><Camera className="h-3 w-3 shrink-0" />Rear</label>
-          </Button>
+        <div className="mt-1.5 grid w-full grid-cols-2 gap-1.5">
+          <label htmlFor={frontId} className={mediaBtnCls}>
+            <Camera className="h-3 w-3 shrink-0" />Front cam
+          </label>
+          <label htmlFor={rearId} className={mediaBtnCls}>
+            <Camera className="h-3 w-3 shrink-0" />Rear cam
+          </label>
         </div>
-        <input id={fieldId} type="file" accept={accept} className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
-        <input id={frontId} type="file" accept={accept} capture="user" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
-        <input id={rearId} type="file" accept={accept} capture="environment" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
-        {value && <div className="mt-2 min-w-0 truncate rounded-md bg-secondary px-2 py-1 text-[10px] text-muted-foreground">{value}</div>}
+        <input id={fieldId} type="file" accept={accept} className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+        <input id={frontId} type="file" accept={accept} capture="user" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+        <input id={rearId} type="file" accept={accept} capture="environment" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+        {value && <div className="mt-2 w-full min-w-0 truncate rounded-md bg-secondary px-2 py-1 text-[10px] text-muted-foreground">{value}</div>}
       </div>
     </>
   );
