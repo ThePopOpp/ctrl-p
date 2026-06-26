@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, Camera, Check, ChevronDown, ChevronRight, Code2, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Monitor, Moon, Palette, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck, Upload, UserCircle, X, Zap } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, Camera, Check, ChevronDown, ChevronRight, Code2, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Mic, Monitor, Moon, Music, Palette, Play, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Square, Sun, Tablet, Trash2, Truck, Upload, UserCircle, Volume2, VolumeX, X, Zap } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -175,6 +176,11 @@ type OpenerContent = {
   video_loop?: boolean;
   video_muted?: boolean;
   video_fit?: "cover" | "contain";
+  video_play_seconds?: number;
+  video_volume?: number;
+  splash_audio_url?: string;
+  splash_audio_enabled?: boolean;
+  splash_audio_volume?: number;
   buttons?: OpenerButton[];
 };
 type LeadField = { key: string; label: string; enabled: boolean; required: boolean };
@@ -491,6 +497,11 @@ function defaultOpenerContent(): OpenerContent {
     video_loop: true,
     video_muted: true,
     video_fit: "cover",
+    video_play_seconds: 0,
+    video_volume: 1,
+    splash_audio_url: "",
+    splash_audio_enabled: false,
+    splash_audio_volume: 0.8,
     buttons: [
       { label: "View card", action: "open_card" },
       { label: "Call me", action: "call" },
@@ -1719,7 +1730,153 @@ function LeadCaptureSectionEditor({ settings, onChange, onFieldChange }: { setti
   );
 }
 
-// Small pill toggle for OpenerPanel — defined at module scope to avoid nested component rules
+// ─── Splash Audio Modal ──────────────────────────────────────────────────────
+
+function SplashAudioModal({ open, onClose, currentUrl, onSave, uploadMedia, uploadingMedia }: {
+  open: boolean; onClose: () => void; currentUrl: string; onSave: (url: string) => void;
+  uploadMedia?: (file: File, mediaType: string, onUploaded: (url: string) => void) => void;
+  uploadingMedia?: string | null;
+}) {
+  const [audioTab, setAudioTab] = useState<"upload" | "record">("upload");
+  const [pasteUrl, setPasteUrl] = useState(currentUrl);
+  const [recordState, setRecordState] = useState<"idle" | "recording" | "stopped">("idle");
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [recSeconds, setRecSeconds] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!open) { stopAudio(); streamRef.current?.getTracks().forEach((t) => t.stop()); if (timerRef.current) clearInterval(timerRef.current); }
+  }, [open]);
+
+  function stopAudio() { audioRef.current?.pause(); setIsPlaying(false); }
+
+  function togglePlay(url: string) {
+    if (!audioRef.current) audioRef.current = new Audio();
+    if (isPlaying) { stopAudio(); return; }
+    audioRef.current.src = url;
+    audioRef.current.onended = () => setIsPlaying(false);
+    audioRef.current.play().catch(() => {});
+    setIsPlaying(true);
+  }
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      recorderRef.current = recorder;
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        setRecordedUrl(URL.createObjectURL(new Blob(chunksRef.current, { type: "audio/webm" })));
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+      };
+      recorder.start();
+      setRecordState("recording");
+      setRecSeconds(0);
+      timerRef.current = setInterval(() => setRecSeconds((s) => s + 1), 1000);
+    } catch { alert("Microphone access denied. Please allow microphone access in your browser settings."); }
+  }
+
+  function stopRecording() {
+    recorderRef.current?.stop();
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    setRecordState("stopped");
+  }
+
+  function fmtSec(s: number) { return `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`; }
+
+  const activeUrl = audioTab === "upload" ? pasteUrl : (recordedUrl || "");
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { stopAudio(); onClose(); } }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Music className="h-4 w-4" /> Splash Audio</DialogTitle>
+          <DialogDescription>Add background music or narration to your splash screen.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+            {(["upload", "record"] as const).map((t) => (
+              <button key={t} type="button" onClick={() => { stopAudio(); setAudioTab(t); }}
+                className={cn("rounded-md py-1.5 text-xs font-medium transition-colors", audioTab === t ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+              >{t === "upload" ? "Upload / URL" : "Record audio"}</button>
+            ))}
+          </div>
+
+          {audioTab === "upload" && <div className="space-y-3">
+            {uploadMedia && (
+              <div className="rounded-lg border bg-background/35 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-semibold">Upload audio file</span>
+                  {pasteUrl && <Badge variant="outline">Added</Badge>}
+                </div>
+                <Button variant="outline" size="sm" asChild disabled={uploadingMedia === "splash-audio"} className="gap-2">
+                  <label htmlFor="splash-audio-upload" className="cursor-pointer">
+                    <Upload className="h-4 w-4" />{uploadingMedia === "splash-audio" ? "Uploading…" : "Choose audio file"}
+                  </label>
+                </Button>
+                <input id="splash-audio-upload" type="file" accept="audio/*" className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f && uploadMedia) uploadMedia(f, "splash-audio", (url) => setPasteUrl(url)); }} />
+                <p className="mt-1.5 text-[11px] text-muted-foreground">MP3, AAC, WAV, OGG supported</p>
+              </div>
+            )}
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Or paste audio URL</div>
+              <Input value={pasteUrl} onChange={(e) => setPasteUrl(e.target.value)} placeholder="https://…/audio.mp3" className="h-9" />
+            </div>
+            {pasteUrl && (
+              <Button variant="outline" size="sm" className="gap-2" type="button" onClick={() => togglePlay(pasteUrl)}>
+                {isPlaying ? <><Square className="h-3.5 w-3.5" /> Stop</> : <><Play className="h-3.5 w-3.5" /> Listen</>}
+              </Button>
+            )}
+          </div>}
+
+          {audioTab === "record" && <div className="rounded-lg border bg-background/35 p-5 text-center space-y-3">
+            {recordState === "idle" && <>
+              <Mic className="mx-auto h-10 w-10 text-muted-foreground opacity-40" />
+              <p className="text-xs text-muted-foreground">Click below to start capturing from your microphone.</p>
+              <Button onClick={startRecording} className="gap-2 mx-auto"><Mic className="h-4 w-4" /> Start recording</Button>
+            </>}
+            {recordState === "recording" && <>
+              <div className="flex items-center justify-center gap-3">
+                <span className="h-3 w-3 animate-pulse rounded-full bg-red-500" />
+                <span className="font-mono text-3xl font-bold text-red-500">{fmtSec(recSeconds)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Recording in progress…</p>
+              <Button variant="destructive" onClick={stopRecording} className="gap-2 mx-auto"><Square className="h-4 w-4" /> Stop</Button>
+            </>}
+            {recordState === "stopped" && recordedUrl && <>
+              <Check className="mx-auto h-8 w-8 text-green-500" />
+              <p className="text-xs text-muted-foreground">Recorded — {fmtSec(recSeconds)}</p>
+              <div className="flex items-center justify-center gap-2">
+                <Button variant="outline" size="sm" className="gap-2" type="button" onClick={() => togglePlay(recordedUrl)}>
+                  {isPlaying ? <><Square className="h-3.5 w-3.5" /> Stop</> : <><Play className="h-3.5 w-3.5" /> Listen</>}
+                </Button>
+                <Button variant="outline" size="sm" className="gap-2" type="button"
+                  onClick={() => { stopAudio(); setRecordState("idle"); setRecordedUrl(null); setRecSeconds(0); }}>
+                  <Mic className="h-3.5 w-3.5" /> Re-record
+                </Button>
+              </div>
+            </>}
+          </div>}
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => { stopAudio(); onClose(); }}>Cancel</Button>
+          <Button onClick={() => { if (activeUrl) { onSave(activeUrl); onClose(); } }} disabled={!activeUrl}>Save audio</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Shared splash helpers ────────────────────────────────────────────────────
+
 function SplashPillToggle({ checked, onToggle, labelOn, labelOff }: { checked: boolean; onToggle: (v: boolean) => void; labelOn: string; labelOff: string }) {
   return (
     <button type="button" role="switch" aria-checked={checked} onClick={() => onToggle(!checked)}
@@ -1729,9 +1886,9 @@ function SplashPillToggle({ checked, onToggle, labelOn, labelOff }: { checked: b
   );
 }
 
-const SPLASH_TRANSITIONS  = ["fade", "slide_up", "slide_down", "slide_left", "slide_right", "wipe_left", "wipe_right", "zoom_in", "zoom_out", "flip", "none"];
-const OPEN_ANIMATIONS     = ["fade_up", "fade_in", "zoom_in", "slide_up", "slide_down", "slide_left", "slide_right", "flip_in", "bounce_in"];
-const CLOSE_ANIMATIONS    = ["fade_out", "zoom_out", "slide_up", "slide_down", "slide_left", "slide_right", "flip_out", "dissolve"];
+const SPLASH_TRANSITIONS = ["fade", "slide_up", "slide_down", "slide_left", "slide_right", "wipe_left", "wipe_right", "zoom_in", "zoom_out", "flip", "none"];
+const OPEN_ANIMATIONS    = ["fade_up", "fade_in", "zoom_in", "slide_up", "slide_down", "slide_left", "slide_right", "flip_in", "bounce_in"];
+const CLOSE_ANIMATIONS   = ["fade_out", "zoom_out", "slide_up", "slide_down", "slide_left", "slide_right", "flip_out", "dissolve"];
 
 function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMedia }: {
   content: OpenerContent;
@@ -1741,12 +1898,19 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
   uploadingMedia?: string | null;
 }) {
   const [splashTab, setSplashTab] = useState<"standard" | "animation" | "video" | "slideshow">("standard");
+  const [audioModalOpen, setAudioModalOpen] = useState(false);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+
   const buttons = (content.buttons || []).slice(0, 2);
   const splashTypography = typographyFrom(content.typography, content.text_color || "#f7fff2");
   const isEnabled = content.enabled !== false;
   const totalSec = Number(content.duration_seconds ?? 7);
   const durMin = Math.floor(totalSec / 60);
   const durSec = totalSec % 60;
+  const vidTotal = Number(content.video_play_seconds ?? 0);
+  const vidMin = Math.floor(vidTotal / 60);
+  const vidSec = vidTotal % 60;
 
   function updateButton(index: number, patch: Partial<OpenerButton>) {
     const next = [...buttons];
@@ -1754,142 +1918,249 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
     onChange({ buttons: next.slice(0, 2) });
   }
 
+  function toggleAudioPreview(url: string) {
+    if (!audioPreviewRef.current) audioPreviewRef.current = new Audio();
+    if (audioPlaying) { audioPreviewRef.current.pause(); setAudioPlaying(false); return; }
+    audioPreviewRef.current.src = url;
+    audioPreviewRef.current.onended = () => setAudioPlaying(false);
+    audioPreviewRef.current.play().catch(() => {});
+    setAudioPlaying(true);
+  }
+
+  // Shared audio section — appears at the bottom of every tab
+  const audioSection = (
+    <div className="rounded-lg border bg-background/35 p-3">
+      <div className="mb-1 flex items-center gap-2">
+        <Music className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-sm font-semibold">Splash audio</span>
+        {content.splash_audio_url && <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-[10px] text-green-700">Added</Badge>}
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">Background music or narration that plays during the splash.</p>
+      {content.splash_audio_url && (
+        <div className="mb-3 space-y-2">
+          <div className="flex items-center gap-2 rounded border bg-muted px-2 py-1">
+            <span className="flex-1 truncate font-mono text-[11px] text-muted-foreground">{content.splash_audio_url}</span>
+            <button type="button" className="shrink-0 rounded p-0.5 hover:bg-red-500/10 hover:text-red-500"
+              onClick={() => { onChange({ splash_audio_url: "", splash_audio_enabled: false }); audioPreviewRef.current?.pause(); setAudioPlaying(false); }}>
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" type="button" onClick={() => toggleAudioPreview(content.splash_audio_url!)}>
+              {audioPlaying ? <><Square className="h-3 w-3" /> Stop</> : <><Play className="h-3 w-3" /> Listen</>}
+            </Button>
+            <SplashPillToggle checked={content.splash_audio_enabled !== false} onToggle={(v) => onChange({ splash_audio_enabled: v })} labelOn="On" labelOff="Off" />
+            <div className="flex items-center gap-1.5">
+              {(content.splash_audio_volume ?? 0.8) < 0.05
+                ? <VolumeX className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                : <Volume2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+              <input type="range" min={0} max={1} step={0.05} value={content.splash_audio_volume ?? 0.8}
+                onChange={(e) => onChange({ splash_audio_volume: parseFloat(e.target.value) })}
+                className="h-1.5 w-20 cursor-pointer accent-primary" />
+              <span className="w-7 text-[10px] text-muted-foreground">{Math.round((content.splash_audio_volume ?? 0.8) * 100)}%</span>
+            </div>
+          </div>
+        </div>
+      )}
+      <Button size="sm" variant="outline" className="h-8 gap-2 text-xs" type="button" onClick={() => setAudioModalOpen(true)}>
+        <Mic className="h-3.5 w-3.5" /> {content.splash_audio_url ? "Change audio" : "Add audio"}
+      </Button>
+    </div>
+  );
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base"><PlayCircle className="h-4 w-4" /> Splash page customizer</CardTitle>
-        <CardDescription>Create a short intro before the visitor opens the business card.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Global controls — always visible */}
-        <div className="grid gap-4 rounded-lg border bg-background/35 p-3 sm:grid-cols-2">
-          <div>
-            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Show splash before card</div>
-            <SplashPillToggle checked={isEnabled} onToggle={(v) => onChange({ enabled: v })} labelOn="Enabled" labelOff="Disabled" />
-          </div>
-          <SelectField label="Transition effect" value={content.transition_effect || "fade"} values={SPLASH_TRANSITIONS} onChange={(v) => onChange({ transition_effect: v })} />
-          <div>
-            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Auto-dismiss timer</div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1"><div className="mb-0.5 text-[10px] text-muted-foreground">Min</div>
-                <Input type="number" min={0} max={10} className="h-8 text-center text-sm" value={durMin}
-                  onChange={(e) => onChange({ duration_seconds: Math.max(0, parseInt(e.target.value) || 0) * 60 + durSec })} />
-              </div>
-              <span className="mt-4 select-none text-sm font-bold text-muted-foreground">:</span>
-              <div className="flex-1"><div className="mb-0.5 text-[10px] text-muted-foreground">Sec</div>
-                <Input type="number" min={0} max={59} className="h-8 text-center text-sm" value={String(durSec).padStart(2, "0")}
-                  onChange={(e) => onChange({ duration_seconds: durMin * 60 + Math.min(59, Math.max(0, parseInt(e.target.value) || 0)) })} />
-              </div>
+    <>
+      <SplashAudioModal
+        open={audioModalOpen}
+        onClose={() => setAudioModalOpen(false)}
+        currentUrl={content.splash_audio_url || ""}
+        onSave={(url) => onChange({ splash_audio_url: url, splash_audio_enabled: true })}
+        uploadMedia={uploadMedia}
+        uploadingMedia={uploadingMedia}
+      />
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base"><PlayCircle className="h-4 w-4" /> Splash page customizer</CardTitle>
+          <CardDescription>Create a short intro before the visitor opens the business card.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+
+          {/* Global controls — always visible */}
+          <div className="grid gap-4 rounded-lg border bg-background/35 p-3 sm:grid-cols-2">
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Show splash before card</div>
+              <SplashPillToggle checked={isEnabled} onToggle={(v) => onChange({ enabled: v })} labelOn="Enabled" labelOff="Disabled" />
             </div>
-          </div>
-        </div>
-        {/* Tabs */}
-        <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
-          {(["standard", "animation", "video", "slideshow"] as const).map((tab) => (
-            <button key={tab} type="button" onClick={() => setSplashTab(tab)}
-              className={cn("rounded-md py-1.5 text-xs font-medium capitalize transition-colors",
-                splashTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
-            >{tab}</button>
-          ))}
-        </div>
-        {/* Standard tab */}
-        {splashTab === "standard" && <div className="space-y-4">
-          <div className="grid gap-3">
-            <Field label="Splash title" value={content.title || ""} onChange={(v) => onChange({ title: v })} />
-            <Field label="Subtitle" value={content.subtitle || ""} onChange={(v) => onChange({ subtitle: v })} />
-        </div>
-          <div className="rounded-lg border bg-background/35 p-3">
-            <div className="mb-3 text-sm font-semibold">Splash typography</div>
-            <TypographyControls value={splashTypography} onChange={(patch) => onChange({ typography: { ...splashTypography, ...patch } })} />
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            <ColorField label="Background" value={content.background_color || "#07130b"} onChange={(v) => onChange({ background_color: v })} />
-            <ColorField label="Accent" value={content.accent_color || "#a3ff12"} onChange={(v) => onChange({ accent_color: v })} />
-            <ColorField label="Text" value={content.text_color || "#f7fff2"} onChange={(v) => onChange({ text_color: v })} />
-          </div>
-          <Field label="Background image URL" value={content.background_image_url || ""} onChange={(v) => onChange({ background_image_url: v })} />
-          <div className="space-y-2">
-            <div className="text-xs font-semibold text-muted-foreground">Buttons (max 2)</div>
-            {[0, 1].map((index) => {
-              const button = buttons[index] || { label: index === 0 ? "View card" : "Call me", action: index === 0 ? "open_card" as const : "call" as const };
-              return (
-                <div key={index} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-[1fr_160px_1fr]">
-                  <Field label={`Button ${index + 1}`} value={button.label || ""} onChange={(v) => updateButton(index, { label: v })} />
-                  <SelectField label="Action" value={button.action || "open_card"} values={["open_card", "call", "sms", "email", "url"]} onChange={(v) => updateButton(index, { action: v as OpenerButton["action"] })} />
-                  <Field label="URL override" value={button.url || (button.action === "call" ? primaryPhone : "")} onChange={(v) => updateButton(index, { url: v })} />
+            <SelectField label="Transition to card" value={content.transition_effect || "fade"} values={SPLASH_TRANSITIONS} onChange={(v) => onChange({ transition_effect: v })} />
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Auto-dismiss timer</div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <div className="mb-0.5 text-[10px] text-muted-foreground">Min</div>
+                  <Input type="number" min={0} max={10} className="h-8 text-center text-sm" value={durMin}
+                    onChange={(e) => onChange({ duration_seconds: Math.max(0, parseInt(e.target.value) || 0) * 60 + durSec })} />
                 </div>
-              );
-            })}
-          </div>
-        </div>}
-
-        {/* Animation tab */}
-        {splashTab === "animation" && <div className="space-y-4">
-          <div className="rounded-lg border bg-background/35 p-3">
-            <div className="mb-1 text-sm font-semibold">Open animation</div>
-            <p className="mb-3 text-xs text-muted-foreground">How the splash appears when first loaded.</p>
-            <div className="grid grid-cols-3 gap-2">
-              {OPEN_ANIMATIONS.map((anim) => (
-                <button key={anim} type="button" onClick={() => onChange({ open_animation: anim })}
-                  className={cn("rounded-lg border px-2 py-2 text-[11px] font-medium capitalize transition-colors",
-                    (content.open_animation || "fade_up") === anim ? "border-primary bg-primary/10 text-primary" : "border-input bg-background hover:border-primary/50")}
-                >{human(anim)}</button>
-              ))}
+                <span className="mt-4 select-none text-sm font-bold text-muted-foreground">:</span>
+                <div className="flex-1">
+                  <div className="mb-0.5 text-[10px] text-muted-foreground">Sec</div>
+                  <Input type="number" min={0} max={59} className="h-8 text-center text-sm" value={String(durSec).padStart(2, "0")}
+                    onChange={(e) => onChange({ duration_seconds: durMin * 60 + Math.min(59, Math.max(0, parseInt(e.target.value) || 0)) })} />
+                </div>
+              </div>
             </div>
           </div>
-          <div className="rounded-lg border bg-background/35 p-3">
-            <div className="mb-1 text-sm font-semibold">Close / dismiss animation</div>
-            <p className="mb-3 text-xs text-muted-foreground">How the splash exits when dismissed.</p>
-            <div className="grid grid-cols-3 gap-2">
-              {CLOSE_ANIMATIONS.map((anim) => (
-                <button key={anim} type="button" onClick={() => onChange({ close_animation: anim })}
-                  className={cn("rounded-lg border px-2 py-2 text-[11px] font-medium capitalize transition-colors",
-                    (content.close_animation || "fade_out") === anim ? "border-primary bg-primary/10 text-primary" : "border-input bg-background hover:border-primary/50")}
-                >{human(anim)}</button>
-              ))}
-            </div>
-          </div>
-        </div>}
 
-        {/* Video tab */}
-        {splashTab === "video" && <div className="space-y-4">
-          <p className="text-xs text-muted-foreground">A full-screen video shown on the splash before the card reveals. MP4 recommended. The auto-dismiss timer above controls when the card appears.</p>
-          {uploadMedia && (
-            <MediaUploadField
-              label="Splash video"
-              mediaType="splash-video"
-              accept="video/*"
-              value={content.background_video_url || ""}
-              uploading={uploadingMedia ?? null}
-              onUpload={uploadMedia}
-              onUploaded={(url) => onChange({ background_video_url: url })}
-            />
-          )}
-          <Field label="Or paste video URL" value={content.background_video_url || ""} onChange={(v) => onChange({ background_video_url: v })} />
-          <div className="grid gap-4 rounded-lg border bg-background/35 p-3 sm:grid-cols-3">
-            <SelectField label="Video fit" value={content.video_fit || "cover"} values={["cover", "contain"]} onChange={(v) => onChange({ video_fit: v as "cover" | "contain" })} />
-            <div>
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Loop video</div>
-              <SplashPillToggle checked={content.video_loop !== false} onToggle={(v) => onChange({ video_loop: v })} labelOn="Loop on" labelOff="No loop" />
-            </div>
-            <div>
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Mute audio</div>
-              <SplashPillToggle checked={content.video_muted !== false} onToggle={(v) => onChange({ video_muted: v })} labelOn="Muted" labelOff="Audio on" />
-            </div>
+          {/* Tab bar */}
+          <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
+            {(["standard", "animation", "video", "slideshow"] as const).map((tab) => (
+              <button key={tab} type="button" onClick={() => setSplashTab(tab)}
+                className={cn("rounded-md py-1.5 text-xs font-medium capitalize transition-colors",
+                  splashTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+              >{tab}</button>
+            ))}
           </div>
-        </div>}
 
-        {/* Slideshow tab */}
-        {splashTab === "slideshow" && (
-          <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-center">
-            <Layers className="mx-auto mb-3 h-8 w-8 text-muted-foreground opacity-40" />
-            <div className="text-sm font-semibold">Multi-slide splash cards</div>
-            <p className="mt-1.5 text-xs text-muted-foreground">Build multi-page slides with individual titles, media, and call-to-action buttons using the <strong>Slideshow</strong> panel in the left sidebar. Each slide inherits the transition effect set above.</p>
-          </div>
-        )}
+          {/* ── Standard tab ── */}
+          {splashTab === "standard" && <div className="space-y-4">
+            <div className="grid gap-3">
+              <Field label="Splash title" value={content.title || ""} onChange={(v) => onChange({ title: v })} />
+              <Field label="Subtitle" value={content.subtitle || ""} onChange={(v) => onChange({ subtitle: v })} />
+            </div>
+            <div className="rounded-lg border bg-background/35 p-3">
+              <div className="mb-3 text-sm font-semibold">Splash typography</div>
+              <TypographyControls value={splashTypography} onChange={(patch) => onChange({ typography: { ...splashTypography, ...patch } })} />
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <ColorField label="Background" value={content.background_color || "#07130b"} onChange={(v) => onChange({ background_color: v })} />
+              <ColorField label="Accent" value={content.accent_color || "#a3ff12"} onChange={(v) => onChange({ accent_color: v })} />
+              <ColorField label="Text" value={content.text_color || "#f7fff2"} onChange={(v) => onChange({ text_color: v })} />
+            </div>
+            <Field label="Background image URL" value={content.background_image_url || ""} onChange={(v) => onChange({ background_image_url: v })} />
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-muted-foreground">Buttons (max 2)</div>
+              {[0, 1].map((index) => {
+                const button = buttons[index] || { label: index === 0 ? "View card" : "Call me", action: index === 0 ? "open_card" as const : "call" as const };
+                return (
+                  <div key={index} className="grid gap-2 rounded-lg border bg-background/35 p-3 md:grid-cols-[1fr_160px_1fr]">
+                    <Field label={`Button ${index + 1}`} value={button.label || ""} onChange={(v) => updateButton(index, { label: v })} />
+                    <SelectField label="Action" value={button.action || "open_card"} values={["open_card", "call", "sms", "email", "url"]} onChange={(v) => updateButton(index, { action: v as OpenerButton["action"] })} />
+                    <Field label="URL override" value={button.url || (button.action === "call" ? primaryPhone : "")} onChange={(v) => updateButton(index, { url: v })} />
+                  </div>
+                );
+              })}
+            </div>
+            {audioSection}
+          </div>}
 
-      </CardContent>
-    </Card>
+          {/* ── Animation tab ── */}
+          {splashTab === "animation" && <div className="space-y-4">
+            <div className="rounded-lg border bg-background/35 p-3">
+              <div className="mb-1 text-sm font-semibold">Open animation</div>
+              <p className="mb-3 text-xs text-muted-foreground">How the splash appears when first loaded.</p>
+              <div className="grid grid-cols-3 gap-2">
+                {OPEN_ANIMATIONS.map((anim) => (
+                  <button key={anim} type="button" onClick={() => onChange({ open_animation: anim })}
+                    className={cn("rounded-lg border px-2 py-2 text-[11px] font-medium capitalize transition-colors",
+                      (content.open_animation || "fade_up") === anim ? "border-primary bg-primary/10 text-primary" : "border-input bg-background hover:border-primary/50")}
+                  >{human(anim)}</button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-lg border bg-background/35 p-3">
+              <div className="mb-1 text-sm font-semibold">Close / dismiss animation</div>
+              <p className="mb-3 text-xs text-muted-foreground">How the splash exits when dismissed.</p>
+              <div className="grid grid-cols-3 gap-2">
+                {CLOSE_ANIMATIONS.map((anim) => (
+                  <button key={anim} type="button" onClick={() => onChange({ close_animation: anim })}
+                    className={cn("rounded-lg border px-2 py-2 text-[11px] font-medium capitalize transition-colors",
+                      (content.close_animation || "fade_out") === anim ? "border-primary bg-primary/10 text-primary" : "border-input bg-background hover:border-primary/50")}
+                  >{human(anim)}</button>
+                ))}
+              </div>
+            </div>
+            {audioSection}
+          </div>}
+
+          {/* ── Video tab ── */}
+          {splashTab === "video" && <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">A full-screen video shown on the splash before the card reveals. MP4 recommended.</p>
+            {uploadMedia && (
+              <MediaUploadField
+                label="Splash video"
+                mediaType="splash-video"
+                accept="video/*"
+                value={content.background_video_url || ""}
+                uploading={uploadingMedia ?? null}
+                onUpload={uploadMedia}
+                onUploaded={(url) => onChange({ background_video_url: url })}
+              />
+            )}
+            <Field label="Or paste video URL" value={content.background_video_url || ""} onChange={(v) => onChange({ background_video_url: v })} />
+
+            {/* Video play timer */}
+            <div className="rounded-lg border bg-background/35 p-3">
+              <div className="mb-1 text-sm font-semibold">Video play timer</div>
+              <p className="mb-3 text-xs text-muted-foreground">How long the video plays before transitioning to the card. Set 0:00 to rely on the auto-dismiss timer above.</p>
+              <div className="flex items-center gap-2">
+                <div className="w-20">
+                  <div className="mb-0.5 text-[10px] text-muted-foreground">Min</div>
+                  <Input type="number" min={0} max={10} className="h-8 text-center text-sm" value={vidMin}
+                    onChange={(e) => onChange({ video_play_seconds: Math.max(0, parseInt(e.target.value) || 0) * 60 + vidSec })} />
+                </div>
+                <span className="mt-4 select-none text-sm font-bold text-muted-foreground">:</span>
+                <div className="w-20">
+                  <div className="mb-0.5 text-[10px] text-muted-foreground">Sec</div>
+                  <Input type="number" min={0} max={59} className="h-8 text-center text-sm" value={String(vidSec).padStart(2, "0")}
+                    onChange={(e) => onChange({ video_play_seconds: vidMin * 60 + Math.min(59, Math.max(0, parseInt(e.target.value) || 0)) })} />
+                </div>
+                <span className="mt-3 text-[11px] text-muted-foreground italic">0:00 = auto</span>
+              </div>
+            </div>
+
+            {/* Video playback controls */}
+            <div className="grid gap-4 rounded-lg border bg-background/35 p-3 sm:grid-cols-3">
+              <SelectField label="Video fit" value={content.video_fit || "cover"} values={["cover", "contain"]} onChange={(v) => onChange({ video_fit: v as "cover" | "contain" })} />
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Loop video</div>
+                <SplashPillToggle checked={content.video_loop !== false} onToggle={(v) => onChange({ video_loop: v })} labelOn="Loop on" labelOff="No loop" />
+              </div>
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">Video audio</div>
+                <SplashPillToggle checked={content.video_muted !== false} onToggle={(v) => onChange({ video_muted: v })} labelOn="Muted" labelOff="Sound on" />
+              </div>
+            </div>
+
+            {/* Video volume — only shown when not muted */}
+            {content.video_muted === false && (
+              <div className="flex items-center gap-3 rounded-lg border bg-background/35 p-3">
+                {(content.video_volume ?? 1) < 0.05
+                  ? <VolumeX className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  : <Volume2 className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                <div className="flex-1">
+                  <div className="mb-1 text-xs font-medium text-muted-foreground">Video volume</div>
+                  <input type="range" min={0} max={1} step={0.05} value={content.video_volume ?? 1}
+                    onChange={(e) => onChange({ video_volume: parseFloat(e.target.value) })}
+                    className="h-1.5 w-full cursor-pointer accent-primary" />
+                </div>
+                <span className="w-8 shrink-0 text-right text-xs text-muted-foreground">{Math.round((content.video_volume ?? 1) * 100)}%</span>
+              </div>
+            )}
+            {audioSection}
+          </div>}
+
+          {/* ── Slideshow tab ── */}
+          {splashTab === "slideshow" && <div className="space-y-4">
+            <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-center">
+              <Layers className="mx-auto mb-3 h-8 w-8 text-muted-foreground opacity-40" />
+              <div className="text-sm font-semibold">Multi-slide splash cards</div>
+              <p className="mt-1.5 text-xs text-muted-foreground">Build multi-page slides with individual titles, media, and call-to-action buttons using the <strong>Slideshow</strong> panel in the left sidebar. Each slide inherits the transition effect set above.</p>
+            </div>
+            {audioSection}
+          </div>}
+
+        </CardContent>
+      </Card>
+    </>
   );
 }
 
