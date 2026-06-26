@@ -183,6 +183,11 @@ type OpenerContent = {
   splash_audio_enabled?: boolean;
   splash_audio_volume?: number;
   buttons?: OpenerButton[];
+  button_position?: "top" | "center" | "bottom";
+  button_margin_top?: number;
+  button_margin_bottom?: number;
+  button_padding_x?: number;
+  button_padding_y?: number;
 };
 type LeadField = { key: string; label: string; enabled: boolean; required: boolean };
 type LeadFormSettings = {
@@ -2326,7 +2331,7 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
               <ColorField label="Text" value={content.text_color || "#f7fff2"} onChange={(v) => onChange({ text_color: v })} />
             </div>
             <Field label="Background image URL" value={content.background_image_url || ""} onChange={(v) => onChange({ background_image_url: v })} />
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="text-xs font-semibold text-muted-foreground">Buttons (max 2)</div>
               {[0, 1].map((index) => {
                 const button = buttons[index] || { label: index === 0 ? "View card" : "Call me", action: index === 0 ? "open_card" as const : "call" as const };
@@ -2338,6 +2343,51 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
                   </div>
                 );
               })}
+
+              {/* Button position + spacing */}
+              <div className="rounded-lg border bg-background/35 p-3 space-y-3">
+                <div className="text-xs font-semibold">Button position</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["top", "center", "bottom"] as const).map((pos) => (
+                    <button key={pos} type="button"
+                      onClick={() => onChange({ button_position: pos })}
+                      className={cn("rounded-lg border py-2 text-xs font-medium capitalize transition-colors",
+                        (content.button_position || "center") === pos
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-input bg-background hover:border-primary/50")}
+                    >
+                      {pos === "top" ? "↑ Top" : pos === "center" ? "⊙ Center" : "↓ Bottom"}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="mb-1.5 text-[10px] text-muted-foreground font-medium">Margin top (px)</div>
+                    <Input type="number" min={0} max={200} className="h-8 text-sm"
+                      value={content.button_margin_top ?? 32}
+                      onChange={(e) => onChange({ button_margin_top: Math.max(0, parseInt(e.target.value) || 0) })} />
+                  </div>
+                  <div>
+                    <div className="mb-1.5 text-[10px] text-muted-foreground font-medium">Margin bottom (px)</div>
+                    <Input type="number" min={0} max={200} className="h-8 text-sm"
+                      value={content.button_margin_bottom ?? 0}
+                      onChange={(e) => onChange({ button_margin_bottom: Math.max(0, parseInt(e.target.value) || 0) })} />
+                  </div>
+                  <div>
+                    <div className="mb-1.5 text-[10px] text-muted-foreground font-medium">Padding horizontal (px)</div>
+                    <Input type="number" min={0} max={80} className="h-8 text-sm"
+                      value={content.button_padding_x ?? 20}
+                      onChange={(e) => onChange({ button_padding_x: Math.max(0, parseInt(e.target.value) || 0) })} />
+                  </div>
+                  <div>
+                    <div className="mb-1.5 text-[10px] text-muted-foreground font-medium">Padding vertical (px)</div>
+                    <Input type="number" min={0} max={80} className="h-8 text-sm"
+                      value={content.button_padding_y ?? 12}
+                      onChange={(e) => onChange({ button_padding_y: Math.max(0, parseInt(e.target.value) || 0) })} />
+                  </div>
+                </div>
+              </div>
             </div>
             {audioSection}
           </div>}

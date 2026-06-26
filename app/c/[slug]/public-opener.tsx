@@ -39,6 +39,11 @@ export type OpenerContent = {
   video_loop?: boolean;
   video_fit?: "cover" | "contain";
   buttons?: OpenerButton[];
+  button_position?: "top" | "center" | "bottom";
+  button_margin_top?: number;
+  button_margin_bottom?: number;
+  button_padding_x?: number;
+  button_padding_y?: number;
 };
 
 export type PublicCard = {
@@ -119,12 +124,17 @@ export function PublicOpener({
   const content: OpenerContent = rawContent;
   const [dismissed, setDismissed] = useState(false);
 
-  const duration    = Math.max(1, Math.min(60, Number(content.duration_seconds || 7)));
-  const openAnim    = content.open_animation  || "fade_up";
-  const closeAnim   = content.close_animation || "fade_out";
-  const splashMode  = content.splash_mode || "standard";
-  const isVideoMode = splashMode === "video";
-  const hasVideo    = !!content.background_video_url;
+  const duration      = Math.max(1, Math.min(60, Number(content.duration_seconds || 7)));
+  const openAnim      = content.open_animation  || "fade_up";
+  const closeAnim     = content.close_animation || "fade_out";
+  const splashMode    = content.splash_mode || "standard";
+  const isVideoMode   = splashMode === "video";
+  const hasVideo      = !!content.background_video_url;
+  const btnPosition   = content.button_position || "center";
+  const btnMarginTop  = content.button_margin_top  ?? 32;
+  const btnMarginBot  = content.button_margin_bottom ?? 0;
+  const btnPadX       = content.button_padding_x ?? 20;
+  const btnPadY       = content.button_padding_y ?? 12;
 
   const bgImage = content.background_image_url
     ? `linear-gradient(rgba(0,0,0,.38),rgba(0,0,0,.38)),url(${content.background_image_url})`
@@ -168,7 +178,11 @@ export function PublicOpener({
     <>
       <style>{animCss(openAnim, closeAnim, duration)}</style>
       <div
-        className={`_opener_overlay fixed inset-0 z-50 grid place-items-center overflow-hidden px-5${dismissed ? " dismissed" : ""}`}
+        className={`_opener_overlay fixed inset-0 z-50 flex flex-col overflow-hidden px-5${
+          btnPosition === "top"    ? " justify-start pt-12"  :
+          btnPosition === "bottom" ? " justify-end pb-12"    :
+          " justify-center"
+        }${dismissed ? " dismissed" : ""}`}
         style={overlayStyle}
         onClick={isVideoMode ? dismiss : undefined}
       >
@@ -217,20 +231,30 @@ export function PublicOpener({
           )}
 
           {/* Buttons */}
-          <div className={`grid gap-3 sm:grid-cols-2 ${isVideoMode ? "mt-0" : "mt-8"}`}>
+          <div
+            className="grid gap-3 sm:grid-cols-2"
+            style={{ marginTop: btnMarginTop, marginBottom: btnMarginBot }}
+          >
             {(content.buttons || []).slice(0, 2).map((button, index) => {
               const href = buttonHref(button, card);
               const label = button.label || (index === 0 ? "View card" : "Contact");
-              const cls = "block rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center text-sm font-semibold backdrop-blur transition-opacity hover:opacity-80 active:opacity-60 cursor-pointer select-none";
+              const btnStyle: CSSProperties = {
+                color: accentColor,
+                paddingLeft: btnPadX,
+                paddingRight: btnPadX,
+                paddingTop: btnPadY,
+                paddingBottom: btnPadY,
+              };
+              const cls = "block rounded-2xl border border-white/20 bg-white/10 text-center text-sm font-semibold backdrop-blur transition-opacity hover:opacity-80 active:opacity-60 cursor-pointer select-none";
               if (!href || button.action === "open_card") {
                 return (
-                  <button key={index} type="button" className={cls} style={{ color: accentColor }} onClick={dismiss}>
+                  <button key={index} type="button" className={cls} style={btnStyle} onClick={dismiss}>
                     {label}
                   </button>
                 );
               }
               return (
-                <a key={index} href={href} className={cls} style={{ color: accentColor }} onClick={dismiss}>
+                <a key={index} href={href} className={cls} style={btnStyle} onClick={dismiss}>
                   {label}
                 </a>
               );

@@ -62,6 +62,11 @@ type OpenerContent = {
   video_loop?: boolean;
   video_fit?: "cover" | "contain";
   buttons?: OpenerButton[];
+  button_position?: "top" | "center" | "bottom";
+  button_margin_top?: number;
+  button_margin_bottom?: number;
+  button_padding_x?: number;
+  button_padding_y?: number;
 };
 type TypographySettings = {
   font_family?: string;
