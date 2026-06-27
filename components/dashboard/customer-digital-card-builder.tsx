@@ -3104,10 +3104,10 @@ function SectionFAB({ section, index, canvas }: { section: DigitalCardSection; i
             </div>
             <div>
               <div className="mb-1 text-[10px] text-muted-foreground">Font weight</div>
-              <Select value={String(section.section_font_weight ?? "")} onValueChange={(val) => canvas.onUpdate(index, { section_font_weight: Number(val) || undefined })}>
+              <Select value={String(section.section_font_weight ?? "0")} onValueChange={(val) => canvas.onUpdate(index, { section_font_weight: val === "0" ? undefined : Number(val) || undefined })}>
                 <SelectTrigger className="text-[11px]"><SelectValue placeholder="Inherited" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Inherited</SelectItem>
+                  <SelectItem value="0">Inherited</SelectItem>
                   {["300", "400", "500", "600", "700", "800", "900"].map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
                 </SelectContent>
               </Select>
