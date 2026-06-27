@@ -2675,47 +2675,51 @@ function LivePreview({ card, publicUrl, mode, onModeChange, themeMode, onThemeMo
               </button>
             ))}
           </div>
-          <div className="relative overflow-auto rounded-xl border bg-secondary/25 p-4">
-            <div className="mx-auto origin-top overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all" style={{ width: modeInfo.width, maxWidth: "100%", minHeight: mode === "mobile" ? 640 : 720, background: previewCard.background_color, color: previewCard.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center", transform: `scale(${zoom / 100})` }}>
-              <div className="min-h-[640px] bg-black/20 p-5 backdrop-blur-[1px] md:p-8">
-                {canvas ? <CanvasCardSections card={previewCard} publicUrl={publicUrl} mode={mode} canvas={canvas} /> : <CardSections card={previewCard} publicUrl={publicUrl} mode={mode} />}
+          <div className="flex items-start gap-2">
+            {/* Canvas + phone frame */}
+            <div className="relative min-w-0 flex-1 overflow-auto rounded-xl border bg-secondary/25 p-4">
+              <div className="mx-auto origin-top overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all" style={{ width: modeInfo.width, maxWidth: "100%", minHeight: mode === "mobile" ? 640 : 720, background: previewCard.background_color, color: previewCard.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center", transform: `scale(${zoom / 100})` }}>
+                <div className="min-h-[640px] bg-black/20 p-5 backdrop-blur-[1px] md:p-8">
+                  {canvas ? <CanvasCardSections card={previewCard} publicUrl={publicUrl} mode={mode} canvas={canvas} /> : <CardSections card={previewCard} publicUrl={publicUrl} mode={mode} />}
+                </div>
+              </div>
+              <div className="absolute right-5 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-2 rounded-2xl border bg-background/95 p-2 shadow-2xl">
+                <button
+                  type="button"
+                  className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-lg font-semibold hover:bg-accent"
+                  aria-label="Zoom in"
+                  onClick={() => onZoomChange(Math.min(130, zoom + 5))}
+                >
+                  +
+                </button>
+                <input
+                  aria-label="Preview zoom"
+                  type="range"
+                  min={55}
+                  max={130}
+                  value={zoom}
+                  onChange={(event) => onZoomChange(Number(event.target.value))}
+                  className="h-32 w-4 accent-foreground"
+                  style={{ writingMode: "vertical-lr", direction: "rtl" }}
+                />
+                <button
+                  type="button"
+                  className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-lg font-semibold hover:bg-accent"
+                  aria-label="Zoom out"
+                  onClick={() => onZoomChange(Math.max(55, zoom - 5))}
+                >
+                  -
+                </button>
+                <div className="text-xs font-semibold">{zoom}%</div>
               </div>
             </div>
-            <div className="absolute right-5 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-2 rounded-2xl border bg-background/95 p-2 shadow-2xl">
-              <button
-                type="button"
-                className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-lg font-semibold hover:bg-accent"
-                aria-label="Zoom in"
-                onClick={() => onZoomChange(Math.min(130, zoom + 5))}
-              >
-                +
-              </button>
-              <input
-                aria-label="Preview zoom"
-                type="range"
-                min={55}
-                max={130}
-                value={zoom}
-                onChange={(event) => onZoomChange(Number(event.target.value))}
-                className="h-32 w-4 accent-foreground"
-                style={{ writingMode: "vertical-lr", direction: "rtl" }}
-              />
-              <button
-                type="button"
-                className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-lg font-semibold hover:bg-accent"
-                aria-label="Zoom out"
-                onClick={() => onZoomChange(Math.max(55, zoom - 5))}
-              >
-                -
-              </button>
-              <div className="text-xs font-semibold">{zoom}%</div>
+            {/* Section FAB — side panel, appears when section is selected */}
+            <div className={cn("shrink-0 overflow-hidden rounded-xl transition-[width] duration-200", selectedSection ? "w-64" : "w-0")}>
+              {selectedSection && (
+                <SectionFAB key={canvas!.selectedIndex} section={selectedSection} index={canvas!.selectedIndex!} canvas={canvas!} card={previewCard} />
+              )}
             </div>
           </div>
-          {selectedSection && (
-            <div className="mt-3">
-              <SectionFAB key={canvas!.selectedIndex} section={selectedSection} index={canvas!.selectedIndex!} canvas={canvas!} card={previewCard} />
-            </div>
-          )}
         </CardContent>
       </Card>
     </aside>
@@ -2909,7 +2913,7 @@ type FabTab = "align" | "spacing" | "colors" | "size" | "font" | "links" | "acti
 
 function SectionFAB({ section, index, canvas }: { section: DigitalCardSection; index: number; canvas: CanvasInteractive; card: DigitalCard }) {
   const [activeTab, setActiveTab] = useState<FabTab>("align");
-  const tabs: { key: FabTab; label: string }[] = [
+  const fabTabs: { key: FabTab; label: string }[] = [
     { key: "align", label: "Align" },
     { key: "spacing", label: "Spacing" },
     { key: "colors", label: "Colors" },
@@ -2919,27 +2923,45 @@ function SectionFAB({ section, index, canvas }: { section: DigitalCardSection; i
     { key: "actions", label: "Actions" },
   ];
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-xl">
-      <div className="flex items-center border-b bg-secondary/30">
-        {tabs.map((tab) => (
-          <button key={tab.key} type="button"
-            className={cn("flex-1 py-1.5 text-[10px] font-medium transition-colors",
-              activeTab === tab.key ? "bg-background text-foreground border-b-2 border-primary" : "text-muted-foreground hover:text-foreground")}
-            onClick={() => setActiveTab(tab.key)}
-          >{tab.label}</button>
-        ))}
-        <button type="button" className="px-2 text-muted-foreground hover:text-foreground" onClick={() => canvas.onSelect(null)}>
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-xl">
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
+        <div className="min-w-0">
+          <div className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground">Section</div>
+          <div className="truncate text-xs font-semibold">{section.label}</div>
+        </div>
+        <button type="button" className="shrink-0 rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => canvas.onSelect(null)}>
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="p-3">
+      {/* Tab grid — 4 + 3 layout */}
+      <div className="shrink-0 grid grid-cols-4 border-b">
+        {fabTabs.slice(0, 4).map((tab) => (
+          <button key={tab.key} type="button"
+            className={cn("border-r py-1.5 text-[10px] font-medium transition-colors last:border-r-0",
+              activeTab === tab.key ? "bg-primary/10 text-primary border-b-2 border-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}
+            onClick={() => setActiveTab(tab.key)}
+          >{tab.label}</button>
+        ))}
+      </div>
+      <div className="shrink-0 grid grid-cols-3 border-b">
+        {fabTabs.slice(4).map((tab) => (
+          <button key={tab.key} type="button"
+            className={cn("border-r py-1.5 text-[10px] font-medium transition-colors last:border-r-0",
+              activeTab === tab.key ? "bg-primary/10 text-primary border-b-2 border-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}
+            onClick={() => setActiveTab(tab.key)}
+          >{tab.label}</button>
+        ))}
+      </div>
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto p-3">
         {activeTab === "align" && (
-          <div>
-            <div className="mb-1.5 text-[10px] text-muted-foreground">Text alignment — {section.label}</div>
-            <div className="flex gap-1.5">
+          <div className="space-y-3">
+            <div className="text-[10px] text-muted-foreground">Text alignment</div>
+            <div className="flex gap-1">
               {(["left", "center", "right"] as const).map((val) => (
                 <button key={val} type="button"
-                  className={cn("flex-1 rounded border py-1.5 text-[11px] font-medium capitalize transition-colors",
+                  className={cn("flex-1 rounded border py-2 text-[11px] font-medium capitalize transition-colors",
                     (section.text_align || "left") === val ? "border-primary bg-primary/10 text-primary" : "border-input bg-transparent text-muted-foreground hover:text-foreground")}
                   onClick={() => canvas.onUpdate(index, { text_align: val })}
                 >{val}</button>
@@ -2948,41 +2970,45 @@ function SectionFAB({ section, index, canvas }: { section: DigitalCardSection; i
           </div>
         )}
         {activeTab === "spacing" && (
-          <div className="space-y-2">
-            <div className="text-[10px] font-medium text-muted-foreground">Margin (px)</div>
-            <div className="grid grid-cols-4 gap-1">
-              {(["margin_top", "margin_right", "margin_bottom", "margin_left"] as const).map((field) => (
-                <div key={field}>
-                  <div className="mb-0.5 text-[9px] text-muted-foreground capitalize">{field.replace("margin_", "")}</div>
-                  <input type="number" min={0} max={200} value={section[field]}
-                    className="w-full rounded border border-input bg-transparent px-1 py-1 text-center text-[11px]"
-                    onChange={(e) => canvas.onUpdate(index, { [field]: Number(e.target.value) } as Partial<DigitalCardSection>)}
-                  />
-                </div>
-              ))}
+          <div className="space-y-3">
+            <div>
+              <div className="mb-1.5 text-[10px] font-medium text-muted-foreground">Margin (px)</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(["margin_top", "margin_right", "margin_bottom", "margin_left"] as const).map((field) => (
+                  <div key={field}>
+                    <div className="mb-0.5 text-[9px] text-muted-foreground capitalize">{field.replace("margin_", "")}</div>
+                    <input type="number" min={0} max={200} value={section[field]}
+                      className="w-full rounded border border-input bg-transparent px-2 py-1 text-center text-[11px]"
+                      onChange={(e) => canvas.onUpdate(index, { [field]: Number(e.target.value) } as Partial<DigitalCardSection>)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="text-[10px] font-medium text-muted-foreground">Padding (px)</div>
-            <div className="grid grid-cols-4 gap-1">
-              {(["padding_top", "padding_right", "padding_bottom", "padding_left"] as const).map((field) => (
-                <div key={field}>
-                  <div className="mb-0.5 text-[9px] text-muted-foreground capitalize">{field.replace("padding_", "")}</div>
-                  <input type="number" min={0} max={200} value={section[field]}
-                    className="w-full rounded border border-input bg-transparent px-1 py-1 text-center text-[11px]"
-                    onChange={(e) => canvas.onUpdate(index, { [field]: Number(e.target.value) } as Partial<DigitalCardSection>)}
-                  />
-                </div>
-              ))}
+            <div>
+              <div className="mb-1.5 text-[10px] font-medium text-muted-foreground">Padding (px)</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(["padding_top", "padding_right", "padding_bottom", "padding_left"] as const).map((field) => (
+                  <div key={field}>
+                    <div className="mb-0.5 text-[9px] text-muted-foreground capitalize">{field.replace("padding_", "")}</div>
+                    <input type="number" min={0} max={200} value={section[field]}
+                      className="w-full rounded border border-input bg-transparent px-2 py-1 text-center text-[11px]"
+                      onChange={(e) => canvas.onUpdate(index, { [field]: Number(e.target.value) } as Partial<DigitalCardSection>)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
         {activeTab === "colors" && (
-          <div className="grid gap-2">
+          <div className="space-y-2">
             <ColorField label="Section background" value={section.section_background || ""} onChange={(val) => canvas.onUpdate(index, { section_background: val || undefined })} />
             <ColorField label="Section text color" value={section.section_color || ""} onChange={(val) => canvas.onUpdate(index, { section_color: val || undefined })} />
           </div>
         )}
         {activeTab === "size" && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
             <div>
               <div className="mb-1 text-[10px] text-muted-foreground">Width (%)</div>
               <input type="number" min={10} max={100} value={section.section_width ?? 100}
@@ -3000,7 +3026,7 @@ function SectionFAB({ section, index, canvas }: { section: DigitalCardSection; i
           </div>
         )}
         {activeTab === "font" && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
             <div>
               <div className="mb-1 text-[10px] text-muted-foreground">Font size (px)</div>
               <input type="number" min={8} max={72} value={section.section_font_size ?? ""}
@@ -3022,21 +3048,21 @@ function SectionFAB({ section, index, canvas }: { section: DigitalCardSection; i
           </div>
         )}
         {activeTab === "links" && (
-          <div className="py-2 text-center">
-            <div className="text-sm font-medium">Manage card links</div>
-            <p className="mt-1 text-xs text-muted-foreground">Open the <strong>Links</strong> tab in the left sidebar to add, edit, or reorder links.</p>
+          <div className="py-4 text-center">
+            <div className="text-xs font-medium">Card links</div>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">Open the <strong>Links</strong> tab in the left sidebar to add, edit, or reorder links for this card.</p>
           </div>
         )}
         {activeTab === "actions" && (
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" className="flex-1 text-[11px]" onClick={() => canvas.onDuplicate(index)}>
-              <Copy className="mr-1 h-3.5 w-3.5" />Duplicate
+          <div className="space-y-2">
+            <Button type="button" variant="outline" size="sm" className="w-full justify-start text-[11px]" onClick={() => canvas.onDuplicate(index)}>
+              <Copy className="mr-2 h-3.5 w-3.5" />Duplicate section
             </Button>
-            <Button type="button" variant="outline" size="sm" className="flex-1 text-[11px]" onClick={() => canvas.onToggleVisible(index)}>
-              {section.is_visible ? <><EyeOff className="mr-1 h-3.5 w-3.5" />Hide</> : <><Eye className="mr-1 h-3.5 w-3.5" />Show</>}
+            <Button type="button" variant="outline" size="sm" className="w-full justify-start text-[11px]" onClick={() => canvas.onToggleVisible(index)}>
+              {section.is_visible ? <><EyeOff className="mr-2 h-3.5 w-3.5" />Hide section</> : <><Eye className="mr-2 h-3.5 w-3.5" />Show section</>}
             </Button>
-            <Button type="button" variant="destructive" size="sm" className="flex-1 text-[11px]" onClick={() => canvas.onRemove(index)}>
-              <Trash2 className="mr-1 h-3.5 w-3.5" />Delete
+            <Button type="button" variant="destructive" size="sm" className="w-full justify-start text-[11px]" onClick={() => canvas.onRemove(index)}>
+              <Trash2 className="mr-2 h-3.5 w-3.5" />Delete section
             </Button>
           </div>
         )}
