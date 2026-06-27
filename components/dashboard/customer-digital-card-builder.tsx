@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DndContext, type DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, Camera, Check, ChevronDown, ChevronRight, Code2, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Mic, Monitor, Moon, Music, Palette, Play, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Square, Sun, Tablet, Trash2, Truck, Upload, UserCircle, Volume2, VolumeX, X, Zap } from "lucide-react";
 
@@ -42,6 +45,13 @@ type DigitalCardSection = {
   padding_right: number;
   padding_bottom: number;
   padding_left: number;
+  text_align?: "left" | "center" | "right";
+  section_background?: string;
+  section_color?: string;
+  section_width?: number;
+  section_min_height?: number;
+  section_font_size?: number;
+  section_font_weight?: number;
 };
 
 type DigitalCard = {
@@ -87,6 +97,16 @@ type DigitalCard = {
   assigned_product_id?: string | null;
   digital_card_links?: DigitalCardLink[];
   digital_card_sections?: DigitalCardSection[];
+};
+
+type CanvasInteractive = {
+  selectedIndex: number | null;
+  onSelect: (index: number | null) => void;
+  onUpdate: (index: number, patch: Partial<DigitalCardSection>) => void;
+  onReorder: (from: number, to: number) => void;
+  onRemove: (index: number) => void;
+  onDuplicate: (index: number) => void;
+  onToggleVisible: (index: number) => void;
 };
 
 type CardData = {
@@ -438,6 +458,10 @@ function newSection(sectionType = "custom", label?: string, order = 100, patch: 
   };
 }
 
+function sectionKey(section: DigitalCardSection, index: number) {
+  return section.id || `${section.section_type}-${index}`;
+}
+
 function normalizeSections(sections: DigitalCardSection[] | undefined) {
   const list = sections?.length ? sections : defaultSections();
   return [...list]
@@ -527,6 +551,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
   const [form, setForm] = useState<DigitalCard>(() => emptyCard());
   const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [saving, setSaving] = useState(false);
+  const [selectedSectionIndex, setSelectedSectionIndex] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("mobile");
   const [previewThemeMode, setPreviewThemeMode] = useState<CardThemeMode>("dark");
@@ -717,6 +742,24 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
 
   function removeSection(index: number) {
     setForm((current) => ({ ...current, digital_card_sections: normalizeSections(current.digital_card_sections).filter((_, itemIndex) => itemIndex !== index) }));
+  }
+
+  function duplicateSection(index: number) {
+    setForm((current) => {
+      const sections = normalizeSections(current.digital_card_sections);
+      if (index < 0 || index >= sections.length) return current;
+      const copy = { ...sections[index], id: undefined, display_order: sections.length + 1 };
+      return { ...current, digital_card_sections: normalizeSections([...sections, copy]) };
+    });
+  }
+
+  function toggleSectionVisible(index: number) {
+    setForm((current) => {
+      const sections = normalizeSections(current.digital_card_sections);
+      if (index < 0 || index >= sections.length) return current;
+      sections[index] = { ...sections[index], is_visible: !sections[index].is_visible };
+      return { ...current, digital_card_sections: sections };
+    });
   }
 
   function moveSection(index: number, direction: -1 | 1) {
@@ -1646,7 +1689,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
               )}
             </section>
 
-            <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} themeMode={previewThemeMode} onThemeModeChange={setPreviewThemeMode} zoom={previewZoom} onZoomChange={setPreviewZoom} />
+            <LivePreview card={form} publicUrl={publicUrl} mode={previewMode} onModeChange={setPreviewMode} themeMode={previewThemeMode} onThemeModeChange={setPreviewThemeMode} zoom={previewZoom} onZoomChange={setPreviewZoom} canvas={{ selectedIndex: selectedSectionIndex, onSelect: setSelectedSectionIndex, onUpdate: updateSection, onReorder: (from, to) => { reorderSection(from, to); setSelectedSectionIndex(null); }, onRemove: (idx) => { removeSection(idx); setSelectedSectionIndex(null); }, onDuplicate: (idx) => { duplicateSection(idx); setSelectedSectionIndex(null); }, onToggleVisible: toggleSectionVisible }} />
           </div>
         )}
       </main>
@@ -2599,10 +2642,12 @@ function OpenerPanel({ content, primaryPhone, onChange, uploadMedia, uploadingMe
   );
 }
 
-function LivePreview({ card, publicUrl, mode, onModeChange, themeMode, onThemeModeChange, zoom, onZoomChange }: { card: DigitalCard; publicUrl: string; mode: PreviewMode; onModeChange: (mode: PreviewMode) => void; themeMode: CardThemeMode; onThemeModeChange: (mode: CardThemeMode) => void; zoom: number; onZoomChange: (zoom: number) => void }) {
+function LivePreview({ card, publicUrl, mode, onModeChange, themeMode, onThemeModeChange, zoom, onZoomChange, canvas }: { card: DigitalCard; publicUrl: string; mode: PreviewMode; onModeChange: (mode: PreviewMode) => void; themeMode: CardThemeMode; onThemeModeChange: (mode: CardThemeMode) => void; zoom: number; onZoomChange: (zoom: number) => void; canvas?: CanvasInteractive }) {
   const modeInfo = previewModes.find((item) => item.value === mode) || previewModes[0];
   const previewCard = applyTheme(card, themeMode);
   const backgroundImage = previewCard.background_image_url ? `linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)), url(${previewCard.background_image_url})` : undefined;
+  const allSections = normalizeSections(previewCard.digital_card_sections);
+  const selectedSection = canvas && canvas.selectedIndex != null ? (allSections[canvas.selectedIndex] ?? null) : null;
 
   return (
     <aside className="min-w-0 bg-background/30 p-4 2xl:sticky 2xl:top-16 2xl:self-start">
@@ -2633,7 +2678,7 @@ function LivePreview({ card, publicUrl, mode, onModeChange, themeMode, onThemeMo
           <div className="relative overflow-auto rounded-xl border bg-secondary/25 p-4">
             <div className="mx-auto origin-top overflow-hidden rounded-[1.75rem] border border-white/15 shadow-2xl transition-all" style={{ width: modeInfo.width, maxWidth: "100%", minHeight: mode === "mobile" ? 640 : 720, background: previewCard.background_color, color: previewCard.text_color, backgroundImage, backgroundSize: "cover", backgroundPosition: "center", transform: `scale(${zoom / 100})` }}>
               <div className="min-h-[640px] bg-black/20 p-5 backdrop-blur-[1px] md:p-8">
-                <CardSections card={previewCard} publicUrl={publicUrl} mode={mode} />
+                {canvas ? <CanvasCardSections card={previewCard} publicUrl={publicUrl} mode={mode} canvas={canvas} /> : <CardSections card={previewCard} publicUrl={publicUrl} mode={mode} />}
               </div>
             </div>
             <div className="absolute right-5 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-2 rounded-2xl border bg-background/95 p-2 shadow-2xl">
@@ -2666,6 +2711,11 @@ function LivePreview({ card, publicUrl, mode, onModeChange, themeMode, onThemeMo
               <div className="text-xs font-semibold">{zoom}%</div>
             </div>
           </div>
+          {selectedSection && (
+            <div className="mt-3">
+              <SectionFAB key={canvas!.selectedIndex} section={selectedSection} index={canvas!.selectedIndex!} canvas={canvas!} card={previewCard} />
+            </div>
+          )}
         </CardContent>
       </Card>
     </aside>
@@ -2699,6 +2749,13 @@ function sectionStyle(section: DigitalCardSection): React.CSSProperties {
     paddingRight: section.padding_right,
     paddingBottom: section.padding_bottom,
     paddingLeft: section.padding_left,
+    textAlign: section.text_align || undefined,
+    background: section.section_background || undefined,
+    color: section.section_color || undefined,
+    width: section.section_width ? `${section.section_width}%` : undefined,
+    minHeight: section.section_min_height || undefined,
+    fontSize: section.section_font_size || undefined,
+    fontWeight: section.section_font_weight || undefined,
   };
 }
 
@@ -2786,6 +2843,206 @@ function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: D
 
 function PlaceholderSection({ label, text }: { label: string; text: string }) {
   return <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm"><div className="font-semibold">{label}</div><div className="mt-1 text-xs opacity-70">{text}</div></div>;
+}
+
+function SortableSection({ section, index, canvas, card, publicUrl, visibleLinks }: { section: DigitalCardSection; index: number; canvas: CanvasInteractive; card: DigitalCard; publicUrl: string; visibleLinks: DigitalCardLink[] }) {
+  const id = sectionKey(section, index);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const isSelected = canvas.selectedIndex === index;
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ ...sectionStyle(section), transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      className={cn("group relative cursor-pointer rounded-lg transition-all duration-150", isSelected && "ring-2 ring-primary ring-offset-1", isDragging && "z-10 shadow-xl")}
+      onClick={(e) => { e.stopPropagation(); canvas.onSelect(isSelected ? null : index); }}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className={cn("absolute right-0 top-0 z-10 cursor-grab rounded-bl-lg bg-black/50 p-1 opacity-0 transition-opacity group-hover:opacity-80 active:cursor-grabbing", isSelected && "opacity-80")}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="h-3.5 w-3.5 text-white" />
+      </div>
+      <PreviewSection section={section} card={card} publicUrl={publicUrl} visibleLinks={visibleLinks} />
+    </div>
+  );
+}
+
+function CanvasCardSections({ card, publicUrl, mode, canvas }: { card: DigitalCard; publicUrl: string; mode: PreviewMode; canvas: CanvasInteractive }) {
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
+  const allSections = normalizeSections(card.digital_card_sections);
+  const items = allSections
+    .map((section, idx) => ({ section, idx }))
+    .filter(({ section }) => {
+      const isOpener = section.section_type === "gallery" && (section.content?.digital_product === "opener" || section.label.toLowerCase().includes("opener"));
+      return section.is_visible && !isOpener;
+    });
+  const visibleLinks = (card.digital_card_links || []).filter((link) => link.is_visible !== false && link.label && link.url);
+  const ids = items.map(({ section, idx }) => sectionKey(section, idx));
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const fromItem = items[ids.indexOf(String(active.id))];
+    const toItem = items[ids.indexOf(String(over.id))];
+    if (fromItem !== undefined && toItem !== undefined) canvas.onReorder(fromItem.idx, toItem.idx);
+  }
+
+  return (
+    <div className={cn(mode !== "mobile" && "grid gap-x-8 md:grid-cols-[1fr_1.1fr]")} onClick={() => canvas.onSelect(null)}>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          {items.map(({ section, idx }) => (
+            <SortableSection key={sectionKey(section, idx)} section={section} index={idx} canvas={canvas} card={card} publicUrl={publicUrl} visibleLinks={visibleLinks} />
+          ))}
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+}
+
+type FabTab = "align" | "spacing" | "colors" | "size" | "font" | "links" | "actions";
+
+function SectionFAB({ section, index, canvas }: { section: DigitalCardSection; index: number; canvas: CanvasInteractive; card: DigitalCard }) {
+  const [activeTab, setActiveTab] = useState<FabTab>("align");
+  const tabs: { key: FabTab; label: string }[] = [
+    { key: "align", label: "Align" },
+    { key: "spacing", label: "Spacing" },
+    { key: "colors", label: "Colors" },
+    { key: "size", label: "Size" },
+    { key: "font", label: "Font" },
+    { key: "links", label: "Links" },
+    { key: "actions", label: "Actions" },
+  ];
+  return (
+    <div className="overflow-hidden rounded-xl border bg-card shadow-xl">
+      <div className="flex items-center border-b bg-secondary/30">
+        {tabs.map((tab) => (
+          <button key={tab.key} type="button"
+            className={cn("flex-1 py-1.5 text-[10px] font-medium transition-colors",
+              activeTab === tab.key ? "bg-background text-foreground border-b-2 border-primary" : "text-muted-foreground hover:text-foreground")}
+            onClick={() => setActiveTab(tab.key)}
+          >{tab.label}</button>
+        ))}
+        <button type="button" className="px-2 text-muted-foreground hover:text-foreground" onClick={() => canvas.onSelect(null)}>
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <div className="p-3">
+        {activeTab === "align" && (
+          <div>
+            <div className="mb-1.5 text-[10px] text-muted-foreground">Text alignment — {section.label}</div>
+            <div className="flex gap-1.5">
+              {(["left", "center", "right"] as const).map((val) => (
+                <button key={val} type="button"
+                  className={cn("flex-1 rounded border py-1.5 text-[11px] font-medium capitalize transition-colors",
+                    (section.text_align || "left") === val ? "border-primary bg-primary/10 text-primary" : "border-input bg-transparent text-muted-foreground hover:text-foreground")}
+                  onClick={() => canvas.onUpdate(index, { text_align: val })}
+                >{val}</button>
+              ))}
+            </div>
+          </div>
+        )}
+        {activeTab === "spacing" && (
+          <div className="space-y-2">
+            <div className="text-[10px] font-medium text-muted-foreground">Margin (px)</div>
+            <div className="grid grid-cols-4 gap-1">
+              {(["margin_top", "margin_right", "margin_bottom", "margin_left"] as const).map((field) => (
+                <div key={field}>
+                  <div className="mb-0.5 text-[9px] text-muted-foreground capitalize">{field.replace("margin_", "")}</div>
+                  <input type="number" min={0} max={200} value={section[field]}
+                    className="w-full rounded border border-input bg-transparent px-1 py-1 text-center text-[11px]"
+                    onChange={(e) => canvas.onUpdate(index, { [field]: Number(e.target.value) } as Partial<DigitalCardSection>)}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="text-[10px] font-medium text-muted-foreground">Padding (px)</div>
+            <div className="grid grid-cols-4 gap-1">
+              {(["padding_top", "padding_right", "padding_bottom", "padding_left"] as const).map((field) => (
+                <div key={field}>
+                  <div className="mb-0.5 text-[9px] text-muted-foreground capitalize">{field.replace("padding_", "")}</div>
+                  <input type="number" min={0} max={200} value={section[field]}
+                    className="w-full rounded border border-input bg-transparent px-1 py-1 text-center text-[11px]"
+                    onChange={(e) => canvas.onUpdate(index, { [field]: Number(e.target.value) } as Partial<DigitalCardSection>)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {activeTab === "colors" && (
+          <div className="grid gap-2">
+            <ColorField label="Section background" value={section.section_background || ""} onChange={(val) => canvas.onUpdate(index, { section_background: val || undefined })} />
+            <ColorField label="Section text color" value={section.section_color || ""} onChange={(val) => canvas.onUpdate(index, { section_color: val || undefined })} />
+          </div>
+        )}
+        {activeTab === "size" && (
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div className="mb-1 text-[10px] text-muted-foreground">Width (%)</div>
+              <input type="number" min={10} max={100} value={section.section_width ?? 100}
+                className="w-full rounded border border-input bg-transparent px-2 py-1.5 text-[11px]"
+                onChange={(e) => canvas.onUpdate(index, { section_width: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <div className="mb-1 text-[10px] text-muted-foreground">Min height (px)</div>
+              <input type="number" min={0} max={600} value={section.section_min_height ?? 0}
+                className="w-full rounded border border-input bg-transparent px-2 py-1.5 text-[11px]"
+                onChange={(e) => canvas.onUpdate(index, { section_min_height: Number(e.target.value) || undefined })}
+              />
+            </div>
+          </div>
+        )}
+        {activeTab === "font" && (
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div className="mb-1 text-[10px] text-muted-foreground">Font size (px)</div>
+              <input type="number" min={8} max={72} value={section.section_font_size ?? ""}
+                placeholder="Inherited"
+                className="w-full rounded border border-input bg-transparent px-2 py-1.5 text-[11px]"
+                onChange={(e) => canvas.onUpdate(index, { section_font_size: Number(e.target.value) || undefined })}
+              />
+            </div>
+            <div>
+              <div className="mb-1 text-[10px] text-muted-foreground">Font weight</div>
+              <Select value={String(section.section_font_weight ?? "")} onValueChange={(val) => canvas.onUpdate(index, { section_font_weight: Number(val) || undefined })}>
+                <SelectTrigger className="text-[11px]"><SelectValue placeholder="Inherited" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Inherited</SelectItem>
+                  {["300", "400", "500", "600", "700", "800", "900"].map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+        {activeTab === "links" && (
+          <div className="py-2 text-center">
+            <div className="text-sm font-medium">Manage card links</div>
+            <p className="mt-1 text-xs text-muted-foreground">Open the <strong>Links</strong> tab in the left sidebar to add, edit, or reorder links.</p>
+          </div>
+        )}
+        {activeTab === "actions" && (
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" className="flex-1 text-[11px]" onClick={() => canvas.onDuplicate(index)}>
+              <Copy className="mr-1 h-3.5 w-3.5" />Duplicate
+            </Button>
+            <Button type="button" variant="outline" size="sm" className="flex-1 text-[11px]" onClick={() => canvas.onToggleVisible(index)}>
+              {section.is_visible ? <><EyeOff className="mr-1 h-3.5 w-3.5" />Hide</> : <><Eye className="mr-1 h-3.5 w-3.5" />Show</>}
+            </Button>
+            <Button type="button" variant="destructive" size="sm" className="flex-1 text-[11px]" onClick={() => canvas.onRemove(index)}>
+              <Trash2 className="mr-1 h-3.5 w-3.5" />Delete
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function PreviewPill({ label, accent }: { label: string; accent: string }) {
