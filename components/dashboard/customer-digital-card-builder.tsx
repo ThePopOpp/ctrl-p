@@ -5,7 +5,7 @@ import { DndContext, type DragEndEvent, MouseSensor, TouchSensor, useSensor, use
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, Camera, Check, ChevronDown, ChevronRight, Code2, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, MessageSquare, Mic, Monitor, Moon, Music, Palette, Play, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Square, Sun, Tablet, Trash2, Truck, Upload, UserCircle, Volume2, VolumeX, X, Zap } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, Camera, Check, ChevronDown, ChevronRight, Clock, Code2, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, Mail, MessageSquare, Mic, Monitor, Moon, Music, Nfc, Palette, Play, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Square, Sun, Tablet, Tag, Trash2, Truck, Upload, UserCircle, Volume2, VolumeX, X, Zap } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -1849,15 +1849,37 @@ type AutomationLog = {
   automations: { name: string } | null;
 };
 
-const PRESET_DESCRIPTIONS: Record<string, { icon: string; label: string; detail: string; badge: string }> = {
-  lead_email:           { icon: "✉️", label: "Email me on new lead", detail: "Instant email to you whenever someone submits the lead form.", badge: "Lead" },
-  lead_sms:             { icon: "💬", label: "SMS me on new lead", detail: "Text alert to your phone number when a lead comes in.", badge: "Lead" },
-  lead_followup:        { icon: "⏰", label: "24h lead follow-up email", detail: "Auto-send a follow-up email to the lead 24 hours later.", badge: "Lead" },
-  nfc_alert:            { icon: "📲", label: "Alert me on NFC tap", detail: "Email you each time someone taps your NFC card.", badge: "NFC" },
-  qr_alert:             { icon: "🔲", label: "Alert me on QR scan", detail: "Email you each time someone scans your QR code.", badge: "QR" },
-  payment_thankyou:     { icon: "💳", label: "Payment received thank-you", detail: "Send an automatic thank-you to the customer after Square payment.", badge: "Square" },
-  auto_tag_source:      { icon: "🏷️", label: "Auto-tag lead by source", detail: "Tag each lead with their traffic source automatically.", badge: "CRM" },
-  subscription_welcome: { icon: "⭐", label: "Subscription welcome email", detail: "Welcome email when a Square subscription activates.", badge: "Square" },
+function TwilioLogo() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="10" fill="#F22F46" />
+      <circle cx="7.2" cy="7.2" r="1.7" fill="white" />
+      <circle cx="12.8" cy="7.2" r="1.7" fill="white" />
+      <circle cx="7.2" cy="12.8" r="1.7" fill="white" />
+      <circle cx="12.8" cy="12.8" r="1.7" fill="white" />
+    </svg>
+  );
+}
+
+function SquareLogo() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect width="20" height="20" rx="3" fill="#1A1A1A" />
+      <rect x="5" y="5" width="10" height="10" rx="1.5" fill="white" />
+      <rect x="7.5" y="7.5" width="5" height="5" rx="0.5" fill="#1A1A1A" />
+    </svg>
+  );
+}
+
+const PRESET_DESCRIPTIONS: Record<string, { icon: React.ReactNode; label: string; detail: string; badge: string }> = {
+  lead_email:           { icon: <Mail className="h-5 w-5" />, label: "Email me on new lead", detail: "Instant email to you whenever someone submits the lead form.", badge: "Lead" },
+  lead_sms:             { icon: <TwilioLogo />, label: "SMS me on new lead", detail: "Text alert to your phone number when a lead comes in.", badge: "Lead" },
+  lead_followup:        { icon: <Clock className="h-5 w-5" />, label: "24h lead follow-up email", detail: "Auto-send a follow-up email to the lead 24 hours later.", badge: "Lead" },
+  nfc_alert:            { icon: <Nfc className="h-5 w-5" />, label: "Alert me on NFC tap", detail: "Email you each time someone taps your NFC card.", badge: "NFC" },
+  qr_alert:             { icon: <QrCode className="h-5 w-5" />, label: "Alert me on QR scan", detail: "Email you each time someone scans your QR code.", badge: "QR" },
+  payment_thankyou:     { icon: <SquareLogo />, label: "Payment received thank-you", detail: "Send an automatic thank-you to the customer after Square payment.", badge: "Square" },
+  auto_tag_source:      { icon: <Tag className="h-5 w-5" />, label: "Auto-tag lead by source", detail: "Tag each lead with their traffic source automatically.", badge: "CRM" },
+  subscription_welcome: { icon: <SquareLogo />, label: "Subscription welcome email", detail: "Welcome email when a Square subscription activates.", badge: "Square" },
 };
 
 const LEAD_STATUSES = ["new", "contacted", "qualified", "archived"];
@@ -1971,7 +1993,7 @@ function AutomatePanel({ cardId }: { cardId: string }) {
             return (
               <div key={key} className={cn("rounded-lg border p-3 transition-colors", isOn ? "border-primary/40 bg-primary/5" : "bg-background/35")}>
                 <div className="flex items-start gap-3">
-                  <span className="mt-0.5 text-lg">{meta.icon}</span>
+                  <span className="mt-0.5 shrink-0 text-muted-foreground">{meta.icon}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold">{meta.label}</span>
