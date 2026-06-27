@@ -466,6 +466,71 @@ function PublicSection({
     );
   }
 
+  if (section.section_type === "profile_logo") {
+    const logoPos = (card.media_settings?.logo_position as string | undefined) || "left";
+    const logoJustify = logoPos === "center" ? "justify-center" : logoPos === "right" ? "justify-end" : "justify-start";
+    return (
+      <div style={sectionStyle(section)}>
+        <div className="relative flex items-center">
+          <div className={cn("flex flex-1 items-center", logoJustify)}>
+            {card.logo_url
+              ? <img className="max-h-12 max-w-[140px] object-contain" src={card.logo_url} alt={`${card.company_name || card.card_name} logo`} />
+              : <div className="text-sm font-semibold opacity-75">controlp.io card</div>}
+          </div>
+          <div className="shrink-0">
+            <PublicThemeToggle mode={themeMode} dark={darkTheme} light={lightTheme} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (section.section_type === "profile_photo") {
+    const imageSettings = imageStyleFrom(card.media_settings?.profile_image_style);
+    const profileImagePos = (imageSettings as { position?: string }).position || "center";
+    const imgMargin = profileImagePos === "left" ? "mr-auto ml-0" : profileImagePos === "right" ? "ml-auto mr-0" : "mx-auto";
+    const imageClasses = cn(`${imgMargin} h-28 w-28 object-cover shadow-xl transition-transform transition-shadow duration-200`, imageShapeClass(imageSettings), imageHoverClass(imageSettings));
+    const fallbackImageClasses = cn(`${imgMargin} grid h-28 w-28 place-items-center bg-white/10 text-3xl font-semibold shadow-xl transition-transform transition-shadow duration-200`, imageShapeClass(imageSettings), imageHoverClass(imageSettings));
+    return (
+      <div style={sectionStyle(section)}>
+        {card.profile_photo_url ? (
+          <img className={imageClasses} style={imageBorderStyle(imageSettings)} src={card.profile_photo_url} alt={card.display_name || card.card_name} />
+        ) : (
+          <div className={fallbackImageClasses} style={imageBorderStyle(imageSettings)}>{(card.display_name || card.card_name).slice(0, 2).toUpperCase()}</div>
+        )}
+      </div>
+    );
+  }
+
+  if (section.section_type === "profile_name") {
+    const textSettings = typographyFrom(card.media_settings?.content_typography, card.text_color);
+    const textStyle = typographyStyle(textSettings);
+    const nameSize = Number(textSettings.font_size || 18);
+    const imageSettings = imageStyleFrom(card.media_settings?.profile_image_style);
+    const profileImagePos = (imageSettings as { position?: string }).position || "center";
+    const contentAlign = profileImagePos === "left" ? "text-left" : profileImagePos === "right" ? "text-right" : "text-center";
+    return (
+      <div className={contentAlign} style={{ ...sectionStyle(section), ...textStyle }}>
+        <h1 className="tracking-tight" style={{ fontSize: nameSize, fontWeight: textStyle.fontWeight, lineHeight: textStyle.lineHeight }}>{card.display_name || card.card_name}</h1>
+        <p className="mt-1 opacity-80" style={{ fontSize: Math.max(12, nameSize * 0.58) }}>{[card.job_title, card.company_name].filter(Boolean).join(" - ")}</p>
+      </div>
+    );
+  }
+
+  if (section.section_type === "profile_bio") {
+    const textSettings = typographyFrom(card.media_settings?.content_typography, card.text_color);
+    const textStyle = typographyStyle(textSettings);
+    const nameSize = Number(textSettings.font_size || 18);
+    const imageSettings = imageStyleFrom(card.media_settings?.profile_image_style);
+    const profileImagePos = (imageSettings as { position?: string }).position || "center";
+    const contentAlign = profileImagePos === "left" ? "text-left" : profileImagePos === "right" ? "text-right" : "text-center";
+    return (
+      <div className={contentAlign} style={sectionStyle(section)}>
+        {card.bio && <p className="opacity-85" style={{ fontSize: Math.max(13, nameSize * 0.72), lineHeight: textStyle.lineHeight }}>{card.bio}</p>}
+      </div>
+    );
+  }
+
   if (section.section_type === "quick_actions") {
     return (
       <div className="grid grid-cols-3 gap-2" style={sectionStyle(section)}>

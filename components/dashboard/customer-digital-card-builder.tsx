@@ -117,7 +117,7 @@ type CardData = {
 };
 
 const linkTypes = ["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"];
-const sectionTypes = ["profile_header", "quick_actions", "links", "lead_capture", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"];
+const sectionTypes = ["profile_logo", "profile_photo", "profile_name", "profile_bio", "profile_header", "quick_actions", "links", "lead_capture", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"];
 const customerNavItems = [
   { label: "Overview", icon: Home, href: "/dashboard/customer" },
   { label: "Profile", icon: UserCircle, href: "/dashboard/customer/profile" },
@@ -428,13 +428,16 @@ function defaultLeadFormSettings(): LeadFormSettings {
 
 function defaultSections(): DigitalCardSection[] {
   return [
-    newSection("profile_header", "Profile header", 1, { margin_bottom: 24 }),
-    newSection("quick_actions", "Quick actions", 2, { margin_bottom: 20 }),
-    newSection("links", "Links and socials", 3, { margin_bottom: 20 }),
-    newSection("lead_capture", "Lead capture button", 4, { is_visible: false, margin_bottom: 20 }),
-    newSection("video", "Intro video", 5, { is_visible: false, margin_bottom: 20 }),
-    newSection("qr_code", "QR code", 6, { margin_bottom: 0 }),
-    newSection("nfc", "NFC tap to share", 7, { is_visible: false, margin_bottom: 0 }),
+    newSection("profile_logo",  "Logo",             1,  { margin_bottom: 8 }),
+    newSection("profile_photo", "Profile photo",    2,  { margin_top: 28, margin_bottom: 16 }),
+    newSection("profile_name",  "Name & title",     3,  { margin_bottom: 8 }),
+    newSection("profile_bio",   "Bio",              4,  { margin_bottom: 24 }),
+    newSection("quick_actions", "Quick actions",    5,  { margin_bottom: 20 }),
+    newSection("links",         "Links and socials",6,  { margin_bottom: 20 }),
+    newSection("lead_capture",  "Lead capture button", 7, { is_visible: false, margin_bottom: 20 }),
+    newSection("video",         "Intro video",      8,  { is_visible: false, margin_bottom: 20 }),
+    newSection("qr_code",       "QR code",          9,  { margin_bottom: 0 }),
+    newSection("nfc",           "NFC tap to share", 10, { is_visible: false, margin_bottom: 0 }),
   ];
 }
 
@@ -762,6 +765,23 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
     });
   }
 
+  function splitProfileHeader() {
+    setForm((current) => {
+      const sections = normalizeSections(current.digital_card_sections);
+      const idx = sections.findIndex((s) => s.section_type === "profile_header");
+      if (idx === -1) return current;
+      const h = sections[idx];
+      const split: DigitalCardSection[] = [
+        { ...newSection("profile_logo",  "Logo",          h.display_order,       { margin_bottom: 8 }),  is_visible: h.is_visible },
+        { ...newSection("profile_photo", "Profile photo", h.display_order + 0.1, { margin_top: 28, margin_bottom: 16 }), is_visible: h.is_visible },
+        { ...newSection("profile_name",  "Name & title",  h.display_order + 0.2, { margin_bottom: 8 }),  is_visible: h.is_visible },
+        { ...newSection("profile_bio",   "Bio",           h.display_order + 0.3, { margin_bottom: h.margin_bottom }), is_visible: h.is_visible },
+      ];
+      return { ...current, digital_card_sections: normalizeSections([...sections.slice(0, idx), ...split, ...sections.slice(idx + 1)]) };
+    });
+    setSelectedSectionIndex(null);
+  }
+
   function moveSection(index: number, direction: -1 | 1) {
     setForm((current) => {
       const sections = normalizeSections(current.digital_card_sections);
@@ -1065,16 +1085,23 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {normalizeSections(form.digital_card_sections).map((section, index) => (
-                    <div key={sectionKey(section, index)} className="flex items-center gap-3 rounded-lg border bg-background/35 p-3">
-                      <button type="button" className="min-w-0 flex-1 text-left" onClick={() => updateSection(index, { is_visible: !section.is_visible })}>
-                        <div className="truncate font-medium">{section.label || human(section.section_type)}</div>
-                        <div className="mt-0.5 text-xs text-muted-foreground">{human(section.section_type)} / Layer {index + 1}</div>
-                      </button>
-                      <Badge variant={section.is_visible ? "default" : "secondary"}>{section.is_visible ? "Active" : "Inactive"}</Badge>
-                      <Button variant={section.is_visible ? "outline" : "default"} size="sm" onClick={() => updateSection(index, { is_visible: !section.is_visible })}>
-                        {section.is_visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        {section.is_visible ? "Hide" : "Show"}
-                      </Button>
+                    <div key={sectionKey(section, index)} className="rounded-lg border bg-background/35 p-3">
+                      <div className="flex items-center gap-3">
+                        <button type="button" className="min-w-0 flex-1 text-left" onClick={() => updateSection(index, { is_visible: !section.is_visible })}>
+                          <div className="truncate font-medium">{section.label || human(section.section_type)}</div>
+                          <div className="mt-0.5 text-xs text-muted-foreground">{human(section.section_type)} / Layer {index + 1}</div>
+                        </button>
+                        <Badge variant={section.is_visible ? "default" : "secondary"}>{section.is_visible ? "Active" : "Inactive"}</Badge>
+                        <Button variant={section.is_visible ? "outline" : "default"} size="sm" onClick={() => updateSection(index, { is_visible: !section.is_visible })}>
+                          {section.is_visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {section.is_visible ? "Hide" : "Show"}
+                        </Button>
+                      </div>
+                      {section.section_type === "profile_header" && (
+                        <div className="mt-2 rounded-md bg-secondary/60 p-2 text-[11px] text-muted-foreground">
+                          Logo, photo, name, and bio are grouped. <button type="button" className="font-semibold text-primary underline-offset-2 hover:underline" onClick={splitProfileHeader}>Separate into individual sections →</button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </CardContent>
@@ -2781,6 +2808,46 @@ function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: D
           <div className="mt-1 opacity-75" style={{ fontSize: Math.max(11, nameSize * 0.58) }}>{[card.job_title, card.company_name].filter(Boolean).join(" - ") || "Title - Company"}</div>
           {card.bio ? <p className="mt-4 opacity-85" style={{ fontSize: Math.max(12, nameSize * 0.72), lineHeight: textStyle.lineHeight }}>{card.bio}</p> : <p className="mt-4 opacity-50" style={{ fontSize: Math.max(12, nameSize * 0.72), lineHeight: textStyle.lineHeight }}>Short bio and introduction will appear here.</p>}
         </div>
+      </div>
+    );
+  }
+  if (section.section_type === "profile_logo") {
+    const logoPos = (card.media_settings?.logo_position as string | undefined) || "left";
+    const logoJustify = logoPos === "center" ? "justify-center" : logoPos === "right" ? "justify-end" : "justify-start";
+    return (
+      <div className={cn("flex items-center", logoJustify)}>
+        {card.logo_url ? <img className="max-h-10 max-w-[140px] object-contain" src={card.logo_url} alt="" /> : <div className="text-xs font-semibold opacity-70">controlp.io card</div>}
+      </div>
+    );
+  }
+  if (section.section_type === "profile_photo") {
+    const imageStyle = imageStyleFrom(card.media_settings?.profile_image_style);
+    const pos = (imageStyle as { position?: string }).position || "center";
+    const imgJustify = pos === "left" ? "justify-start" : pos === "right" ? "justify-end" : "justify-center";
+    const imageClasses = cn("h-24 w-24 object-cover shadow-xl transition-transform transition-shadow duration-200", imageShapeClass(imageStyle), imageHoverClass(imageStyle));
+    const fallbackClasses = cn("grid h-24 w-24 place-items-center bg-white/10 text-2xl font-semibold shadow-xl", imageShapeClass(imageStyle));
+    return (
+      <div className={cn("flex", imgJustify)}>
+        {card.profile_photo_url ? <img className={imageClasses} style={imageBorderStyle(imageStyle)} src={card.profile_photo_url} alt="" /> : <div className={fallbackClasses} style={imageBorderStyle(imageStyle)}>{(card.display_name || card.card_name || "CP").slice(0, 2).toUpperCase()}</div>}
+      </div>
+    );
+  }
+  if (section.section_type === "profile_name") {
+    const textStyle = typographyStyle(typographyFrom(card.media_settings?.content_typography, card.text_color));
+    const nameSize = Number(typographyFrom(card.media_settings?.content_typography, card.text_color).font_size || 18);
+    return (
+      <div style={textStyle}>
+        <div className="leading-tight" style={{ fontSize: nameSize, fontWeight: textStyle.fontWeight }}>{card.display_name || card.card_name || "Your Name"}</div>
+        <div className="mt-1 opacity-75" style={{ fontSize: Math.max(11, nameSize * 0.58) }}>{[card.job_title, card.company_name].filter(Boolean).join(" - ") || "Title - Company"}</div>
+      </div>
+    );
+  }
+  if (section.section_type === "profile_bio") {
+    const textStyle = typographyStyle(typographyFrom(card.media_settings?.content_typography, card.text_color));
+    const nameSize = Number(typographyFrom(card.media_settings?.content_typography, card.text_color).font_size || 18);
+    return (
+      <div style={textStyle}>
+        {card.bio ? <p style={{ fontSize: Math.max(12, nameSize * 0.72), lineHeight: textStyle.lineHeight }}>{card.bio}</p> : <p className="opacity-50" style={{ fontSize: Math.max(12, nameSize * 0.72), lineHeight: textStyle.lineHeight }}>Short bio and introduction will appear here.</p>}
       </div>
     );
   }
