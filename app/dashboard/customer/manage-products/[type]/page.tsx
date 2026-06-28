@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, BookOpen, Calendar, CalendarCheck, ChevronRight,
@@ -136,7 +136,8 @@ const PRODUCT_CONFIGS: Record<string, ProductConfig> = {
   },
 };
 
-export default function ProductComingSoonPage({ params }: { params: { type: string } }) {
+export default function ProductComingSoonPage({ params }: { params: Promise<{ type: string }> }) {
+  const { type } = use(params);
   const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
@@ -145,7 +146,7 @@ export default function ProductComingSoonPage({ params }: { params: { type: stri
     if (stored === "light" || stored === "dark") setTheme(stored);
   }, []);
 
-  const config = PRODUCT_CONFIGS[params.type];
+  const config = PRODUCT_CONFIGS[type];
 
   if (!config) {
     return (
