@@ -3365,6 +3365,9 @@ function EmbedPanel({ publicUrl, isPublished }: { publicUrl: string; isPublished
   const [preset, setPreset] = useState<EmbedPreset>("mobile");
   const [copied, setCopied] = useState(false);
   const embedUrl = `${publicUrl}?embed=1`;
+  // Preview uses a relative URL so it loads from the current server (dev, staging, or prod)
+  const cardPath = publicUrl.replace(/^https?:\/\/[^/]+/, "");
+  const previewUrl = `${cardPath}?embed=1`;
   const { width, height } = embedPresets[preset];
   const snippet = `<iframe\n  src="${embedUrl}"\n  width="${width}"\n  height="${height}"\n  frameborder="0"\n  style="border-radius:16px;overflow:hidden;border:none;"\n  title="Digital Business Card"\n  loading="lazy"\n></iframe>`;
 
@@ -3421,7 +3424,7 @@ function EmbedPanel({ publicUrl, isPublished }: { publicUrl: string; isPublished
           <CardContent className="p-0">
             <div className="overflow-hidden rounded-b-xl border-t bg-muted/30" style={{ height: Math.min(height, 520) }}>
               <iframe
-                src={embedUrl}
+                src={previewUrl}
                 width="100%"
                 height={Math.min(height, 520)}
                 style={{ border: "none", display: "block" }}
