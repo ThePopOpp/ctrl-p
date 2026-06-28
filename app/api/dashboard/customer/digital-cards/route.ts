@@ -5,7 +5,7 @@ import { getServerSupabaseConfig, jsonError, serverEnv } from "@/lib/admin/serve
 
 const LINK_TYPES = new Set(["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"]);
 const STATUSES = new Set(["draft", "published", "unpublished"]);
-const SECTION_TYPES = new Set(["profile_header", "quick_actions", "links", "lead_capture", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"]);
+const SECTION_TYPES = new Set(["profile_logo", "profile_photo", "profile_name", "profile_bio", "profile_header", "quick_actions", "links", "lead_capture", "video", "qr_code", "nfc", "gallery", "scratch_card", "punch_card", "loyalty_card", "custom"]);
 const CARD_MODES = new Set(["standard", "opener_slider", "qr_only", "nfc_landing"]);
 const THEME_MODES = new Set(["light", "dark", "both"]);
 const LAYOUT_TEMPLATES = new Set(["classic", "split_profile", "link_hub", "sales_intro", "portfolio", "appointment_first"]);
@@ -247,11 +247,16 @@ function buildSections(sections: DigitalCardSectionBody[] | undefined, cardId: s
     });
 }
 
+function isTableMissing(msg: string | null | undefined) {
+  return typeof msg === "string" && (msg.includes("schema cache") || msg.includes("does not exist") || msg.includes("relation") || msg.includes("Could not find"));
+}
+
 export async function GET(request: Request) {
   const verified = await verifyCustomerRequest(request);
   if (verified.error) return verified.error;
 
-  const [cardsResult, ordersResult, productsResult] = await Promise.all([
+  // Phase 1: cards + user-level data in parallel
+  const [cardsResult, ordersResult, productsResult, messagesResult, paymentsResult] = await Promise.all([
     verified.adminClient
       .from("digital_cards")
       .select(cardSelect())
@@ -268,10 +273,50 @@ export async function GET(request: Request) {
       .select("id, name, slug, category, tagline, sale_price, base_price")
       .or("product_type.ilike.%nfc%,name.ilike.%qr%,name.ilike.%business card%,name.ilike.%sticker%")
       .limit(8),
+    verified.adminClient
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", verified.actorId)
+      .eq("internal_only", false),
+    verified.adminClient
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", verified.actorId),
   ]);
 
   const failed = [cardsResult, ordersResult, productsResult].find((result) => result.error);
   if (failed?.error) return jsonError(failed.error.message, 400);
+
+  const cardIds = ((cardsResult.data ?? []) as unknown as Array<{ id: string }>).map((c) => c.id);
+
+  // Phase 2: card-level analytics (requires card IDs)
+  const [leadsResult, eventsResult, bookingsResult] = cardIds.length
+    ? await Promise.all([
+        verified.adminClient
+          .from("digital_card_leads")
+          .select("id, name, email, phone, message, status, created_at")
+          .in("digital_card_id", cardIds)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        verified.adminClient
+          .from("digital_card_events")
+          .select("event_type")
+          .in("digital_card_id", cardIds)
+          .limit(5000),
+        verified.adminClient
+          .from("booking_appointments")
+          .select("id", { count: "exact", head: true })
+          .eq("customer_id", verified.actorId),
+      ])
+    : [
+        { data: [] as Array<{ id: string; name: string | null; email: string | null; phone: string | null; message: string | null; status: string | null; created_at: string | null }>, error: null, count: null },
+        { data: [] as Array<{ event_type: string }>, error: null, count: null },
+        { data: null, error: null, count: 0 },
+      ];
+
+  const leads = leadsResult.error && isTableMissing(leadsResult.error.message) ? [] : (leadsResult.data ?? []) as Array<{ id: string; name: string | null; email: string | null; phone: string | null; message: string | null; status: string | null; created_at: string | null }>;
+  const events = eventsResult.error && isTableMissing(eventsResult.error.message) ? [] : (eventsResult.data ?? []) as Array<{ event_type: string }>;
+  const eventCounts = events.reduce<Record<string, number>>((acc, e) => { acc[e.event_type] = (acc[e.event_type] || 0) + 1; return acc; }, {});
 
   return NextResponse.json({
     profile: verified.profile,
@@ -279,6 +324,18 @@ export async function GET(request: Request) {
     orders: ordersResult.data ?? [],
     products: productsResult.data ?? [],
     publicBase: publicBase(),
+    stats: {
+      leads: leads.length,
+      newLeads: leads.filter((l) => l.status === "new").length,
+      saves: eventCounts.save_contact || 0,
+      shares: eventCounts.share || 0,
+      qrScans: eventCounts.qr_scan || 0,
+      nfcTaps: eventCounts.nfc_tap || 0,
+      messages: messagesResult.error ? 0 : (messagesResult.count ?? 0),
+      payments: paymentsResult.error ? 0 : (paymentsResult.count ?? 0),
+      bookings: bookingsResult.error && isTableMissing(bookingsResult.error.message) ? 0 : (bookingsResult.count ?? 0),
+    },
+    recentLeads: leads.slice(0, 8),
   });
 }
 

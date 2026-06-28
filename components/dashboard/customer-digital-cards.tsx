@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bell, Box, Copy, CreditCard, Download, Eye, FileCheck2, Home, IdCard, LogOut, MessageSquare, Monitor, Moon, Plus, QrCode, Save, Settings, Smartphone, Sun, Tablet, Trash2, Truck, UserCircle } from "lucide-react";
+import { BarChart3, Bell, BookOpen, Box, Bookmark, CalendarCheck, Copy, CreditCard, Download, Eye, FileCheck2, Home, IdCard, LogOut, MessageSquare, Monitor, Moon, Plus, QrCode, Save, Settings, Share2, Smartphone, Sun, Tablet, Trash2, Truck, UserCircle, X } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -73,11 +73,33 @@ type Product = {
   base_price: number | string | null;
 };
 
+type RecentLead = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  message: string | null;
+  status: string | null;
+  created_at: string | null;
+};
+
 type CardData = {
   cards: DigitalCard[];
   products: Product[];
   publicBase: string;
   profile: { email: string | null; full_name: string | null; phone: string | null; company: string | null; profile_photo_url?: string | null };
+  stats?: {
+    leads: number;
+    newLeads: number;
+    saves: number;
+    shares: number;
+    qrScans: number;
+    nfcTaps: number;
+    messages: number;
+    payments: number;
+    bookings: number;
+  };
+  recentLeads?: RecentLead[];
 };
 
 const linkTypes = ["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"];
@@ -143,6 +165,17 @@ async function customerToken() {
   return session.access_token;
 }
 
+const PRODUCT_TYPES = [
+  { name: "Digital Business Cards", badge: "Live" as const, href: null as string | null },
+  { name: "QR Code Landing Pages", badge: "Coming Soon" as const, href: "/dashboard/customer/manage-products/qr-pages" },
+  { name: "NFC Tap Products", badge: "Coming Soon" as const, href: "/dashboard/customer/manage-products/nfc-products" },
+  { name: "Lead Capture Forms", badge: "Coming Soon" as const, href: "/dashboard/customer/manage-products/lead-forms" },
+  { name: "Slideshow Cards", badge: "Coming Soon" as const, href: "/dashboard/customer/manage-products/slideshow" },
+  { name: "Scratch / Reveal Coupons", badge: "Coming Soon" as const, href: "/dashboard/customer/manage-products/scratch-coupons" },
+  { name: "Loyalty / Punch Cards", badge: "Coming Soon" as const, href: "/dashboard/customer/manage-products/loyalty-cards" },
+  { name: "Product Bundles", badge: "Coming Soon" as const, href: "/dashboard/customer/manage-products/bundles" },
+];
+
 export function CustomerDigitalCards() {
   const router = useRouter();
   const [data, setData] = useState<CardData | null>(null);
@@ -152,10 +185,20 @@ export function CustomerDigitalCards() {
   const [form, setForm] = useState<DigitalCard>(() => emptyCard());
   const [saving, setSaving] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [bellOpen, setBellOpen] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("controlp_customer_theme");
     if (storedTheme === "light" || storedTheme === "dark") setTheme(storedTheme);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   async function load() {
@@ -311,7 +354,44 @@ export function CustomerDigitalCards() {
         <div className="flex h-12 items-center gap-3 px-5">
           <div className="text-xs text-muted-foreground">Customer <span className="mx-2">/</span><span className="font-medium text-foreground">My Products</span></div>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Notifications"><Bell className="h-4 w-4" /></Button>
+            <div ref={bellRef} className="relative">
+              <Button variant="outline" size="icon" className="relative h-8 w-8" aria-label="Notifications" onClick={() => setBellOpen((v) => !v)}>
+                <Bell className="h-4 w-4" />
+                {(data?.stats?.newLeads ?? 0) > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {(data?.stats?.newLeads ?? 0) > 9 ? "9+" : data?.stats?.newLeads}
+                  </span>
+                )}
+              </Button>
+              {bellOpen && (
+                <div className="absolute right-0 top-10 z-50 w-80 rounded-xl border bg-card shadow-xl">
+                  <div className="flex items-center justify-between border-b px-4 py-3">
+                    <div className="text-sm font-semibold">New leads</div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setBellOpen(false)}><X className="h-3.5 w-3.5" /></Button>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {(data?.recentLeads ?? []).filter((l) => l.status === "new").slice(0, 8).map((lead) => (
+                      <div key={lead.id} className="border-b px-4 py-3 last:border-0">
+                        <div className="flex items-start gap-2">
+                          <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-xs font-medium">{lead.name || lead.email || "Anonymous"}</div>
+                            {lead.message && <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{lead.message}</div>}
+                            <div className="mt-1 text-[10px] text-muted-foreground">{lead.created_at ? new Date(lead.created_at).toLocaleDateString() : ""}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {!(data?.recentLeads ?? []).filter((l) => l.status === "new").length && (
+                      <div className="px-4 py-6 text-center text-xs text-muted-foreground">No new leads.</div>
+                    )}
+                  </div>
+                  <div className="border-t px-4 py-2">
+                    <a href="/dashboard/customer/manage-products" className="block text-center text-xs text-primary hover:underline">View all leads →</a>
+                  </div>
+                </div>
+              )}
+            </div>
             <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Toggle theme" onClick={toggleTheme}>{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
             <Button variant="outline" className="h-8 text-xs" onClick={signOut}><LogOut className="h-4 w-4" /> Sign out</Button>
           </div>
@@ -333,13 +413,19 @@ export function CustomerDigitalCards() {
 
             {message && <div className="mb-4 rounded-lg border bg-background/50 p-3 text-sm text-muted-foreground">{message}</div>}
 
-            <section className="mb-5 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <section className="mb-5 grid gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
               <Stat label="Products" value={String(cards.length)} hint="Digital products owned" />
               <Stat label="Published" value={String(cards.filter((card) => card.status === "published").length)} hint="Public URL active" />
               <Stat label="Views" value={String(cards.reduce((sum, card) => sum + Number(card.view_count || 0), 0))} hint="Public profile loads" />
               <Stat label="Clicks" value={String(cards.reduce((sum, card) => sum + Number(card.click_count || 0), 0))} hint="Link and button actions" />
-              <Stat label="NFC ready" value={String(cards.filter((card) => card.nfc_status !== "not_ordered").length)} hint="Prepared for physical products" />
+              <Stat label="NFC Ready" value={String(cards.filter((card) => card.nfc_status !== "not_ordered").length)} hint="Prepared for physical products" />
               <Stat label="Subscriptions" value={String(cards.filter((card) => card.access_status === "active").length)} hint="Monthly access active" />
+              <Stat label="Leads" value={String(data.stats?.leads ?? 0)} hint="Form submissions" badge={data.stats?.newLeads ? `${data.stats.newLeads} new` : undefined} />
+              <Stat label="Messages" value={String(data.stats?.messages ?? 0)} hint="Inbox messages" />
+              <Stat label="Saves" value={String(data.stats?.saves ?? 0)} hint="Contact card saves" />
+              <Stat label="Shares" value={String(data.stats?.shares ?? 0)} hint="Card shares" />
+              <Stat label="Payments" value={String(data.stats?.payments ?? 0)} hint="Payments received" />
+              <Stat label="Bookings" value={String(data.stats?.bookings ?? 0)} hint="Appointments booked" />
             </section>
 
             {!cards.length ? (
@@ -381,8 +467,40 @@ export function CustomerDigitalCards() {
             )}
 
             <section className="mt-5">
-              <Card><CardHeader className="pb-3"><CardTitle className="text-base">Digital product types</CardTitle><CardDescription>Business cards are live now. This hub is ready for QR pages, NFC products, lead forms, scratch/reveal coupons, loyalty cards, and future subscription products.</CardDescription></CardHeader><CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{["Digital Business Cards", "QR Code Landing Pages", "NFC Tap Products", "Lead Capture Forms", "Slideshow Cards", "Scratch / Reveal Coupons", "Loyalty / Punch Cards", "Product Bundles"].map((item, index) => <div key={item} className="rounded-lg border bg-background/35 p-3"><div className="flex items-center justify-between gap-2"><div className="font-medium">{item}</div><Badge variant={index === 0 ? "default" : "secondary"}>{index === 0 ? "Live" : "Next"}</Badge></div><div className="mt-1 text-xs text-muted-foreground">{index === 0 ? `${cards.length} owned by your account` : "Prepared for future upsell workflows"}</div></div>)}</CardContent></Card>
-              <Card className="mt-5"><CardHeader className="pb-3"><CardTitle className="text-base">Connected products and upsells</CardTitle><CardDescription>These physical and digital products can connect to a customer-owned card, QR URL, or NFC destination.</CardDescription></CardHeader><CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{products.map((product) => <div key={product.id} className="rounded-lg border bg-background/35 p-3"><div className="font-medium">{product.name}</div><div className="mt-1 text-xs text-muted-foreground">{product.tagline || product.category || "Ready for future card bundle links"}</div></div>)}{!products.length && ["NFC business cards", "QR stickers", "ID badges", "Dog tags"].map((item) => <div key={item} className="rounded-lg border bg-background/35 p-3"><div className="font-medium">{item}</div><div className="mt-1 text-xs text-muted-foreground">Future managed product connection</div></div>)}</CardContent></Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Digital product types</CardTitle>
+                  <CardDescription>Digital business cards are live. More product types are coming soon — click any card to learn more.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {PRODUCT_TYPES.map((pt) => {
+                    const inner = (
+                      <div className={cn("rounded-lg border bg-background/35 p-3 transition-colors", pt.href && "cursor-pointer hover:border-primary/40 hover:bg-primary/5")}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-medium">{pt.name}</div>
+                          <Badge variant={pt.badge === "Live" ? "default" : "secondary"} className={pt.badge === "Coming Soon" ? "border border-dashed text-[10px]" : undefined}>{pt.badge}</Badge>
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {pt.badge === "Live" ? `${cards.length} owned by your account` : "Coming soon — click to learn more"}
+                        </div>
+                      </div>
+                    );
+                    return pt.href
+                      ? <a key={pt.name} href={pt.href}>{inner}</a>
+                      : <div key={pt.name}>{inner}</div>;
+                  })}
+                </CardContent>
+              </Card>
+              <Card className="mt-5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Connected products and upsells</CardTitle>
+                  <CardDescription>These physical and digital products can connect to a customer-owned card, QR URL, or NFC destination.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {products.map((product) => <div key={product.id} className="rounded-lg border bg-background/35 p-3"><div className="font-medium">{product.name}</div><div className="mt-1 text-xs text-muted-foreground">{product.tagline || product.category || "Ready for future card bundle links"}</div></div>)}
+                  {!products.length && ["NFC business cards", "QR stickers", "ID badges", "Dog tags"].map((item) => <div key={item} className="rounded-lg border bg-background/35 p-3"><div className="font-medium">{item}</div><div className="mt-1 text-xs text-muted-foreground">Future managed product connection</div></div>)}
+                </CardContent>
+              </Card>
             </section>
           </>
         )}
@@ -619,8 +737,19 @@ function Nav({ href, icon, label, active }: { href: string; icon: React.ReactNod
   return <a href={href} className={cn("flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-accent-foreground", active && "bg-accent font-medium text-accent-foreground")}>{icon}{label}</a>;
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return <Card><CardContent className="p-4"><div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div><div className="mt-2 text-[22px] font-semibold leading-none">{value}</div><div className="mt-2 text-[11px] text-muted-foreground">{hint}</div></CardContent></Card>;
+function Stat({ label, value, hint, badge }: { label: string; value: string; hint: string; badge?: string }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between gap-1">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+          {badge && <span className="rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-500">{badge}</span>}
+        </div>
+        <div className="mt-2 text-[22px] font-semibold leading-none">{value}</div>
+        <div className="mt-2 text-[11px] text-muted-foreground">{hint}</div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
