@@ -138,7 +138,7 @@ export function CustomerProfile() {
   }
 
   return (
-    <div className={cn(theme === "dark" && "dark", "min-h-screen bg-background text-foreground")}>
+    <div className={cn(theme === "dark" && "dark", "min-h-screen overflow-x-hidden bg-background text-foreground")}>
       <CustomerSidebar active="Profile" profile={form} onSignOut={signOut} />
 
       {/* Mobile drawer backdrop */}
@@ -183,8 +183,8 @@ export function CustomerProfile() {
         </div>
       </div>
 
-      <main className="min-h-screen lg:pl-[238px]">
-        <header className="sticky top-0 z-10 flex h-12 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur">
+      <header className="fixed inset-x-0 top-0 z-10 flex h-12 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur lg:left-[238px]">
+
           <button type="button" aria-label="Open menu" onClick={() => setMobileOpen(true)}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-md border text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden">
             <Menu className="h-4 w-4" />
@@ -194,7 +194,8 @@ export function CustomerProfile() {
             <Button variant="outline" size="icon" onClick={toggleTheme} aria-label="Toggle theme">{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
           </div>
         </header>
-        <section className="space-y-5 p-5">
+      <main className="lg:pl-[238px]">
+        <section className="space-y-5 px-5 pb-5 pt-14">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <h1 className="text-[25px] font-semibold tracking-tight">Customer Profile</h1>

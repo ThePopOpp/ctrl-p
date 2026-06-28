@@ -367,7 +367,7 @@ export function CustomerShell({
   }
 
   return (
-    <div className={cn(theme === "dark" && "dark", "min-h-screen bg-background text-foreground")}>
+    <div className={cn(theme === "dark" && "dark", "min-h-screen overflow-x-hidden bg-background text-foreground")}>
       {/* ── Desktop sidebar ── */}
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[238px] border-r bg-card/95 px-3 py-3 lg:block">
         <a className="mb-[45px] block px-2 pt-[5px]" href="/dashboard/customer">
@@ -420,7 +420,7 @@ export function CustomerShell({
         </div>
       </div>
 
-      <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur lg:pl-[238px]">
+      <header className="fixed inset-x-0 top-0 z-10 border-b bg-background/90 backdrop-blur lg:left-[238px]">
         <div className="flex h-12 items-center gap-3 px-4">
           <button
             type="button"
@@ -484,7 +484,7 @@ export function CustomerShell({
         </div>
       </header>
 
-      <main className="px-4 py-5 lg:pl-[258px] lg:pr-6">
+      <main className="px-4 pb-5 pt-14 lg:pl-[258px] lg:pr-6">
         {state === "loading" && (
           <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Loading your dashboard...</div>
         )}
