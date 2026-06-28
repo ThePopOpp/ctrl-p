@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Box, CalendarClock, Camera, CreditCard, FileCheck2, Home, IdCard, LogOut, Mail, MessageSquare, Moon, Phone, Save, Settings, ShieldCheck, Sun, Truck, Upload, UserCircle, type LucideIcon } from "lucide-react";
+import { BarChart3, Box, CalendarClock, Camera, CreditCard, FileCheck2, Home, IdCard, LogOut, Mail, Menu, MessageSquare, Moon, Phone, Save, Settings, ShieldCheck, Sun, Truck, Upload, UserCircle, X, type LucideIcon } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -50,6 +50,7 @@ export function CustomerProfile() {
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({ full_name: "", phone: "", company: "", email: "", profile_photo_url: "" });
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("controlp_customer_theme");
@@ -139,10 +140,59 @@ export function CustomerProfile() {
   return (
     <div className={cn(theme === "dark" && "dark", "min-h-screen bg-background text-foreground")}>
       <CustomerSidebar active="Profile" profile={form} onSignOut={signOut} />
+
+      {/* Mobile drawer backdrop */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" onClick={() => setMobileOpen(false)} />
+      )}
+
+      {/* Mobile drawer */}
+      <div className={cn(
+        "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r bg-card transition-transform duration-200 ease-in-out lg:hidden",
+        mobileOpen ? "translate-x-0" : "-translate-x-full",
+      )}>
+        <div className="flex h-14 items-center justify-between border-b px-4">
+          <a href="/dashboard/customer">
+            <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-auto w-[110px] dark:hidden" />
+            <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-auto w-[110px] dark:block" />
+          </a>
+          <button type="button" aria-label="Close menu" onClick={() => setMobileOpen(false)} className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+          {navItems.map(({ label, icon: Icon, href }) => (
+            <a key={label} href={href} onClick={() => setMobileOpen(false)}
+              className={cn("flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-accent-foreground", label === "Profile" && "bg-accent font-medium text-accent-foreground")}>
+              <Icon className="h-4 w-4 shrink-0" />
+              {label}
+            </a>
+          ))}
+        </nav>
+        <div className="border-t px-3 py-3">
+          <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2">
+            {form.profile_photo_url
+              ? <img className="h-7 w-7 shrink-0 rounded-full object-cover" src={form.profile_photo_url} alt="" />
+              : <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">{(form.full_name || form.email || "C").slice(0, 1).toUpperCase()}</div>}
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-medium">{form.full_name || "Customer"}</div>
+              <div className="truncate text-[10px] text-muted-foreground">Customer</div>
+            </div>
+            <button onClick={signOut} aria-label="Sign out" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><LogOut className="h-3.5 w-3.5" /></button>
+          </div>
+        </div>
+      </div>
+
       <main className="min-h-screen lg:pl-[238px]">
-        <header className="sticky top-0 z-10 flex h-12 items-center justify-between border-b bg-background/90 px-5 backdrop-blur">
+        <header className="sticky top-0 z-10 flex h-12 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur">
+          <button type="button" aria-label="Open menu" onClick={() => setMobileOpen(true)}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md border text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden">
+            <Menu className="h-4 w-4" />
+          </button>
           <div className="text-xs text-muted-foreground">Customer <span className="mx-2">/</span><span className="font-medium text-foreground">Profile</span></div>
-          <Button variant="outline" size="icon" onClick={toggleTheme} aria-label="Toggle theme">{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
+          <div className="ml-auto">
+            <Button variant="outline" size="icon" onClick={toggleTheme} aria-label="Toggle theme">{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</Button>
+          </div>
         </header>
         <section className="space-y-5 p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
