@@ -99,6 +99,13 @@ function formatPhone(phone: string): string {
   return phone;
 }
 
+// Normalize a phone number to its last 10 digits for reliable matching
+// across formats like "+14803527598", "14803527598", and "4803527598".
+function normalizeNumber(phone: string): string {
+  const digits = (phone || "").replace(/\D/g, "");
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
 function formatDuration(seconds: string | number): string {
   const s = Number(seconds);
   if (!s || isNaN(s)) return "--:--";
@@ -200,6 +207,7 @@ export function AdminCommunications() {
   const [calls, setCalls] = useState<TwilioCall[]>([]);
   const [callsLoading, setCallsLoading] = useState(false);
   const [historyTab, setHistoryTab] = useState<"calls" | "voicemail">("calls");
+  const [numberFilter, setNumberFilter] = useState<string | null>(null);
   const [expandedCallSid, setExpandedCallSid] = useState<string | null>(null);
   const [callRecordings, setCallRecordings] = useState<Record<string, TwilioRecording[]>>({});
   const [loadingRecordings, setLoadingRecordings] = useState<Record<string, boolean>>({});
@@ -565,11 +573,15 @@ export function AdminCommunications() {
   }, [contacts, contactSearch]);
 
   const visibleCalls = useMemo(() => {
+    let list = calls;
     if (historyTab === "voicemail") {
-      return calls.filter((c) => c.direction === "inbound" && ["no-answer", "completed"].includes(c.status));
+      list = list.filter((c) => c.direction === "inbound" && ["no-answer", "completed"].includes(c.status));
     }
-    return calls;
-  }, [calls, historyTab]);
+    if (numberFilter) {
+      list = list.filter((c) => normalizeNumber(c.to) === numberFilter || normalizeNumber(c.from) === numberFilter);
+    }
+    return list;
+  }, [calls, historyTab, numberFilter]);
 
   const isCallActive = callState !== "idle";
 
@@ -921,6 +933,21 @@ export function AdminCommunications() {
                       </div>
                     </div>
 
+                    {/* Active number filter */}
+                    {numberFilter && (
+                      <div className="mb-3 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+                        <Phone className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <span className="text-muted-foreground">Showing calls with</span>
+                        <span className="font-semibold">{formatPhone(numberFilter)}</span>
+                        <button
+                          onClick={() => setNumberFilter(null)}
+                          className="ml-auto flex shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-3 w-3" />Clear filter
+                        </button>
+                      </div>
+                    )}
+
                     {/* Call list */}
                     <div className="space-y-2">
                       {callsLoading && !calls.length && (
@@ -931,7 +958,9 @@ export function AdminCommunications() {
                       {!callsLoading && !visibleCalls.length && (
                         <Card>
                           <CardContent className="p-8 text-center text-muted-foreground">
-                            {historyTab === "voicemail" ? "No voicemail messages." : "No call history yet."}
+                            {numberFilter
+                              ? `No ${historyTab === "voicemail" ? "voicemail" : "calls"} with ${formatPhone(numberFilter)}.`
+                              : historyTab === "voicemail" ? "No voicemail messages." : "No call history yet."}
                           </CardContent>
                         </Card>
                       )}
@@ -954,7 +983,27 @@ export function AdminCommunications() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-semibold text-sm">{formatPhone(displayNumber)}</span>
+                                  <span
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const digits = normalizeNumber(displayNumber);
+                                      setNumberFilter((prev) => (prev === digits ? null : digits));
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        const digits = normalizeNumber(displayNumber);
+                                        setNumberFilter((prev) => (prev === digits ? null : digits));
+                                      }
+                                    }}
+                                    className="font-semibold text-sm cursor-pointer rounded hover:text-primary hover:underline underline-offset-2"
+                                    title="Show only calls with this number"
+                                  >
+                                    {formatPhone(displayNumber)}
+                                  </span>
                                   <CallStatusBadge status={call.status} />
                                   {recordings.length > 0 && (
                                     <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[10px] px-1.5 py-0">
