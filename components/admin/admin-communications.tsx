@@ -573,20 +573,41 @@ export function AdminCommunications() {
     );
   }, [contacts, contactSearch]);
 
+  // Our own Twilio numbers, normalized — used to reliably tell which side of a
+  // call is the customer, since Twilio's `direction` is unreliable for calls
+  // placed from the browser.
+  const ownNumbers = useMemo(() => {
+    const set = new Set<string>();
+    availableNumbers.forEach((n) => set.add(normalizeNumber(n)));
+    if (phoneNumber) set.add(normalizeNumber(phoneNumber));
+    return set;
+  }, [availableNumbers, phoneNumber]);
+
+  const callIsOutbound = useCallback((call: TwilioCall): boolean => {
+    const fromOwn = ownNumbers.has(normalizeNumber(call.from));
+    const toOwn = ownNumbers.has(normalizeNumber(call.to));
+    if (fromOwn && !toOwn) return true;
+    if (toOwn && !fromOwn) return false;
+    return call.direction.startsWith("outbound");
+  }, [ownNumbers]);
+
+  // The other party (customer) number — the side that isn't one of our numbers.
+  const callOtherParty = useCallback((call: TwilioCall): string => {
+    return callIsOutbound(call) ? call.to : call.from;
+  }, [callIsOutbound]);
+
   const visibleCalls = useMemo(() => {
     let list = calls;
     if (historyTab === "voicemail") {
       list = list.filter((c) => c.direction === "inbound" && ["no-answer", "completed"].includes(c.status));
     } else if (directionFilter !== "all") {
-      list = list.filter((c) =>
-        directionFilter === "outbound" ? c.direction.startsWith("outbound") : !c.direction.startsWith("outbound"),
-      );
+      list = list.filter((c) => (directionFilter === "outbound" ? callIsOutbound(c) : !callIsOutbound(c)));
     }
     if (numberFilter) {
-      list = list.filter((c) => normalizeNumber(c.to) === numberFilter || normalizeNumber(c.from) === numberFilter);
+      list = list.filter((c) => normalizeNumber(callOtherParty(c)) === numberFilter);
     }
     return list;
-  }, [calls, historyTab, directionFilter, numberFilter]);
+  }, [calls, historyTab, directionFilter, numberFilter, callIsOutbound, callOtherParty]);
 
   const isCallActive = callState !== "idle";
 
@@ -1001,7 +1022,8 @@ export function AdminCommunications() {
                         const isExpanded = expandedCallSid === call.sid;
                         const recordings = callRecordings[call.sid] ?? [];
                         const loadingRec = loadingRecordings[call.sid];
-                        const displayNumber = call.direction.startsWith("outbound") ? call.to : call.from;
+                        const isOutbound = callIsOutbound(call);
+                        const displayNumber = callOtherParty(call);
                         const hasRecording = isExpanded && recordings.length > 0;
 
                         return (
@@ -1012,7 +1034,7 @@ export function AdminCommunications() {
                               className="flex w-full items-center gap-3 p-3 hover:bg-accent/40 transition-colors text-left"
                             >
                               <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full border bg-secondary/50">
-                                <CallDirectionIcon direction={call.direction} status={call.status} />
+                                <CallDirectionIcon direction={isOutbound ? "outbound" : "inbound"} status={call.status} />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -1062,7 +1084,7 @@ export function AdminCommunications() {
                                   <div>
                                     <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Direction</div>
                                     <div className="text-sm font-medium mt-0.5">
-                                      {call.direction.startsWith("outbound") ? "Outbound" : "Inbound"}
+                                      {isOutbound ? "Outbound" : "Inbound"}
                                     </div>
                                   </div>
                                   <div>
