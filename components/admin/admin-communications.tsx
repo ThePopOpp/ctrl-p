@@ -207,6 +207,7 @@ export function AdminCommunications() {
   const [calls, setCalls] = useState<TwilioCall[]>([]);
   const [callsLoading, setCallsLoading] = useState(false);
   const [historyTab, setHistoryTab] = useState<"calls" | "voicemail">("calls");
+  const [directionFilter, setDirectionFilter] = useState<"all" | "inbound" | "outbound">("all");
   const [numberFilter, setNumberFilter] = useState<string | null>(null);
   const [expandedCallSid, setExpandedCallSid] = useState<string | null>(null);
   const [callRecordings, setCallRecordings] = useState<Record<string, TwilioRecording[]>>({});
@@ -576,12 +577,16 @@ export function AdminCommunications() {
     let list = calls;
     if (historyTab === "voicemail") {
       list = list.filter((c) => c.direction === "inbound" && ["no-answer", "completed"].includes(c.status));
+    } else if (directionFilter !== "all") {
+      list = list.filter((c) =>
+        directionFilter === "outbound" ? c.direction.startsWith("outbound") : !c.direction.startsWith("outbound"),
+      );
     }
     if (numberFilter) {
       list = list.filter((c) => normalizeNumber(c.to) === numberFilter || normalizeNumber(c.from) === numberFilter);
     }
     return list;
-  }, [calls, historyTab, numberFilter]);
+  }, [calls, historyTab, directionFilter, numberFilter]);
 
   const isCallActive = callState !== "idle";
 
@@ -932,6 +937,34 @@ export function AdminCommunications() {
                         </Button>
                       </div>
                     </div>
+
+                    {/* Direction filter: All / Inbound / Outbound */}
+                    {historyTab === "calls" && (
+                      <div className="mb-3 flex items-center gap-1.5">
+                        {([
+                          ["all", "All", null],
+                          ["inbound", "Inbound", PhoneIncoming],
+                          ["outbound", "Outbound", PhoneOutgoing],
+                        ] as const).map(([key, label, Icon]) => {
+                          const isActive = directionFilter === key;
+                          return (
+                            <button
+                              key={key}
+                              onClick={() => setDirectionFilter(key)}
+                              className={cn(
+                                "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                                isActive
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-border bg-secondary/30 text-muted-foreground hover:bg-accent hover:text-foreground",
+                              )}
+                            >
+                              {Icon && <Icon className="h-3.5 w-3.5" />}
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {/* Active number filter */}
                     {numberFilter && (
