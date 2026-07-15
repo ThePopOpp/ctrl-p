@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronDown, MapPin, Menu, Moon, Search, ShoppingCart, Sun, Truck, X } from "lucide-react";
 
+import { DownloadAppButton } from "@/components/pwa/download-app-button";
+
 const CART_KEY = "ctrlp_cart";
 
 function readCartCount(): number {
@@ -371,7 +373,11 @@ export function SiteNav() {
 
               <Link href="/login" className="hidden sm:inline-flex items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-700 px-4 py-2 text-[14px] font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">Sign in</Link>
 
-              <Link href="/contact" className="inline-flex items-center justify-center rounded-md bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-[14px] font-medium text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">Get a quote</Link>
+              <DownloadAppButton
+                label="Download app"
+                responsiveLabel
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-[14px] font-medium text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+              />
 
               <button type="button" onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden rounded-md p-2 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 -mr-1">
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -389,7 +395,10 @@ export function SiteNav() {
             <Link href="/contact" className="block rounded-md px-3 py-2 text-[14px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setMobileOpen(false)}>Contact</Link>
             <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex gap-2">
               <Link href="/login" className="flex-1 text-center rounded-md border border-zinc-200 dark:border-zinc-700 px-4 py-2 text-[14px] font-medium text-zinc-900 dark:text-zinc-100" onClick={() => setMobileOpen(false)}>Sign in</Link>
-              <Link href="/contact" className="flex-1 text-center rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-4 py-2 text-[14px] font-medium" onClick={() => setMobileOpen(false)}>Get a quote</Link>
+              <DownloadAppButton
+                label="Download app"
+                className="flex flex-1 items-center justify-center gap-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-4 py-2 text-[14px] font-medium"
+              />
             </div>
           </div>
         )}

@@ -1,17 +1,29 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
+import { PwaRegister } from "@/components/pwa/pwa-register";
 
 export const metadata: Metadata = {
   title: "ControlP.io",
   description: "Print management, orders, proofs, and customer communication — all in one workspace.",
+  applicationName: "Ctrl+P",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Ctrl+P",
+  },
   icons: {
     icon: [
       { url: "/logos/favicon.png", type: "image/png" },
       { url: "/logos/favicon.svg", type: "image/svg+xml" },
     ],
-    apple: "/logos/favicon.png",
+    apple: "/icons/apple-touch-icon.png",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +36,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="overflow-x-hidden">{children}</body>
+      <body className="overflow-x-hidden">
+        {children}
+        <PwaRegister />
+      </body>
     </html>
   );
 }

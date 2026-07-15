@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, Check, Facebook, Instagram, Linkedin, Phone, Mail, Zap } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
+import { DownloadAppButton } from "@/components/pwa/download-app-button";
 
 function Star({ filled = true }: { filled?: boolean }) {
   return (
@@ -532,6 +533,10 @@ export function HomePage() {
                   <Linkedin className="h-3.5 w-3.5" />
                 </a>
               </div>
+              <DownloadAppButton
+                label="Download the app"
+                className="mt-5 inline-flex items-center justify-center gap-2 rounded-md border border-zinc-200 dark:border-zinc-700 px-4 py-2 text-[13px] font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              />
             </div>
 
             {/* Shop col */}

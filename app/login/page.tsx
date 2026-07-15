@@ -8,6 +8,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { defaultDashboardPathForRole } from "@/lib/rbac/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DownloadAppButton } from "@/components/pwa/download-app-button";
 
 export default function LoginPage() {
   return (
@@ -192,6 +193,11 @@ function LoginForm() {
         <Mail className="h-4 w-4" />
         {magicSent ? "Magic link sent — check your inbox" : "Email me a magic link"}
       </button>
+
+      <DownloadAppButton
+        label="Download the Ctrl+P app"
+        className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+      />
 
       <p className="mt-8 text-center text-[13.5px] text-zinc-500">
         Don&apos;t have an account?{" "}

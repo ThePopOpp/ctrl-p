@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DownloadAppButton } from "@/components/pwa/download-app-button";
 
 // ─── Shared Types ───────────────────────────────────────────────────────────
 
@@ -438,6 +439,11 @@ export function CustomerShell({
                 <Input className="h-8 rounded-lg pl-9 text-xs" placeholder={searchPlaceholder} value={searchQuery} onChange={(e) => onSearchChange(e.target.value)} />
               </div>
             )}
+            <DownloadAppButton
+              label="Get app"
+              responsiveLabel
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            />
             {onOpenNotifications && (
               <div ref={notifRef} className="relative">
                 <Button variant="outline" size="icon" className="relative h-8 w-8" aria-label="Notifications" onClick={onOpenNotifications}>
