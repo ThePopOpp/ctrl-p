@@ -1,4 +1,5 @@
 import type { ComponentPropsWithoutRef } from "react";
+import { Info } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -47,6 +48,14 @@ export function LegalArticle({ title, lastUpdated, body }: LegalDoc) {
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-400">Legal</p>
         <h1 className="text-[34px] font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{title}</h1>
         {lastUpdated && <p className="mt-2 text-sm text-zinc-500">Last updated: {lastUpdated}</p>}
+      </div>
+      <div className="mb-10 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-900/15">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+        <p className="text-[13px] leading-6 text-amber-900 dark:text-amber-200">
+          This page is provided for general informational purposes only and does not constitute legal advice.
+          For questions about how these terms apply to you, please{" "}
+          <a href="/contact" className="font-medium underline underline-offset-2 hover:opacity-80">contact us</a>.
+        </p>
       </div>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {body}
