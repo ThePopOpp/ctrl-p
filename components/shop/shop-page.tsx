@@ -8,7 +8,6 @@ import { CartProvider, useCart } from "@/lib/cart/cart-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SiteNav } from "@/components/site-nav";
 import { cn } from "@/lib/utils";
 
 type Product = {
@@ -508,7 +507,6 @@ function ShopContent() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      <SiteNav />
 
       <main className="mx-auto max-w-7xl px-4 py-8">
         {/* Page header */}

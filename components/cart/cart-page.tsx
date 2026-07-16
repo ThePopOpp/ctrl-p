@@ -24,7 +24,6 @@ import { CartProvider, useCart, type CartItem } from "@/lib/cart/cart-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SiteNav } from "@/components/site-nav";
 import { cn } from "@/lib/utils";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -313,7 +312,6 @@ function CartContent() {
   if (!items.length) {
     return (
       <div className="min-h-screen bg-background text-foreground">
-        <SiteNav />
         <div className="mx-auto max-w-5xl px-4 py-16 text-center">
           <div className="mb-6 flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-secondary">
             <ShoppingCart className="h-9 w-9 text-muted-foreground" />
@@ -339,7 +337,6 @@ function CartContent() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <SiteNav />
 
       <main className="mx-auto max-w-6xl px-4 py-8">
         {/* Breadcrumb */}

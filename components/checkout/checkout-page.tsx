@@ -7,7 +7,6 @@ import { CartProvider, useCart } from "@/lib/cart/cart-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SiteNav } from "@/components/site-nav";
 import { cn } from "@/lib/utils";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -125,7 +124,6 @@ function CheckoutContent() {
   if (!items.length) {
     return (
       <div className="min-h-screen bg-background text-foreground">
-        <SiteNav />
         <div className="flex flex-col items-center justify-center py-24 px-4">
           <div className="mb-4 text-5xl">🛒</div>
           <h1 className="mb-2 text-2xl font-bold">Your cart is empty</h1>
@@ -138,7 +136,6 @@ function CheckoutContent() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <SiteNav />
 
       <main className="mx-auto max-w-5xl px-4 py-8">
         <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">

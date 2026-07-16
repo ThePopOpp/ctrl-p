@@ -9,7 +9,6 @@ import {
 import { CartProvider, useCart } from "@/lib/cart/cart-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SiteNav } from "@/components/site-nav";
 import { DesignerBookingModal } from "@/components/shop/designer-booking-modal";
 import { cn } from "@/lib/utils";
 
@@ -326,7 +325,6 @@ function ProductDetailContent({ slug }: { slug: string }) {
   return (
     <>
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      <SiteNav />
 
       <div className="mx-auto max-w-[1200px] px-4 py-4">
         {/* Breadcrumb */}

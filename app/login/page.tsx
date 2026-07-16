@@ -205,8 +205,8 @@ function LoginForm() {
       </p>
       <p className="mt-12 text-center text-[11.5px] text-zinc-400">
         By signing in, you agree to our{" "}
-        <a href="/contact.html" className="underline hover:text-zinc-700">Terms</a> and{" "}
-        <a href="/contact.html" className="underline hover:text-zinc-700">Privacy Policy</a>.
+        <a href="/contact" className="underline hover:text-zinc-700">Terms</a> and{" "}
+        <a href="/contact" className="underline hover:text-zinc-700">Privacy Policy</a>.
       </p>
     </AuthShell>
   );

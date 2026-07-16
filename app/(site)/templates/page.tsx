@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Search, Star, ChevronDown, Sparkles } from "lucide-react";
-import { SiteNav } from "@/components/site-nav";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = [
@@ -64,7 +63,6 @@ export default function TemplatesPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
-      <SiteNav />
 
       {/* Hero */}
       <section className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 px-4 py-16 text-center">
@@ -183,9 +181,6 @@ export default function TemplatesPage() {
         </section>
       </main>
 
-      <footer className="border-t border-zinc-200 dark:border-zinc-800 py-8 text-center text-sm text-zinc-400">
-        © 2026 controlp.io · Chandler, Arizona · (480) 999-9906
-      </footer>
     </div>
   );
 }

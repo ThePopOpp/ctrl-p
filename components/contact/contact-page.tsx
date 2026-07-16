@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, ChevronRight, Clock, Mail, MapPin, MessageCircle, Phone, Send, Upload } from "lucide-react";
-import { SiteNav } from "@/components/site-nav";
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
@@ -48,7 +47,6 @@ export function ContactPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      <SiteNav />
 
       {/* Hero */}
       <section className="py-16 border-b border-zinc-200 dark:border-zinc-800">
@@ -301,16 +299,6 @@ export function ContactPage() {
         </div>
       </section>
 
-      {/* Simple footer */}
-      <footer className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 pt-10 pb-6">
-        <div className="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <Link href="/" className="inline-flex items-center">
-            <img src="/logos/logo-light-lime.svg" alt="ControlP.io" className="h-7 w-auto dark:hidden" />
-            <img src="/logos/logo-darkgreen-lime.svg" alt="ControlP.io" className="hidden h-7 w-auto dark:block" />
-          </Link>
-          <div className="text-[12.5px] text-zinc-500">© {new Date().getFullYear()} controlp.io · Chandler, Arizona · (480) 999-9906</div>
-        </div>
-      </footer>
     </div>
   );
 }

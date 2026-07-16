@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { SiteNav } from "@/components/site-nav";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = ["All articles", "Design tips", "File prep", "Vehicle wraps", "Materials guide", "Case studies", "Small business", "Industry news"];
@@ -139,7 +138,6 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
-      <SiteNav />
 
       {/* Hero */}
       <section className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 px-4 py-14">
@@ -253,9 +251,6 @@ export default function BlogPage() {
         </div>
       </main>
 
-      <footer className="border-t border-zinc-200 dark:border-zinc-800 py-8 text-center text-sm text-zinc-400">
-        © 2026 controlp.io · Chandler, Arizona · (480) 999-9906
-      </footer>
     </div>
   );
 }
