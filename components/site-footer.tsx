@@ -43,7 +43,7 @@ export function SiteFooter() {
               <Mail className="h-3.5 w-3.5" /> hello@controlp.io
             </a>
             <div className="flex items-center gap-2 mt-5">
-              <a href="#" className="w-8 h-8 rounded-md border border-zinc-200 dark:border-zinc-700 flex items-center justify-center hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+              <a href="https://www.facebook.com/controlp.io" target="_blank" rel="noreferrer" aria-label="Facebook" className="w-8 h-8 rounded-md border border-zinc-200 dark:border-zinc-700 flex items-center justify-center hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
                 <Facebook className="h-3.5 w-3.5" />
               </a>
               <a href="#" className="w-8 h-8 rounded-md border border-zinc-200 dark:border-zinc-700 flex items-center justify-center hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
@@ -93,8 +93,8 @@ export function SiteFooter() {
         <div className="flex flex-col md:flex-row items-center justify-between pt-8 gap-4">
           <div className="text-[12.5px] text-zinc-500">© {new Date().getFullYear()} controlp.io · All rights reserved · Chandler, Arizona</div>
           <div className="flex items-center gap-6 text-[12.5px] text-zinc-500">
-            <Link href="/contact" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Privacy Policy</Link>
-            <Link href="/contact" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Terms of Service</Link>
             <Link href="/faq" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Accessibility</Link>
           </div>
         </div>

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, Check, Zap } from "lucide-react";
 
+import { HeroPlotter } from "@/components/home/hero-plotter";
+
 function Star({ filled = true }: { filled?: boolean }) {
   return (
     <svg
@@ -197,45 +199,8 @@ export function HomePage() {
               </div>
             </div>
 
-            {/* Hero image grid */}
-            <div className="relative">
-              <div className="grid grid-cols-2 gap-3">
-                <Link href="/shop?category=wall-art" className="group overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 aspect-[4/5] relative block bg-zinc-100 dark:bg-zinc-900">
-                  <img src="https://www.b2sign.com/image/thumb/240305/p3UypbTG-s1000.jpg" alt="Wall art framed print" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
-                  <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold bg-white/90 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100 backdrop-blur-sm shadow-md border border-white/60 dark:border-zinc-700/60">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="opacity-60"><rect x="3" y="3" width="18" height="18" rx="2" /><rect x="7" y="7" width="10" height="10" rx="1" /></svg>
-                    Wall Art
-                  </span>
-                </Link>
-                <div className="space-y-3">
-                  <Link href="/shop" className="group overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 aspect-square relative block bg-zinc-100 dark:bg-zinc-900">
-                    <img src="https://controlp.io/wp-content/uploads/2025/02/cotton.bc_.3.webp" alt="Premium business cards" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
-                    <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold bg-white/90 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100 backdrop-blur-sm shadow-md border border-white/60 dark:border-zinc-700/60">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="opacity-60"><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M2 10h20" /></svg>
-                      Business Cards
-                    </span>
-                  </Link>
-                  <Link href="/shop?category=banners" className="group overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 aspect-square relative block bg-zinc-100 dark:bg-zinc-900">
-                    <img src="https://www.b2sign.com/image/thumb/240305/YD25B8Uu-s1000.jpg" alt="Custom banners" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
-                    <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold bg-white/90 dark:bg-zinc-900/90 text-zinc-900 dark:text-zinc-100 backdrop-blur-sm shadow-md border border-white/60 dark:border-zinc-700/60">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="opacity-60"><path d="M4 2L4 22M4 3H20L17.3333 8L20 13H4V3Z" /></svg>
-                      Banners
-                    </span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Floating stat card */}
-              <div className="absolute -bottom-4 -left-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 shadow-lg hidden md:flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600">
-                  <Check className="h-4 w-4" />
-                </div>
-                <div>
-                  <div className="text-[13px] font-semibold">2,400+ projects</div>
-                  <div className="text-[11px] text-zinc-500">delivered statewide</div>
-                </div>
-              </div>
-            </div>
+            {/* Animated plotter panel */}
+            <HeroPlotter />
           </div>
         </div>
       </section>
