@@ -50,7 +50,7 @@ export function ContactPage() {
 
       {/* Hero */}
       <section className="py-16 border-b border-zinc-200 dark:border-zinc-800">
-        <div className="max-w-[1400px] mx-auto px-6 text-center">
+        <div className="max-w-[1280px] mx-auto px-6 text-center">
           <h1 className="text-[48px] font-bold tracking-tight mb-4">Let&apos;s talk.</h1>
           <p className="text-[16px] text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto">
             Quotes, complex jobs, installation questions, or just want to swing by the shop — we&apos;re here.
@@ -60,7 +60,7 @@ export function ContactPage() {
 
       {/* Main */}
       <section className="py-16">
-        <div className="max-w-[1400px] mx-auto px-6">
+        <div className="max-w-[1280px] mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12">
 
             {/* Contact form */}

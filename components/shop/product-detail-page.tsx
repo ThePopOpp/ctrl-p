@@ -326,7 +326,7 @@ function ProductDetailContent({ slug }: { slug: string }) {
     <>
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
 
-      <div className="mx-auto max-w-[1200px] px-4 py-4">
+      <div className="mx-auto max-w-[1280px] px-4 py-4">
         {/* Breadcrumb */}
         <nav className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground">
           <a href="/" className="hover:text-foreground">Home</a>
