@@ -3,9 +3,18 @@ import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig } from "@/lib/admin/server-auth";
 import { DEFAULT_PRICING_RULES, pricingRulesFromRows } from "@/lib/wall-studio/pricing";
-import type { PricingRules, WsProduct } from "@/lib/wall-studio/types";
+import type { PricingRules, WsCategory, WsProduct } from "@/lib/wall-studio/types";
 
 export type StudioCatalog = { products: WsProduct[]; rules: PricingRules };
+
+export type SavedLook = {
+  id: string;
+  snapshot_url: string | null;
+  wall_w_ft: number | null;
+  wall_h_ft: number | null;
+  created_at: string;
+  product: { name: string; category: WsCategory; slug: string } | null;
+};
 
 // Postgres `numeric` comes back as a string via PostgREST — coerce to number.
 function toProduct(row: Record<string, unknown>): WsProduct {
@@ -44,5 +53,37 @@ export async function loadStudioCatalog(): Promise<StudioCatalog> {
     return { products, rules: pricing };
   } catch {
     return { products: [], rules: DEFAULT_PRICING_RULES };
+  }
+}
+
+/** Loads a saved visualizer look by id (for the public share page). */
+export async function loadVisualization(id: string): Promise<SavedLook | null> {
+  const config = getServerSupabaseConfig();
+  if ("error" in config) return null;
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+
+  try {
+    const db = createClient(config.supabaseUrl, config.serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data } = await db
+      .from("ws_visualizations")
+      .select("id, snapshot_url, wall_w_ft, wall_h_ft, created_at, ws_products(name, category, slug)")
+      .eq("id", id)
+      .maybeSingle();
+    if (!data) return null;
+
+    const rel = (data as Record<string, unknown>).ws_products;
+    const p = Array.isArray(rel) ? rel[0] : rel;
+    return {
+      id: String(data.id),
+      snapshot_url: (data.snapshot_url as string | null) ?? null,
+      wall_w_ft: data.wall_w_ft != null ? Number(data.wall_w_ft) : null,
+      wall_h_ft: data.wall_h_ft != null ? Number(data.wall_h_ft) : null,
+      created_at: String(data.created_at),
+      product: p ? { name: String(p.name), category: p.category as WsCategory, slug: String(p.slug) } : null,
+    };
+  } catch {
+    return null;
   }
 }

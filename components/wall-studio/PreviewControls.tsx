@@ -53,7 +53,8 @@ export function PreviewControls({
       const res = await fetch("/api/wall-studio/visualizations", { method: "POST", headers, body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "save failed");
-      setSavedUrl(data.snapshot_url);
+      const shareUrl = data.id ? `${window.location.origin}/studio/look/${data.id}` : data.snapshot_url;
+      setSavedUrl(shareUrl);
       setSaveState("saved");
     } catch {
       setSaveState("error");
