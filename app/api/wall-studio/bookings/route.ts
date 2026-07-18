@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError } from "@/lib/admin/server-auth";
+import { sendBookingConfirmation } from "@/lib/email/wall-studio-emails";
 
 const TIME_WINDOWS = ["8–11 AM", "11–2 PM", "2–5 PM"];
 
@@ -16,6 +17,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     name?: string;
     phone?: string;
+    email?: string;
     address?: string;
     project_type?: string;
     notes?: string;
@@ -26,6 +28,7 @@ export async function POST(request: Request) {
 
   const name = String(body?.name || "").trim();
   const phone = String(body?.phone || "").trim();
+  const email = String(body?.email || "").trim().toLowerCase();
   const address = String(body?.address || "").trim();
   const projectType = String(body?.project_type || "").trim();
   const preferredDate = String(body?.preferred_date || "").trim();
@@ -62,6 +65,7 @@ export async function POST(request: Request) {
         order_id: body?.order_id || null,
         name,
         phone,
+        email: email || null,
         address,
         project_type: projectType || "Wall Studio install",
         notes: String(body?.notes || "").trim() || null,
@@ -71,7 +75,36 @@ export async function POST(request: Request) {
       .select("ref")
       .single();
 
-    if (!error && data) return NextResponse.json({ ref: data.ref });
+    if (!error && data) {
+      const bookingRef = data.ref;
+      const projectLabel = projectType || "Wall Studio install";
+
+      // Admin notification (non-blocking).
+      db.from("admin_notifications")
+        .insert({
+          type: "ws_booking",
+          title: `New install request ${bookingRef}`,
+          body: `${name} · ${projectLabel} · ${preferredDate}, ${timeWindow}`,
+          user_id: userId,
+          meta: { ref: bookingRef, phone, email: email || null, address },
+        })
+        .then(() => {}, () => {});
+
+      // Customer confirmation email (non-blocking; only if an email was given).
+      if (email) {
+        sendBookingConfirmation({
+          to: email,
+          name,
+          ref: bookingRef,
+          projectType: projectLabel,
+          preferredDate,
+          timeWindow,
+          phone,
+        }).catch(() => {});
+      }
+
+      return NextResponse.json({ ref: bookingRef });
+    }
     if (error && error.code !== "23505") return jsonError(error.message, 500);
   }
   return jsonError("Could not create booking, please try again.", 500);

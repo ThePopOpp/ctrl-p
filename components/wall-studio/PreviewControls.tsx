@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, type RefObject } from "react";
-import { Camera, Download, ImageUp, RotateCcw, Scissors, Square } from "lucide-react";
+import { useRef, useState, type RefObject } from "react";
+import { Bookmark, Camera, Check, Copy, Download, ImageUp, Loader2, RotateCcw, Scissors, Square } from "lucide-react";
 
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { estimatedDims, estimatedSqft, quadArea } from "@/lib/wall-studio/geometry";
 import { computeInstall, money } from "@/lib/wall-studio/pricing";
 import { useWallStudio } from "@/lib/wall-studio/store";
@@ -22,6 +23,42 @@ export function PreviewControls({
   const { selected, corners, dims, calibArea, cutouts, scale, opacity, rules, factors, setDims, setScale, setOpacity, resetCorners, openSizeDialog } =
     useWallStudio();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [savedUrl, setSavedUrl] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  async function saveLook() {
+    if (!selected) return;
+    setSaveState("saving");
+    try {
+      const blob = await stageApi.current?.getSnapshotBlob();
+      if (!blob) throw new Error("no snapshot");
+      const fd = new FormData();
+      fd.append("png", blob, "look.png");
+      fd.append("product_id", selected.id);
+      fd.append("corners", JSON.stringify(corners));
+      fd.append("cutouts", JSON.stringify(cutouts));
+      fd.append("wall_w_ft", String(dims.w));
+      fd.append("wall_h_ft", String(dims.h));
+      fd.append("pattern_scale", String(scale));
+      fd.append("opacity", opacity.toFixed(2));
+      const headers: Record<string, string> = {};
+      try {
+        const db = getSupabaseBrowserClient();
+        const token = db ? (await db.auth.getSession()).data.session?.access_token : null;
+        if (token) headers.authorization = `Bearer ${token}`;
+      } catch {
+        /* guest save */
+      }
+      const res = await fetch("/api/wall-studio/visualizations", { method: "POST", headers, body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "save failed");
+      setSavedUrl(data.snapshot_url);
+      setSaveState("saved");
+    } catch {
+      setSaveState("error");
+    }
+  }
 
   if (!selected) return null;
 
@@ -180,6 +217,30 @@ export function PreviewControls({
           <Download className="h-4 w-4" />
           Download preview
         </button>
+        <button type="button" className={btn} onClick={saveLook} disabled={saveState === "saving"}>
+          {saveState === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bookmark className="h-4 w-4" />}
+          {saveState === "saving" ? "Saving…" : "Save this look"}
+        </button>
+        {saveState === "saved" && savedUrl && (
+          <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-[12px] dark:border-zinc-700 dark:bg-zinc-800/40">
+            <a href={savedUrl} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-zinc-600 underline dark:text-zinc-300">
+              {savedUrl}
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard?.writeText(savedUrl);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+              className="shrink-0 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100"
+              title="Copy link"
+            >
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        )}
+        {saveState === "error" && <p className="text-[12px] text-red-600">Could not save. Try again.</p>}
         <button type="button" className={btn} onClick={() => stageApi.current?.toggleCut()}>
           {cutting ? <Square className="h-4 w-4" /> : <Scissors className="h-4 w-4" />}
           {cutting ? "Done cutting" : "Cut Design"}

@@ -16,6 +16,7 @@ export type StageApi = {
   toggleCamera: () => void;
   uploadPhoto: (file: File) => void;
   snapshot: () => Promise<void>;
+  getSnapshotBlob: () => Promise<Blob | null>;
   toggleCut: () => void;
   reset: () => void;
   recalibrate: () => void;
@@ -97,12 +98,15 @@ export const VisualizerStage = forwardRef<
     setImageSrc(URL.createObjectURL(file));
     setNote("Photo loaded — drag the corners to fit your wall");
   }
-  async function snapshot() {
-    if (!selected) return;
+  async function composeBlob(): Promise<Blob | null> {
+    if (!selected) return null;
     const backdrop = cameraOn && videoRef.current ? videoRef.current : imgRef.current;
-    if (!backdrop) return;
-    const blob = await composeSnapshot({ backdrop, product: selected, corners, scale, opacity, cutouts });
-    if (!blob) return;
+    if (!backdrop) return null;
+    return composeSnapshot({ backdrop, product: selected, corners, scale, opacity, cutouts });
+  }
+  async function snapshot() {
+    const blob = await composeBlob();
+    if (!blob || !selected) return;
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `wall-preview-${selected.slug}.png`;
@@ -127,6 +131,7 @@ export const VisualizerStage = forwardRef<
     toggleCamera,
     uploadPhoto,
     snapshot,
+    getSnapshotBlob: composeBlob,
     toggleCut,
     reset: () => recalibrate(),
     recalibrate: () => {

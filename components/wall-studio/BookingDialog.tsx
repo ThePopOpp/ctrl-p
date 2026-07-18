@@ -19,6 +19,7 @@ export function BookingDialog() {
   const { bookingOpen, setBookingOpen } = useWallStudio();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [projectType, setProjectType] = useState(PROJECT_TYPES[0]);
   const [notes, setNotes] = useState("");
@@ -52,6 +53,7 @@ export function BookingDialog() {
         body: JSON.stringify({
           name,
           phone,
+          email,
           address,
           project_type: projectType,
           notes,
@@ -107,6 +109,10 @@ export function BookingDialog() {
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">Phone</label>
                 <input className={control} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(480) 555-0148" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Email (for confirmation)</label>
+                <input type="email" className={control} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">Install address</label>
