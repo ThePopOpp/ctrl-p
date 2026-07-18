@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, ChevronDown, MapPin, Menu, Moon, Search, ShoppingCart, Sun, Truck, X } from "lucide-react";
+import { ArrowRight, ChevronDown, MapPin, Menu, Moon, Search, ShoppingCart, Sparkles, Sun, Truck, X } from "lucide-react";
 
 import { DownloadAppButton } from "@/components/pwa/download-app-button";
 
@@ -341,10 +341,27 @@ export function SiteNav() {
                         </Link>
                       ))}
                     </div>
+
+                    {/* Featured CTA — full-width bottom row */}
+                    <Link
+                      href="/studio"
+                      className="group/wscta col-span-3 mt-1 flex items-center gap-4 rounded-lg bg-zinc-900 dark:bg-zinc-800 p-3.5 text-white transition-colors hover:bg-zinc-800 dark:hover:bg-zinc-700"
+                    >
+                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-lime-300 text-zinc-900">
+                        <Sparkles className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[14px] font-semibold">Wall Studio</span>
+                          <span className="rounded-full bg-lime-300 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-900">New</span>
+                        </div>
+                        <div className="text-[12.5px] text-zinc-300">See wraps, wallpaper &amp; window film on your wall in real perspective — then order &amp; book install.</div>
+                      </div>
+                      <ArrowRight className="h-4 w-4 shrink-0 text-lime-300 transition-transform group-hover/wscta:translate-x-0.5" />
+                    </Link>
                   </div>
                 </div>
 
-                <Link href="/studio" className="rounded-md px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">Wall Studio</Link>
                 <Link href="/shop" className="rounded-md px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">Deals</Link>
                 <Link href="/faq" className="rounded-md px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">FAQ</Link>
                 <Link href="/contact" className="rounded-md px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">Contact</Link>
