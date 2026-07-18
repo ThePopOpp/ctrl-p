@@ -14,6 +14,7 @@ import type { Corner, Cutout } from "@/lib/wall-studio/types";
 
 export type StageApi = {
   toggleCamera: () => void;
+  capturePhoto: () => void;
   uploadPhoto: (file: File) => void;
   snapshot: () => Promise<void>;
   getSnapshotBlob: () => Promise<Blob | null>;
@@ -83,20 +84,50 @@ export const VisualizerStage = forwardRef<
       setNote("Camera off — demo room restored");
       return;
     }
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setNote("Live camera needs a secure (HTTPS) connection. Upload a photo of your wall instead.");
+      return;
+    }
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      // Prefer the rear camera (phones); fall back to any camera (desktop webcams).
+      let s: MediaStream;
+      try {
+        s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      } catch {
+        s = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
       streamRef.current = s;
       if (videoRef.current) videoRef.current.srcObject = s;
       setCameraOn(true);
       setNote("Live camera — point at your wall and fit the corners");
-    } catch {
-      setNote("Camera unavailable in this environment — upload a photo instead");
+    } catch (err) {
+      const name = (err as { name?: string })?.name;
+      setNote(
+        name === "NotAllowedError"
+          ? "Camera permission was blocked — allow access in your browser, or upload a photo."
+          : name === "NotFoundError"
+            ? "No camera detected on this device — upload a photo instead."
+            : "Camera unavailable — upload a photo of your wall instead.",
+      );
     }
   }
   function uploadPhoto(file: File) {
     stopCamera();
     setImageSrc(URL.createObjectURL(file));
     setNote("Photo loaded — drag the corners to fit your wall");
+  }
+  // Freeze the current live-camera frame to a still and use it as the backdrop.
+  function capturePhoto() {
+    const v = videoRef.current;
+    if (!v || !cameraOn || !v.videoWidth) return;
+    const c = document.createElement("canvas");
+    c.width = v.videoWidth;
+    c.height = v.videoHeight;
+    c.getContext("2d")?.drawImage(v, 0, 0);
+    const url = c.toDataURL("image/png");
+    stopCamera();
+    setImageSrc(url);
+    setNote("Photo captured — drag the corners to fit your wall");
   }
   async function composeBlob(): Promise<Blob | null> {
     if (!selected) return null;
@@ -129,6 +160,7 @@ export const VisualizerStage = forwardRef<
 
   useImperativeHandle(ref, () => ({
     toggleCamera,
+    capturePhoto,
     uploadPhoto,
     snapshot,
     getSnapshotBlob: composeBlob,

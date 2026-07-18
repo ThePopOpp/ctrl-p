@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState, type RefObject } from "react";
-import { Bookmark, Camera, Check, Copy, Download, ImageUp, Loader2, RotateCcw, Scissors, Square } from "lucide-react";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import { Aperture, Bookmark, Camera, Check, Copy, Download, ImageUp, Loader2, RotateCcw, Scissors, Square, Video } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { estimatedDims, estimatedSqft, quadArea } from "@/lib/wall-studio/geometry";
 import { computeInstall, money } from "@/lib/wall-studio/pricing";
@@ -23,9 +24,16 @@ export function PreviewControls({
   const { selected, corners, dims, calibArea, cutouts, scale, opacity, rules, factors, setDims, setScale, setOpacity, resetCorners, openSizeDialog } =
     useWallStudio();
   const fileRef = useRef<HTMLInputElement>(null);
+  const captureRef = useRef<HTMLInputElement>(null);
+  const [cameraSupported, setCameraSupported] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [savedUrl, setSavedUrl] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Live camera requires a secure context (HTTPS/localhost) + getUserMedia support.
+  useEffect(() => {
+    setCameraSupported(typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia);
+  }, []);
 
   async function saveLook() {
     if (!selected) return;
@@ -147,16 +155,71 @@ export function PreviewControls({
         )}
       </div>
 
-      {/* Source */}
-      <div className="grid grid-cols-2 gap-2">
-        <button type="button" className={btn} onClick={() => stageApi.current?.toggleCamera()}>
-          <Camera className="h-4 w-4" />
-          {cameraOn ? "Stop camera" : "Camera"}
-        </button>
-        <button type="button" className={btn} onClick={() => fileRef.current?.click()}>
-          <ImageUp className="h-4 w-4" />
-          Upload
-        </button>
+      {/* Source: see it in your own space */}
+      <div>
+        <label className="mb-1.5 block text-[12px] font-medium text-zinc-500">See it in your space</label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => captureRef.current?.click()}
+            className="flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "var(--ws-accent)" }}
+          >
+            <Camera className="h-4 w-4" />
+            Take photo
+          </button>
+          <button type="button" className={btn} onClick={() => fileRef.current?.click()}>
+            <ImageUp className="h-4 w-4" />
+            Upload photo
+          </button>
+        </div>
+
+        {/* Live webcam (optional): freeze a frame with Capture */}
+        {cameraSupported &&
+          (cameraOn ? (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => stageApi.current?.capturePhoto()}
+                className="flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: "var(--ws-accent)" }}
+              >
+                <Aperture className="h-4 w-4" />
+                Capture
+              </button>
+              <button
+                type="button"
+                className={cn(btn, "border-red-400 text-red-600")}
+                onClick={() => stageApi.current?.toggleCamera()}
+              >
+                Stop camera
+              </button>
+            </div>
+          ) : (
+            <button type="button" className={cn(btn, "mt-2 w-full")} onClick={() => stageApi.current?.toggleCamera()}>
+              <Video className="h-4 w-4" />
+              Use live camera
+            </button>
+          ))}
+        <p className="mt-1.5 text-[11px] text-zinc-400">
+          {cameraSupported
+            ? "On a phone, “Take photo” opens your camera. Upload works anywhere."
+            : "Live camera needs a secure (HTTPS) connection — “Take photo” / “Upload” still work."}
+        </p>
+
+        {/* Native camera capture (phones open the camera directly) */}
+        <input
+          ref={captureRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) stageApi.current?.uploadPhoto(f);
+            e.target.value = "";
+          }}
+        />
         <input
           ref={fileRef}
           type="file"
