@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { DesignCard } from "@/components/wall-studio/DesignCard";
 import { DesignSlider } from "@/components/wall-studio/DesignSlider";
+import { VisualizerDrawer } from "@/components/wall-studio/VisualizerDrawer";
 import { useWallStudio } from "@/lib/wall-studio/store";
 import type { WsCategory } from "@/lib/wall-studio/types";
 
@@ -14,7 +15,7 @@ const CATS: Array<{ value: WsCategory | "all"; label: string }> = [
 ];
 
 export function StudioApp() {
-  const { products, selected, selectProduct, cat, setCat } = useWallStudio();
+  const { products, selected, openVisualizer, cat, setCat } = useWallStudio();
   const accent = selected?.accent_hex ?? "#2f6b4f";
   const list = products.filter((p) => cat === "all" || p.category === cat);
 
@@ -32,9 +33,16 @@ export function StudioApp() {
           photo, drop a design on it in real perspective, then order and book installation — all in one place.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => openVisualizer()}
+            className="inline-flex items-center rounded-md bg-zinc-900 px-5 py-2.5 text-[15px] font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+          >
+            Try the visualizer
+          </button>
           <a
             href="#ws-designs"
-            className="inline-flex items-center rounded-md bg-zinc-900 px-5 py-2.5 text-[15px] font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            className="inline-flex items-center rounded-md border border-zinc-300 px-5 py-2.5 text-[15px] font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
             Browse designs
           </a>
@@ -81,12 +89,14 @@ export function StudioApp() {
                 key={p.id}
                 product={p}
                 selected={selected?.id === p.id}
-                onPreview={() => selectProduct(p)}
+                onPreview={() => openVisualizer(p)}
               />
             ))}
           </DesignSlider>
         )}
       </section>
+
+      <VisualizerDrawer />
     </div>
   );
 }

@@ -1,10 +1,23 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import type { PricingRules, WsCartItem, WsCategory, WsProduct } from "@/lib/wall-studio/types";
+import { DEFAULT_CORNERS } from "@/lib/wall-studio/constants";
+import { quadArea } from "@/lib/wall-studio/geometry";
+import type { Corner, Cutout, InstallFactors, PricingRules, WsCategory, WsProduct } from "@/lib/wall-studio/types";
 
 type CategoryFilter = WsCategory | "all";
+
+const DEFAULT_FACTORS: InstallFactors = {
+  location: "int",
+  condition: "good",
+  obstacles: 2,
+  miles: 8,
+  removal: false,
+  cleaning: true,
+  access: false,
+  rush: false,
+};
 
 type WallStudioContextType = {
   products: WsProduct[];
@@ -17,15 +30,33 @@ type WallStudioContextType = {
   selected: WsProduct | null;
   selectProduct: (p: WsProduct) => void;
 
-  cart: WsCartItem[];
-  addCartItem: (item: WsCartItem) => number; // returns the new item's index
-  removeCartItem: (index: number) => void;
-  clearCart: () => void;
+  // Visualizer drawer
+  open: boolean;
+  openVisualizer: (p?: WsProduct) => void;
+  closeVisualizer: () => void;
+
+  // Quad + calibration
+  corners: Corner[];
+  setCorner: (i: number, c: Corner) => void;
+  resetCorners: () => void;
+  dims: { w: number; h: number };
+  setDims: (d: { w?: number; h?: number }) => void;
+  calibArea: number | null;
+  recalibrate: () => void;
+
+  cutouts: Cutout[];
+  setCutouts: (c: Cutout[]) => void;
+
+  scale: number;
+  setScale: (n: number) => void;
+  opacity: number;
+  setOpacity: (n: number) => void;
+
+  factors: InstallFactors;
+  setFactors: (f: Partial<InstallFactors>) => void;
 };
 
 const WallStudioContext = createContext<WallStudioContextType | null>(null);
-
-const CART_KEY = "wallstudio:cart";
 
 export function WallStudioProvider({
   initialProducts,
@@ -38,53 +69,56 @@ export function WallStudioProvider({
 }) {
   const [cat, setCat] = useState<CategoryFilter>("all");
   const [selected, setSelected] = useState<WsProduct | null>(initialProducts[0] ?? null);
-  const [cart, setCart] = useState<WsCartItem[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const [corners, setCornersState] = useState<Corner[]>(DEFAULT_CORNERS);
+  const cornersRef = useRef(corners);
+  useEffect(() => {
+    cornersRef.current = corners;
+  }, [corners]);
+
+  const [dims, setDimsState] = useState({ w: 20, h: 10 });
+  const [calibArea, setCalibArea] = useState<number | null>(null);
+  const [cutouts, setCutouts] = useState<Cutout[]>([]);
+  const [scale, setScale] = useState(220);
+  const [opacity, setOpacity] = useState(0.92);
+  const [factors, setFactorsState] = useState<InstallFactors>(DEFAULT_FACTORS);
 
   const productsById = useMemo(
     () => Object.fromEntries(initialProducts.map((p) => [p.id, p])),
     [initialProducts],
   );
 
-  // Load persisted cart (client only).
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CART_KEY);
-      if (stored) setCart(JSON.parse(stored));
-    } catch {
-      /* ignore parse errors */
-    }
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-    try {
-      localStorage.setItem(CART_KEY, JSON.stringify(cart));
-    } catch {
-      /* ignore storage errors */
-    }
-  }, [cart, loaded]);
-
   function selectProduct(p: WsProduct) {
     setSelected(p);
+    setCutouts([]); // new design starts clean
   }
 
-  function addCartItem(item: WsCartItem): number {
-    let index = -1;
-    setCart((prev) => {
-      index = prev.length;
-      return [...prev, item];
-    });
-    return index;
+  function openVisualizer(p?: WsProduct) {
+    if (p) selectProduct(p);
+    setOpen(true);
+  }
+  function closeVisualizer() {
+    setOpen(false);
   }
 
-  function removeCartItem(index: number) {
-    setCart((prev) => prev.filter((_, i) => i !== index));
+  function setCorner(i: number, c: Corner) {
+    setCornersState((prev) => prev.map((p, idx) => (idx === i ? c : p)));
+  }
+  function recalibrate() {
+    setCalibArea(quadArea(cornersRef.current));
+  }
+  function resetCorners() {
+    setCornersState(DEFAULT_CORNERS);
+    setCalibArea(quadArea(DEFAULT_CORNERS));
+  }
+  function setDims(d: { w?: number; h?: number }) {
+    setDimsState((prev) => ({ w: d.w ?? prev.w, h: d.h ?? prev.h }));
+    setCalibArea(quadArea(cornersRef.current));
   }
 
-  function clearCart() {
-    setCart([]);
+  function setFactors(f: Partial<InstallFactors>) {
+    setFactorsState((prev) => ({ ...prev, ...f }));
   }
 
   const value: WallStudioContextType = {
@@ -95,10 +129,24 @@ export function WallStudioProvider({
     setCat,
     selected,
     selectProduct,
-    cart,
-    addCartItem,
-    removeCartItem,
-    clearCart,
+    open,
+    openVisualizer,
+    closeVisualizer,
+    corners,
+    setCorner,
+    resetCorners,
+    dims,
+    setDims,
+    calibArea,
+    recalibrate,
+    cutouts,
+    setCutouts,
+    scale,
+    setScale,
+    opacity,
+    setOpacity,
+    factors,
+    setFactors,
   };
 
   return <WallStudioContext.Provider value={value}>{children}</WallStudioContext.Provider>;
