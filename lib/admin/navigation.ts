@@ -12,6 +12,7 @@ import {
   PackageCheck,
   Palette,
   Phone,
+  LayoutTemplate,
   Radio,
   Settings,
   ShoppingBag,
@@ -49,6 +50,7 @@ export const adminNavGroups: readonly {
     label: "Catalog",
     items: [
       ["Products", PackageCheck, "/admin/products"],
+      ["Wall Studio", LayoutTemplate, "/admin/wall-studio"],
       ["Coupons", Tag, "/admin/coupons"],
       ["Artwork", FileText, "/admin/artwork"],
       ["Shipping", Truck, "/admin/shipments"],
