@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control P · Wall Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#23211c; --paper:#efede7; --panel:#f7f6f2; --line:#d8d4cb;
+  --accent:#2f6b4f; --accent-soft:#2f6b4f22;
+  --radius:14px;
+  font-size:16px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Instrument Sans', system-ui, sans-serif;
+  background:var(--paper); color:var(--ink);
+  line-height:1.5;
+}
+h1,h2,h3,.serif{font-family:'Instrument Serif', Georgia, serif; font-weight:400;}
+em{font-style:italic;}
+button{font:inherit; cursor:pointer;}
+input,select,textarea{font:inherit; color:var(--ink);}
+img,video{display:block; max-width:100%;}
+a{color:inherit;}
+
+/* ---------- Top bar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; gap:1.5rem;
+  padding:.8rem 1.4rem;
+  background:color-mix(in srgb, var(--paper) 88%, white);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.wordmark{font-family:'Instrument Serif', serif; font-size:1.35rem; letter-spacing:.01em;}
+.wordmark span{color:var(--accent); transition:color .4s;}
+.topnav{display:flex; gap:1.1rem; margin-left:auto; font-size:.95rem;}
+.topnav a{text-decoration:none; opacity:.75;}
+.topnav a:hover{opacity:1;}
+.cart-btn{
+  position:relative; border:none; background:none; color:var(--ink);
+  padding:.35rem; display:grid; place-items:center; border-radius:10px;
+  transition:background .15s;
+}
+.cart-btn:hover{background:var(--accent-soft);}
+.cart-btn svg{width:24px; height:24px;}
+.cart-btn .count{
+  position:absolute; top:-3px; right:-5px;
+  background:var(--accent); color:#fff; border-radius:999px;
+  min-width:1.25rem; height:1.25rem; display:grid; place-items:center;
+  font-size:.72rem; font-weight:600; padding:0 .25rem;
+  border:2px solid var(--paper); transition:background .4s;
+}
+
+/* ---------- Hero ---------- */
+.hero{
+  max-width:1100px; margin:0 auto; padding:3.2rem 1.4rem 2.2rem;
+}
+.hero h1{font-size:clamp(2.2rem, 5.4vw, 3.6rem); line-height:1.08; max-width:20ch;}
+.hero h1 em{color:var(--accent); transition:color .4s;}
+.hero p{margin-top:.9rem; max-width:52ch; opacity:.8;}
+.hero-cta{margin-top:1.4rem; display:flex; gap:.8rem; flex-wrap:wrap;}
+.btn{
+  border-radius:999px; padding:.65rem 1.35rem; font-weight:500;
+  border:1px solid var(--ink); background:transparent; color:var(--ink);
+  text-decoration:none; display:inline-block; transition:background .15s;
+}
+.btn:hover{background:var(--accent-soft);}
+.btn.primary{background:var(--ink); color:var(--paper);}
+.btn.primary:hover{background:var(--accent); border-color:var(--accent);}
+.btn.accent{background:var(--accent); border-color:var(--accent); color:#fff;}
+.btn.dark{background:#1a1815; border-color:#1a1815; color:var(--paper);}
+.btn.dark:hover{background:#2e2b26; border-color:#2e2b26;}
+.btn[disabled]{opacity:.45; cursor:not-allowed;}
+.swatch-strip{
+  margin-top:2rem; display:flex; gap:.55rem; flex-wrap:wrap;
+}
+.swatch-strip button{
+  width:44px; height:44px; border-radius:10px; border:2px solid transparent;
+  background-size:60px; background-position:center;
+  transition:transform .12s, border-color .12s;
+}
+.swatch-strip button:hover{transform:translateY(-2px);}
+.swatch-strip button.active{border-color:var(--ink);}
+
+/* ---------- Sections ---------- */
+section{max-width:1100px; margin:0 auto; padding:2.6rem 1.4rem;}
+.section-head{display:flex; align-items:baseline; gap:1rem; margin-bottom:1.3rem; flex-wrap:wrap;}
+.section-head h2{font-size:1.9rem;}
+.section-head .hint{opacity:.65; font-size:.92rem;}
+.chips{display:flex; gap:.5rem; margin-bottom:1.1rem; flex-wrap:wrap;}
+.chip{
+  border:1px solid var(--line); background:var(--panel); border-radius:999px;
+  padding:.35rem .95rem; font-size:.88rem;
+}
+.chip.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+
+/* ---------- Catalog ---------- */
+/* ---------- Catalog slider: 3.5 cards desktop / 2.5 tablet / 1.5 mobile ---------- */
+.grid{
+  display:flex; gap:1.1rem; overflow-x:auto;
+  scroll-snap-type:x proximity;
+  padding-bottom:.8rem;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin; scrollbar-color:var(--line) transparent;
+}
+.grid::-webkit-scrollbar{height:6px;}
+.grid::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
+.grid{cursor:grab;}
+.grid.dragging{cursor:grabbing; scroll-snap-type:none; user-select:none;}
+.grid.dragging .card{pointer-events:none;}
+.grid .card{
+  flex:0 0 calc((100% - 3.3rem)/3.5); /* 3 full gaps visible */
+  scroll-snap-align:start;
+}
+@media(max-width:900px){.grid .card{flex-basis:calc((100% - 2.2rem)/2.5);}}
+@media(max-width:600px){.grid .card{flex-basis:calc((100% - 1.1rem)/1.5);}}
+.slider-nav{margin-left:auto; display:flex; gap:.45rem;}
+.slider-nav button{
+  width:38px; height:38px; border-radius:50%; border:1px solid var(--ink);
+  background:transparent; font-size:1rem; display:grid; place-items:center;
+  transition:background .15s;
+}
+.slider-nav button:hover{background:var(--accent-soft);}
+.card{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+  overflow:hidden; display:flex; flex-direction:column;
+  transition:transform .15s, box-shadow .15s;
+}
+.card:hover{transform:translateY(-3px); box-shadow:0 10px 26px #00000012;}
+.card .tile{height:150px; background-size:110px; background-position:center;}
+.card .body{padding:.85rem .95rem 1rem; display:flex; flex-direction:column; gap:.35rem; flex:1;}
+.card .cat{font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; opacity:.55;}
+.card h3{font-size:1.18rem;}
+.card .price{font-size:.92rem; opacity:.8;}
+.card .row{margin-top:auto; display:flex; gap:.5rem; padding-top:.6rem;}
+.card .row .btn{padding:.42rem .9rem; font-size:.86rem; flex:1; text-align:center;}
+.card.selected{outline:2px solid var(--accent); outline-offset:-2px;}
+
+/* ---------- Visualizer ---------- */
+.viz-wrap{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:1.2rem;}
+@media(max-width:860px){.viz-wrap{grid-template-columns:1fr;}}
+.stage-outer{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+  padding:.7rem;
+}
+.stage{
+  position:relative; width:100%; aspect-ratio:4/3; overflow:hidden;
+  border-radius:10px; background:#dcd9d2; touch-action:none; user-select:none;
+}
+.stage img.backdrop, .stage video.backdrop{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+}
+#patternSurface{
+  position:absolute; left:0; top:0; width:1200px; height:900px;
+  transform-origin:0 0; pointer-events:none;
+  background-repeat:repeat;
+}
+.handle{
+  position:absolute; width:26px; height:26px; margin:-13px 0 0 -13px;
+  border-radius:50%; background:#fff; border:3px solid var(--accent);
+  box-shadow:0 2px 8px #0003; cursor:grab; z-index:5; transition:border-color .4s;
+}
+.handle:active{cursor:grabbing;}
+.stage .quad-line{position:absolute; inset:0; pointer-events:none; z-index:4;}
+.stage-note{
+  position:absolute; left:0; right:0; bottom:0; z-index:6;
+  background:#23211ccc; color:#fff; font-size:.82rem;
+  padding:.4rem .8rem; text-align:center; pointer-events:none;
+}
+.viz-panel{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+  padding:1rem 1.1rem; display:flex; flex-direction:column; gap:1rem; align-self:start;
+}
+.viz-panel h3{font-size:1.25rem;}
+.viz-panel .selected-tile{
+  display:flex; gap:.7rem; align-items:center;
+  background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:.55rem .7rem;
+}
+.viz-panel .selected-tile .sw{width:44px; height:44px; border-radius:8px; background-size:60px; background-position:center; flex:none;}
+.viz-panel label{font-size:.82rem; font-weight:500; opacity:.75; display:block; margin-bottom:.25rem;}
+.viz-panel input[type=range]{width:100%; accent-color:var(--accent);}
+.viz-actions{display:flex; flex-direction:column; gap:.55rem;}
+.viz-actions .btn{text-align:center;}
+.src-row{display:flex; gap:.5rem;}
+.src-row .btn{flex:1; text-align:center; padding:.5rem .6rem; font-size:.88rem;}
+#fileInput{display:none;}
+
+/* ---------- Booking ---------- */
+.book-grid{display:grid; grid-template-columns:1fr 1fr; gap:1.2rem;}
+@media(max-width:760px){.book-grid{grid-template-columns:1fr;}}
+.panel{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:1.2rem;
+}
+.field{margin-bottom:.85rem;}
+.field label{display:block; font-size:.82rem; font-weight:500; opacity:.75; margin-bottom:.3rem;}
+.field input, .field select, .field textarea{
+  width:100%; padding:.55rem .7rem; border:1px solid var(--line); border-radius:8px; background:#fff;
+}
+.field textarea{min-height:80px; resize:vertical;}
+.slots{display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem;}
+.slot{
+  border:1px solid var(--line); background:#fff; border-radius:8px; padding:.5rem .3rem; font-size:.85rem;
+}
+.slot.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+.confirm-box{
+  border-left:4px solid var(--accent); background:var(--accent-soft);
+  padding:.9rem 1rem; border-radius:8px; font-size:.95rem; margin-top:1rem; display:none;
+}
+.confirm-box.show{display:block;}
+
+/* ---------- Cart drawer ---------- */
+.drawer-backdrop{
+  position:fixed; inset:0; background:#0006; z-index:80; opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.drawer{
+  position:fixed; top:0; right:-420px; width:min(400px,94vw); height:100%;
+  background:var(--paper); z-index:90; transition:right .25s ease;
+  display:flex; flex-direction:column; border-left:1px solid var(--line);
+}
+body.drawer-open .drawer{right:0;}
+body.drawer-open .drawer-backdrop{opacity:1; pointer-events:auto;}
+.drawer header{display:flex; align-items:center; justify-content:space-between; padding:1rem 1.2rem; border-bottom:1px solid var(--line);}
+.drawer header h3{font-size:1.4rem;}
+.drawer .items{flex:1; overflow-y:auto; padding:1rem 1.2rem; display:flex; flex-direction:column; gap:.8rem;}
+.cart-item{
+  display:flex; gap:.7rem; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:.6rem;
+}
+.cart-item .sw{width:52px; height:52px; border-radius:8px; background-size:64px; background-position:center; flex:none;}
+.cart-item .info{flex:1; font-size:.9rem;}
+.cart-item .info strong{display:block;}
+.cart-item .rm{border:none; background:none; opacity:.5; font-size:1.1rem; align-self:start;}
+.cart-item .rm:hover{opacity:1;}
+.drawer footer{padding:1rem 1.2rem; border-top:1px solid var(--line);}
+.total-row{display:flex; justify-content:space-between; margin-bottom:.3rem; font-size:.92rem;}
+.total-row.grand{font-weight:600; font-size:1.05rem; margin:.5rem 0 .9rem;}
+.empty-msg{opacity:.6; text-align:center; margin-top:2rem;}
+
+/* ---------- Modals ---------- */
+.modal-backdrop{
+  position:fixed; inset:0; background:#0007; z-index:100; display:none;
+  align-items:center; justify-content:center; padding:1rem;
+}
+.modal-backdrop.show{display:flex;}
+.modal{
+  background:var(--paper); border-radius:var(--radius); width:min(460px,100%);
+  max-height:90vh; overflow-y:auto; padding:1.4rem;
+}
+.modal h3{font-size:1.5rem; margin-bottom:.9rem;}
+.modal .dims{display:grid; grid-template-columns:1fr 1fr; gap:.7rem;}
+.modal .calc{
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:.7rem .9rem; font-size:.92rem; margin:.9rem 0;
+}
+.modal .actions{display:flex; gap:.6rem; justify-content:flex-end; margin-top:1rem;}
+.pay-note{font-size:.8rem; opacity:.6; margin-top:.7rem;}
+
+/* ---------- Live price + drag tooltip ---------- */
+.price-live{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:.6rem .8rem;font-size:.88rem;line-height:1.4;}
+.price-live strong{font-size:1.05rem;}
+.dims-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
+.dims-row input{width:100%;padding:.45rem .6rem;border:1px solid var(--line);border-radius:8px;background:#fff;}
+.dims-row .lbl{font-size:.7rem;opacity:.6;display:block;margin-top:.15rem;}
+.drag-tip{position:absolute;z-index:20;background:#23211c;color:#fff;font-size:.78rem;padding:.32rem .6rem;border-radius:6px;pointer-events:none;white-space:nowrap;display:none;transform:translate(-50%,-170%);}
+
+/* ---------- Cutouts: click-to-draw polygons ---------- */
+#cutoutSvg{position:absolute;inset:0;z-index:7;pointer-events:none;width:100%;height:100%;}
+#cutoutSvg .cut-poly{fill:rgba(255,255,255,.07);stroke:#fff;stroke-width:2;stroke-dasharray:6 4;pointer-events:auto;cursor:move;}
+.stage.cutting #cutoutSvg .cut-poly{pointer-events:none;}
+#cutoutSvg .cutting-path{fill:none;stroke:var(--accent);stroke-width:2.5;}
+#cutoutSvg .cut-dot{fill:#fff;stroke:var(--accent);stroke-width:3;}
+#cutoutSvg .cut-dot.first{fill:var(--accent);stroke:#fff;}
+#cutoutLayer{position:absolute;inset:0;z-index:8;pointer-events:none;}
+.cut-del{position:absolute;pointer-events:auto;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;border:none;background:#23211c;color:#fff;font-size:.72rem;line-height:1;cursor:pointer;}
+.stage.cutting{cursor:crosshair;}
+.stage.cutting .handle{pointer-events:none;opacity:.35;}
+
+/* ---------- Install estimator ---------- */
+.est-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;}
+@media(max-width:760px){.est-grid{grid-template-columns:1fr;}}
+.breakdown{font-size:.9rem;}
+.breakdown .li{display:flex;justify-content:space-between;gap:1rem;padding:.34rem 0;border-bottom:1px dashed var(--line);}
+.breakdown .li.total{border-bottom:none;font-weight:600;font-size:1.08rem;padding-top:.6rem;}
+.breakdown .muted{opacity:.55;font-size:.8rem;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;}
+.check-line{display:flex;gap:.5rem;align-items:center;font-size:.9rem;font-weight:400;opacity:.9;}
+
+/* ---------- Overlay drawers & modals ---------- */
+.btn.mini{padding:.42rem .95rem;font-size:.86rem;}
+.topbar{flex-wrap:wrap;row-gap:.5rem;}
+.sheet-backdrop{position:fixed;inset:0;background:#0006;z-index:94;opacity:0;pointer-events:none;transition:opacity .2s;}
+body.viz-open .sheet-backdrop, body.est-open .sheet-backdrop{opacity:1;pointer-events:auto;}
+body.viz-open, body.est-open{overflow:hidden;}
+
+.viz-drawer{
+  position:fixed;left:0;right:0;bottom:0;z-index:95;
+  background:var(--paper);border-top:1px solid var(--line);
+  border-radius:20px 20px 0 0;box-shadow:0 -14px 44px #00000030;
+  transform:translateY(103%);transition:transform .3s ease;
+  max-height:93vh;overflow-y:auto;
+}
+body.viz-open .viz-drawer{transform:translateY(0);}
+.viz-drawer .inner{max-width:1100px;margin:0 auto;padding:0 1.4rem 1.6rem;}
+.drawer-head{
+  position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:1rem;
+  padding:.9rem 1.4rem;background:var(--paper);border-bottom:1px solid var(--line);
+  margin-bottom:1rem;
+}
+.drawer-head .spacer{margin-left:auto;}
+
+.est-drawer{
+  position:fixed;top:0;right:-480px;width:min(450px,94vw);height:100%;
+  background:var(--paper);z-index:96;transition:right .25s ease;
+  overflow-y:auto;border-left:1px solid var(--line);
+}
+body.est-open .est-drawer{right:0;}
+.est-drawer .inner{padding:0 1.2rem 1.4rem;}
+.est-grid.single{grid-template-columns:1fr;}
+
+.modal-wide{width:min(780px,100%);}
+
+footer.site{
+  border-top:1px solid var(--line); margin-top:2rem; padding:1.6rem 1.4rem;
+  text-align:center; font-size:.85rem; opacity:.65;
+}
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<div class="topbar">
+  <div class="wordmark">Control P <span>· Wall Studio</span></div>
+  <nav class="topnav">
+    <a href="#designs">Designs</a>
+    <a href="#" id="navViz">Visualizer</a>
+    <a href="#" id="quoteBtn">Installation Quote</a>
+  </nav>
+  <button class="btn mini dark" id="bookBtn">Book Installation</button>
+  <button class="cart-btn" id="cartBtn" aria-label="Cart">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/><path d="M3 3h2l2.4 12.2a1.6 1.6 0 0 0 1.6 1.3h7.9a1.6 1.6 0 0 0 1.6-1.3L20.5 7H6"/></svg>
+    <span class="count" id="cartCount">0</span>
+  </button>
+</div>
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <h1>See it on <em>your wall</em> before it ships.</h1>
+  <p>Wall wraps, wallpaper, and window film for homes and businesses. Point your camera at a wall or upload a photo, drop a design on it in real perspective, then order and book installation — all in one place.</p>
+  <div class="hero-cta">
+    <button class="btn primary" id="openVizBtn">Try the visualizer</button>
+    <a class="btn" href="#designs">Browse designs</a>
+  </div>
+  <div class="swatch-strip" id="swatchStrip"></div>
+</div>
+
+<!-- ============ CATALOG ============ -->
+<section id="designs">
+  <div class="section-head">
+    <h2>Designs</h2>
+    <span class="hint">Priced per square foot · 25 sq ft minimum per panel</span>
+    <div class="slider-nav">
+      <button id="slidePrev" aria-label="Previous designs">←</button>
+      <button id="slideNext" aria-label="Next designs">→</button>
+    </div>
+  </div>
+  <div class="chips" id="catChips"></div>
+  <div class="grid" id="productGrid"></div>
+</section>
+
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+
+<!-- ============ VISUALIZER (bottom drawer) ============ -->
+<div class="viz-drawer" id="vizDrawer">
+  <div class="drawer-head">
+    <h2 class="serif" style="font-size:1.6rem">Visualizer</h2>
+    <span class="hint" style="opacity:.6;font-size:.88rem">Drag the four corners to fit your wall or window</span>
+    <span class="spacer"></span>
+    <button class="btn mini" id="closeVizBtn">✕ Close</button>
+  </div>
+  <div class="inner">
+  <div class="viz-wrap">
+    <div class="stage-outer">
+      <div class="stage" id="stage">
+        <img class="backdrop" id="backdropImg" alt="Room preview">
+        <video class="backdrop" id="backdropVideo" autoplay playsinline muted style="display:none"></video>
+        <svg class="quad-line" id="quadSvg" width="100%" height="100%">
+          <polygon id="quadPoly" fill="none" stroke="#ffffffaa" stroke-width="1.5" stroke-dasharray="6 5"/>
+        </svg>
+        <div id="patternSurface"></div>
+        <div class="handle" data-i="0"></div>
+        <div class="handle" data-i="1"></div>
+        <div class="handle" data-i="2"></div>
+        <div class="handle" data-i="3"></div>
+        <svg id="cutoutSvg"></svg>
+        <div id="cutoutLayer"></div>
+        <div class="drag-tip" id="dragTip"></div>
+        <div class="stage-note" id="stageNote">Demo room loaded — use your camera or upload a photo of your space</div>
+      </div>
+    </div>
+    <div class="viz-panel">
+      <h3>Preview controls</h3>
+      <div class="selected-tile">
+        <div class="sw" id="selSwatch"></div>
+        <div>
+          <strong id="selName"></strong><br>
+          <span style="font-size:.85rem;opacity:.7" id="selPrice"></span>
+        </div>
+      </div>
+      <div>
+        <label>Wall size (real feet)</label>
+        <div class="dims-row">
+          <div><input type="number" id="vizW" value="20" min="1" step="0.5"><span class="lbl">Width (ft)</span></div>
+          <div><input type="number" id="vizH" value="10" min="1" step="0.5"><span class="lbl">Height (ft)</span></div>
+        </div>
+      </div>
+      <div class="price-live" id="vizPrice"></div>
+      <div class="src-row">
+        <button class="btn" id="cameraBtn">📷 Camera</button>
+        <button class="btn" id="uploadBtn">🖼 Upload</button>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+      <div>
+        <label>Pattern scale</label>
+        <input type="range" id="scaleRange" min="80" max="500" value="220">
+      </div>
+      <div>
+        <label>Blend strength</label>
+        <input type="range" id="opacityRange" min="30" max="100" value="92">
+      </div>
+      <div class="viz-actions">
+        <button class="btn accent" id="snapshotBtn">Download preview</button>
+        <button class="btn" id="addCutoutBtn">✂ Cut Design</button>
+        <button class="btn" id="resetCornersBtn">Reset corners</button>
+        <button class="btn primary" id="vizAddCart">Add this design to cart</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ INSTALLATION QUOTE (right slide-out) ============ -->
+<aside class="est-drawer" id="estDrawer">
+  <div class="drawer-head">
+    <h2 class="serif" style="font-size:1.45rem">Installation quote</h2>
+    <span class="spacer"></span>
+    <button class="btn mini" id="closeEstBtn">✕</button>
+  </div>
+  <div class="inner">
+  <p style="opacity:.6;font-size:.85rem;margin-bottom:1rem">Updates live with your cart, wall size, and job conditions.</p>
+  <div class="est-grid single">
+    <div class="panel">
+      <div class="two-col">
+        <div class="field"><label>Location</label>
+          <select id="fLocation"><option value="int">Interior</option><option value="ext">Exterior (+20%)</option></select></div>
+        <div class="field"><label>Surface condition</label>
+          <select id="fCondition"><option value="good">Good / smooth</option><option value="textured">Textured (+15%)</option><option value="damaged">Needs repair (+$120 & +10%)</option></select></div>
+      </div>
+      <div class="two-col">
+        <div class="field"><label>Obstacles — outlets, fixtures, furniture moves</label><input type="number" id="fObstacles" value="2" min="0"></div>
+        <div class="field"><label>Distance from shop (miles)</label><input type="number" id="fMiles" value="8" min="0"></div>
+      </div>
+      <div class="field"><label class="check-line"><input type="checkbox" id="fRemoval"> Remove existing paper / wrap — $1.25/sq ft</label></div>
+      <div class="field"><label class="check-line"><input type="checkbox" id="fCleaning" checked> Cleaning & surface prep — $0.35/sq ft</label></div>
+      <div class="field"><label class="check-line"><input type="checkbox" id="fAccess"> Difficult access — stairs, lift areas, tight spaces (+$75)</label></div>
+      <div class="field"><label class="check-line"><input type="checkbox" id="fRush"> Rush — install within 7 days (+25%)</label></div>
+      <p class="muted" style="font-size:.8rem;opacity:.55">Wall height and material type are read automatically from your cart and visualizer. Over 10 ft adds ladder work (+10%); over 14 ft adds a lift (+25% & $150). Design cutouts never change price — full panels are printed and trimmed on site.</p>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:.7rem">Estimate breakdown</h3>
+      <div class="breakdown" id="estBreakdown"></div>
+    </div>
+  </div>
+  </div>
+</aside>
+
+<!-- ============ BOOKING (modal) ============ -->
+<div class="modal-backdrop" id="bookingModalBg">
+  <div class="modal modal-wide">
+    <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:.3rem">
+      <h3 style="margin:0">Book installation</h3>
+      <span style="margin-left:auto"></span>
+      <button class="btn mini" id="closeBookingBtn">✕</button>
+    </div>
+    <p style="opacity:.6;font-size:.85rem;margin-bottom:1rem">Chandler & Greater Phoenix · free on-site measure with every install</p>
+    <div class="book-grid">
+    <div class="panel">
+      <div class="field"><label>Full name</label><input id="bkName" placeholder="Jamie Rivera"></div>
+      <div class="field"><label>Phone</label><input id="bkPhone" placeholder="(480) 555-0148"></div>
+      <div class="field"><label>Install address</label><input id="bkAddr" placeholder="123 W Main St, Chandler, AZ"></div>
+      <div class="field"><label>Project type</label>
+        <select id="bkType">
+          <option>Wallpaper — residential</option>
+          <option>Wall wrap — commercial</option>
+          <option>Window film / frost</option>
+          <option>Mural / custom print</option>
+        </select>
+      </div>
+      <div class="field"><label>Notes (wall sizes, surfaces, access)</label><textarea id="bkNotes"></textarea></div>
+    </div>
+    <div class="panel">
+      <div class="field"><label>Preferred date</label><input type="date" id="bkDate"></div>
+      <div class="field">
+        <label>Time window</label>
+        <div class="slots" id="bkSlots"></div>
+      </div>
+      <button class="btn primary" id="bkSubmit" style="width:100%">Request install slot</button>
+      <div class="confirm-box" id="bkConfirm"></div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<footer class="site">Control P · Wall Studio — Chandler, AZ · Prototype build</footer>
+
+<!-- ============ CART DRAWER ============ -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="drawer">
+  <header><h3>Your cart</h3><button class="btn" id="closeDrawer" style="padding:.3rem .8rem">✕</button></header>
+  <div class="items" id="cartItems"></div>
+  <footer>
+    <div class="total-row"><span>Materials</span><span id="totMaterials">$0.00</span></div>
+    <div class="total-row"><span>Est. installation</span><span id="totInstall">$0.00</span></div>
+    <div class="total-row grand"><span>Total</span><span id="totGrand">$0.00</span></div>
+    <label style="display:flex;gap:.5rem;align-items:center;font-size:.88rem;margin-bottom:.8rem">
+      <input type="checkbox" id="includeInstall" checked> Include professional installation — <a href="#" onclick="openEst();return false">adjust job factors</a>
+    </label>
+    <button class="btn accent" id="checkoutBtn" style="width:100%">Checkout</button>
+  </footer>
+</aside>
+
+<!-- ============ SIZE MODAL ============ -->
+<div class="modal-backdrop" id="sizeModalBg">
+  <div class="modal">
+    <h3 id="sizeModalTitle">Size your wall</h3>
+    <div class="dims">
+      <div class="field"><label>Width (ft)</label><input type="number" id="dimW" value="10" min="1" step="0.5"></div>
+      <div class="field"><label>Height (ft)</label><input type="number" id="dimH" value="8" min="1" step="0.5"></div>
+    </div>
+    <div class="calc" id="sizeCalc"></div>
+    <div class="actions">
+      <button class="btn" id="sizeCancel">Cancel</button>
+      <button class="btn primary" id="sizeConfirm">Add to cart</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CHECKOUT MODAL ============ -->
+<div class="modal-backdrop" id="checkoutModalBg">
+  <div class="modal">
+    <h3>Checkout</h3>
+    <div id="checkoutForm">
+      <div class="field"><label>Name</label><input id="coName"></div>
+      <div class="field"><label>Email</label><input id="coEmail" type="email"></div>
+      <div class="field"><label>Phone</label><input id="coPhone"></div>
+      <div class="field"><label>Delivery / job address</label><input id="coAddr"></div>
+      <div class="calc" id="coSummary"></div>
+      <div class="actions">
+        <button class="btn" id="coCancel">Back</button>
+        <button class="btn accent" id="coPay">Pay now</button>
+      </div>
+      <p class="pay-note">Demo checkout — connect Square or Stripe here for live payments.</p>
+    </div>
+    <div id="checkoutDone" style="display:none">
+      <div class="confirm-box show" id="orderConfirm"></div>
+      <div class="actions"><button class="btn primary" id="coClose">Done</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =================================================================
+   PRODUCTS — tiles are inline SVG patterns (no external assets)
+================================================================= */
+function tile(svg){ return "url('data:image/svg+xml;utf8," + encodeURIComponent(svg) + "')"; }
+function tileSrc(svg){ return "data:image/svg+xml;utf8," + encodeURIComponent(svg); }
+
+const SVGS = {
+  palm: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#e9efe6"/><g stroke="#2f6b4f" stroke-width="3" fill="none" stroke-linecap="round"><path d="M20 100 Q35 60 30 20"/><path d="M30 20 Q10 35 8 55 M30 20 Q45 40 42 62 M28 40 Q12 52 14 70 M29 38 Q46 55 44 74"/><path d="M95 118 Q88 85 96 55"/><path d="M96 55 Q78 66 76 84 M96 55 Q112 72 110 90"/></g></svg>`,
+  terrazzo: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#f4ede4"/><g><polygon points="14,18 30,12 26,30" fill="#c2603d"/><polygon points="70,10 86,16 78,32 64,26" fill="#7f8f7a"/><polygon points="100,52 114,48 112,66" fill="#3f5d76"/><polygon points="30,60 48,56 44,76 28,74" fill="#d9b26a"/><polygon points="78,78 94,72 96,90 80,94" fill="#c2603d"/><polygon points="12,96 28,92 24,110" fill="#3f5d76"/><polygon points="54,104 70,100 66,116" fill="#7f8f7a"/><circle cx="58" cy="34" r="4" fill="#3f5d76"/><circle cx="104" cy="106" r="5" fill="#d9b26a"/></g></svg>`,
+  deco: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#1f3a5f"/><g fill="none" stroke="#d8b25c" stroke-width="2.5"><path d="M0 120 A60 60 0 0 1 120 120"/><path d="M15 120 A45 45 0 0 1 105 120"/><path d="M30 120 A30 30 0 0 1 90 120"/><path d="M45 120 A15 15 0 0 1 75 120"/><path d="M-60 60 A60 60 0 0 1 60 60" transform="translate(0,-60)"/><path d="M60 0 A60 60 0 0 1 180 0" transform="translate(-60,0)"/></g></svg>`,
+  herring: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#b98d5f"/><g stroke="#8a6240" stroke-width="2"><path d="M0 0 L30 30 M30 30 L60 0 M60 0 L90 30 M90 30 L120 0"/><path d="M0 40 L30 70 M30 70 L60 40 M60 40 L90 70 M90 70 L120 40"/><path d="M0 80 L30 110 M30 110 L60 80 M60 80 L90 110 M90 110 L120 80"/><path d="M0 30 L30 60 M30 60 L60 30 M60 30 L90 60 M90 60 L120 30" stroke="#a3federal"/></g><g stroke="#caa273" stroke-width="1.4"><path d="M0 20 L30 50 M30 50 L60 20 M60 20 L90 50 M90 50 L120 20"/><path d="M0 60 L30 90 M30 90 L60 60 M60 60 L90 90 M90 90 L120 60"/><path d="M0 100 L30 130 M60 100 L30 130 M60 100 L90 130 M120 100 L90 130"/></g></svg>`,
+  carbon: `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect width="60" height="60" fill="#232326"/><g fill="#2e2e33"><rect x="0" y="0" width="28" height="13"/><rect x="30" y="15" width="28" height="13"/><rect x="0" y="30" width="28" height="13"/><rect x="30" y="45" width="28" height="13"/></g><g fill="#3a3a41"><rect x="30" y="0" width="28" height="6"/><rect x="0" y="15" width="28" height="6"/><rect x="30" y="30" width="28" height="6"/><rect x="0" y="45" width="28" height="6"/></g></svg>`,
+  mural: `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="450"><defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c46b"/><stop offset=".5" stop-color="#e0784a"/><stop offset="1" stop-color="#8a4a5e"/></linearGradient></defs><rect width="600" height="450" fill="url(#sky)"/><circle cx="300" cy="230" r="80" fill="#fbe3b0" opacity=".85"/><path d="M0 450 L0 340 Q90 300 160 340 T340 330 T600 350 L600 450 Z" fill="#5c3550"/><path d="M0 450 L0 390 Q140 360 260 395 T600 400 L600 450 Z" fill="#3c2440"/><g fill="#3c2440"><path d="M120 340 l0 -55 m0 55 l-22 -30 m22 12 l20 -34" stroke="#3c2440" stroke-width="9" stroke-linecap="round"/></g></svg>`,
+  froststripe: `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="#ffffff" opacity="0"/><g fill="#e9f0f4" opacity=".85"><rect x="0" width="14" height="80"/><rect x="26" width="6" height="80"/><rect x="44" width="14" height="80"/><rect x="70" width="6" height="80"/></g></svg>`,
+  frostdot: `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect width="60" height="60" fill="#eef3f6" opacity=".78"/><g fill="#ffffff" opacity=".9"><circle cx="15" cy="15" r="7"/><circle cx="45" cy="15" r="4"/><circle cx="15" cy="45" r="4"/><circle cx="45" cy="45" r="7"/></g></svg>`,
+  slate: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#49525c"/><rect width="200" height="200" fill="#3e4750" opacity=".5"/><g stroke="#565f6a" stroke-width="1" opacity=".6"><path d="M0 66 H200 M0 133 H200 M66 0 V200 M133 0 V200"/></g><g fill="#525b66" opacity=".35"><circle cx="40" cy="30" r="18"/><circle cx="150" cy="90" r="26"/><circle cx="80" cy="170" r="20"/></g></svg>`
+};
+// fix a typo-safe herringbone (remove invalid color token)
+SVGS.herring = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#b98d5f"/><g stroke="#8a6240" stroke-width="2" fill="none"><path d="M0 0 L30 30 L60 0 L90 30 L120 0"/><path d="M0 40 L30 70 L60 40 L90 70 L120 40"/><path d="M0 80 L30 110 L60 80 L90 110 L120 80"/></g><g stroke="#caa273" stroke-width="1.4" fill="none"><path d="M0 20 L30 50 L60 20 L90 50 L120 20"/><path d="M0 60 L30 90 L60 60 L90 90 L120 60"/><path d="M0 100 L30 130 M60 100 L30 130 M60 100 L90 130 M120 100 L90 130"/></g></svg>`;
+
+const PRODUCTS = [
+  {id:"palm",   name:"Palm Verde",     cat:"Wallpaper",   price:6.50, accent:"#2f6b4f", svg:SVGS.palm,   blend:"multiply", repeat:true},
+  {id:"terr",   name:"Terrazzo Sol",   cat:"Wallpaper",   price:6.00, accent:"#c2603d", svg:SVGS.terrazzo,blend:"multiply", repeat:true},
+  {id:"deco",   name:"Deco Arc",       cat:"Wallpaper",   price:7.25, accent:"#1f3a5f", svg:SVGS.deco,   blend:"multiply", repeat:true},
+  {id:"herr",   name:"Herringbone Oak",cat:"Wallpaper",   price:6.75, accent:"#8a6240", svg:SVGS.herring,blend:"multiply", repeat:true},
+  {id:"carbon", name:"Carbon Weave",   cat:"Wall wrap",   price:8.50, accent:"#2b2b2e", svg:SVGS.carbon, blend:"multiply", repeat:true},
+  {id:"slate",  name:"Matte Slate",    cat:"Wall wrap",   price:8.00, accent:"#3e4750", svg:SVGS.slate,  blend:"multiply", repeat:true},
+  {id:"mural",  name:"Desert Dusk Mural",cat:"Wall wrap", price:9.75, accent:"#b4552d", svg:SVGS.mural,  blend:"multiply", repeat:false},
+  {id:"fstripe",name:"Frost Stripe",   cat:"Window film", price:5.50, accent:"#6c8ea4", svg:SVGS.froststripe, blend:"normal", repeat:true},
+  {id:"fdot",   name:"Frost Dot",      cat:"Window film", price:5.50, accent:"#58748c", svg:SVGS.frostdot,    blend:"normal", repeat:true},
+];
+const CATS = ["All","Wallpaper","Wall wrap","Window film"];
+const MIN_SQFT = 25;
+const INSTALL_RATES = {"Wallpaper":3.25, "Wall wrap":4.00, "Window film":3.00}; // base labor $/sq ft by material
+
+/* =================================================================
+   STATE
+================================================================= */
+const state = {
+  selected: PRODUCTS[0],
+  cart: [],
+  cat: "All",
+  corners: [{x:.18,y:.22},{x:.62,y:.20},{x:.18,y:.80},{x:.62,y:.82}], // TL TR BL BR (fractions)
+  dims: {w:20, h:10},   // real-world wall size in feet
+  calibArea: null,      // quad px area when dims were last set (for drag-to-resize pricing)
+  cutouts: [],          // {x,y,w,h} stage fractions — excluded from print, no price change
+  liveIdx: null,        // cart index linked to the visualizer for real-time price updates
+  scale: 220,
+  opacity: .92,
+  camera: null,
+  sizeModalProduct: null,
+  bkSlot: null,
+};
+
+/* =================================================================
+   DEMO ROOM BACKDROP (inline SVG)
+================================================================= */
+const DEMO_ROOM = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900"><rect width="1200" height="900" fill="#e6e1d8"/><rect y="640" width="1200" height="260" fill="#c9b99f"/><g stroke="#bcae95" stroke-width="3"><path d="M0 700 H1200 M0 770 H1200 M0 845 H1200"/></g><rect x="850" y="140" width="240" height="330" fill="#dfeaf0" stroke="#f5f2ec" stroke-width="14"/><path d="M970 140 V470 M850 305 H1090" stroke="#f5f2ec" stroke-width="10"/><rect x="120" y="560" width="430" height="150" rx="22" fill="#8a7f6d"/><rect x="140" y="480" width="390" height="110" rx="18" fill="#9c917e"/><rect x="105" y="545" width="60" height="165" rx="14" fill="#7c7261"/><rect x="505" y="545" width="60" height="165" rx="14" fill="#7c7261"/><ellipse cx="340" cy="875" rx="330" ry="24" fill="#00000014"/><rect x="660" y="520" width="110" height="190" rx="8" fill="#6b5d48"/><ellipse cx="715" cy="470" rx="70" ry="60" fill="#5d7a52"/><ellipse cx="690" cy="440" rx="45" ry="42" fill="#6d8c60"/></svg>`;
+
+/* =================================================================
+   HOMOGRAPHY (unit surface -> stage px)  — Franklin Ta method
+================================================================= */
+function adj(m){return [
+  m[4]*m[8]-m[5]*m[7], m[2]*m[7]-m[1]*m[8], m[1]*m[5]-m[2]*m[4],
+  m[5]*m[6]-m[3]*m[8], m[0]*m[8]-m[2]*m[6], m[2]*m[3]-m[0]*m[5],
+  m[3]*m[7]-m[4]*m[6], m[1]*m[6]-m[0]*m[7], m[0]*m[4]-m[1]*m[3]];}
+function multmm(a,b){const c=Array(9);for(let i=0;i<3;i++)for(let j=0;j<3;j++){let s=0;for(let k=0;k<3;k++)s+=a[3*i+k]*b[3*k+j];c[3*i+j]=s;}return c;}
+function multmv(m,v){return [m[0]*v[0]+m[1]*v[1]+m[2]*v[2], m[3]*v[0]+m[4]*v[1]+m[5]*v[2], m[6]*v[0]+m[7]*v[1]+m[8]*v[2]];}
+function basisToPoints(x1,y1,x2,y2,x3,y3,x4,y4){
+  const m=[x1,x2,x3, y1,y2,y3, 1,1,1];
+  const v=multmv(adj(m),[x4,y4,1]);
+  return multmm(m,[v[0],0,0, 0,v[1],0, 0,0,v[2]]);
+}
+function projection(w,h,pts){ // pts: [TL,TR,BL,BR] in px
+  const s=basisToPoints(0,0, w,0, 0,h, w,h);
+  const d=basisToPoints(pts[0].x,pts[0].y, pts[1].x,pts[1].y, pts[2].x,pts[2].y, pts[3].x,pts[3].y);
+  const t=multmm(d,adj(s));
+  for(let i=0;i<9;i++)t[i]/=t[8];
+  return t;
+}
+function applyProjection(el,w,h,pts){
+  const t=projection(w,h,pts);
+  el.style.transform="matrix3d("+[
+    t[0],t[3],0,t[6],
+    t[1],t[4],0,t[7],
+    0,0,1,0,
+    t[2],t[5],0,t[8]].join(",")+")";
+}
+function projectPoint(H,u,v){const p=multmv(H,[u,v,1]);return {x:p[0]/p[2], y:p[1]/p[2]};}
+
+/* =================================================================
+   DOM REFS
+================================================================= */
+const $=id=>document.getElementById(id);
+const stage=$("stage"), surf=$("patternSurface"), quadPoly=$("quadPoly");
+const backdropImg=$("backdropImg"), backdropVideo=$("backdropVideo");
+const handles=[...document.querySelectorAll(".handle")];
+const SW=1200, SH=900;
+
+/* =================================================================
+   RENDER: catalog + swatches
+================================================================= */
+function money(n){return "$"+n.toFixed(2);}
+function setAccent(c){document.documentElement.style.setProperty("--accent",c);document.documentElement.style.setProperty("--accent-soft",c+"22");}
+
+function renderChips(){
+  $("catChips").innerHTML=CATS.map(c=>`<button class="chip ${c===state.cat?'active':''}" data-cat="${c}">${c}</button>`).join("");
+  $("catChips").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{state.cat=b.dataset.cat;renderChips();renderGrid();});
+}
+function renderGrid(){
+  const list=PRODUCTS.filter(p=>state.cat==="All"||p.cat===state.cat);
+  $("productGrid").innerHTML=list.map(p=>`
+    <div class="card ${p.id===state.selected.id?'selected':''}" data-id="${p.id}">
+      <div class="tile" style="background-image:${tile(p.svg)};${p.repeat?'':'background-size:cover;'}"></div>
+      <div class="body">
+        <span class="cat">${p.cat}</span>
+        <h3>${p.name}</h3>
+        <span class="price">${money(p.price)} / sq ft</span>
+        <div class="row">
+          <button class="btn" data-act="preview">Preview</button>
+          <button class="btn primary" data-act="cart">Add</button>
+        </div>
+      </div>
+    </div>`).join("");
+  $("productGrid").querySelectorAll(".card").forEach(card=>{
+    const p=PRODUCTS.find(x=>x.id===card.dataset.id);
+    card.querySelector('[data-act=preview]').onclick=()=>{selectProduct(p);openViz();};
+    card.querySelector('[data-act=cart]').onclick=()=>openSizeModal(p);
+  });
+}
+function slideBy(dir){
+  const track=$("productGrid");
+  const card=track.querySelector(".card");
+  if(!card)return;
+  const gap=parseFloat(getComputedStyle(track).gap)||18;
+  track.scrollBy({left:dir*(card.getBoundingClientRect().width+gap), behavior:"smooth"});
+}
+$("slidePrev").onclick=()=>slideBy(-1);
+$("slideNext").onclick=()=>slideBy(1);
+
+/* ---------- click & drag the card row (mouse; touch scrolls natively) ---------- */
+(function enableDragScroll(){
+  const track=$("productGrid");
+  let down=false, dragged=false, startX=0, startScroll=0, lastX=0, vel=0, momentumId=null;
+  track.addEventListener("pointerdown",e=>{
+    if(e.pointerType!=="mouse")return; // touch/pen use native scrolling
+    down=true; dragged=false;
+    startX=lastX=e.clientX; startScroll=track.scrollLeft; vel=0;
+    if(momentumId){cancelAnimationFrame(momentumId);momentumId=null;}
+  });
+  track.addEventListener("pointermove",e=>{
+    if(!down)return;
+    const dx=e.clientX-startX;
+    if(!dragged && Math.abs(dx)>5){
+      dragged=true;
+      track.classList.add("dragging");
+      track.setPointerCapture(e.pointerId);
+    }
+    if(dragged){
+      vel=e.clientX-lastX; lastX=e.clientX;
+      track.scrollLeft=startScroll-dx;
+    }
+  });
+  const release=()=>{
+    if(!down)return;
+    down=false;
+    if(dragged){
+      // small momentum glide, then snap styling returns
+      let v=vel;
+      const glide=()=>{
+        v*=.92;
+        track.scrollLeft-=v;
+        if(Math.abs(v)>.5)momentumId=requestAnimationFrame(glide);
+        else{momentumId=null;track.classList.remove("dragging");}
+      };
+      momentumId=requestAnimationFrame(glide);
+      setTimeout(()=>track.classList.remove("dragging"),400);
+    }
+  };
+  track.addEventListener("pointerup",release);
+  track.addEventListener("pointerleave",release);
+  track.addEventListener("pointercancel",release);
+  // if a drag happened, swallow the click so buttons don't fire
+  track.addEventListener("click",e=>{if(dragged){e.stopPropagation();e.preventDefault();dragged=false;}},true);
+})();
+
+function renderSwatches(){
+  $("swatchStrip").innerHTML=PRODUCTS.map(p=>`<button title="${p.name}" class="${p.id===state.selected.id?'active':''}" data-id="${p.id}" style="background-image:${tile(p.svg)};${p.repeat?'':'background-size:cover;'}"></button>`).join("");
+  $("swatchStrip").querySelectorAll("button").forEach(b=>b.onclick=()=>selectProduct(PRODUCTS.find(p=>p.id===b.dataset.id)));
+}
+function selectProduct(p){
+  state.selected=p; setAccent(p.accent);
+  state.liveIdx=null; // new design = new item; stop live-updating the old one
+  renderSwatches(); renderGrid(); renderSelectedPanel(); updateOverlay(); updateLivePricing();
+}
+function renderSelectedPanel(){
+  const p=state.selected;
+  $("selSwatch").style.backgroundImage=tile(p.svg);
+  $("selSwatch").style.backgroundSize=p.repeat?"60px":"cover";
+  $("selName").textContent=p.name;
+  $("selPrice").textContent=p.cat+" · "+money(p.price)+"/sq ft";
+}
+
+/* =================================================================
+   VISUALIZER — overlay + handles
+================================================================= */
+function stageRect(){return stage.getBoundingClientRect();}
+function cornersPx(){
+  const r=stageRect();
+  return state.corners.map(c=>({x:c.x*r.width, y:c.y*r.height}));
+}
+function updateOverlay(){
+  const p=state.selected;
+  surf.style.backgroundImage=tile(p.svg);
+  if(p.repeat){surf.style.backgroundSize=state.scale+"px"; surf.style.backgroundRepeat="repeat";}
+  else{surf.style.backgroundSize="100% 100%"; surf.style.backgroundRepeat="no-repeat";}
+  surf.style.mixBlendMode=p.blend;
+  surf.style.opacity=state.opacity;
+  const pts=cornersPx();
+  applyProjection(surf,SW,SH,pts);
+  handles.forEach((h,i)=>{h.style.left=pts[i].x+"px"; h.style.top=pts[i].y+"px";});
+  // polygon outline (TL,TR,BR,BL order for drawing)
+  quadPoly.setAttribute("points",[pts[0],pts[1],pts[3],pts[2]].map(q=>q.x+","+q.y).join(" "));
+  updateCutoutGeometry();
+  buildMask(pts);
+}
+
+/* ---------- cutouts: freeform polygons drawn by clicking (no price change) ---------- */
+function surfacePolysForCutouts(H, toPxX, toPxY){
+  // inverse-project each stage-space cutout polygon into pattern-surface space
+  const inv=adj(H);
+  return state.cutouts.map(c=>c.pts.map(pt=>projectPoint(inv, pt.x*toPxX, pt.y*toPxY)));
+}
+function buildMask(pts){
+  if(!state.cutouts.length){
+    surf.style.maskImage=""; surf.style.webkitMaskImage="";
+    return;
+  }
+  const r=stageRect();
+  const H=projection(SW,SH,pts);
+  const polys=surfacePolysForCutouts(H, r.width, r.height);
+  // evenodd path: full surface rect minus each cutout polygon (alpha mask, cross-browser)
+  let d=`M0 0 H${SW} V${SH} H0 Z `;
+  polys.forEach(p=>{
+    d+=`M${p[0].x.toFixed(1)} ${p[0].y.toFixed(1)} `+p.slice(1).map(q=>`L${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(" ")+" Z ";
+  });
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${SH}"><path fill-rule="evenodd" d="${d}" fill="#fff"/></svg>`;
+  const url=`url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+  surf.style.maskImage=url; surf.style.maskSize="100% 100%";
+  surf.style.webkitMaskImage=url; surf.style.webkitMaskSize="100% 100%";
+}
+const cutSvg=$("cutoutSvg");
+const SVGNS="http://www.w3.org/2000/svg";
+function polyCentroid(px){let x=0,y=0;px.forEach(p=>{x+=p.x;y+=p.y;});return {x:x/px.length,y:y/px.length};}
+function renderCutouts(){
+  cutSvg.innerHTML=""; $("cutoutLayer").innerHTML="";
+  state.cutouts.forEach((c,i)=>{
+    const poly=document.createElementNS(SVGNS,"polygon");
+    poly.setAttribute("class","cut-poly");
+    cutSvg.appendChild(poly);
+    // drag the whole shape to reposition
+    poly.addEventListener("pointerdown",e=>{
+      if(state.cutting)return;
+      e.preventDefault(); poly.setPointerCapture(e.pointerId);
+      let last={x:e.clientX,y:e.clientY};
+      const move=ev=>{
+        const rr=stageRect();
+        const dx=(ev.clientX-last.x)/rr.width, dy=(ev.clientY-last.y)/rr.height;
+        last={x:ev.clientX,y:ev.clientY};
+        c.pts=c.pts.map(p=>({x:Math.min(1,Math.max(0,p.x+dx)), y:Math.min(1,Math.max(0,p.y+dy))}));
+        requestOverlay();
+      };
+      const up=()=>{poly.removeEventListener("pointermove",move);poly.removeEventListener("pointerup",up);};
+      poly.addEventListener("pointermove",move); poly.addEventListener("pointerup",up);
+    });
+    const del=document.createElement("button");
+    del.className="cut-del"; del.title="Remove cutout"; del.textContent="✕";
+    del.onclick=()=>{state.cutouts.splice(i,1);renderCutouts();updateOverlay();updateLivePricing();};
+    $("cutoutLayer").appendChild(del);
+  });
+  updateCutoutGeometry();
+}
+function updateCutoutGeometry(){
+  const r=stageRect();
+  const polys=cutSvg.querySelectorAll(".cut-poly");
+  const dels=$("cutoutLayer").querySelectorAll(".cut-del");
+  state.cutouts.forEach((c,i)=>{
+    const px=c.pts.map(p=>({x:p.x*r.width, y:p.y*r.height}));
+    if(polys[i])polys[i].setAttribute("points",px.map(p=>p.x+","+p.y).join(" "));
+    if(dels[i]){const ct=polyCentroid(px); dels[i].style.left=ct.x+"px"; dels[i].style.top=ct.y+"px";}
+  });
+  drawCuttingPath();
+}
+/* ---------- drawing mode: click points around the object ---------- */
+function drawCuttingPath(){
+  cutSvg.querySelectorAll(".cutting-path,.cut-dot").forEach(el=>el.remove());
+  if(!state.cutting || !state.cutting.pts.length)return;
+  const r=stageRect();
+  const px=state.cutting.pts.map(p=>({x:p.x*r.width, y:p.y*r.height}));
+  const pl=document.createElementNS(SVGNS,"polyline");
+  pl.setAttribute("class","cutting-path");
+  pl.setAttribute("points",px.map(p=>p.x+","+p.y).join(" "));
+  cutSvg.appendChild(pl);
+  px.forEach((p,idx)=>{
+    const dot=document.createElementNS(SVGNS,"circle");
+    dot.setAttribute("class","cut-dot"+(idx===0?" first":""));
+    dot.setAttribute("cx",p.x); dot.setAttribute("cy",p.y); dot.setAttribute("r",idx===0?7:5);
+    cutSvg.appendChild(dot);
+  });
+}
+function startCutting(){
+  state.cutting={pts:[]};
+  stage.classList.add("cutting");
+  $("addCutoutBtn").textContent="✓ Done cutting";
+  $("stageNote").textContent="Click around the object to outline it — click the first point (or Done) to close the cutout";
+}
+function finishCutting(cancel){
+  if(!cancel && state.cutting && state.cutting.pts.length>=3){
+    state.cutouts.push({pts:state.cutting.pts});
+  }
+  state.cutting=null;
+  stage.classList.remove("cutting");
+  $("addCutoutBtn").textContent="✂ Cut Design";
+  $("stageNote").textContent="Cutouts are printed full and trimmed on site — no price change";
+  renderCutouts(); updateOverlay(); updateLivePricing();
+}
+stage.addEventListener("pointerdown",e=>{
+  if(!state.cutting)return;
+  if(e.target.closest(".handle")||e.target.closest(".cut-del"))return;
+  const r=stageRect();
+  const fx=(e.clientX-r.left)/r.width, fy=(e.clientY-r.top)/r.height;
+  const pts=state.cutting.pts;
+  if(pts.length>=3){
+    const fpx={x:pts[0].x*r.width, y:pts[0].y*r.height};
+    if(Math.hypot(e.clientX-r.left-fpx.x, e.clientY-r.top-fpx.y)<12){finishCutting(false);return;}
+  }
+  pts.push({x:Math.min(1,Math.max(0,fx)), y:Math.min(1,Math.max(0,fy))});
+  drawCuttingPath();
+});
+window.addEventListener("keydown",e=>{if(e.key==="Escape"&&state.cutting)finishCutting(true);});
+let overlayRaf=null;
+function requestOverlay(){
+  if(overlayRaf)return;
+  overlayRaf=requestAnimationFrame(()=>{overlayRaf=null;updateOverlay();});
+}
+/* ---------- dynamic pricing helpers ---------- */
+function quadArea(){ // shoelace, px², order TL TR BR BL
+  const p=cornersPx(); const o=[p[0],p[1],p[3],p[2]];
+  let a=0;
+  for(let i=0;i<4;i++){const j=(i+1)%4; a+=o[i].x*o[j].y - o[j].x*o[i].y;}
+  return Math.abs(a/2);
+}
+function estimatedSqft(){
+  if(!state.calibArea) state.calibArea=quadArea()||1;
+  const ratio=quadArea()/state.calibArea;
+  return Math.max(1, Math.round(state.dims.w*state.dims.h*ratio*10)/10);
+}
+function estimatedDims(){ // scale W and H by sqrt of the area ratio
+  const ratio=Math.sqrt((quadArea()/(state.calibArea||1)));
+  return {w:Math.round(state.dims.w*ratio*10)/10, h:Math.round(state.dims.h*ratio*10)/10};
+}
+function updateLivePricing(){
+  const p=state.selected;
+  const est=estimatedSqft();
+  const billed=Math.max(MIN_SQFT,est);
+  const mat=billed*p.price;
+  const inst=computeInstall(billed, estimatedDims().h, INSTALL_RATES[p.cat]).total;
+  $("vizPrice").innerHTML=
+    `≈ <strong>${est} sq ft</strong>${est<MIN_SQFT?` <span style="opacity:.6">(billed at ${MIN_SQFT} min)</span>`:``}`+
+    `<br>Materials <strong>${money(mat)}</strong> · Est. install ${money(inst)}`+
+    (state.cutouts.length?`<br><span style="opacity:.6">${state.cutouts.length} cutout(s) — printed full, trimmed on site, no price change</span>`:``);
+  // live-linked cart item
+  if(state.liveIdx!==null && state.cart[state.liveIdx] && state.cart[state.liveIdx].pid===p.id){
+    const d=estimatedDims();
+    Object.assign(state.cart[state.liveIdx],{w:d.w,h:d.h,sqft:billed});
+    renderCart(); saveCart();
+  }else{
+    renderEstimate();
+  }
+}
+let priceRaf=null;
+function requestPricing(){
+  if(priceRaf)return;
+  priceRaf=requestAnimationFrame(()=>{priceRaf=null;updateLivePricing();});
+}
+
+/* ---------- corner drag with live price tooltip ---------- */
+const dragTip=$("dragTip");
+handles.forEach(h=>{
+  h.addEventListener("pointerdown",e=>{
+    e.preventDefault();
+    h.setPointerCapture(e.pointerId);
+    const i=+h.dataset.i;
+    const move=ev=>{
+      const r=stageRect();
+      state.corners[i]={
+        x:Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width)),
+        y:Math.min(1,Math.max(0,(ev.clientY-r.top)/r.height))
+      };
+      updateOverlay();
+      requestPricing();
+      const est=estimatedSqft();
+      dragTip.style.display="block";
+      dragTip.style.left=(state.corners[i].x*r.width)+"px";
+      dragTip.style.top=(state.corners[i].y*r.height)+"px";
+      dragTip.textContent=`≈ ${est} sq ft · ${money(Math.max(MIN_SQFT,est)*state.selected.price)} materials`;
+    };
+    const up=()=>{
+      dragTip.style.display="none";
+      h.removeEventListener("pointermove",move);h.removeEventListener("pointerup",up);
+    };
+    h.addEventListener("pointermove",move);
+    h.addEventListener("pointerup",up);
+  });
+});
+$("vizW").oninput=e=>{state.dims.w=parseFloat(e.target.value)||1;state.calibArea=quadArea();updateLivePricing();};
+$("vizH").oninput=e=>{state.dims.h=parseFloat(e.target.value)||1;state.calibArea=quadArea();updateLivePricing();};
+$("addCutoutBtn").onclick=()=>{
+  if(state.cutting)finishCutting(false);
+  else startCutting();
+};
+$("scaleRange").oninput=e=>{state.scale=+e.target.value;updateOverlay();};
+$("opacityRange").oninput=e=>{state.opacity=e.target.value/100;updateOverlay();};
+$("resetCornersBtn").onclick=()=>{
+  state.corners=[{x:.18,y:.22},{x:.62,y:.20},{x:.18,y:.80},{x:.62,y:.82}];
+  updateOverlay();
+  state.calibArea=quadArea();
+  updateLivePricing();
+};
+window.addEventListener("resize",updateOverlay);
+
+/* ---------- backdrop sources ---------- */
+backdropImg.src=tileSrc(DEMO_ROOM);
+function stopCamera(){
+  if(state.camera){state.camera.getTracks().forEach(t=>t.stop());state.camera=null;}
+  backdropVideo.style.display="none"; backdropImg.style.display="block";
+}
+$("cameraBtn").onclick=async()=>{
+  if(state.camera){stopCamera();$("cameraBtn").textContent="📷 Camera";$("stageNote").textContent="Camera off — demo room restored";return;}
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    state.camera=s; backdropVideo.srcObject=s;
+    backdropVideo.style.display="block"; backdropImg.style.display="none";
+    $("cameraBtn").textContent="⏹ Stop camera";
+    $("stageNote").textContent="Live camera — point at your wall and fit the corners";
+  }catch(err){
+    $("stageNote").textContent="Camera unavailable in this environment — upload a photo instead";
+  }
+};
+$("uploadBtn").onclick=()=>$("fileInput").click();
+$("fileInput").onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  stopCamera(); $("cameraBtn").textContent="📷 Camera";
+  const url=URL.createObjectURL(f);
+  backdropImg.src=url;
+  $("stageNote").textContent="Photo loaded — drag the corners to fit your wall";
+};
+
+/* ---------- snapshot (canvas render with textured triangles) ---------- */
+function drawTexturedTriangle(ctx,img,x0,y0,x1,y1,x2,y2,u0,v0,u1,v1,u2,v2){
+  ctx.save();
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.lineTo(x2,y2);ctx.closePath();ctx.clip();
+  const den=u0*(v2-v1)-u1*v2+u2*v1+(u1-u2)*v0;
+  if(!den){ctx.restore();return;}
+  const m11=-(v0*(x2-x1)-v1*x2+v2*x1+(v1-v2)*x0)/den;
+  const m12=(v1*y2+v0*(y1-y2)-v2*y1+(v2-v1)*y0)/den;
+  const m21=(u0*(x2-x1)-u1*x2+u2*x1+(u1-u2)*x0)/den;
+  const m22=-(u1*y2+u0*(y1-y2)-u2*y1+(u2-u1)*y0)/den;
+  const dx=(u0*(v2*x1-v1*x2)+v0*(u1*x2-u2*x1)+(u2*v1-u1*v2)*x0)/den;
+  const dy=(u0*(v2*y1-v1*y2)+v0*(u1*y2-u2*y1)+(u2*v1-u1*v2)*y0)/den;
+  ctx.transform(m11,m12,m21,m22,dx,dy);
+  ctx.drawImage(img,0,0);
+  ctx.restore();
+}
+function loadImage(src){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=src;});}
+$("snapshotBtn").onclick=async()=>{
+  const p=state.selected;
+  // 1. base frame
+  let baseW,baseH,drawBase;
+  if(state.camera && backdropVideo.videoWidth){
+    baseW=backdropVideo.videoWidth; baseH=backdropVideo.videoHeight;
+    drawBase=ctx=>ctx.drawImage(backdropVideo,0,0,baseW,baseH);
+  }else{
+    baseW=backdropImg.naturalWidth||1200; baseH=backdropImg.naturalHeight||900;
+    drawBase=ctx=>ctx.drawImage(backdropImg,0,0,baseW,baseH);
+  }
+  const cv=document.createElement("canvas");cv.width=baseW;cv.height=baseH;
+  const ctx=cv.getContext("2d");
+  drawBase(ctx);
+  // 2. pattern surface canvas
+  const tileImg=await loadImage(tileSrc(p.svg));
+  const pc=document.createElement("canvas");pc.width=SW;pc.height=SH;
+  const pctx=pc.getContext("2d");
+  if(p.repeat){
+    const s=state.scale;
+    const scaled=document.createElement("canvas");scaled.width=s;scaled.height=s*(tileImg.height/tileImg.width);
+    scaled.getContext("2d").drawImage(tileImg,0,0,scaled.width,scaled.height);
+    pctx.fillStyle=pctx.createPattern(scaled,"repeat");
+    pctx.fillRect(0,0,SW,SH);
+  }else{
+    pctx.drawImage(tileImg,0,0,SW,SH);
+  }
+  // 3. project onto base via homography (stage fractions -> base px)
+  const pts=state.corners.map(c=>({x:c.x*baseW,y:c.y*baseH}));
+  const H=projection(SW,SH,pts);
+  // punch cutout holes in the pattern (surface space) so they render clear
+  if(state.cutouts.length){
+    const polys=surfacePolysForCutouts(H, baseW, baseH);
+    pctx.globalCompositeOperation="destination-out";
+    pctx.fillStyle="#000";
+    polys.forEach(poly=>{
+      pctx.beginPath();
+      pctx.moveTo(poly[0].x,poly[0].y);
+      for(let k=1;k<poly.length;k++)pctx.lineTo(poly[k].x,poly[k].y);
+      pctx.closePath(); pctx.fill();
+    });
+    pctx.globalCompositeOperation="source-over";
+  }
+  ctx.globalAlpha=state.opacity;
+  ctx.globalCompositeOperation=p.blend==="multiply"?"multiply":"source-over";
+  const N=20;
+  for(let gy=0;gy<N;gy++){
+    for(let gx=0;gx<N;gx++){
+      const u0=gx/N*SW, v0=gy/N*SH, u1=(gx+1)/N*SW, v1=(gy+1)/N*SH;
+      const A=projectPoint(H,u0,v0),B=projectPoint(H,u1,v0),C=projectPoint(H,u0,v1),D=projectPoint(H,u1,v1);
+      drawTexturedTriangle(ctx,pc,A.x,A.y,B.x,B.y,C.x,C.y,u0,v0,u1,v0,u0,v1);
+      drawTexturedTriangle(ctx,pc,D.x,D.y,B.x,B.y,C.x,C.y,u1,v1,u1,v0,u0,v1);
+    }
+  }
+  ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
+  cv.toBlob(b=>{
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(b);
+    a.download="wall-preview-"+p.id+".png";
+    a.click();
+  },"image/png");
+};
+
+/* ---------- drawers & modals ---------- */
+function openViz(){
+  document.body.classList.add("viz-open");
+  // stage has real dimensions only once visible — redraw and recalibrate pricing
+  setTimeout(()=>{
+    updateOverlay(); renderCutouts();
+    state.calibArea=quadArea();
+    updateLivePricing();
+  },350);
+}
+function closeViz(){
+  document.body.classList.remove("viz-open");
+  if(state.cutting)finishCutting(true);
+  stopCamera(); $("cameraBtn").textContent="📷 Camera";
+}
+function openEst(){
+  document.body.classList.remove("drawer-open");
+  document.body.classList.add("est-open");
+  renderEstimate();
+}
+function closeEst(){document.body.classList.remove("est-open");}
+function openBooking(){$("bookingModalBg").classList.add("show");}
+function closeBooking(){$("bookingModalBg").classList.remove("show");}
+$("openVizBtn").onclick=openViz;
+$("navViz").onclick=e=>{e.preventDefault();openViz();};
+$("closeVizBtn").onclick=closeViz;
+$("quoteBtn").onclick=e=>{e.preventDefault();openEst();};
+$("closeEstBtn").onclick=closeEst;
+$("bookBtn").onclick=openBooking;
+$("closeBookingBtn").onclick=closeBooking;
+$("sheetBackdrop").onclick=()=>{closeEst();closeViz();};
+$("bookingModalBg").addEventListener("click",e=>{if(e.target.id==="bookingModalBg")closeBooking();});
+window.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&!state.cutting){closeEst();closeViz();closeBooking();}
+});
+
+/* =================================================================
+   SIZE MODAL + CART
+================================================================= */
+function openSizeModal(p, fromViz){
+  state.sizeModalProduct=p;
+  state.sizeModalFromViz=!!fromViz;
+  if(fromViz){
+    const d=estimatedDims();
+    $("dimW").value=d.w; $("dimH").value=d.h;
+  }
+  $("sizeModalTitle").textContent="Size it — "+p.name;
+  $("sizeModalBg").classList.add("show");
+  updateSizeCalc();
+}
+function sqftFromInputs(){
+  const w=parseFloat($("dimW").value)||0, h=parseFloat($("dimH").value)||0;
+  return {w,h,sqft:Math.max(MIN_SQFT, Math.round(w*h*10)/10)};
+}
+function updateSizeCalc(){
+  const p=state.sizeModalProduct; if(!p)return;
+  const {w,h,sqft}=sqftFromInputs();
+  const raw=Math.round(w*h*10)/10;
+  $("sizeCalc").innerHTML=
+    `${w}′ × ${h}′ = <strong>${raw} sq ft</strong>`+
+    (raw<MIN_SQFT?` (billed at ${MIN_SQFT} sq ft minimum)`:``)+
+    `<br>Materials: <strong>${money(sqft*p.price)}</strong> · Install priced by job factors in the Installation Quote`;
+}
+$("dimW").oninput=updateSizeCalc; $("dimH").oninput=updateSizeCalc;
+$("sizeCancel").onclick=()=>$("sizeModalBg").classList.remove("show");
+$("sizeConfirm").onclick=()=>{
+  const p=state.sizeModalProduct; const {w,h,sqft}=sqftFromInputs();
+  state.cart.push({pid:p.id,w,h,sqft});
+  if(state.sizeModalFromViz)state.liveIdx=state.cart.length-1; // drag corners → this line updates live
+  $("sizeModalBg").classList.remove("show");
+  saveCart(); renderCart(); openDrawer();
+};
+$("vizAddCart").onclick=()=>openSizeModal(state.selected, true);
+
+/* =================================================================
+   INSTALLATION PRICING ENGINE
+   factors: sqft, material type, height, interior/exterior, surface
+   condition, removal, cleaning, obstacles, access, distance, rush
+================================================================= */
+function factorInputs(){
+  return {
+    location:$("fLocation").value,
+    condition:$("fCondition").value,
+    obstacles:Math.max(0,parseInt($("fObstacles").value)||0),
+    miles:Math.max(0,parseFloat($("fMiles").value)||0),
+    removal:$("fRemoval").checked,
+    cleaning:$("fCleaning").checked,
+    access:$("fAccess").checked,
+    rush:$("fRush").checked,
+  };
+}
+function computeInstall(sqft, maxHeightFt, baseRate){
+  const f=factorInputs();
+  const lines=[];
+  let labor=sqft*baseRate;
+  lines.push({label:`Base labor — ${sqft} sq ft × ${money(baseRate)}`, amt:labor});
+  let mult=1, flats=0;
+  if(maxHeightFt>14){mult*=1.25; flats+=150; lines.push({label:`Lift / scaffold — walls over 14 ft (+25% & $150)`, amt:labor*0.25+150});}
+  else if(maxHeightFt>10){mult*=1.10; lines.push({label:`Ladder work — walls over 10 ft (+10%)`, amt:labor*0.10});}
+  if(f.location==="ext"){lines.push({label:`Exterior conditions (+20%)`, amt:labor*0.20}); mult*=1.20;}
+  if(f.condition==="textured"){lines.push({label:`Textured surface (+15%)`, amt:labor*0.15}); mult*=1.15;}
+  if(f.condition==="damaged"){lines.push({label:`Surface repair (+$120 & +10%)`, amt:labor*0.10+120}); mult*=1.10; flats+=120;}
+  let sub=labor*mult+flats;
+  if(f.removal){const a=sqft*1.25; lines.push({label:`Remove existing material — $1.25/sq ft`, amt:a}); sub+=a;}
+  if(f.cleaning){const a=sqft*0.35; lines.push({label:`Cleaning & prep — $0.35/sq ft`, amt:a}); sub+=a;}
+  if(f.obstacles){const a=f.obstacles*15; lines.push({label:`Obstacles × ${f.obstacles} — $15 each`, amt:a}); sub+=a;}
+  if(f.access){lines.push({label:`Difficult access`, amt:75}); sub+=75;}
+  const extraMiles=Math.max(0,f.miles-15);
+  if(extraMiles){const a=extraMiles*2; lines.push({label:`Travel — ${extraMiles} mi beyond 15 free`, amt:a}); sub+=a;}
+  if(f.rush){const a=sub*0.25; lines.push({label:`Rush scheduling (+25%)`, amt:a}); sub+=a;}
+  if(sub<150 && sqft>0){lines.push({label:`Minimum service call`, amt:150-sub}); sub=150;}
+  return {lines, total:Math.round(sub*100)/100};
+}
+function cartInstallInputs(){
+  // pull sqft, tallest wall, and blended base rate from the cart;
+  // fall back to the visualizer's current wall if the cart is empty
+  if(!state.cart.length){
+    const est=Math.max(MIN_SQFT,estimatedSqft());
+    return {sqft:est, maxH:estimatedDims().h, rate:INSTALL_RATES[state.selected.cat], fromViz:true};
+  }
+  let sqft=0, maxH=0, rateWeighted=0;
+  state.cart.forEach(it=>{
+    const p=PRODUCTS.find(x=>x.id===it.pid);
+    sqft+=it.sqft; maxH=Math.max(maxH,it.h);
+    rateWeighted+=it.sqft*INSTALL_RATES[p.cat];
+  });
+  return {sqft, maxH, rate:rateWeighted/sqft, fromViz:false};
+}
+function renderEstimate(){
+  const inp=cartInstallInputs();
+  const est=computeInstall(inp.sqft, inp.maxH, inp.rate);
+  $("estBreakdown").innerHTML=
+    `<div class="li muted"><span>${inp.fromViz?"From visualizer wall":"From cart"} — ${inp.sqft} sq ft · tallest wall ${inp.maxH} ft</span><span></span></div>`+
+    est.lines.map(l=>`<div class="li"><span>${l.label}</span><span>${money(l.amt)}</span></div>`).join("")+
+    `<div class="li total"><span>Installation total</span><span>${money(est.total)}</span></div>`;
+  return est;
+}
+function cartTotals(){
+  const withInstall=$("includeInstall").checked;
+  let mat=0;
+  state.cart.forEach(it=>{
+    const p=PRODUCTS.find(x=>x.id===it.pid);
+    mat+=it.sqft*p.price;
+  });
+  const inp=cartInstallInputs();
+  const inst=(withInstall&&state.cart.length)?computeInstall(inp.sqft,inp.maxH,inp.rate).total:0;
+  return {mat,inst,grand:mat+inst};
+}
+function renderCart(){
+  $("cartCount").textContent=state.cart.length;
+  const box=$("cartItems");
+  if(!state.cart.length){box.innerHTML=`<p class="empty-msg">Your cart is empty.<br>Pick a design and size your wall.</p>`;}
+  else box.innerHTML=state.cart.map((it,i)=>{
+    const p=PRODUCTS.find(x=>x.id===it.pid);
+    return `<div class="cart-item">
+      <div class="sw" style="background-image:${tile(p.svg)};${p.repeat?'':'background-size:cover;'}"></div>
+      <div class="info"><strong>${p.name}</strong>${it.w}′ × ${it.h}′ · ${it.sqft} sq ft<br>${money(it.sqft*p.price)}</div>
+      <button class="rm" data-i="${i}" title="Remove">✕</button>
+    </div>`;
+  }).join("");
+  box.querySelectorAll(".rm").forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.i;
+    state.cart.splice(i,1);
+    if(state.liveIdx!==null){
+      if(i===state.liveIdx)state.liveIdx=null;
+      else if(i<state.liveIdx)state.liveIdx--;
+    }
+    saveCart();renderCart();
+  });
+  renderEstimate();
+  const t=cartTotals();
+  $("totMaterials").textContent=money(t.mat);
+  $("totInstall").textContent=money(t.inst);
+  $("totGrand").textContent=money(t.grand);
+  $("checkoutBtn").disabled=!state.cart.length;
+}
+$("includeInstall").onchange=renderCart;
+["fLocation","fCondition","fObstacles","fMiles","fRemoval","fCleaning","fAccess","fRush"].forEach(id=>{
+  $(id).addEventListener("input",()=>{renderCart();updateLivePricing();});
+});
+// booking date within 7 days auto-flags rush pricing (still user-adjustable)
+$("bkDate").addEventListener("change",()=>{
+  const d=new Date($("bkDate").value+"T12:00:00");
+  $("fRush").checked=(d-Date.now())<7*24*3600*1000;
+  renderCart();updateLivePricing();
+});
+function openDrawer(){document.body.classList.add("drawer-open");}
+function closeDrawer(){document.body.classList.remove("drawer-open");}
+$("cartBtn").onclick=openDrawer;
+$("closeDrawer").onclick=closeDrawer;
+$("drawerBackdrop").onclick=closeDrawer;
+
+/* ---------- best-effort persistence ---------- */
+async function saveCart(){try{if(window.storage)await window.storage.set("wallstudio:cart",JSON.stringify(state.cart));}catch(e){}}
+async function loadCart(){try{if(window.storage){const r=await window.storage.get("wallstudio:cart");if(r&&r.value)state.cart=JSON.parse(r.value);}}catch(e){}}
+
+/* =================================================================
+   CHECKOUT
+================================================================= */
+$("checkoutBtn").onclick=()=>{
+  if(!state.cart.length)return;
+  closeDrawer();
+  const t=cartTotals();
+  $("coSummary").innerHTML=state.cart.map(it=>{
+    const p=PRODUCTS.find(x=>x.id===it.pid);
+    return `${p.name} — ${it.sqft} sq ft — ${money(it.sqft*p.price)}`;
+  }).join("<br>")+`<br><br><strong>Total due: ${money(t.grand)}</strong>${t.inst?` (incl. install)`:``}`;
+  $("checkoutForm").style.display="block";
+  $("checkoutDone").style.display="none";
+  $("checkoutModalBg").classList.add("show");
+};
+$("coCancel").onclick=()=>{$("checkoutModalBg").classList.remove("show");openDrawer();};
+$("coPay").onclick=()=>{
+  if(!$("coName").value.trim()||!$("coEmail").value.trim()){alert("Name and email are required.");return;}
+  const t=cartTotals();
+  const order="WS-"+Date.now().toString().slice(-6);
+  $("orderConfirm").innerHTML=`<strong>Order ${order} confirmed.</strong><br>
+    ${state.cart.length} item(s) · ${money(t.grand)}<br>
+    A confirmation email will be sent to ${$("coEmail").value}. Use <a href="#" onclick="openBooking();return false">Book Installation</a> to schedule your install crew.`;
+  $("checkoutForm").style.display="none";
+  $("checkoutDone").style.display="block";
+  state.cart=[]; saveCart(); renderCart();
+};
+$("coClose").onclick=()=>$("checkoutModalBg").classList.remove("show");
+
+/* =================================================================
+   BOOKING
+================================================================= */
+const SLOTS=["8–11 AM","11–2 PM","2–5 PM"];
+function renderSlots(){
+  $("bkSlots").innerHTML=SLOTS.map(s=>`<button class="slot ${s===state.bkSlot?'active':''}">${s}</button>`).join("");
+  $("bkSlots").querySelectorAll(".slot").forEach(b=>b.onclick=()=>{state.bkSlot=b.textContent;renderSlots();});
+}
+(function initDate(){
+  const d=new Date(); d.setDate(d.getDate()+2);
+  $("bkDate").min=d.toISOString().slice(0,10);
+  $("bkDate").value=d.toISOString().slice(0,10);
+})();
+$("bkSubmit").onclick=async()=>{
+  const name=$("bkName").value.trim(), phone=$("bkPhone").value.trim(), addr=$("bkAddr").value.trim();
+  if(!name||!phone||!addr||!state.bkSlot){alert("Please fill name, phone, address, and pick a time window.");return;}
+  const booking={name,phone,addr,type:$("bkType").value,notes:$("bkNotes").value,date:$("bkDate").value,slot:state.bkSlot,ref:"IN-"+Date.now().toString().slice(-6)};
+  try{if(window.storage)await window.storage.set("wallstudio:booking:"+booking.ref,JSON.stringify(booking));}catch(e){}
+  const c=$("bkConfirm");
+  c.innerHTML=`<strong>Install request ${booking.ref} received.</strong><br>${booking.type} · ${booking.date}, ${booking.slot}<br>We'll text ${phone} to confirm and schedule a free on-site measure.`;
+  c.classList.add("show");
+};
+
+/* =================================================================
+   INIT
+================================================================= */
+(async function init(){
+  await loadCart();
+  setAccent(state.selected.accent);
+  renderChips(); renderGrid(); renderSwatches(); renderSelectedPanel(); renderSlots(); renderCart();
+  renderCutouts();
+  // wait a tick for layout, then draw overlay and calibrate pricing
+  requestAnimationFrame(updateOverlay);
+  setTimeout(()=>{
+    updateOverlay();
+    state.calibArea=quadArea();
+    updateLivePricing();
+    renderEstimate();
+  },300);
+})();
+</script>
+</body>
+</html>

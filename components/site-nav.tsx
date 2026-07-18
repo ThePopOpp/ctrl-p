@@ -344,6 +344,7 @@ export function SiteNav() {
                   </div>
                 </div>
 
+                <Link href="/studio" className="rounded-md px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">Wall Studio</Link>
                 <Link href="/shop" className="rounded-md px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">Deals</Link>
                 <Link href="/faq" className="rounded-md px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">FAQ</Link>
                 <Link href="/contact" className="rounded-md px-3 py-2 font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">Contact</Link>
@@ -390,6 +391,7 @@ export function SiteNav() {
         {mobileOpen && (
           <div className="lg:hidden border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 py-4 space-y-1">
             <Link href="/shop" className="block rounded-md px-3 py-2 text-[14px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setMobileOpen(false)}>Shop</Link>
+            <Link href="/studio" className="block rounded-md px-3 py-2 text-[14px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setMobileOpen(false)}>Wall Studio</Link>
             <Link href="/shop" className="block rounded-md px-3 py-2 text-[14px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setMobileOpen(false)}>Deals</Link>
             <Link href="/faq" className="block rounded-md px-3 py-2 text-[14px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setMobileOpen(false)}>FAQ</Link>
             <Link href="/contact" className="block rounded-md px-3 py-2 text-[14px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setMobileOpen(false)}>Contact</Link>
