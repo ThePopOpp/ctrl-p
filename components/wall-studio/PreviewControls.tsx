@@ -19,7 +19,7 @@ export function PreviewControls({
   cameraOn: boolean;
   cutting: boolean;
 }) {
-  const { selected, corners, dims, calibArea, cutouts, scale, opacity, rules, factors, setDims, setScale, setOpacity, resetCorners } =
+  const { selected, corners, dims, calibArea, cutouts, scale, opacity, rules, factors, setDims, setScale, setOpacity, resetCorners, openSizeDialog } =
     useWallStudio();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -164,6 +164,13 @@ export function PreviewControls({
 
       {/* Actions */}
       <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          className="flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-3 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+          onClick={() => openSizeDialog(selected, true)}
+        >
+          Add this design to cart
+        </button>
         <button
           type="button"
           className="flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[13px] font-semibold text-white"

@@ -35,6 +35,15 @@ type WallStudioContextType = {
   openVisualizer: (p?: WsProduct) => void;
   closeVisualizer: () => void;
 
+  // Commerce dialogs / sheets
+  sizeDialog: { product: WsProduct; fromViz: boolean } | null;
+  openSizeDialog: (product: WsProduct, fromViz?: boolean) => void;
+  closeSizeDialog: () => void;
+  installOpen: boolean;
+  setInstallOpen: (v: boolean) => void;
+  bookingOpen: boolean;
+  setBookingOpen: (v: boolean) => void;
+
   // Quad + calibration
   corners: Corner[];
   setCorner: (i: number, c: Corner) => void;
@@ -70,6 +79,9 @@ export function WallStudioProvider({
   const [cat, setCat] = useState<CategoryFilter>("all");
   const [selected, setSelected] = useState<WsProduct | null>(initialProducts[0] ?? null);
   const [open, setOpen] = useState(false);
+  const [sizeDialog, setSizeDialog] = useState<{ product: WsProduct; fromViz: boolean } | null>(null);
+  const [installOpen, setInstallOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
 
   const [corners, setCornersState] = useState<Corner[]>(DEFAULT_CORNERS);
   const cornersRef = useRef(corners);
@@ -102,6 +114,13 @@ export function WallStudioProvider({
     setOpen(false);
   }
 
+  function openSizeDialog(product: WsProduct, fromViz = false) {
+    setSizeDialog({ product, fromViz });
+  }
+  function closeSizeDialog() {
+    setSizeDialog(null);
+  }
+
   function setCorner(i: number, c: Corner) {
     setCornersState((prev) => prev.map((p, idx) => (idx === i ? c : p)));
   }
@@ -132,6 +151,13 @@ export function WallStudioProvider({
     open,
     openVisualizer,
     closeVisualizer,
+    sizeDialog,
+    openSizeDialog,
+    closeSizeDialog,
+    installOpen,
+    setInstallOpen,
+    bookingOpen,
+    setBookingOpen,
     corners,
     setCorner,
     resetCorners,

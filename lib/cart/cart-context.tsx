@@ -2,6 +2,16 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
+import type { InstallFactors, WsCategory } from "@/lib/wall-studio/types";
+
+/**
+ * Optional payload carried by Wall Studio cart lines so the checkout API can
+ * re-price them server-side. Absent on normal shop lines (fully additive).
+ */
+export type WallStudioLineMeta =
+  | { kind: "wall_design"; wsProductId: string; category: WsCategory; w: number; h: number; sqft: number }
+  | { kind: "wall_install"; factors: InstallFactors };
+
 export type CartItem = {
   product_id: string;
   name: string;
@@ -9,6 +19,7 @@ export type CartItem = {
   unit_price: number;
   quantity: number;
   image?: string | null;
+  wallStudio?: WallStudioLineMeta;
 };
 
 type CartContextType = {

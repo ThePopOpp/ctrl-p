@@ -9,10 +9,12 @@ export function DesignCard({
   product,
   selected,
   onPreview,
+  onAdd,
 }: {
   product: WsProduct;
   selected: boolean;
   onPreview: () => void;
+  onAdd: () => void;
 }) {
   return (
     <div
@@ -44,13 +46,21 @@ export function DesignCard({
           <span className="text-[13px] text-zinc-500">{money(product.price_per_sqft)} / sq ft</span>
         </div>
       </button>
-      <div className="mt-auto px-4 pb-4 pt-1">
+      <div className="mt-auto flex gap-2 px-4 pb-4 pt-1">
         <button
           type="button"
           onClick={onPreview}
-          className="w-full rounded-md border border-zinc-200 px-3 py-2 text-[13px] font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          className="flex-1 rounded-md border border-zinc-200 px-3 py-2 text-[13px] font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
         >
-          Preview design
+          Preview
+        </button>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex-1 rounded-md px-3 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: "var(--ws-accent)" }}
+        >
+          Add to cart
         </button>
       </div>
     </div>

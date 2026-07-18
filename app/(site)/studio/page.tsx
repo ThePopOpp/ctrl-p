@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { StudioApp } from "@/components/wall-studio/StudioApp";
+import { CartProvider } from "@/lib/cart/cart-context";
 import { loadStudioCatalog } from "@/lib/wall-studio/server";
 import { WallStudioProvider } from "@/lib/wall-studio/store";
 
@@ -15,8 +16,10 @@ export const metadata: Metadata = {
 export default async function StudioPage() {
   const { products, rules } = await loadStudioCatalog();
   return (
-    <WallStudioProvider initialProducts={products} initialRules={rules}>
-      <StudioApp />
-    </WallStudioProvider>
+    <CartProvider>
+      <WallStudioProvider initialProducts={products} initialRules={rules}>
+        <StudioApp />
+      </WallStudioProvider>
+    </CartProvider>
   );
 }

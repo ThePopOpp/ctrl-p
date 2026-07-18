@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError, serverEnv } from "@/lib/admin/server-auth";
 import { sendOrderConfirmation } from "@/lib/email/order-emails";
+import { billedSqft, computeInstall, pricingRulesFromRows } from "@/lib/wall-studio/pricing";
+import type { InstallFactors, WsCategory } from "@/lib/wall-studio/types";
 
 type SquarePaymentLinkResponse = {
   payment_link?: { id?: string; url?: string; order_id?: string };
@@ -35,7 +37,15 @@ export async function POST(request: Request) {
   if (config.error) return config.error;
 
   const body = await request.json().catch(() => null) as {
-    items?: Array<{ product_id: string; quantity: number; unit_price: number; name: string }>;
+    items?: Array<{
+      product_id: string;
+      quantity: number;
+      unit_price: number;
+      name: string;
+      wallStudio?:
+        | { kind: "wall_design"; wsProductId: string; category: WsCategory; w: number; h: number; sqft: number }
+        | { kind: "wall_install"; factors: InstallFactors };
+    }>;
     coupon_code?: string;
     first_name?: string;
     last_name?: string;
@@ -59,35 +69,112 @@ export async function POST(request: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Validate items and fetch live prices from DB
-  const productIds = body.items.map((item) => item.product_id);
-  const productsResult = await db
-    .from("products")
-    .select("id, name, sku, base_price, sale_price, status, stock_status")
-    .in("id", productIds)
-    .eq("status", "active");
+  // Split into normal catalog lines and Wall Studio lines (designs / installation).
+  const normalItems = body.items.filter((i) => !i.wallStudio);
+  const wallDesignItems = body.items.filter((i) => i.wallStudio?.kind === "wall_design");
+  const wallInstallItems = body.items.filter((i) => i.wallStudio?.kind === "wall_install");
 
-  if (productsResult.error) return jsonError(productsResult.error.message, 400);
-
-  const productMap = new Map((productsResult.data ?? []).map((p) => [p.id, p]));
-
-  const lineItems: { product_id: string; name: string; sku?: string; quantity: number; unit_price: number; line_total: number }[] = [];
+  const lineItems: {
+    product_id: string | null;
+    name: string;
+    sku?: string;
+    quantity: number;
+    unit_price: number;
+    line_total: number;
+    options?: Record<string, unknown>;
+  }[] = [];
   let subtotal = 0;
 
-  for (const item of body.items) {
-    const product = productMap.get(item.product_id);
-    if (!product) return jsonError(`Product not found: ${item.product_id}`, 404);
-    if (product.stock_status === "out_of_stock") return jsonError(`${product.name} is out of stock.`, 409);
+  // ── Normal catalog items (priced from the products table) ──
+  if (normalItems.length) {
+    const productIds = normalItems.map((item) => item.product_id);
+    const productsResult = await db
+      .from("products")
+      .select("id, name, sku, base_price, sale_price, status, stock_status")
+      .in("id", productIds)
+      .eq("status", "active");
+    if (productsResult.error) return jsonError(productsResult.error.message, 400);
+    const productMap = new Map((productsResult.data ?? []).map((p) => [p.id, p]));
 
-    const quantity = Math.max(1, Math.round(Number(item.quantity || 1)));
-    const unitPrice = Number(product.sale_price || product.base_price || 0);
-    if (!unitPrice) return jsonError(`${product.name} has no price set.`, 400);
+    for (const item of normalItems) {
+      const product = productMap.get(item.product_id);
+      if (!product) return jsonError(`Product not found: ${item.product_id}`, 404);
+      if (product.stock_status === "out_of_stock") return jsonError(`${product.name} is out of stock.`, 409);
 
-    const lineTotal = Number((quantity * unitPrice).toFixed(2));
-    lineItems.push({ product_id: product.id, name: product.name, sku: product.sku, quantity, unit_price: unitPrice, line_total: lineTotal });
-    subtotal += lineTotal;
+      const quantity = Math.max(1, Math.round(Number(item.quantity || 1)));
+      const unitPrice = Number(product.sale_price || product.base_price || 0);
+      if (!unitPrice) return jsonError(`${product.name} has no price set.`, 400);
+
+      const lineTotal = Number((quantity * unitPrice).toFixed(2));
+      lineItems.push({ product_id: product.id, name: product.name, sku: product.sku, quantity, unit_price: unitPrice, line_total: lineTotal });
+      subtotal += lineTotal;
+    }
   }
 
+  // ── Wall Studio lines (recomputed from ws_products + ws_pricing_rules) ──
+  if (wallDesignItems.length || wallInstallItems.length) {
+    const rulesResult = await db.from("ws_pricing_rules").select("key, value");
+    const rules = pricingRulesFromRows(rulesResult.data ?? []);
+
+    const wsIds = wallDesignItems.map((i) => (i.wallStudio as { wsProductId: string }).wsProductId);
+    const wsResult = await db.from("ws_products").select("id, name, slug, price_per_sqft, category").in("id", wsIds);
+    if (wsResult.error) return jsonError(wsResult.error.message, 400);
+    const wsMap = new Map((wsResult.data ?? []).map((p) => [p.id, p]));
+
+    const wallForInstall: { category: WsCategory; sqft: number; h: number }[] = [];
+
+    for (const item of wallDesignItems) {
+      const meta = item.wallStudio as { wsProductId: string; w: number; h: number };
+      const p = wsMap.get(meta.wsProductId);
+      if (!p) return jsonError(`Wall design not found: ${meta.wsProductId}`, 404);
+
+      const billed = billedSqft(meta.w, meta.h, rules);
+      const materials = Number((billed * Number(p.price_per_sqft)).toFixed(2));
+      if (Math.abs(materials - Number(item.unit_price)) > 0.01) {
+        return jsonError("Wall pricing changed — please review your cart.", 409);
+      }
+      lineItems.push({
+        product_id: null,
+        name: item.name || p.name,
+        sku: `WS-${String(p.slug).toUpperCase()}`,
+        quantity: 1,
+        unit_price: materials,
+        line_total: materials,
+        options: { kind: "wall_design", ws_product_id: p.id, w: meta.w, h: meta.h, sqft: billed, category: p.category },
+      });
+      subtotal += materials;
+      wallForInstall.push({ category: p.category as WsCategory, sqft: billed, h: meta.h });
+    }
+
+    for (const item of wallInstallItems) {
+      if (!wallForInstall.length) return jsonError("Installation requires at least one wall design.", 400);
+      let sqft = 0;
+      let maxHeightFt = 0;
+      let rateWeighted = 0;
+      for (const w of wallForInstall) {
+        sqft += w.sqft;
+        maxHeightFt = Math.max(maxHeightFt, w.h);
+        rateWeighted += w.sqft * rules.installBaseRates[w.category];
+      }
+      const factors = (item.wallStudio as { factors: InstallFactors }).factors;
+      const est = computeInstall({ sqft, maxHeightFt, blendedBaseRate: sqft ? rateWeighted / sqft : 0, factors }, rules);
+      if (Math.abs(est.total - Number(item.unit_price)) > 0.01) {
+        return jsonError("Installation total changed — please reopen the Installation quote.", 409);
+      }
+      lineItems.push({
+        product_id: null,
+        name: "Professional installation",
+        sku: "WS-INSTALL",
+        quantity: 1,
+        unit_price: est.total,
+        line_total: est.total,
+        options: { kind: "wall_install", factors, lines: est.lines },
+      });
+      subtotal += est.total;
+    }
+  }
+
+  if (!lineItems.length) return jsonError("At least one item is required.");
   subtotal = Number(subtotal.toFixed(2));
 
   // Validate and apply coupon
@@ -158,6 +245,7 @@ export async function POST(request: Request) {
     unit_cost: 0,
     unit_price: item.unit_price,
     line_total: item.line_total,
+    options: item.options ?? {},
     proof_required: true,
   }));
 

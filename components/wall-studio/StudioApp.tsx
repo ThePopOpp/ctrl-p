@@ -1,8 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { BookingDialog } from "@/components/wall-studio/BookingDialog";
 import { DesignCard } from "@/components/wall-studio/DesignCard";
 import { DesignSlider } from "@/components/wall-studio/DesignSlider";
+import { InstallQuoteSheet } from "@/components/wall-studio/InstallQuoteSheet";
+import { SizeDialog } from "@/components/wall-studio/SizeDialog";
 import { VisualizerDrawer } from "@/components/wall-studio/VisualizerDrawer";
 import { useWallStudio } from "@/lib/wall-studio/store";
 import type { WsCategory } from "@/lib/wall-studio/types";
@@ -15,7 +18,8 @@ const CATS: Array<{ value: WsCategory | "all"; label: string }> = [
 ];
 
 export function StudioApp() {
-  const { products, selected, openVisualizer, cat, setCat } = useWallStudio();
+  const { products, selected, openVisualizer, openSizeDialog, setInstallOpen, setBookingOpen, cat, setCat } =
+    useWallStudio();
   const accent = selected?.accent_hex ?? "#2f6b4f";
   const list = products.filter((p) => cat === "all" || p.category === cat);
 
@@ -46,6 +50,20 @@ export function StudioApp() {
           >
             Browse designs
           </a>
+          <button
+            type="button"
+            onClick={() => setInstallOpen(true)}
+            className="inline-flex items-center rounded-md border border-zinc-300 px-5 py-2.5 text-[15px] font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Installation quote
+          </button>
+          <button
+            type="button"
+            onClick={() => setBookingOpen(true)}
+            className="inline-flex items-center rounded-md border border-zinc-300 px-5 py-2.5 text-[15px] font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Book installation
+          </button>
         </div>
       </section>
 
@@ -90,6 +108,7 @@ export function StudioApp() {
                 product={p}
                 selected={selected?.id === p.id}
                 onPreview={() => openVisualizer(p)}
+                onAdd={() => openSizeDialog(p)}
               />
             ))}
           </DesignSlider>
@@ -97,6 +116,9 @@ export function StudioApp() {
       </section>
 
       <VisualizerDrawer />
+      <SizeDialog />
+      <InstallQuoteSheet />
+      <BookingDialog />
     </div>
   );
 }

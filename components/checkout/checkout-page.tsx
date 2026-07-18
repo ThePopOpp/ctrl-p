@@ -94,6 +94,7 @@ function CheckoutContent() {
             quantity: item.quantity,
             unit_price: item.unit_price,
             name: item.name,
+            wallStudio: item.wallStudio,
           })),
           coupon_code: couponResult?.coupon.code || undefined,
           first_name: firstName.trim(),
