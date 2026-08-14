@@ -158,6 +158,26 @@ async function verifyAdmin(request: Request, supabaseUrl: string, publishableKey
   return { actor, actorId };
 }
 
+export async function GET(request: Request) {
+  const config = getSupabaseEnv();
+  if (config.error) return config.error;
+
+  const verified = await verifyAdmin(request, config.supabaseUrl, config.publishableKey);
+  if (verified.error) return verified.error;
+
+  const admin = createClient(config.supabaseUrl, config.serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const result = await admin
+    .from("users")
+    .select("id, full_name, email, phone, company, role, status, created_at, deleted_at")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
+
+  if (result.error) return jsonError(result.error.message, 400);
+  return NextResponse.json({ users: result.data ?? [] });
+}
+
 export async function POST(request: Request) {
   const config = getSupabaseEnv();
   if (config.error) return config.error;
