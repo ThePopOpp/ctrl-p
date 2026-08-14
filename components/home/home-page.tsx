@@ -84,15 +84,21 @@ function WindowIcon({ size = 72 }: { size?: number }) {
   );
 }
 
-const CATEGORIES = [
+const CATEGORIES: {
+  icon: (props: { size?: number }) => React.ReactElement;
+  title: string;
+  desc: string;
+  href: string;
+  image?: string;
+}[] = [
   { icon: WrapIcon, title: "Vehicle Wraps", desc: "6 products · Tesla specialty", href: "/shop" },
-  { icon: SignsIcon, title: "Signs", desc: "Acrylic · Aluminum · Coroplast", href: "/shop" },
-  { icon: BannerIcon, title: "Banners", desc: "Vinyl · Mesh · Fabric · Retractable", href: "/shop" },
-  { icon: CardsIcon, title: "Business Cards", desc: "Standard · Die-cut · Foil", href: "/shop" },
-  { icon: SignsIcon, title: "Flags", desc: "Feather · Teardrop · Pole", href: "/shop" },
-  { icon: DisplaysIcon, title: "Displays & Tents", desc: "Event tents · Tabletop · Fabric", href: "/shop" },
+  { icon: SignsIcon, title: "Signs", desc: "Acrylic · Aluminum · Coroplast", href: "/shop", image: "https://www.b2sign.com/image/thumb/240404/dNDEb9Bb-s1000.jpg" },
+  { icon: BannerIcon, title: "Banners", desc: "Vinyl · Mesh · Fabric · Retractable", href: "/shop", image: "https://www.b2sign.com/image/thumb/240430/WvsHtoYW-s1000.jpg" },
+  { icon: CardsIcon, title: "Business Cards", desc: "Standard · Die-cut · Foil", href: "/shop", image: "https://kwyzxqlbwraiqftfjgjj.supabase.co/storage/v1/object/public/artwork/products/bc/1782186571885-velvet-bc---4.webp" },
+  { icon: SignsIcon, title: "Flags", desc: "Feather · Teardrop · Pole", href: "/shop", image: "https://www.b2sign.com/image/thumb/240228/snlYm2Bs-s1000.jpg" },
+  { icon: DisplaysIcon, title: "Displays & Tents", desc: "Event tents · Tabletop · Fabric", href: "/shop", image: "https://www.b2sign.com/image/thumb/240228/XWKEnh55-s1000.jpg" },
   { icon: MerchIcon, title: "Apparel & Merch", desc: "Shirts · Hats · Bags · Mugs", href: "/shop" },
-  { icon: WindowIcon, title: "Window Graphics", desc: "Perforated · Cling · Frosted", href: "/shop" },
+  { icon: WindowIcon, title: "Window Graphics", desc: "Perforated · Cling · Frosted", href: "/shop", image: "https://www.b2sign.com/image/thumb/240305/p3UypbTG-s1000.jpg" },
 ];
 
 type ProductCard = {
@@ -264,8 +270,19 @@ export function HomePage() {
               const Icon = cat.icon;
               return (
                 <Link key={cat.title} href={cat.href} className="group overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-600 transition-all hover:-translate-y-0.5 hover:shadow-md">
-                  <div className="aspect-[4/3] flex items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 text-zinc-400 dark:text-zinc-600">
-                    <Icon />
+                  <div className="aspect-[4/3] relative overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900">
+                    {cat.image ? (
+                      <img
+                        src={cat.image}
+                        alt={cat.title}
+                        loading="lazy"
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-zinc-400 dark:text-zinc-600">
+                        <Icon />
+                      </div>
+                    )}
                   </div>
                   <div className="p-5">
                     <div className="flex items-center justify-between">
