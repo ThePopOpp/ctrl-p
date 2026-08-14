@@ -65,16 +65,17 @@ export function HeroPlotter() {
 
   return (
     <div className="relative mx-auto w-full max-w-[520px]">
-      <div className="relative h-[440px] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl lg:h-[560px]">
-        {/* Grid backdrop */}
+      {/* Transparent stage — flows with the hero background; strokes use currentColor */}
+      <div className="relative h-[440px] overflow-hidden text-zinc-900 dark:text-zinc-100 lg:h-[560px]">
+        {/* Faint neutral grid (reads on light and dark) */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             backgroundImage:
-              "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
+              "linear-gradient(to right, rgba(120,120,120,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(120,120,120,0.14) 1px, transparent 1px)",
             backgroundSize: "26px 26px",
-            maskImage: "radial-gradient(ellipse at center, black 55%, transparent 100%)",
-            WebkitMaskImage: "radial-gradient(ellipse at center, black 55%, transparent 100%)",
+            maskImage: "radial-gradient(ellipse at center, black 50%, transparent 100%)",
+            WebkitMaskImage: "radial-gradient(ellipse at center, black 50%, transparent 100%)",
           }}
         />
         {/* Ambient lime glow */}
@@ -86,14 +87,14 @@ export function HeroPlotter() {
         {/* Top bar */}
         <div className="absolute inset-x-0 top-0 flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2 font-mono text-[11px] tracking-[0.22em] text-zinc-500">
-            <span className="inline-block h-2 w-2 bg-zinc-600" />
+            <span className="inline-block h-2 w-2 bg-zinc-400 dark:bg-zinc-600" />
             PLOTTING
           </div>
           <div className="flex items-center gap-1.5">
             {PRODUCTS.map((_, k) => (
               <span
                 key={k}
-                className={cn("h-1.5 rounded-full transition-all duration-500", k === index ? "w-5" : "w-1.5 bg-zinc-700")}
+                className={cn("h-1.5 rounded-full transition-all duration-500", k === index ? "w-5" : "w-1.5 bg-zinc-300 dark:bg-zinc-700")}
                 style={k === index ? { background: LIME, boxShadow: `0 0 8px ${LIME}` } : undefined}
               />
             ))}
@@ -109,10 +110,10 @@ export function HeroPlotter() {
                 d={d}
                 pathLength={1}
                 className="cp-stroke"
-                style={{ stroke: "#d4d4d8", strokeWidth: 2, animationDelay: `${0.35 + di * 0.14}s` }}
+                style={{ stroke: "currentColor", opacity: 0.5, strokeWidth: 2, animationDelay: `${0.35 + di * 0.14}s` }}
               />
             ))}
-            <path id={pathId} d={product.main} pathLength={1} className="cp-stroke" style={{ stroke: "#fafafa" }} />
+            <path id={pathId} d={product.main} pathLength={1} className="cp-stroke" style={{ stroke: "currentColor" }} />
             {product.circles?.map(([cx, cy, r], ci) => (
               <circle
                 key={ci}
@@ -120,7 +121,7 @@ export function HeroPlotter() {
                 cy={cy}
                 r={r}
                 className="cp-fade"
-                style={{ fill: "none", stroke: "#d4d4d8", strokeWidth: 2, animationDelay: "1.2s" }}
+                style={{ fill: "none", stroke: "currentColor", opacity: 0.5, strokeWidth: 2, animationDelay: "1.2s" }}
               />
             ))}
 
@@ -143,18 +144,18 @@ export function HeroPlotter() {
         </svg>
 
         {/* Rotating product label */}
-        <div className="absolute bottom-5 left-5 inline-flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900/80 px-3 py-1.5 text-[12px] font-semibold text-zinc-100 backdrop-blur">
+        <div className="absolute bottom-5 left-5 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/80 px-3 py-1.5 text-[12px] font-semibold text-zinc-900 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-100">
           <span className="h-2 w-2 rounded-full" style={{ background: LIME, boxShadow: `0 0 8px ${LIME}` }} />
           {product.label}
         </div>
 
         {/* Stats badge */}
-        <div className="absolute bottom-5 right-5 flex items-center gap-2.5 rounded-xl border border-zinc-700 bg-zinc-900/80 px-3 py-2 backdrop-blur">
+        <div className="absolute bottom-5 right-5 flex items-center gap-2.5 rounded-xl border border-zinc-200 bg-white/80 px-3 py-2 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/80">
           <span className="grid h-7 w-7 place-items-center rounded-full" style={{ background: LIME }}>
             <Check className="h-4 w-4 text-zinc-900" />
           </span>
           <div>
-            <div className="text-[13px] font-semibold text-zinc-100">2,400+ projects</div>
+            <div className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">2,400+ projects</div>
             <div className="text-[11px] text-zinc-500">delivered statewide</div>
           </div>
         </div>

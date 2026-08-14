@@ -208,10 +208,23 @@ export function HomePage() {
       {/* ── Vendor trust bar ───────────────────────────────── */}
       <section className="border-b border-zinc-200 dark:border-zinc-800 py-8 overflow-hidden">
         <div className="max-w-[1280px] mx-auto px-6">
-          <div className="text-center text-[11.5px] tracking-[0.15em] uppercase text-zinc-400 font-semibold mb-5">Trusted vendors &amp; materials</div>
-          <div className="flex items-center justify-center gap-10 flex-wrap opacity-60 text-zinc-500 text-[14px] font-medium">
-            <span>3M</span><span>·</span><span>Avery Dennison</span><span>·</span><span>4Over</span><span>·</span>
-            <span>B2Sign</span><span>·</span><span>Max Pro Films</span><span>·</span><span>Rowmark</span><span>·</span><span>SAi Flexi</span>
+          <div className="text-center text-[11.5px] tracking-[0.15em] uppercase text-zinc-400 font-semibold mb-5">Trusted products &amp; services</div>
+          <div className="flex items-center justify-center gap-x-6 gap-y-2 flex-wrap opacity-70 text-zinc-500 text-[14px] font-medium">
+            {[
+              "Hats",
+              "Embroidery",
+              "Large Format Prints",
+              "Wall Wraps",
+              "Installation",
+              "Window Film",
+              "Banners",
+              "Digital & Print Business Card Combo",
+            ].map((item, i, arr) => (
+              <span key={item} className="flex items-center gap-x-6">
+                <span>{item}</span>
+                {i < arr.length - 1 && <span className="opacity-50">·</span>}
+              </span>
+            ))}
           </div>
         </div>
       </section>
