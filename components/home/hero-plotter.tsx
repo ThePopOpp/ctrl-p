@@ -67,21 +67,21 @@ export function HeroPlotter() {
     <div className="relative mx-auto w-full max-w-[520px]">
       {/* Transparent stage — flows with the hero background; strokes use currentColor */}
       <div className="relative h-[440px] overflow-hidden text-zinc-900 dark:text-zinc-100 lg:h-[560px]">
-        {/* Faint neutral grid (reads on light and dark) */}
+        {/* Faint neutral grid — densest at the far top-right corner, dissolving inward */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             backgroundImage:
               "linear-gradient(to right, rgba(120,120,120,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(120,120,120,0.14) 1px, transparent 1px)",
             backgroundSize: "26px 26px",
-            maskImage: "radial-gradient(ellipse at center, black 50%, transparent 100%)",
-            WebkitMaskImage: "radial-gradient(ellipse at center, black 50%, transparent 100%)",
+            maskImage: "radial-gradient(130% 130% at 100% 0%, black 0%, black 22%, transparent 66%)",
+            WebkitMaskImage: "radial-gradient(130% 130% at 100% 0%, black 0%, black 22%, transparent 66%)",
           }}
         />
-        {/* Ambient lime glow */}
+        {/* Ambient lime glow anchored to the top-right corner */}
         <div
-          className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full opacity-20 blur-3xl"
-          style={{ background: LIME }}
+          className="pointer-events-none absolute -right-10 -top-10 h-80 w-80 rounded-full opacity-25 blur-3xl"
+          style={{ background: `radial-gradient(circle at top right, ${LIME}, transparent 70%)` }}
         />
 
         {/* Top bar */}
