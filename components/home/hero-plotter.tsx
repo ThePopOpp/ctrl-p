@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-
 const LIME = "#b4f13a";
 const DRAW_MS = 2200;
 const CYCLE_MS = 3600;
@@ -65,42 +63,8 @@ export function HeroPlotter() {
 
   return (
     <div className="relative mx-auto w-full max-w-[520px]">
-      {/* Transparent stage — flows with the hero background; strokes use currentColor */}
-      <div className="relative h-[440px] overflow-hidden text-zinc-900 dark:text-zinc-100 lg:h-[560px]">
-        {/* Faint neutral grid — densest at the far top-right corner, dissolving inward */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, rgba(120,120,120,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(120,120,120,0.14) 1px, transparent 1px)",
-            backgroundSize: "26px 26px",
-            maskImage: "radial-gradient(130% 130% at 100% 0%, black 0%, black 22%, transparent 66%)",
-            WebkitMaskImage: "radial-gradient(130% 130% at 100% 0%, black 0%, black 22%, transparent 66%)",
-          }}
-        />
-        {/* Ambient lime glow anchored to the top-right corner */}
-        <div
-          className="pointer-events-none absolute -right-10 -top-10 h-80 w-80 rounded-full opacity-25 blur-3xl"
-          style={{ background: `radial-gradient(circle at top right, ${LIME}, transparent 70%)` }}
-        />
-
-        {/* Top bar */}
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-2 font-mono text-[11px] tracking-[0.22em] text-zinc-500">
-            <span className="inline-block h-2 w-2 bg-zinc-400 dark:bg-zinc-600" />
-            PLOTTING
-          </div>
-          <div className="flex items-center gap-1.5">
-            {PRODUCTS.map((_, k) => (
-              <span
-                key={k}
-                className={cn("h-1.5 rounded-full transition-all duration-500", k === index ? "w-5" : "w-1.5 bg-zinc-300 dark:bg-zinc-700")}
-                style={k === index ? { background: LIME, boxShadow: `0 0 8px ${LIME}` } : undefined}
-              />
-            ))}
-          </div>
-        </div>
-
+      {/* Transparent stage — floats directly on the shared hero background */}
+      <div className="relative h-[440px] text-zinc-900 dark:text-zinc-100 lg:h-[560px]">
         {/* Plotter drawing */}
         <svg viewBox="0 0 420 340" className="absolute inset-0 h-full w-full">
           <g key={index} transform={product.transform}>

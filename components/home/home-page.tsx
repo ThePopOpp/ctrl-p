@@ -149,8 +149,25 @@ export function HomePage() {
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
 
       {/* ── Hero ───────────────────────────────────────────── */}
-      <section className="bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900/60 dark:to-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
-        <div className="max-w-[1280px] mx-auto px-6 py-16 lg:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900/60 dark:to-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
+        {/* Ambient background: faint grid + lime wash radiating from the top-left */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage:
+                "linear-gradient(to right, rgba(120,120,120,0.10) 1px, transparent 1px), linear-gradient(to bottom, rgba(120,120,120,0.10) 1px, transparent 1px)",
+              backgroundSize: "34px 34px",
+              maskImage: "radial-gradient(130% 120% at 0% 0%, black 0%, black 26%, transparent 68%)",
+              WebkitMaskImage: "radial-gradient(130% 120% at 0% 0%, black 0%, black 26%, transparent 68%)",
+            }}
+          />
+          <div
+            className="absolute -left-24 -top-24 h-[26rem] w-[42rem] rounded-full opacity-30 blur-3xl dark:opacity-25"
+            style={{ background: "radial-gradient(circle at top left, #b4f13a, transparent 68%)" }}
+          />
+        </div>
+        <div className="relative z-10 max-w-[1280px] mx-auto px-6 py-16 lg:py-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               {/* Review chip */}
