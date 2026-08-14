@@ -33,7 +33,7 @@ function baseHtml(content: string) {
         </td></tr>
         <tr><td style="padding:28px">${content}</td></tr>
         <tr><td style="background:#f9f9f9;border-top:1px solid #e4e4e7;padding:16px 28px;font-size:12px;color:#71717a">
-          ControlP.io &bull; Print management platform &bull; <a href="https://my.controlp.io" style="color:#71717a">my.controlp.io</a>
+          ControlP.io &bull; Print management platform &bull; <a href="https://controlp.io" style="color:#71717a">controlp.io</a>
         </td></tr>
       </table>
     </td></tr>
@@ -65,7 +65,7 @@ export async function sendOrderConfirmation(options: {
   if (!configured()) return;
 
   const from = env("EMAIL_FROM") || env("SMTP_USER");
-  const appUrl = env("PUBLIC_APP_URL") || "https://my.controlp.io";
+  const appUrl = env("PUBLIC_APP_URL") || "https://controlp.io";
   const discount = Number(options.discountAmount || 0);
 
   const html = baseHtml(`
@@ -136,7 +136,7 @@ export async function sendPaymentConfirmed(options: {
   if (!configured()) return;
 
   const from = env("EMAIL_FROM") || env("SMTP_USER");
-  const appUrl = env("PUBLIC_APP_URL") || "https://my.controlp.io";
+  const appUrl = env("PUBLIC_APP_URL") || "https://controlp.io";
 
   const html = baseHtml(`
     <div style="margin-bottom:20px">

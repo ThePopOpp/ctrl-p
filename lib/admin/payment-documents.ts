@@ -112,7 +112,7 @@ export function renderPaymentDocumentHtml(payment: PaymentRecord, kind: PaymentD
   const title = kind === "receipt" ? "Receipt" : "Invoice";
   const orderNumber = order?.order_number || payment.order_id.slice(0, 8);
   const invoiceNumber = payment.invoice_number || `${kind.toUpperCase()}-${payment.id.slice(0, 8)}`;
-  const senderLogo = text(sender.logo_url, "https://my.controlp.io/logos/ctrl-p-logo-dark.svg");
+  const senderLogo = text(sender.logo_url, "https://controlp.io/logos/ctrl-p-logo-dark.svg");
   const senderName = text(sender.name, "ControlP.io");
   const senderEmail = text(sender.email, "hello@controlp.io");
   const senderWebsite = text(sender.website, "https://www.controlp.io");

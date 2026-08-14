@@ -181,7 +181,7 @@ export async function POST(request: Request) {
 
   const appUrl = (() => {
     const configured = env("PUBLIC_APP_URL");
-    return configured && !/localhost|127\.0\.0\.1/i.test(configured) ? configured.replace(/\/$/, "") : "https://my.controlp.io";
+    return configured && !/localhost|127\.0\.0\.1/i.test(configured) ? configured.replace(/\/$/, "") : "https://controlp.io";
   })();
 
   const results: ImportUserResult[] = [];

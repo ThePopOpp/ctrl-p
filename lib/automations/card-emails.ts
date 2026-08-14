@@ -29,7 +29,7 @@ function baseHtml(content: string) {
         </td></tr>
         <tr><td style="padding:28px;color:#d1fae5">${content}</td></tr>
         <tr><td style="background:#0a120c;border-top:1px solid #1e3322;padding:14px 28px;font-size:11px;color:#4b6b52">
-          ControlP.io &bull; Digital Business Cards &bull; <a href="https://my.controlp.io" style="color:#4b6b52">my.controlp.io</a>
+          ControlP.io &bull; Digital Business Cards &bull; <a href="https://controlp.io" style="color:#4b6b52">controlp.io</a>
         </td></tr>
       </table>
     </td></tr>

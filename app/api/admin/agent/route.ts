@@ -13,7 +13,7 @@ You help owner Jeremy Waters (Super Admin) run the business efficiently. You can
 ## Business Overview
 - Name: Ctrl+P / ControlP.io
 - Location: Chandler, AZ (Metro Phoenix area)
-- Platform: my.controlp.io
+- Platform: controlp.io
 - Support email: hello@controlp.io
 - Primary support line: (480) 999-9906
 

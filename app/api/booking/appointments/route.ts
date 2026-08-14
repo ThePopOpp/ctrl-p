@@ -177,7 +177,7 @@ function customerEmailHtml(input: {
             <table cellpadding="0" cellspacing="0" role="presentation">
               <tr><td style="padding-bottom:5px;"><table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:6px;font-size:8px;color:#a3ff12;">&#8226;</td><td style="font-size:12px;color:#6b7280;">(480) 999-9906</td></tr></table></td></tr>
               <tr><td style="padding-bottom:5px;"><table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:6px;font-size:8px;color:#a3ff12;">&#8226;</td><td style="font-size:12px;color:#6b7280;">Mon–Fri 9 am – 5 pm MST</td></tr></table></td></tr>
-              <tr><td style="padding-bottom:5px;"><table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:6px;font-size:8px;color:#a3ff12;">&#8226;</td><td style="font-size:12px;color:#6b7280;"><a href="https://my.controlp.io" style="color:#16a34a;text-decoration:none;">my.controlp.io</a></td></tr></table></td></tr>
+              <tr><td style="padding-bottom:5px;"><table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:6px;font-size:8px;color:#a3ff12;">&#8226;</td><td style="font-size:12px;color:#6b7280;"><a href="https://controlp.io" style="color:#16a34a;text-decoration:none;">controlp.io</a></td></tr></table></td></tr>
               <tr><td><table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:6px;font-size:8px;color:#a3ff12;">&#8226;</td><td style="font-size:12px;color:#6b7280;"><a href="mailto:hello@controlp.io" style="color:#16a34a;text-decoration:none;">hello@controlp.io</a></td></tr></table></td></tr>
             </table>
           </td>
@@ -443,7 +443,7 @@ export async function POST(request: Request) {
   const timeLabel = new Intl.DateTimeFormat("en-US", { timeZone: "America/Phoenix", hour: "numeric", minute: "2-digit" }).format(requestedDate);
   const location = typeResult.data.meeting_url || typeResult.data.location_type.replace(/_/g, " ");
   const customer = customerMessage({ typeName: typeResult.data.name, dateLabel, timeLabel, location });
-  const baseUrl = serverEnv("NEXT_PUBLIC_APP_URL") || "https://my.controlp.io";
+  const baseUrl = serverEnv("NEXT_PUBLIC_APP_URL") || "https://controlp.io";
   const customerHtml = customerEmailHtml({
     firstName,
     typeName: typeResult.data.name,

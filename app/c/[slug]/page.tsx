@@ -360,7 +360,7 @@ export default async function PublicDigitalCardPage({ params, searchParams }: { 
     .sort((a, b) => Number(a.display_order || 100) - Number(b.display_order || 100));
   const sections = normalizeSections(card.digital_card_sections);
   const backgroundImage = card.background_image_url ? `linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)), url(${card.background_image_url})` : undefined;
-  const publicUrl = card.public_url || `https://my.controlp.io/c/${card.slug}`;
+  const publicUrl = card.public_url || `https://controlp.io/c/${card.slug}`;
   const opener = openerSection(sections);
   const fabPosition = typeof card.media_settings?.public_fab_position === "string" ? card.media_settings.public_fab_position : "bottom_right";
   const { dark: darkTheme, light: lightTheme } = publicThemeSettings(card);

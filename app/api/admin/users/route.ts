@@ -37,7 +37,7 @@ function cleanAppUrl(request: Request) {
     ? configured
     : requestOrigin && !/localhost|127\.0\.0\.1/i.test(requestOrigin)
       ? requestOrigin
-      : "https://my.controlp.io";
+      : "https://controlp.io";
 
   return candidate.replace(/\/$/, "");
 }

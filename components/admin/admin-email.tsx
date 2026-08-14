@@ -1259,7 +1259,7 @@ export function AdminEmail() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold">Form Submissions</h2>
-              <p className="text-sm text-muted-foreground">Contact form submissions from <code className="font-mono text-xs bg-muted px-1 rounded">my.controlp.io/contact</code>. All submissions are automatically stored here.</p>
+              <p className="text-sm text-muted-foreground">Contact form submissions from <code className="font-mono text-xs bg-muted px-1 rounded">controlp.io/contact</code>. All submissions are automatically stored here.</p>
             </div>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
               setSubLoading(true);
@@ -1525,7 +1525,7 @@ export function AdminEmail() {
                   <div>
                     <div className="font-semibold text-sm">Contact form integration</div>
                     <div className="text-[12px] text-muted-foreground">
-                      {submissions.length > 0 ? `${submissions.length} submission${submissions.length !== 1 ? "s" : ""} received ✓` : "Wire up my.controlp.io/contact to capture leads"}
+                      {submissions.length > 0 ? `${submissions.length} submission${submissions.length !== 1 ? "s" : ""} received ✓` : "Wire up controlp.io/contact to capture leads"}
                     </div>
                   </div>
                   {submissions.length > 0 && <Badge className="ml-auto mr-2 bg-green-500/20 text-green-700 border-green-500/30">Done</Badge>}

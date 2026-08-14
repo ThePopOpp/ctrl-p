@@ -236,7 +236,7 @@ export function CustomerDigitalCards() {
 
   const cards = data?.cards ?? [];
   const products = data?.products ?? [];
-  const publicUrl = useMemo(() => `${data?.publicBase || "https://my.controlp.io"}/c/${form.slug || "card"}`, [data?.publicBase, form.slug]);
+  const publicUrl = useMemo(() => `${data?.publicBase || "https://controlp.io"}/c/${form.slug || "card"}`, [data?.publicBase, form.slug]);
 
   function openNew() {
     setMessage("");

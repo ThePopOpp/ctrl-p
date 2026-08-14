@@ -77,7 +77,7 @@ export async function POST(
 
   const billingContact = asRecord(payment.billing_contact);
   const customer = asRecord(billingContact.customer);
-  const appUrl = serverEnv("PUBLIC_APP_URL") || "https://my.controlp.io";
+  const appUrl = serverEnv("PUBLIC_APP_URL") || "https://controlp.io";
   const documentUrl = getPaymentDocumentUrl(appUrl, paymentId, kind).replace("/api/admin/payments/", "/api/payments/");
   const message = buildPaymentMessage({ kind, payment, documentUrl });
   const order = Array.isArray(payment.orders) ? payment.orders[0] : payment.orders;

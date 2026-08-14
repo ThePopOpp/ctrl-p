@@ -139,7 +139,7 @@ export async function POST(request: Request) {
     };
   }
 
-  const appUrl = serverEnv("PUBLIC_APP_URL") || "https://my.controlp.io";
+  const appUrl = serverEnv("PUBLIC_APP_URL") || "https://controlp.io";
   const squareResponse = await fetch(`${config.baseUrl}/v2/online-checkout/payment-links`, {
     method: "POST",
     headers: {

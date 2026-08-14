@@ -133,7 +133,7 @@ function safeLinkUrl(value: unknown, linkType: string) {
 }
 
 function publicBase() {
-  return serverEnv("PUBLIC_APP_URL").replace(/\/$/, "") || "https://my.controlp.io";
+  return serverEnv("PUBLIC_APP_URL").replace(/\/$/, "") || "https://controlp.io";
 }
 
 async function verifyCustomerRequest(request: Request) {

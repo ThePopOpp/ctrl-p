@@ -277,7 +277,7 @@ export async function POST(request: Request) {
     return jsonError("Square is not configured.", 501);
   }
 
-  const appUrl = serverEnv("PUBLIC_APP_URL") || "https://my.controlp.io";
+  const appUrl = serverEnv("PUBLIC_APP_URL") || "https://controlp.io";
   const redirectUrl = `${appUrl.replace(/\/$/, "")}/checkout/confirmation?order_id=${order.id}`;
 
   const squareLineItems = lineItems.map((item) => ({

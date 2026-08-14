@@ -10,7 +10,7 @@ import {
 
 function env(name: string) { return process.env[name] || ""; }
 
-function appUrl() { return env("PUBLIC_APP_URL").replace(/\/$/, "") || "https://my.controlp.io"; }
+function appUrl() { return env("PUBLIC_APP_URL").replace(/\/$/, "") || "https://controlp.io"; }
 
 export type CardTriggerType =
   | "lead_submit"

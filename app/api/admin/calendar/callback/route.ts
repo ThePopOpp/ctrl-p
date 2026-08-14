@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const error = url.searchParams.get("error");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://my.controlp.io";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://controlp.io";
   const settingsUrl = `${appUrl}/admin/settings?tab=calendar`;
 
   if (error || !code) {

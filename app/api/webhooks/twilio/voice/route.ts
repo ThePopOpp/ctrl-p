@@ -61,7 +61,7 @@ function buildTwiml(
   ownedNumbers: string[],
 ): string {
   const recordingCallback =
-    (process.env.PUBLIC_APP_URL || "https://my.controlp.io") +
+    (process.env.PUBLIC_APP_URL || "https://controlp.io") +
     "/api/webhooks/twilio/recording-status";
 
   // Outbound call from browser client — to is a real E.164 number

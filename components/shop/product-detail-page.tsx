@@ -678,8 +678,8 @@ function ProductDetailContent({ slug }: { slug: string }) {
                     </p>
                     <a
                       href={product.slug === 'vision-art-chart'
-                        ? `https://my.controlp.io/vision-art-chart.html`
-                        : `https://my.controlp.io/designer.html?product=${product.slug}&sides=${sides.toLowerCase().includes("double") ? "2" : "1"}`}
+                        ? `https://controlp.io/vision-art-chart.html`
+                        : `https://controlp.io/designer.html?product=${product.slug}&sides=${sides.toLowerCase().includes("double") ? "2" : "1"}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-5 py-2.5 text-sm font-semibold text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"

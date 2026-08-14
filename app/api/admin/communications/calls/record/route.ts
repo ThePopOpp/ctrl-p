@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const authToken = serverEnv("TWILIO_AUTH_TOKEN");
   if (!accountSid || !authToken) return jsonError("Twilio credentials not configured.", 501);
 
-  const publicUrl = serverEnv("PUBLIC_APP_URL") || "https://my.controlp.io";
+  const publicUrl = serverEnv("PUBLIC_APP_URL") || "https://controlp.io";
 
   try {
     const client = twilio(accountSid, authToken);

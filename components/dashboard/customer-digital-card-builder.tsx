@@ -602,7 +602,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
     load();
   }, [cardId]);
 
-  const publicUrl = useMemo(() => `${data?.publicBase || "https://my.controlp.io"}/c/${form.slug || "card"}`, [data?.publicBase, form.slug]);
+  const publicUrl = useMemo(() => `${data?.publicBase || "https://controlp.io"}/c/${form.slug || "card"}`, [data?.publicBase, form.slug]);
 
   function update<K extends keyof DigitalCard>(key: K, value: DigitalCard[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -3439,7 +3439,7 @@ function EmbedPanel({ publicUrl, isPublished }: { publicUrl: string; isPublished
 }
 
 function LockedEmbedPanel({ onUnlock }: { onUnlock: () => void }) {
-  const mockSnippet = `<iframe\n  src="https://my.controlp.io/c/your-card?embed=1"\n  width="390"\n  height="700"\n  frameborder="0"\n  style="border-radius:16px;overflow:hidden;border:none;"\n  title="Digital Business Card"\n  loading="lazy"\n></iframe>`;
+  const mockSnippet = `<iframe\n  src="https://controlp.io/c/your-card?embed=1"\n  width="390"\n  height="700"\n  frameborder="0"\n  style="border-radius:16px;overflow:hidden;border:none;"\n  title="Digital Business Card"\n  loading="lazy"\n></iframe>`;
   return (
     <Card>
       <CardHeader className="pb-3">

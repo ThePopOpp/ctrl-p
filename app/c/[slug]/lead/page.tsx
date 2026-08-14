@@ -48,7 +48,7 @@ export default async function PublicDigitalCardLeadPage({ params }: { params: Pr
 
   if (result.error || !result.data) notFound();
   const card = result.data as LeadCard;
-  const publicUrl = card.public_url || `https://my.controlp.io/c/${card.slug}`;
+  const publicUrl = card.public_url || `https://controlp.io/c/${card.slug}`;
   const settings = {
     button_background: card.accent_color,
     button_text_color: card.background_color,

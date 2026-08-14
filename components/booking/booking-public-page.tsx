@@ -1128,7 +1128,7 @@ export function BookingPublicPage() {
           <footer className="mt-10 border-t border-black/10 pt-4 text-center text-xs text-muted-foreground dark:border-white/10">
             Powered by{" "}
             <a
-              href="https://my.controlp.io"
+              href="https://controlp.io"
               className="font-medium text-[#5a8800] hover:underline dark:text-[#a3ff12]"
             >
               ControlP.io

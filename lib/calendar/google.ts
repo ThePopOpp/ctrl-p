@@ -23,7 +23,7 @@ export type FreeBusyWindow = { start: string; end: string };
 function googleEnv() {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID || "";
   const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET || "";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://my.controlp.io";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://controlp.io";
   const redirectUri = `${appUrl}/api/admin/calendar/callback`;
   return { clientId, clientSecret, redirectUri };
 }
