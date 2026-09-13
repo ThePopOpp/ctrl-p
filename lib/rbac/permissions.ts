@@ -45,6 +45,10 @@ export const PERMISSIONS = {
   PROFILE_EDIT: "profile.edit",
   REPORTS_VIEW: "reports.view",
   ACTIVITY_VIEW: "activity.view",
+  PIPELINE_VIEW_ALL: "pipeline.view_all",
+  PIPELINE_VIEW_ASSIGNED: "pipeline.view_assigned",
+  PIPELINE_EDIT: "pipeline.edit",
+  PIPELINE_MANAGE: "pipeline.manage",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

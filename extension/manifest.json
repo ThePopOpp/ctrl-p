@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "CTRL+P Product Capture",
+  "version": "1.0.0",
+  "description": "Capture a vendor's product page into a CTRL+P Product Card — title, images, specs and wholesale cost, in one click.",
+  "minimum_chrome_version": "114",
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage", "cookies"],
+  "host_permissions": ["https://controlp.io/*"],
+  "background": {
+    "service_worker": "dist/extension/src/background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "action": {
+    "default_title": "Capture product"
+  },
+  "icons": {
+    "128": "icon128.png"
+  }
+}

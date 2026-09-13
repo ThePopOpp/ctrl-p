@@ -1343,6 +1343,9 @@ export function AdminEmail() {
                               }}>{status === "replied" ? "Mark replied" : status === "archived" ? "Archive" : "Mark read"}</Button>
                             )
                           ))}
+                          <Button variant="outline" size="sm" className="h-7 text-[12px]" asChild>
+                            <Link href={`/admin/pipeline?from_submission=${s.id}`}>Add to Pipeline</Link>
+                          </Button>
                           <Button variant="ghost" size="sm" className="h-7 gap-1 text-[12px] text-primary ml-auto" asChild>
                             <Link href="/admin/agent" target="_blank"><Bot className="h-3.5 w-3.5" />Draft reply with AI</Link>
                           </Button>

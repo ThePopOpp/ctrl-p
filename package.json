@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "build:extension": "tsc -p extension/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest"
   },

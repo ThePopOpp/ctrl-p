@@ -1,0 +1,129 @@
+/* Side panel styling. This lives outside the vendor page's DOM, so nothing here
+   can leak into their page and their CSS cannot reach in. Colours track the
+   dashboard's palette closely enough to feel like one product. */
+
+:root {
+  --bg: #ffffff;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --accent: #2563eb;
+  --warn-bg: #fffbeb;
+  --warn-fg: #92400e;
+  --error-bg: #fef2f2;
+  --error-fg: #b91c1c;
+  --ok-bg: #ecfdf5;
+  --ok-fg: #047857;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --fg: #f1f5f9;
+    --muted: #94a3b8;
+    --border: #1e293b;
+    --warn-bg: #422006;
+    --warn-fg: #fcd34d;
+    --error-bg: #450a0a;
+    --error-fg: #fca5a5;
+    --ok-bg: #052e2b;
+    --ok-fg: #6ee7b7;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 12px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand { font-weight: 700; letter-spacing: -0.01em; }
+.title { margin: 0 0 6px; font-size: 16px; }
+.subtitle { margin: 14px 0 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+
+.muted { color: var(--muted); }
+.small { font-size: 11px; }
+
+.section { display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; gap: 8px; }
+.row > * { flex: 1; }
+
+.button {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.button:hover:not(:disabled) { background: color-mix(in srgb, var(--fg) 6%, transparent); }
+.button:disabled { opacity: .55; cursor: default; }
+.button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+
+.alert { margin: 0 0 10px; padding: 8px 10px; border-radius: 7px; font-size: 12px; }
+.alert.error { background: var(--error-bg); color: var(--error-fg); }
+.alert.warn { background: var(--warn-bg); color: var(--warn-fg); }
+.alert.notice { background: var(--ok-bg); color: var(--ok-fg); }
+
+.form { display: flex; flex-direction: column; gap: 10px; }
+.source { margin: 0; font-size: 11px; color: var(--muted); word-break: break-all; }
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.label { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; }
+
+.input {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+}
+.input:focus { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 1px; }
+
+/* The badge is load-bearing: an `extracted` value came from a vision model
+   reading a screenshot, and acting on an inferred cost without checking it is
+   how margin quietly disappears. */
+.badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.badge.verified { background: var(--ok-bg); color: var(--ok-fg); }
+.badge.extracted { background: var(--warn-bg); color: var(--warn-fg); }
+.badge.manual { background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--muted); }
+
+.variants { width: 100%; border-collapse: collapse; font-size: 12px; }
+.variants td { padding: 5px 6px; border-bottom: 1px solid var(--border); }
+.variants td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.shot {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  margin-top: 8px;
+}

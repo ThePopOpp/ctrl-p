@@ -1,0 +1,32 @@
+{
+  // Compiles the extension with the TypeScript already in devDependencies — no
+  // bundler, so `extension/` loads unpacked the moment this runs.
+  //
+  // rootDir is the repo root so `lib/capture/extract.ts` compiles into the
+  // output tree alongside the extension's own sources. That module's only
+  // imports are `import type`, which TypeScript erases, so the emitted
+  // extract.js has no imports and runs in the panel unchanged. The extraction
+  // pipeline is therefore genuinely shared with the web app rather than
+  // duplicated — the one piece that must never drift.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // Chrome's API surface is declared locally in src/chrome.d.ts rather than
+    // pulling in @types/chrome — only a handful of calls are used, and the
+    // extension should build from a clean checkout with no extra install.
+    "types": [],
+    "rootDir": "..",
+    "outDir": "dist",
+    "strict": true,
+    "noEmit": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@/*": ["../*"]
+    }
+  },
+  "include": ["src/**/*.ts", "../lib/capture/extract.ts", "../lib/capture/types.ts", "../lib/products/types.ts"]
+}

@@ -1,7 +1,22 @@
 import type { NextConfig } from "next";
 
+const supabaseHost = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname;
+  } catch {
+    return "";
+  }
+})();
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Only our own storage host is optimizable. Product card images can also
+  // point at a vendor's CDN while a card is still a draft; components/products/
+  // product-image.tsx falls back to a plain <img> for those rather than
+  // wildcarding this list, which would make the site an open image proxy.
+  images: supabaseHost
+    ? { remotePatterns: [{ protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] }
+    : undefined,
   output: "standalone",
   outputFileTracingRoot: __dirname,
   async headers() {

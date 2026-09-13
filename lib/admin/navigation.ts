@@ -14,9 +14,11 @@ import {
   Phone,
   LayoutTemplate,
   Radio,
+  ScanLine,
   Settings,
   ShoppingBag,
   Tag,
+  TrendingUp,
   Truck,
   UserCog,
   Users,
@@ -34,6 +36,7 @@ export const adminNavGroups: readonly {
     items: [
       ["Dashboard", LayoutDashboard, "/admin"],
       ["Analytics", Radio, "/admin/analytics"],
+      ["Pipeline", TrendingUp, "/admin/pipeline"],
       ["Orders", ShoppingBag, "/admin/orders"],
       ["Projects", CalendarRange, "/admin/production-schedule"],
       ["Production", Boxes, "/admin/production"],
@@ -50,6 +53,7 @@ export const adminNavGroups: readonly {
     label: "Catalog",
     items: [
       ["Products", PackageCheck, "/admin/products"],
+      ["Product Cards", ScanLine, "/admin/product-cards"],
       ["Wall Studio", LayoutTemplate, "/admin/wall-studio"],
       ["Coupons", Tag, "/admin/coupons"],
       ["Artwork", FileText, "/admin/artwork"],
