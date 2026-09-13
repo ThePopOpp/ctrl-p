@@ -16,7 +16,9 @@ import { STAGE_ORDER, isActiveStage } from "@/lib/pipeline/stages";
 import type {
   CustomerRecord,
   ExtraChecklistItem,
+  LinkedProject,
   OpportunityDetail,
+  OpportunityDocument,
   OpportunityEvent,
   OpportunityFile,
   OpportunityLineItem,
@@ -88,6 +90,29 @@ export async function GET(request: Request, { params }: Params) {
       : Promise.resolve({ data: [] }),
   ]);
 
+  const eventRows = (events.data ?? []) as OpportunityEvent[];
+  const projectIds = Array.from(new Set([
+    opportunity.won_project_id,
+    ...eventRows.filter((event) => event.log_kind === "project").map((event) => (typeof event.details?.project_id === "string" ? event.details.project_id : null)),
+  ].filter((value): value is string => Boolean(value))));
+  const voiceEvents = eventRows.filter((event) => event.log_kind === "voice_note" && typeof event.details?.storage_path === "string");
+
+  const [documents, projects, voiceUrls] = await Promise.all([
+    client.from("pipeline_opportunity_documents").select("*").eq("opportunity_id", id).order("updated_at", { ascending: false }),
+    projectIds.length
+      ? client.from("production_schedule_items").select("id, title, status, due_date, project_name").in("id", projectIds)
+      : Promise.resolve({ data: [] }),
+    voiceEvents.length
+      ? client.storage.from("pipeline-voice-notes").createSignedUrls(voiceEvents.map((event) => String(event.details.storage_path)), 3600)
+      : Promise.resolve({ data: [] as { path: string | null; signedUrl: string }[] }),
+  ]);
+  const urlByPath = new Map(((voiceUrls.data ?? []) as { path: string | null; signedUrl: string }[]).map((row) => [row.path, row.signedUrl]));
+  const voiceNoteUrls: Record<string, string> = {};
+  for (const event of voiceEvents) {
+    const url = urlByPath.get(String(event.details.storage_path));
+    if (url) voiceNoteUrls[event.id] = url;
+  }
+
   const dedupe = <T extends { id: string }>(rows: T[]) => Array.from(new Map(rows.map((row) => [row.id, row])).values());
   const messages = dedupe([...((messagesByOrder.data ?? []) as RelatedMessage[]), ...((messagesByCustomer.data ?? []) as RelatedMessage[])])
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -102,7 +127,7 @@ export async function GET(request: Request, { params }: Params) {
     value: opportunityValue(opportunity.estimated_value, currentQuote),
     lineItems: (lineItems.data ?? []) as OpportunityLineItem[],
     quotes: quoteRows,
-    events: (events.data ?? []) as OpportunityEvent[],
+    events: eventRows,
     tasks: (tasks.data ?? []) as OpportunityTask[],
     files: (files.data ?? []) as OpportunityFile[],
     customer: (customer.data ?? null) as CustomerRecord | null,
@@ -112,6 +137,9 @@ export async function GET(request: Request, { params }: Params) {
     payments: (payments.data ?? []) as RelatedPayment[],
     messages,
     appointments,
+    documents: ((documents.data ?? []) as OpportunityDocument[]).map((doc) => ({ ...doc, amount: doc.amount === null ? null : Number(doc.amount) })),
+    projects: (projects.data ?? []) as LinkedProject[],
+    voiceNoteUrls,
     staff,
     stageConfig,
     access,

@@ -113,7 +113,27 @@ When an opportunity moves to Closed Won, `ensureWonRecords` runs **before** the 
 
 Header (value, weighted, owner, dates, overdue flags, Won/Lost/Hold/Reopen), stage path with *Advance*, customer or prospect contact, originating inquiry, project details, order setup (billing, deposit, terms, PO), stage guidance and checklist, next action, line items (multiple products per opportunity with service-aware specs), quote versions, activity timeline, tasks, related orders/payments/appointments, file links, stage history, and assignment history.
 
-**Activity integrity.** The timeline merges pipeline events, `messages` for the linked customer and orders (labelled with their real sent/not-sent state), and `booking_appointments`. *Log activity* records something that happened outside Ctrl+P and is always labelled **Logged manually**; it never sends an email, text or call. Sending uses the existing Messages/Communications modules; booking uses Bookings.
+**Activity timeline.** One stream, tabbed to match the quick actions: All, Calls, Email, Text, Appointments, Notes, Voice notes, AI Agent, Projects, Plans, Contracts, SOW, Quotes, Invoices, Payments and Updates (stage, owner and other changes). Each tab shows its count, highlighted when something arrived since you last opened that tab (remembered per browser). It merges pipeline events, `messages` for the linked customer and orders, `booking_appointments`, and `payments` on linked orders; a message or booking made from the workspace appears once. Entries show their real provider status (for example *Twilio · delivered* or *Email · failed*). *Add* on a tab logs that kind by hand or opens the matching quick action; hand-logged entries are always labelled **Logged manually** and never send anything.
+
+## Quick actions
+
+The workspace's action menu sits under the header while the main sidebar is expanded. Collapse the sidebar (bottom of the rail; remembered per browser) and the menu moves to a vertical rail beside the content. Contact panels also carry Call, Text and Email shortcuts. Every tool opens in a modal that can be expanded to full screen.
+
+| Action | What it really does | Recorded as |
+|---|---|---|
+| Call | Twilio browser dialer (same TwiML app as Communications; does not register, so it never takes incoming calls). After hang-up the server fetches the call from Twilio and records its real status and duration. A call that never connected is not recorded. | `communication` / `call` with CallSid; de-duplicated |
+| Email | Sends plain text through the SMTP settings used by Messages (`SMTP_*`, `EMAIL_FROM`). Saves a `messages` row for the linked customer/won order. A rejected send is recorded as failed and reported as an error. | `communication` / `email` |
+| Text | Sends through Twilio from an allowed SMS number (`TWILIO_SMS_NUMBERS`, else the main number). Saves a `messages` row. Status shown is Twilio's (queued/sent/delivered/failed). | `communication` / `sms` |
+| Schedule | Uses the public booking flow: appointment types, real open slots, and `POST /api/booking/appointments`, which sends the customer's normal confirmation. The booking is then attached. | `communication` / `meeting` with appointment id |
+| Note | Internal note on the opportunity. | `manual_log` / `note` |
+| Voice note | Records in the browser, stores the audio in the private `pipeline-voice-notes` bucket (≤10 MB), and optionally transcribes with OpenAI Whisper. Played back through short-lived signed links. | `communication` / `voice_note` |
+| AI Agent | Summaries, next steps, follow-up email/text drafts and questions, generated only from the opportunity record (Anthropic if `ANTHROPIC_API_KEY`, else OpenAI). Nothing is sent; drafts can be copied into Email/Text or saved to the timeline. AI phone calling is not available in Ctrl+P. | `communication` / `ai_agent` (only when saved) |
+| Project | Creates an item in Projects (`/api/admin/production-schedule`) on the won order, or links an existing one. | `record_linked` / `project` |
+| Plan, Contract, SOW | Records in `pipeline_opportunity_documents` with title, status, amount, dates, terms and an optional file link. Status is staff-recorded; there is no e-signature. | `document_updated` |
+| Quote | Opens the Quote panel's link/new-version dialog (quotes are built in Orders). | `quote_linked` / `quote_revised` |
+| Invoice | Creates an invoice in Payments on the won order or a linked quote order, and optionally sends it through the existing invoice delivery (email/text). Payment status always comes from Payments. | `record_linked` / `invoice` |
+
+All quick-action routes require `pipeline.edit` and record access to the opportunity; calls to other modules (token, bookings, projects, payments) keep those modules' own role checks.
 
 ## Permissions
 
@@ -137,7 +157,8 @@ New keys in `lib/rbac/permissions.ts`, mirrored in the database function `app_us
 
 ## Setup
 
-1. **Apply the migration** `supabase/migrations/20260913000001_sales_pipeline.sql` on its own (SQL editor or psql). It is idempotent. Avoid a blanket `supabase db push` unless every pending migration is intended.
+1. **Apply the migrations** in order, each on its own (SQL editor or psql): `supabase/migrations/20260913000001_sales_pipeline.sql`, then `supabase/migrations/20260914000001_pipeline_quick_actions.sql` (event types, documents table, private voice-note bucket). Both are safe to re-run. Avoid a blanket `supabase db push` unless every pending migration is intended.
+   - Quick actions use existing environment variables: Twilio (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_TWIML_APP_SID`, `TWILIO_PHONE_NUMBER(S)`, `TWILIO_SMS_NUMBERS`), SMTP (`SMTP_*`, `EMAIL_FROM`), and `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` for AI drafts (`OPENAI_API_KEY` also enables voice-note transcription). A tool whose provider isn't configured says so instead of pretending to work.
 2. **Environment:** no new variables. Uses existing `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 3. **Roles:** confirm sales staff have `employee`/`staff` (or `customer_support` for own-records-only) and are `active`.
 4. **Optional:** tune probabilities and checklists in *Stage settings*.
@@ -146,7 +167,11 @@ New keys in `lib/rbac/permissions.ts`, mirrored in the database function `app_us
 ## Known limitations
 
 - Files are **links** (Drive, Dropbox, artwork bucket URLs); there is no upload control on the opportunity. Proofs of record remain on the order.
-- Sending email/SMS, placing calls and booking appointments open the existing modules; those messages attach to the opportunity's timeline through the linked customer or order, not through an opportunity id on `messages`.
+- Emails are plain text (no templates yet). Inbound replies appear only when they land in `messages` for the linked customer.
+- Call recordings are not played back in the workspace; use Communications.
+- AI Agent drafts and answers only; there is no AI voice calling.
+- Plans, contracts and SOWs have no e-signature or document sending; status is recorded by staff.
+- The collapsible sidebar exists on the Pipeline pages; other admin pages keep their fixed sidebar.
 - Won conversion creates order lines without catalog product ids when line items weren't matched to products, and line prices use the planning estimates; the order total is the accepted quote amount.
 - Quote status (sent, accepted) is recorded by staff; Ctrl+P has no customer-facing quote acceptance flow to read it from.
 - The admin console has no shared layout; the Pipeline shell mirrors the existing per-page sidebar/header pattern.

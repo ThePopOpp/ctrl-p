@@ -115,7 +115,10 @@ export type OpportunityEventType =
   | "task_created"
   | "task_completed"
   | "file_linked"
-  | "manual_log";
+  | "manual_log"
+  | "communication"
+  | "record_linked"
+  | "document_updated";
 
 export type OpportunityEvent = {
   id: string;
@@ -158,6 +161,33 @@ export type OpportunityFile = {
   artwork_file_id: string | null;
   created_by: string | null;
   created_at: string;
+};
+
+export type DocumentKind = "plan" | "contract" | "sow";
+export type DocumentStatus = "draft" | "sent" | "accepted" | "signed" | "declined" | "archived";
+
+export type OpportunityDocument = {
+  id: string;
+  opportunity_id: string;
+  kind: DocumentKind;
+  title: string;
+  status: DocumentStatus;
+  amount: number | null;
+  effective_date: string | null;
+  due_date: string | null;
+  body: string | null;
+  file_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LinkedProject = {
+  id: string;
+  title: string;
+  status: string | null;
+  due_date: string | null;
+  project_name: string | null;
 };
 
 export type StaffMember = { id: string; full_name: string | null; email: string | null; role: string };
@@ -264,6 +294,10 @@ export type OpportunityDetail = {
   payments: RelatedPayment[];
   messages: RelatedMessage[];
   appointments: RelatedAppointment[];
+  documents: OpportunityDocument[];
+  projects: LinkedProject[];
+  /** Short-lived signed playback URLs for voice notes, keyed by event id. */
+  voiceNoteUrls: Record<string, string>;
   staff: StaffMember[];
   stageConfig: StageConfigMap;
   access: PipelineAccess;

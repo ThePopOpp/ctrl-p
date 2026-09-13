@@ -10,9 +10,11 @@ import {
   CircleAlert,
   ExternalLink,
   Link2,
+  Mail,
   MessageSquare,
   Pause,
   Pencil,
+  Phone,
   Plus,
   RefreshCw,
   RotateCcw,
@@ -22,7 +24,9 @@ import {
   Zap,
 } from "lucide-react";
 
-import { PipelineShell } from "@/components/admin/pipeline/pipeline-shell";
+import { ActivityTimeline } from "@/components/admin/pipeline/activity-timeline";
+import { PipelineShell, usePipelineSidebar } from "@/components/admin/pipeline/pipeline-shell";
+import { ActionRail, QuickActionModal, type QuickActionId, type ToolRequest } from "@/components/admin/pipeline/quick-actions";
 import {
   EditableField,
   EmptyState,
@@ -51,6 +55,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { errorMessage, pipelineRequest } from "@/lib/pipeline/client";
 import { isOverdue } from "@/lib/pipeline/forecast";
 import { checklistFor, missingSpecifications, nextPathStage, resolveGuide } from "@/lib/pipeline/guidance";
+import { TIMELINE_TABS, type TimelineTabKey } from "@/lib/pipeline/timeline";
 import {
   ARTWORK_SOURCES,
   ARTWORK_STATUSES,
@@ -88,6 +93,9 @@ function Workspace({ id }: { id: string }) {
   const [quoteDialog, setQuoteDialog] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [customerDialog, setCustomerDialog] = useState(false);
+  const [tool, setTool] = useState<ToolRequest | null>(null);
+  const [logKind, setLogKind] = useState("call");
+  const { collapsed } = usePipelineSidebar();
 
   const load = useCallback(async () => {
     try {
@@ -169,6 +177,28 @@ function Workspace({ id }: { id: string }) {
   const specGaps = missingSpecifications(lineItems);
   const dueFollowUp = o.stage === "on_hold" ? o.hold_follow_up_date : o.next_action_due;
 
+  const runTool = (toolId: QuickActionId) => {
+    if (toolId === "quote") setQuoteDialog(true);
+    else setTool({ id: toolId });
+  };
+
+  /** "Add" on a timeline tab: log that kind by hand, or open the matching quick action. */
+  const addToTimeline = (tab: TimelineTabKey) => {
+    const log = TIMELINE_TABS.find((item) => item.key === tab)?.log;
+    const toolFor: Partial<Record<TimelineTabKey, QuickActionId>> = {
+      voice: "voice", ai: "agent", project: "project", plan: "plan", contract: "contract", sow: "sow", quote: "quote", invoice: "invoice", payment: "invoice",
+    };
+    if (log) {
+      setLogKind(log);
+      setLogOpen(true);
+    } else if (toolFor[tab]) {
+      runTool(toolFor[tab]!);
+    } else {
+      setLogKind("note");
+      setLogOpen(true);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <BackLink />
@@ -209,6 +239,9 @@ function Workspace({ id }: { id: string }) {
             )}
           </div>
         </div>
+
+        {/* Quick actions sit here while the sidebar is open; collapsed, they move to a rail beside the content. */}
+        {!collapsed && <div className="mt-3"><ActionRail vertical={false} disabled={!canEdit} onRun={runTool} /></div>}
 
         <div className="mt-4 grid gap-x-6 gap-y-1 border-t pt-3 sm:grid-cols-2 lg:grid-cols-4">
           <FieldRow label="Customer / company">{o.company || customer?.company || o.contact_name || customer?.full_name || "—"}</FieldRow>
@@ -273,7 +306,13 @@ function Workspace({ id }: { id: string }) {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_minmax(0,320px)]">
+      <div className={cn(
+        "grid gap-4",
+        collapsed
+          ? "xl:grid-cols-[minmax(0,170px)_minmax(0,300px)_minmax(0,1fr)_minmax(0,300px)]"
+          : "xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)_minmax(0,320px)]",
+      )}>
+        {collapsed && <div><ActionRail vertical disabled={!canEdit} onRun={runTool} /></div>}
         {/* Left: who and what */}
         <div className="space-y-4">
           <Panel
@@ -287,6 +326,7 @@ function Workspace({ id }: { id: string }) {
                 <FieldRow label="Phone">{customer.phone || "—"}</FieldRow>
                 <FieldRow label="Company">{customer.company || "—"}</FieldRow>
                 <FieldRow label="Account">{customer.role === "customer" ? "Customer account" : human(customer.role)}</FieldRow>
+                <ContactActions phone={customer.phone} email={customer.email} disabled={!canEdit} onRun={runTool} />
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
                   <Link href="/admin/customers" className="inline-flex items-center gap-1 underline-offset-2 hover:underline">Open Customers <ExternalLink className="h-3 w-3" /></Link>
                   {canEdit && o.stage !== "closed_won" && <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => patch({ customer_user_id: null }, "Customer unlinked")}>Unlink</button>}
@@ -298,6 +338,7 @@ function Workspace({ id }: { id: string }) {
                 <FieldRow label="Email"><EditableField ariaLabel="Contact email" value={o.contact_email} disabled={!canEdit} onSave={(value) => patch({ contact_email: value })} /></FieldRow>
                 <FieldRow label="Phone"><EditableField ariaLabel="Contact phone" value={o.contact_phone} disabled={!canEdit} onSave={(value) => patch({ contact_phone: value })} /></FieldRow>
                 <FieldRow label="Company"><EditableField ariaLabel="Company" value={o.company} disabled={!canEdit} onSave={(value) => patch({ company: value })} /></FieldRow>
+                <ContactActions phone={o.contact_phone} email={o.contact_email} disabled={!canEdit} onRun={runTool} />
                 <p className="mt-3 text-[11px] text-muted-foreground">No customer account yet. At Closed Won the matching customer is linked by email, or one is created once.</p>
               </div>
             )}
@@ -443,7 +484,7 @@ function Workspace({ id }: { id: string }) {
           <QuotePanel detail={detail} currentQuote={currentQuote} canEdit={canEdit} onNew={() => setQuoteDialog(true)}
             onUpdate={(body, message) => run(() => pipelineRequest(`/opportunities/${id}/quotes`, { method: "PATCH", body: { quote_id: currentQuote?.id, ...body } }), message)} />
 
-          <Timeline events={events} messages={messages} appointments={appointments} staff={staff} canEdit={canEdit} onLog={() => setLogOpen(true)} />
+          <ActivityTimeline detail={detail} canEdit={canEdit} onAdd={addToTimeline} />
 
           <TasksPanel detail={detail} canEdit={canEdit}
             onCreate={(body) => run(() => pipelineRequest(`/opportunities/${id}/tasks`, { method: "POST", body }), "Task added")}
@@ -503,6 +544,22 @@ function Workspace({ id }: { id: string }) {
                 ))}
                 <Link href="/admin/bookings" className="mt-1 inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline">Book in Bookings <ExternalLink className="h-3 w-3" /></Link>
               </div>
+              <div>
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Projects</p>
+                {detail.projects.length === 0 ? <p className="text-xs text-muted-foreground">No projects linked.</p> : detail.projects.map((project) => (
+                  <div key={project.id} className="flex justify-between gap-2 text-xs"><span className="truncate">{project.title}</span><span className="shrink-0 text-muted-foreground">{human(project.status)}{project.due_date ? ` · ${fmtDate(project.due_date, false)}` : ""}</span></div>
+                ))}
+                <Link href="/admin/production-schedule" className="mt-1 inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline">Open Projects <ExternalLink className="h-3 w-3" /></Link>
+              </div>
+              <div>
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Plans, contracts & SOWs</p>
+                {detail.documents.length === 0 ? <p className="text-xs text-muted-foreground">None yet.</p> : detail.documents.map((doc) => (
+                  <button key={doc.id} type="button" disabled={!canEdit} onClick={() => runTool(doc.kind)} className="flex w-full justify-between gap-2 rounded text-left text-xs enabled:hover:bg-muted/50">
+                    <span className="truncate">{doc.title}</span>
+                    <span className="shrink-0 text-muted-foreground">{doc.kind === "sow" ? "SOW" : human(doc.kind)} · {human(doc.status)}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </Panel>
 
@@ -521,6 +578,17 @@ function Workspace({ id }: { id: string }) {
       </div>
 
       {transition.element}
+
+      <QuickActionModal
+        request={tool}
+        detail={detail}
+        onClose={() => setTool(null)}
+        onSwitch={(next) => setTool(next)}
+        onDone={async (message) => {
+          await load();
+          setSave({ status: "saved", message });
+        }}
+      />
 
       <StageConfigDialog open={configOpen} initial={stageConfig} startStage={o.stage} onClose={() => setConfigOpen(false)} onSaved={() => void load()} />
 
@@ -551,6 +619,7 @@ function Workspace({ id }: { id: string }) {
 
       <LogDialog
         open={logOpen}
+        initialKind={logKind}
         onClose={() => setLogOpen(false)}
         onSave={async (body) => {
           const ok = await run(() => pipelineRequest(`/opportunities/${id}/activities`, { method: "POST", body }), "Activity logged");
@@ -577,6 +646,18 @@ function BackLink() {
     <Link href="/admin/pipeline" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
       <ArrowLeft className="h-4 w-4" /> Back to Pipeline
     </Link>
+  );
+}
+
+function ContactActions({ phone, email, disabled, onRun }: { phone: string | null; email: string | null; disabled: boolean; onRun: (id: QuickActionId) => void }) {
+  const realEmail = email && !/@import\.controlp\.io$/i.test(email);
+  if (!phone && !realEmail) return null;
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {phone && <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" disabled={disabled} onClick={() => onRun("call")}><Phone className="h-3.5 w-3.5" /> Call</Button>}
+      {phone && <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" disabled={disabled} onClick={() => onRun("sms")}><MessageSquare className="h-3.5 w-3.5" /> Text</Button>}
+      {realEmail && <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" disabled={disabled} onClick={() => onRun("email")}><Mail className="h-3.5 w-3.5" /> Email</Button>}
+    </div>
   );
 }
 
@@ -682,103 +763,6 @@ function QuotePanel({
           )}
           <p className="text-[11px] text-muted-foreground">Status here records what the customer told you. Sending the quote itself happens from Orders or Messages.</p>
         </div>
-      )}
-    </Panel>
-  );
-}
-
-type TimelineItem = { id: string; at: string; title: string; body: string | null; tag: string; tone: string; actor?: string };
-
-function Timeline({
-  events,
-  messages,
-  appointments,
-  staff,
-  canEdit,
-  onLog,
-}: {
-  events: OpportunityEvent[];
-  messages: OpportunityDetail["messages"];
-  appointments: OpportunityDetail["appointments"];
-  staff: OpportunityDetail["staff"];
-  canEdit: boolean;
-  onLog: () => void;
-}) {
-  const [filter, setFilter] = useState<"all" | "manual" | "system" | "messages" | "appointments">("all");
-  const items = useMemo(() => {
-    const list: (TimelineItem & { group: typeof filter })[] = [];
-    for (const event of events) {
-      if (event.event_type === "fields_updated") continue;
-      list.push({
-        id: event.id,
-        at: event.occurred_at,
-        title: event.is_manual_log ? `${labelFor(MANUAL_LOG_KINDS, event.log_kind)}${event.summary ? `: ${event.summary}` : ""}` : event.summary || human(event.event_type),
-        body: event.body,
-        tag: event.is_manual_log ? "Logged manually" : "Pipeline",
-        tone: event.is_manual_log ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground",
-        actor: staffName(staff, event.actor_id),
-        group: event.is_manual_log ? "manual" : "system",
-      });
-    }
-    for (const message of messages) {
-      list.push({
-        id: `message-${message.id}`,
-        at: message.sent_at || message.created_at,
-        title: `${human(message.direction)} ${message.channel}${message.subject ? `: ${message.subject}` : ""}`,
-        body: message.body,
-        tag: message.sent_at ? "Messages · sent" : "Messages · not sent",
-        tone: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-        group: "messages",
-      });
-    }
-    for (const appointment of appointments) {
-      list.push({
-        id: `appointment-${appointment.id}`,
-        at: appointment.start_time,
-        title: appointment.title,
-        body: null,
-        tag: `Booking · ${human(appointment.status)}`,
-        tone: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
-        group: "appointments",
-      });
-    }
-    return list.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-  }, [events, messages, appointments, staff]);
-
-  const shown = filter === "all" ? items : items.filter((item) => item.group === filter);
-
-  return (
-    <Panel
-      title="Activity timeline"
-      action={
-        <div className="flex flex-wrap items-center gap-1.5">
-          <SelectField aria-label="Timeline filter" className="h-8 w-auto text-xs" value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}>
-            <option value="all">All activity</option>
-            <option value="manual">Manual logs</option>
-            <option value="system">Stage, owner & quote changes</option>
-            <option value="messages">Messages</option>
-            <option value="appointments">Appointments</option>
-          </SelectField>
-          <Button size="sm" variant="outline" asChild><Link href="/admin/messages"><MessageSquare className="h-3.5 w-3.5" /> Messages</Link></Button>
-          {canEdit && <Button size="sm" variant="outline" onClick={onLog}><Plus className="h-3.5 w-3.5" /> Log activity</Button>}
-        </div>
-      }
-    >
-      {shown.length === 0 ? (
-        <EmptyState message="No activity yet. Messages and bookings for the linked customer and orders appear here; log calls or meetings that happened elsewhere." />
-      ) : (
-        <ol className="space-y-2">
-          {shown.slice(0, 80).map((item) => (
-            <li key={item.id} className="rounded-lg border p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">{item.title}</span>
-                <Badge className={cn("border-transparent text-[10px]", item.tone)}>{item.tag}</Badge>
-                <span className="ml-auto text-xs text-muted-foreground">{fmtDateTime(item.at)}{item.actor ? ` · ${item.actor}` : ""}</span>
-              </div>
-              {item.body && <p className="mt-1 line-clamp-4 whitespace-pre-wrap text-xs text-muted-foreground">{item.body}</p>}
-            </li>
-          ))}
-        </ol>
       )}
     </Panel>
   );
@@ -1063,8 +1047,8 @@ function QuoteDialog({
   );
 }
 
-function LogDialog({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (body: Record<string, unknown>) => Promise<boolean> }) {
-  const [kind, setKind] = useState("call");
+function LogDialog({ open, initialKind, onClose, onSave }: { open: boolean; initialKind: string; onClose: () => void; onSave: (body: Record<string, unknown>) => Promise<boolean> }) {
+  const [kind, setKind] = useState(initialKind);
   const [direction, setDirection] = useState("outbound");
   const [when, setWhen] = useState("");
   const [subject, setSubject] = useState("");
@@ -1076,9 +1060,10 @@ function LogDialog({ open, onClose, onSave }: { open: boolean; onClose: () => vo
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     setWhen(now.toISOString().slice(0, 16));
+    setKind(initialKind);
     setSubject("");
     setBody("");
-  }, [open]);
+  }, [open, initialKind]);
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && !saving && onClose()}>
