@@ -30,6 +30,7 @@ import {
   RefreshCw,
   Search,
   Send,
+  Smartphone,
   Sparkles,
   Sun,
   Trash2,
@@ -42,6 +43,7 @@ import { getCurrentAdminProfile } from "@/lib/admin/admin-api";
 import { AdminNotificationBell } from "@/components/admin/admin-notification-bell";
 import { adminNavGroups, isAdminNavActive } from "@/lib/admin/navigation";
 import { AdminEmail } from "@/components/admin/admin-email";
+import { PhoneImportDialog } from "@/components/admin/phone-import-dialog";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -225,6 +227,9 @@ export function AdminCommunications() {
   // Contacts state
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [contactSearch, setContactSearch] = useState("");
+  const [canPhoneImport, setCanPhoneImport] = useState(false);
+  const [phoneImportOpen, setPhoneImportOpen] = useState(false);
+  const [phoneImportAuto, setPhoneImportAuto] = useState(false);
 
   // SMS state
   const [smsTo, setSmsTo] = useState("");
@@ -248,6 +253,17 @@ export function AdminCommunications() {
         return;
       }
       setAuthState("allowed");
+      // Creating contacts follows "Add customer" and CSV import: admins only.
+      const mayImport = Boolean(profile && (profile.role === "super_admin" || profile.role === "admin"));
+      setCanPhoneImport(mayImport);
+      // Scanned the "Import from phone" QR code: land on Contacts with the importer open.
+      if (new URLSearchParams(window.location.search).get("import") === "phone") {
+        setActiveTab("contacts");
+        if (mayImport) {
+          setPhoneImportAuto(true);
+          setPhoneImportOpen(true);
+        }
+      }
       initTwilioDevice();
       loadCalls();
       loadContacts();
@@ -1320,9 +1336,16 @@ export function AdminCommunications() {
                         onChange={(e) => setContactSearch(e.target.value)}
                       />
                     </div>
-                    <Button variant="outline" size="sm" onClick={loadContacts} className="gap-1.5 text-xs h-8">
-                      <RefreshCw className="h-3.5 w-3.5" />Refresh
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {canPhoneImport && (
+                        <Button variant="outline" size="sm" onClick={() => { setPhoneImportAuto(false); setPhoneImportOpen(true); }} className="gap-1.5 text-xs h-8">
+                          <Smartphone className="h-3.5 w-3.5" />From phone
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm" onClick={loadContacts} className="gap-1.5 text-xs h-8">
+                        <RefreshCw className="h-3.5 w-3.5" />Refresh
+                      </Button>
+                    </div>
                   </div>
                   <ContactSearchList
                     contacts={filteredContacts}
@@ -1333,6 +1356,18 @@ export function AdminCommunications() {
                     onEmailContact={() => {}}
                     showFull
                   />
+                  {canPhoneImport && (
+                    <PhoneImportDialog
+                      open={phoneImportOpen}
+                      autoPick={phoneImportAuto}
+                      onClose={() => {
+                        setPhoneImportOpen(false);
+                        setPhoneImportAuto(false);
+                        if (window.location.search.includes("import=phone")) window.history.replaceState(null, "", window.location.pathname);
+                      }}
+                      onImported={() => void loadContacts()}
+                    />
+                  )}
                 </div>
               )}
 
