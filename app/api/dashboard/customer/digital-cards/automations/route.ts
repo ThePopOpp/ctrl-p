@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError } from "@/lib/admin/server-auth";
+import { isUuid, sanitizeLeadPatch } from "@/lib/digital-cards/lead-patch";
 
 // Preset automation templates — toggled on/off per card from the UI
 export type PresetKey =
@@ -88,6 +89,12 @@ const PRESETS: Record<PresetKey, {
   },
 };
 
+type AdminClient = SupabaseClient;
+
+/**
+ * Authenticates the caller and loads their profile. Card data in this route is
+ * available only to the card's owner or an active super admin.
+ */
 async function verifyCardOwner(request: Request) {
   const config = getServerSupabaseConfig();
   if (config.error) return { error: config.error };
@@ -107,25 +114,35 @@ async function verifyCardOwner(request: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  return { userId, adminClient };
+  const profile = await adminClient.from("users").select("role, status, deleted_at").eq("id", userId).maybeSingle();
+  const row = profile.data as { role: string | null; status: string | null; deleted_at: string | null } | null;
+  if (!row || row.deleted_at || !["active", "pending"].includes(String(row.status))) {
+    return { error: jsonError("Your account is not active.", 403) };
+  }
+  const isSuperAdmin = row.role === "super_admin" && row.status === "active";
+
+  return { userId, adminClient, isSuperAdmin };
+}
+
+/** The card, if the caller owns it or is a super admin. */
+async function loadManagedCard(adminClient: AdminClient, cardId: string, userId: string, isSuperAdmin: boolean) {
+  if (!isUuid(cardId)) return null;
+  const result = await adminClient.from("digital_cards").select("id, user_id").eq("id", cardId).maybeSingle();
+  const card = result.data as { id: string; user_id: string } | null;
+  if (!card) return null;
+  return card.user_id === userId || isSuperAdmin ? card : null;
 }
 
 // GET /api/dashboard/customer/digital-cards/automations?card_id=xxx
 export async function GET(request: Request) {
-  const { error, userId, adminClient } = await verifyCardOwner(request);
+  const { error, userId, adminClient, isSuperAdmin } = await verifyCardOwner(request);
   if (error) return error;
 
   const { searchParams } = new URL(request.url);
   const cardId = searchParams.get("card_id");
   if (!cardId) return jsonError("card_id required", 400);
 
-  // Verify ownership
-  const cardResult = await adminClient!
-    .from("digital_cards")
-    .select("id")
-    .eq("id", cardId)
-    .eq("user_id", userId!)
-    .maybeSingle();
+  const cardResult = { data: await loadManagedCard(adminClient!, cardId, userId!, Boolean(isSuperAdmin)) };
   if (!cardResult.data) return jsonError("Card not found.", 404);
 
   const [automationsResult, logsResult, leadsResult] = await Promise.all([
@@ -161,21 +178,16 @@ export async function GET(request: Request) {
 
 // POST — toggle a preset on (creates or re-enables the automation record)
 export async function POST(request: Request) {
-  const { error, userId, adminClient } = await verifyCardOwner(request);
+  const { error, userId, adminClient, isSuperAdmin } = await verifyCardOwner(request);
   if (error) return error;
 
   const body = await request.json().catch(() => null) as { card_id?: string; preset_key?: PresetKey } | null;
   const cardId = body?.card_id;
   const presetKey = body?.preset_key;
-  if (!cardId || !presetKey || !PRESETS[presetKey]) return jsonError("card_id and preset_key required.", 400);
+  if (!cardId || !presetKey || !Object.prototype.hasOwnProperty.call(PRESETS, presetKey)) return jsonError("card_id and preset_key required.", 400);
 
-  const cardResult = await adminClient!
-    .from("digital_cards")
-    .select("id, user_id")
-    .eq("id", cardId)
-    .eq("user_id", userId!)
-    .maybeSingle();
-  if (!cardResult.data) return jsonError("Card not found.", 404);
+  const card = await loadManagedCard(adminClient!, cardId, userId!, Boolean(isSuperAdmin));
+  if (!card) return jsonError("Card not found.", 404);
 
   const preset = PRESETS[presetKey];
 
@@ -212,7 +224,7 @@ export async function POST(request: Request) {
 
 // PATCH — update a specific automation (toggle, message, delay)
 export async function PATCH(request: Request) {
-  const { error, userId, adminClient } = await verifyCardOwner(request);
+  const { error, userId, adminClient, isSuperAdmin } = await verifyCardOwner(request);
   if (error) return error;
 
   const body = await request.json().catch(() => null) as {
@@ -222,52 +234,74 @@ export async function PATCH(request: Request) {
     action_data?: Record<string, unknown>;
     delay_minutes?: number;
     lead_id?: string;
-    lead_patch?: { status?: string; notes?: string; tags?: string[]; assigned_to?: string | null };
+    lead_patch?: { status?: unknown; notes?: unknown; tags?: unknown; assigned_to?: unknown };
   } | null;
 
-  // Lead CRM patch
-  if (body?.lead_id && body.lead_patch) {
-    const patch: Record<string, unknown> = {};
-    if (body.lead_patch.status    !== undefined) patch.status      = body.lead_patch.status;
-    if (body.lead_patch.notes     !== undefined) patch.notes       = body.lead_patch.notes;
-    if (body.lead_patch.tags      !== undefined) patch.tags        = body.lead_patch.tags;
-    if (body.lead_patch.assigned_to !== undefined) patch.assigned_to = body.lead_patch.assigned_to;
-    await adminClient!.from("digital_card_leads").update(patch).eq("id", body.lead_id);
-    return NextResponse.json({ ok: true });
+  // Lead CRM patch — only the owner of the lead's card, or a super admin.
+  if (body?.lead_id !== undefined || body?.lead_patch !== undefined) {
+    if (!isUuid(body?.lead_id)) return jsonError("Lead not found.", 404);
+    const leadResult = await adminClient!.from("digital_card_leads").select("id, digital_card_id").eq("id", body.lead_id).maybeSingle();
+    const lead = leadResult.data as { id: string; digital_card_id: string } | null;
+    // The same 404 for "doesn't exist" and "not yours", so lead ids can't be probed.
+    const card = lead ? await loadManagedCard(adminClient!, lead.digital_card_id, userId!, Boolean(isSuperAdmin)) : null;
+    if (!lead || !card) return jsonError("Lead not found.", 404);
+
+    // Owners may assign a lead to themselves only; super admins may assign it to any user.
+    const { patch, error: patchError } = sanitizeLeadPatch(body.lead_patch, isSuperAdmin ? null : [card.user_id]);
+    if (patchError) return jsonError(patchError, 400);
+    if (isSuperAdmin && patch.assigned_to) {
+      const assignee = await adminClient!.from("users").select("id").eq("id", patch.assigned_to).is("deleted_at", null).maybeSingle();
+      if (!assignee.data) return jsonError("Unknown assignee.", 400);
+    }
+
+    const saved = await adminClient!
+      .from("digital_card_leads")
+      .update(patch)
+      .eq("id", lead.id)
+      .eq("digital_card_id", card.id)
+      .select("id, status, notes, tags, assigned_to")
+      .maybeSingle();
+    if (saved.error) return jsonError(saved.error.message, 400);
+    if (!saved.data) return jsonError("Lead not found.", 404);
+
+    if (isSuperAdmin && card.user_id !== userId) {
+      await adminClient!.from("activity_logs").insert({
+        actor_id: userId,
+        action: "digital_card_lead_updated",
+        entity_type: "digital_card_lead",
+        entity_id: lead.id,
+        details: { card_id: card.id, card_owner_id: card.user_id, fields: Object.keys(patch) },
+      });
+    }
+    return NextResponse.json({ ok: true, lead: saved.data });
   }
 
   if (!body?.id || !body.card_id) return jsonError("id and card_id required.", 400);
 
-  // Verify the automation belongs to this user's card
-  const check = await adminClient!
-    .from("automations")
-    .select("id")
-    .eq("id", body.id)
-    .eq("digital_card_id", body.card_id)
-    .maybeSingle();
-
-  // Cross-check card ownership
-  const cardCheck = await adminClient!
-    .from("digital_cards")
-    .select("id")
-    .eq("id", body.card_id)
-    .eq("user_id", userId!)
-    .maybeSingle();
-
-  if (!check.data || !cardCheck.data) return jsonError("Automation not found.", 404);
+  const card = await loadManagedCard(adminClient!, body.card_id, userId!, Boolean(isSuperAdmin));
+  const check = card
+    ? await adminClient!.from("automations").select("id").eq("id", body.id).eq("digital_card_id", card.id).maybeSingle()
+    : { data: null };
+  if (!card || !check.data) return jsonError("Automation not found.", 404);
 
   const patch: Record<string, unknown> = {};
-  if (body.enabled !== undefined) patch.enabled = body.enabled;
-  if (body.action_data) patch.action_data = body.action_data;
-  if (body.delay_minutes !== undefined) patch.delay_minutes = body.delay_minutes;
+  if (typeof body.enabled === "boolean") patch.enabled = body.enabled;
+  if (body.action_data && typeof body.action_data === "object" && !Array.isArray(body.action_data)) patch.action_data = body.action_data;
+  if (body.delay_minutes !== undefined) {
+    const delay = Number(body.delay_minutes);
+    if (!Number.isFinite(delay) || delay < 0 || delay > 60 * 24 * 90) return jsonError("Delay must be between 0 and 90 days.", 400);
+    patch.delay_minutes = Math.round(delay);
+  }
+  if (!Object.keys(patch).length) return jsonError("No automation changes were provided.", 400);
 
-  await adminClient!.from("automations").update(patch).eq("id", body.id);
+  const saved = await adminClient!.from("automations").update(patch).eq("id", body.id).eq("digital_card_id", card.id);
+  if (saved.error) return jsonError(saved.error.message, 400);
   return NextResponse.json({ ok: true });
 }
 
 // DELETE — disable (not delete) a preset automation
 export async function DELETE(request: Request) {
-  const { error, userId, adminClient } = await verifyCardOwner(request);
+  const { error, userId, adminClient, isSuperAdmin } = await verifyCardOwner(request);
   if (error) return error;
 
   const { searchParams } = new URL(request.url);
@@ -275,19 +309,15 @@ export async function DELETE(request: Request) {
   const cardId = searchParams.get("card_id");
   if (!automationId || !cardId) return jsonError("id and card_id required.", 400);
 
-  const cardCheck = await adminClient!
-    .from("digital_cards")
-    .select("id")
-    .eq("id", cardId)
-    .eq("user_id", userId!)
-    .maybeSingle();
-  if (!cardCheck.data) return jsonError("Card not found.", 404);
+  const card = await loadManagedCard(adminClient!, cardId, userId!, Boolean(isSuperAdmin));
+  if (!card) return jsonError("Card not found.", 404);
 
-  await adminClient!
+  const saved = await adminClient!
     .from("automations")
     .update({ enabled: false })
     .eq("id", automationId)
-    .eq("digital_card_id", cardId);
+    .eq("digital_card_id", card.id);
+  if (saved.error) return jsonError(saved.error.message, 400);
 
   return NextResponse.json({ ok: true });
 }
