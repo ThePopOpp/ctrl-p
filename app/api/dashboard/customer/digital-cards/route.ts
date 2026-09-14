@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { getServerSupabaseConfig, jsonError, serverEnv } from "@/lib/admin/server-auth";
+import { cardSlugify, isNfcStatus } from "@/lib/digital-cards/card-urls";
 
 const LINK_TYPES = new Set(["website", "social", "phone", "email", "sms", "map", "booking", "payment", "download", "video", "review", "custom"]);
 const STATUSES = new Set(["draft", "published", "unpublished"]);
@@ -108,11 +109,7 @@ function nullable(value: unknown) {
 }
 
 function slugify(value: string) {
-  return clean(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64) || "card";
+  return cardSlugify(clean(value)) || "card";
 }
 
 function safeUrl(value: unknown) {
@@ -403,7 +400,7 @@ export async function POST(request: Request) {
     maps_url: safeUrl(body.maps_url),
     intro_video_url: safeUrl(body.intro_video_url),
     qr_settings: body.qr_settings || { foreground: "#07130b", background: "#ffffff", size: 512 },
-    nfc_status: clean(body.nfc_status) || "not_ordered",
+    nfc_status: isNfcStatus(clean(body.nfc_status)) ? clean(body.nfc_status) : "not_ordered",
     access_status: clean(body.access_status) || "trial",
     access_plan: nullable(body.access_plan),
     assigned_order_id: nullable(body.assigned_order_id),
@@ -428,22 +425,43 @@ export async function POST(request: Request) {
   if (result.error) return jsonError(result.error.message, 400);
 
   const cardId = result.data.id;
-  const deleteResult = await verified.adminClient.from("digital_card_links").delete().eq("digital_card_id", cardId);
-  if (deleteResult.error) return jsonError(deleteResult.error.message, 400);
+
+  // Replace links and sections without a window where a failed write leaves the
+  // card empty: insert the new rows first, and only then remove the rows they replace.
+  const [oldLinks, oldSections] = await Promise.all([
+    verified.adminClient.from("digital_card_links").select("id").eq("digital_card_id", cardId),
+    verified.adminClient.from("digital_card_sections").select("id").eq("digital_card_id", cardId),
+  ]);
+  if (oldLinks.error) return jsonError(oldLinks.error.message, 400);
+  if (oldSections.error) return jsonError(oldSections.error.message, 400);
 
   const linkRows = buildLinks(body.links, cardId);
+  let newLinkIds: string[] = [];
   if (linkRows.length) {
-    const linksResult = await verified.adminClient.from("digital_card_links").insert(linkRows);
+    const linksResult = await verified.adminClient.from("digital_card_links").insert(linkRows).select("id");
     if (linksResult.error) return jsonError(linksResult.error.message, 400);
+    newLinkIds = ((linksResult.data ?? []) as { id: string }[]).map((row) => row.id);
   }
-
-  const sectionDeleteResult = await verified.adminClient.from("digital_card_sections").delete().eq("digital_card_id", cardId);
-  if (sectionDeleteResult.error) return jsonError(sectionDeleteResult.error.message, 400);
 
   const sectionRows = buildSections(body.sections, cardId);
   if (sectionRows.length) {
     const sectionsResult = await verified.adminClient.from("digital_card_sections").insert(sectionRows);
-    if (sectionsResult.error) return jsonError(sectionsResult.error.message, 400);
+    if (sectionsResult.error) {
+      // Undo the links just added so the card keeps exactly what it had before.
+      if (newLinkIds.length) await verified.adminClient.from("digital_card_links").delete().in("id", newLinkIds);
+      return jsonError(sectionsResult.error.message, 400);
+    }
+  }
+
+  const staleLinkIds = ((oldLinks.data ?? []) as { id: string }[]).map((row) => row.id);
+  if (staleLinkIds.length) {
+    const removed = await verified.adminClient.from("digital_card_links").delete().in("id", staleLinkIds);
+    if (removed.error) return jsonError(removed.error.message, 400);
+  }
+  const staleSectionIds = ((oldSections.data ?? []) as { id: string }[]).map((row) => row.id);
+  if (staleSectionIds.length) {
+    const removed = await verified.adminClient.from("digital_card_sections").delete().in("id", staleSectionIds);
+    if (removed.error) return jsonError(removed.error.message, 400);
   }
 
   const cardResult = await verified.adminClient
@@ -454,6 +472,29 @@ export async function POST(request: Request) {
 
   if (cardResult.error) return jsonError(cardResult.error.message, 400);
   return NextResponse.json({ card: cardResult.data });
+}
+
+/** Update a card's NFC status (set to "programmed" after a successful NFC write). Owner only. */
+export async function PATCH(request: Request) {
+  const verified = await verifyCustomerRequest(request);
+  if (verified.error) return verified.error;
+
+  const body = await request.json().catch(() => null) as { id?: string; nfc_status?: string } | null;
+  if (!body?.id) return jsonError("Digital card id is required.");
+  const nfcStatus = clean(body.nfc_status);
+  if (!isNfcStatus(nfcStatus)) return jsonError("Unsupported NFC status.");
+
+  const result = await verified.adminClient
+    .from("digital_cards")
+    .update({ nfc_status: nfcStatus })
+    .eq("id", body.id)
+    .eq("user_id", verified.actorId)
+    .select("id, nfc_status")
+    .maybeSingle();
+
+  if (result.error) return jsonError(result.error.message, 400);
+  if (!result.data) return jsonError("Digital card not found.", 404);
+  return NextResponse.json({ card: result.data });
 }
 
 export async function DELETE(request: Request) {

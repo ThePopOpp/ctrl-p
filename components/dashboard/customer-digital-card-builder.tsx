@@ -7,6 +7,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Bell, Box, Camera, Check, ChevronDown, ChevronRight, Clock, Code2, Copy, CreditCard, Download, Eye, EyeOff, FileCheck2, FormInput, GripVertical, Home, IdCard, Layers, Link as LinkIcon, LogOut, Mail, MessageSquare, Mic, Monitor, Moon, Music, Nfc, Palette, Play, PlayCircle, Plus, QrCode, Save, Settings, Smartphone, Square, Sun, Tablet, Tag, Trash2, Truck, Upload, UserCircle, Volume2, VolumeX, X, Zap } from "lucide-react";
 
+import { NfcWritePanel } from "@/components/dashboard/digital-card-nfc-writer";
+import { LOGO_HEIGHT, LOGO_WIDTH, NFC_STATUSES, cardSlugify, logoSizing, logoStyle, trackedCardUrl } from "@/lib/digital-cards/card-urls";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -371,7 +373,7 @@ function imageBorderStyle(settings: ImageStyleSettings): React.CSSProperties {
 }
 
 function slugify(value: string) {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+  return cardSlugify(value);
 }
 
 function emptyCard(profile?: CardData["profile"]): DigitalCard {
@@ -485,12 +487,24 @@ function normalizeSections(sections: DigitalCardSection[] | undefined) {
     .map((section, index) => ({ ...section, display_order: index + 1 }));
 }
 
+/** The card's QR target: a custom URL when set, otherwise the public URL tagged ?source=qr so scans are counted. */
+function qrTarget(cardUrl: string, card: DigitalCard) {
+  return card.qr_settings?.url?.trim() || trackedCardUrl(cardUrl, "qr");
+}
+
+/** PNG from Ctrl+P's own QR route (same origin, so downloads work). */
 function qrUrl(cardUrl: string, card: DigitalCard) {
+  const foreground = String(card.qr_settings?.foreground || "#07130b");
+  const background = String(card.qr_settings?.background || "#ffffff");
+  const size = Math.min(512, Number(card.qr_settings?.size || 512));
+  return `/api/digital-cards/qr?url=${encodeURIComponent(qrTarget(cardUrl, card))}&size=${size}&fg=${encodeURIComponent(foreground)}&bg=${encodeURIComponent(background)}`;
+}
+
+function qrSvgUrl(cardUrl: string, card: DigitalCard) {
   const foreground = String(card.qr_settings?.foreground || "#07130b").replace("#", "");
   const background = String(card.qr_settings?.background || "#ffffff").replace("#", "");
   const size = Number(card.qr_settings?.size || 512);
-  const target = card.qr_settings?.url?.trim() || cardUrl;
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&color=${foreground}&bgcolor=${background}&data=${encodeURIComponent(target)}`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&color=${foreground}&bgcolor=${background}&format=svg&data=${encodeURIComponent(qrTarget(cardUrl, card))}`;
 }
 
 async function customerToken() {
@@ -1037,7 +1051,8 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                 if (panel === "forms") ensureLeadCaptureSection();
               }}
             />
-            <section className="max-h-[calc(100vh-9rem)] overflow-x-hidden overflow-y-auto border-r bg-background/45 p-4">
+            {/* Internal scrolling only on wide screens; on phones the panel stacks and scrolls with the page. */}
+            <section className="overflow-x-hidden border-b bg-background/45 p-4 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto xl:border-b-0 xl:border-r">
               {activePanel === "settings" && (
                 <div className="space-y-4">
                   <ProductChooser onSelect={(panel) => {
@@ -1252,12 +1267,15 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     <MediaUploadField label="Profile photo" mediaType="profile-photo" accept="image/*" value={form.profile_photo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("profile_photo_url", url)}
                       position={(form.media_settings?.profile_image_style as { position?: "left" | "center" | "right" } | undefined)?.position || "center"}
                       onPositionChange={(pos) => update("media_settings", { ...(form.media_settings || {}), profile_image_style: { ...((form.media_settings?.profile_image_style as object) || {}), position: pos } })} />
+                    <ImageLinkField label="Photo links to (optional)" value={String((form.media_settings?.profile_link_url as string) || "")} onChange={(value) => update("media_settings", { ...(form.media_settings || {}), profile_link_url: value })} />
                   </div>
                   <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">Your company or brand logo shown in the top-left corner of the card.</p>
                     <MediaUploadField label="Logo" mediaType="logo" accept="image/*" value={form.logo_url || ""} uploading={uploadingMedia} onUpload={uploadMedia} onUploaded={(url) => update("logo_url", url)}
                       position={(form.media_settings?.logo_position as "left" | "center" | "right" | undefined) || "left"}
                       onPositionChange={(pos) => update("media_settings", { ...(form.media_settings || {}), logo_position: pos })} />
+                    <LogoSizeControls settings={form.media_settings} onChange={(patch) => update("media_settings", { ...(form.media_settings || {}), ...patch })} />
+                    <ImageLinkField label="Logo links to (optional)" value={String((form.media_settings?.logo_link_url as string) || "")} onChange={(value) => update("media_settings", { ...(form.media_settings || {}), logo_link_url: value })} />
                   </div>
                   <div className="min-w-0">
                     <p className="mb-2 text-xs text-muted-foreground">A full-card background image. A dark overlay is applied automatically so text stays readable.</p>
@@ -1379,7 +1397,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     <SelectField label="QR corner style" value={form.qr_corner_style || "square"} values={qrCornerStyles} onChange={(value) => update("qr_corner_style", value)} />
                     <SelectField label="QR dot style" value={form.qr_dot_style || "square"} values={qrDotStyles} onChange={(value) => update("qr_dot_style", value)} />
                     <Button variant="outline" asChild><a href={qrUrl(publicUrl, form)} download={`${form.slug}-qr.png`}><Download className="h-4 w-4" /> Download QR PNG</a></Button>
-                    <Button variant="outline" asChild><a href={`${qrUrl(publicUrl, form)}&format=svg`} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /> Open QR SVG</a></Button>
+                    <Button variant="outline" asChild><a href={qrSvgUrl(publicUrl, form)} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /> Open QR SVG</a></Button>
                   </div>
                 </CardContent>
               </Card>}
@@ -1425,8 +1443,21 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                     </div>
                   </div>
 
+                  <div className="space-y-3 rounded-lg border p-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold"><Nfc className="h-4 w-4" /> Write to an NFC item</div>
+                    <p className="text-xs text-muted-foreground">Program a card, sticker, bracelet, ring or key fob so a tap opens this card. Writes the NFC tap URL above.</p>
+                    {!(form.status === "published" && form.is_public) && (
+                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">This card isn&apos;t published yet. You can still write items, but a tap shows nothing until you publish.</p>
+                    )}
+                    <NfcWritePanel
+                      url={trackedCardUrl(publicUrl, "nfc")}
+                      cardId={form.id}
+                      onWritten={() => update("nfc_status", "programmed")}
+                    />
+                  </div>
+
                   <div className="rounded-lg border bg-primary/5 p-4 space-y-2">
-                    <div className="text-sm font-semibold">How to program an NFC tag</div>
+                    <div className="text-sm font-semibold">Program a tag with another app</div>
                     <ol className="space-y-1.5 text-xs text-muted-foreground list-none">
                       {[
                         ["Download NFC Tools", "Free app on iOS and Android — search “NFC Tools” by wakdev."],
@@ -1443,7 +1474,7 @@ export function CustomerDigitalCardBuilder({ cardId }: { cardId?: string }) {
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-3">
-                    <SelectField label="NFC status" value={form.nfc_status || "not_ordered"} values={["not_ordered", "ordered", "assigned", "programmed", "shipped"]} onChange={(value) => update("nfc_status", value)} />
+                    <SelectField label="NFC status" value={form.nfc_status || "not_ordered"} values={[...NFC_STATUSES]} onChange={(value) => update("nfc_status", value)} />
                     <SelectField label="Access status" value={form.access_status || "trial"} values={["trial", "active", "past_due", "paused", "expired", "none"]} onChange={(value) => update("access_status", value)} />
                     <SelectField label="Subscription provider" value={form.subscription_provider || "none"} values={["none", "square", "stripe", "manual"]} onChange={(value) => update("subscription_provider", value === "none" ? "" : value)} />
                     <Field label="Access plan" value={form.access_plan || ""} onChange={(value) => update("access_plan", value)} />
@@ -2822,7 +2853,7 @@ function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: D
     return (
       <div>
         <div className="flex items-center justify-between gap-2">
-          {card.logo_url ? <img className="max-h-10 max-w-[140px] object-contain" src={card.logo_url} alt="" /> : <div className="text-xs font-semibold opacity-70">controlp.io card</div>}
+          {card.logo_url ? <img className="object-contain" style={logoStyle(card.media_settings)} src={card.logo_url} alt="" /> : <div className="text-xs font-semibold opacity-70">controlp.io card</div>}
         </div>
         <div className="mt-8" style={textStyle}>
           {card.profile_photo_url ? <img className={imageClasses} style={imageBorderStyle(imageStyle)} src={card.profile_photo_url} alt="" /> : <div className={fallbackImageClasses} style={imageBorderStyle(imageStyle)}>{(card.display_name || card.card_name || "CP").slice(0, 2).toUpperCase()}</div>}
@@ -2838,7 +2869,7 @@ function PreviewSection({ section, card, publicUrl, visibleLinks }: { section: D
     const logoJustify = logoPos === "center" ? "justify-center" : logoPos === "right" ? "justify-end" : "justify-start";
     return (
       <div className={cn("flex items-center", logoJustify)}>
-        {card.logo_url ? <img className="max-h-10 max-w-[140px] object-contain" src={card.logo_url} alt="" /> : <div className="text-xs font-semibold opacity-70">controlp.io card</div>}
+        {card.logo_url ? <img className="object-contain" style={logoStyle(card.media_settings)} src={card.logo_url} alt="" /> : <div className="text-xs font-semibold opacity-70">controlp.io card</div>}
       </div>
     );
   }
@@ -3206,6 +3237,32 @@ function ImageStyleControls({ value, onChange }: { value: ImageStyleSettings; on
 
 function SelectField({ label, value, values, onChange }: { label: string; value: string; values: string[]; onChange: (value: string) => void }) {
   return <div><div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div><Select value={value} onValueChange={onChange}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{values.map((item) => <SelectItem key={item} value={item}>{human(item)}</SelectItem>)}</SelectContent></Select></div>;
+}
+
+function LogoSizeControls({ settings, onChange }: { settings: Record<string, unknown> | null | undefined; onChange: (patch: Record<string, unknown>) => void }) {
+  const sizing = logoSizing(settings);
+  return (
+    <div className="mt-3 grid gap-3 rounded-lg border bg-background/35 p-3 sm:grid-cols-2">
+      <label className="block text-xs">
+        <span className="mb-1.5 flex justify-between font-medium text-muted-foreground"><span>Logo height</span><span>{sizing.custom ? `${sizing.height}px` : "Auto (48px max)"}</span></span>
+        <input type="range" min={LOGO_HEIGHT.min} max={LOGO_HEIGHT.max} value={sizing.height} onChange={(event) => onChange({ logo_height: Number(event.target.value), logo_width: sizing.maxWidth })} className="w-full accent-primary" />
+      </label>
+      <label className="block text-xs">
+        <span className="mb-1.5 flex justify-between font-medium text-muted-foreground"><span>Max width</span><span>{sizing.custom ? (sizing.maxWidth ? `${sizing.maxWidth}px` : "Auto") : "Auto (140px max)"}</span></span>
+        <input type="range" min={0} max={LOGO_WIDTH.max} step={4} value={sizing.maxWidth} onChange={(event) => onChange({ logo_width: Number(event.target.value), logo_height: sizing.height })} className="w-full accent-primary" />
+      </label>
+      <p className="text-[11px] text-muted-foreground sm:col-span-2">The logo keeps its proportions and never stretches.{sizing.custom && <> <button type="button" className="underline" onClick={() => onChange({ logo_height: undefined, logo_width: undefined })}>Reset size</button></>}</p>
+    </div>
+  );
+}
+
+function ImageLinkField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="mt-3 block text-xs">
+      <span className="mb-1.5 block font-medium text-muted-foreground">{label}</span>
+      <Input value={value} placeholder="https://yourcompany.com" onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
 }
 
 function MediaUploadField({ label, mediaType, accept, value, uploading, onUpload, onUploaded, position, onPositionChange }: { label: string; mediaType: string; accept: string; value: string; uploading: string | null; onUpload: (file: File, mediaType: string, onUploaded: (url: string) => void) => void; onUploaded: (url: string) => void; position?: "left" | "center" | "right"; onPositionChange?: (pos: "left" | "center" | "right") => void }) {

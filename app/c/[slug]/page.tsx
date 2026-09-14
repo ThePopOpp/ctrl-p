@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { headers } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import { ExternalLink, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
 
 import { getServerSupabaseConfig } from "@/lib/admin/server-auth";
+import { logoStyle, safeCardHref } from "@/lib/digital-cards/card-urls";
 import { cn } from "@/lib/utils";
 import { PublicCardActions, PublicThemeToggle, PublicTrackedLinks } from "./public-card-actions";
 import { PublicOpener } from "./public-opener";
@@ -230,6 +231,12 @@ function safeHref(value: string | null | undefined) {
   return `https://${value}`;
 }
 
+/** Wraps a logo or profile photo in its optional link. */
+function CardImageLink({ href, block, children }: { href: string | null; block?: boolean; children: ReactNode }) {
+  if (!href) return <>{children}</>;
+  return <a href={href} target="_blank" rel="noopener noreferrer" className={block ? "block" : "inline-flex"}>{children}</a>;
+}
+
 function linkHref(link: PublicCardLink) {
   if (link.link_type === "phone") return `tel:${link.url.replace(/^tel:/i, "")}`;
   if (link.link_type === "sms") return `sms:${link.url.replace(/^sms:/i, "")}`;
@@ -444,7 +451,7 @@ function PublicSection({
         <div className="relative flex items-center">
           <div className={cn("flex flex-1 items-center", logoJustify)}>
             {card.logo_url
-              ? <img className="max-h-12 max-w-[140px] object-contain" src={card.logo_url} alt={`${card.company_name || card.card_name} logo`} />
+              ? <CardImageLink href={safeCardHref(card.media_settings?.logo_link_url)}><img className="object-contain" style={logoStyle(card.media_settings)} src={card.logo_url} alt={`${card.company_name || card.card_name} logo`} /></CardImageLink>
               : <div className="text-sm font-semibold opacity-75">controlp.io card</div>}
           </div>
           <div className="shrink-0">
@@ -454,7 +461,7 @@ function PublicSection({
 
         <div className={cn("mt-8", contentAlign)} style={textStyle}>
           {card.profile_photo_url ? (
-            <img className={imageClasses} style={imageBorderStyle(imageSettings)} src={card.profile_photo_url} alt={card.display_name || card.card_name} />
+            <CardImageLink block href={safeCardHref(card.media_settings?.profile_link_url)}><img className={imageClasses} style={imageBorderStyle(imageSettings)} src={card.profile_photo_url} alt={card.display_name || card.card_name} /></CardImageLink>
           ) : (
             <div className={fallbackImageClasses} style={imageBorderStyle(imageSettings)}>{(card.display_name || card.card_name).slice(0, 2).toUpperCase()}</div>
           )}
@@ -474,7 +481,7 @@ function PublicSection({
         <div className="relative flex items-center">
           <div className={cn("flex flex-1 items-center", logoJustify)}>
             {card.logo_url
-              ? <img className="max-h-12 max-w-[140px] object-contain" src={card.logo_url} alt={`${card.company_name || card.card_name} logo`} />
+              ? <CardImageLink href={safeCardHref(card.media_settings?.logo_link_url)}><img className="object-contain" style={logoStyle(card.media_settings)} src={card.logo_url} alt={`${card.company_name || card.card_name} logo`} /></CardImageLink>
               : <div className="text-sm font-semibold opacity-75">controlp.io card</div>}
           </div>
           <div className="shrink-0">
@@ -494,7 +501,7 @@ function PublicSection({
     return (
       <div style={sectionStyle(section)}>
         {card.profile_photo_url ? (
-          <img className={imageClasses} style={imageBorderStyle(imageSettings)} src={card.profile_photo_url} alt={card.display_name || card.card_name} />
+          <CardImageLink block href={safeCardHref(card.media_settings?.profile_link_url)}><img className={imageClasses} style={imageBorderStyle(imageSettings)} src={card.profile_photo_url} alt={card.display_name || card.card_name} /></CardImageLink>
         ) : (
           <div className={fallbackImageClasses} style={imageBorderStyle(imageSettings)}>{(card.display_name || card.card_name).slice(0, 2).toUpperCase()}</div>
         )}

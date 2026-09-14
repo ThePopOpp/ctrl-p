@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bell, BookOpen, Box, Bookmark, CalendarCheck, Copy, CreditCard, Download, Eye, FileCheck2, Home, IdCard, LogOut, Menu, MessageSquare, Monitor, Moon, Plus, QrCode, Save, Settings, Share2, Smartphone, Sun, Tablet, Trash2, Truck, UserCircle, X } from "lucide-react";
+import { BarChart3, Bell, BookOpen, Box, Bookmark, CalendarCheck, Copy, CreditCard, Download, Eye, FileCheck2, Home, IdCard, LogOut, Menu, MessageSquare, Monitor, Moon, Nfc, Plus, QrCode, Save, Settings, Share2, Smartphone, Sun, Tablet, Trash2, Truck, UserCircle, X } from "lucide-react";
 
+import { NfcWriteDialog } from "@/components/dashboard/digital-card-nfc-writer";
+import { trackedCardUrl } from "@/lib/digital-cards/card-urls";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +53,7 @@ type DigitalCard = {
   website_url?: string | null;
   maps_url?: string | null;
   intro_video_url?: string | null;
-  qr_settings: { foreground?: string; background?: string; size?: number };
+  qr_settings: { foreground?: string; background?: string; size?: number; url?: string };
   nfc_status?: string | null;
   access_status?: string | null;
   access_plan?: string | null;
@@ -151,11 +153,13 @@ function emptyCard(profile?: CardData["profile"]): DigitalCard {
   };
 }
 
+/** PNG from Ctrl+P's own QR route, pointing at the public URL tagged ?source=qr so scans are counted. */
 function qrUrl(cardUrl: string, card: DigitalCard) {
-  const foreground = String(card.qr_settings?.foreground || "#07130b").replace("#", "");
-  const background = String(card.qr_settings?.background || "#ffffff").replace("#", "");
-  const size = Number(card.qr_settings?.size || 512);
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&color=${foreground}&bgcolor=${background}&data=${encodeURIComponent(cardUrl)}`;
+  const foreground = String(card.qr_settings?.foreground || "#07130b");
+  const background = String(card.qr_settings?.background || "#ffffff");
+  const size = Math.min(512, Number(card.qr_settings?.size || 512));
+  const target = card.qr_settings?.url?.trim() || trackedCardUrl(cardUrl, "qr");
+  return `/api/digital-cards/qr?url=${encodeURIComponent(target)}&size=${size}&fg=${encodeURIComponent(foreground)}&bg=${encodeURIComponent(background)}`;
 }
 
 async function customerToken() {
@@ -188,6 +192,7 @@ export function CustomerDigitalCards() {
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [nfcCard, setNfcCard] = useState<DigitalCard | null>(null);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("controlp_customer_theme");
@@ -298,6 +303,7 @@ export function CustomerDigitalCards() {
 
   async function deleteCard(card: DigitalCard) {
     if (!card.id) return;
+    if (!window.confirm(`Delete "${card.card_name}"? Its public page, QR codes and NFC items will stop working. This can't be undone.`)) return;
     setMessage("");
     try {
       const token = await customerToken();
@@ -461,7 +467,8 @@ export function CustomerDigitalCards() {
 
             {message && <div className="mb-4 rounded-lg border bg-background/50 p-3 text-sm text-muted-foreground">{message}</div>}
 
-            <section className="mb-5 grid gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+            {/* One swipeable row on phones; a grid from sm up. */}
+            <section className="-mx-4 mb-5 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 xl:grid-cols-6">
               <Stat label="Products" value={String(cards.length)} hint="Digital products owned" />
               <Stat label="Published" value={String(cards.filter((card) => card.status === "published").length)} hint="Public URL active" />
               <Stat label="Views" value={String(cards.reduce((sum, card) => sum + Number(card.view_count || 0), 0))} hint="Public profile loads" />
@@ -503,6 +510,7 @@ export function CustomerDigitalCards() {
                               <Button size="sm" variant="outline" disabled><Eye className="h-4 w-4" /> Publish first</Button>
                             )}
                             <Button size="sm" variant="outline" asChild><a href={qrUrl(url, card)} download={`${card.slug}-qr.png`}><Download className="h-4 w-4" /> QR PNG</a></Button>
+                            <Button size="sm" variant="outline" onClick={() => setNfcCard(card)}><Nfc className="h-4 w-4" /> Write NFC</Button>
                             <Button size="sm" variant="outline" onClick={() => deleteCard(card)}><Trash2 className="h-4 w-4" /> Delete</Button>
                           </div>
                         </div>
@@ -513,6 +521,13 @@ export function CustomerDigitalCards() {
                 })}
               </section>
             )}
+
+            <NfcWriteDialog
+              card={nfcCard}
+              publicUrl={nfcCard ? nfcCard.public_url || `${data.publicBase}/c/${nfcCard.slug}` : ""}
+              onClose={() => setNfcCard(null)}
+              onWritten={() => void load()}
+            />
 
             <section className="mt-5">
               <Card>
@@ -787,7 +802,7 @@ function Nav({ href, icon, label, active }: { href: string; icon: React.ReactNod
 
 function Stat({ label, value, hint, badge }: { label: string; value: string; hint: string; badge?: string }) {
   return (
-    <Card>
+    <Card className="min-w-[150px] shrink-0 snap-start sm:min-w-0">
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-1">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
