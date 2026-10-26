@@ -106,7 +106,7 @@ function CardImage({
 function PlacementBadge({ text }: { text?: string | null }) {
   if (!text) return null;
   return (
-    <Badge className="absolute left-3 top-3 z-10 shadow-sm" variant="default">
+    <Badge className="pointer-events-none absolute left-3 top-3 z-10 shadow-sm" variant="default">
       {text}
     </Badge>
   );
@@ -129,14 +129,13 @@ function TileCard(props: ProductCardProps & { showSpecs?: boolean }) {
       >
         <PlacementBadge text={props.badgeText} />
 
-        <Link href={href} className="block" aria-label={title}>
-          <CardImage image={image} alt={title} className="aspect-[4/3] w-full" sizes="(max-width: 768px) 100vw, 33vw" />
-        </Link>
+        <CardImage image={image} alt={title} className="aspect-[4/3] w-full" sizes="(max-width: 768px) 100vw, 33vw" />
 
         <div className="flex flex-1 flex-col gap-1 p-4">
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-sm font-semibold leading-snug">
-              <Link href={href} className="hover:underline">
+              {/* Stretched over the whole tile so any click lands on the product. */}
+              <Link href={href} className="hover:underline after:absolute after:inset-0 after:content-['']">
                 {title}
               </Link>
             </h3>
@@ -162,7 +161,7 @@ function TileCard(props: ProductCardProps & { showSpecs?: boolean }) {
 
           <div className="mt-auto flex items-center justify-between pt-3">
             <span className="text-sm font-semibold tabular-nums">{price}</span>
-            <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+            <Button variant="outline" size="sm" className="relative z-10" onClick={() => setOpen(true)}>
               More
             </Button>
           </div>
@@ -220,7 +219,7 @@ function HeroCard(props: ProductCardProps) {
         </div>
 
         <Button asChild size="default" className="mt-2 w-fit">
-          <Link href={href}>
+          <Link href={href} className="after:absolute after:inset-0 after:content-['']">
             {props.ctaLabel ?? "View details"}
             <ArrowRight className="h-4 w-4" />
           </Link>
@@ -238,7 +237,7 @@ function CtaBannerCard(props: ProductCardProps) {
   return (
     <section
       className={cn(
-        "flex flex-col items-center gap-6 rounded-xl border bg-muted/30 p-6 sm:flex-row sm:p-8",
+        "relative flex flex-col items-center gap-6 rounded-xl border bg-muted/30 p-6 sm:flex-row sm:p-8",
         props.className,
       )}
     >
@@ -252,7 +251,7 @@ function CtaBannerCard(props: ProductCardProps) {
       </div>
 
       <Button asChild className="shrink-0">
-        <Link href={href}>
+        <Link href={href} className="after:absolute after:inset-0 after:content-['']">
           {props.ctaLabel ?? "Order now"}
           <ArrowRight className="h-4 w-4" />
         </Link>

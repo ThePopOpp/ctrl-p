@@ -171,7 +171,7 @@ function ProductCard({ product, view }: { product: Product; view: "grid" | "list
 
   if (view === "list") {
     return (
-      <Card className={cn("overflow-hidden transition-shadow hover:shadow-md", isOutOfStock && "opacity-60")}>
+      <Card className={cn("relative overflow-hidden transition-shadow hover:shadow-md", isOutOfStock && "opacity-60")}>
         <div className="flex gap-4 p-4">
           <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg bg-secondary/30">
             {imageUrl ? (
@@ -190,7 +190,7 @@ function ProductCard({ product, view }: { product: Product; view: "grid" | "list
           <div className="flex flex-1 flex-col justify-between min-w-0">
             <div>
               <div className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{product.category}</div>
-              <a href={`/shop/${product.slug}`} className="font-semibold hover:underline underline-offset-2 leading-tight">
+              <a href={`/shop/${product.slug}`} className="font-semibold hover:underline underline-offset-2 leading-tight after:absolute after:inset-0 after:content-['']">
                 {product.name}
               </a>
               {product.tagline && <div className="mt-0.5 text-sm text-muted-foreground line-clamp-1">{product.tagline}</div>}
@@ -202,7 +202,7 @@ function ProductCard({ product, view }: { product: Product; view: "grid" | "list
                   <span className="ml-2 text-sm text-muted-foreground line-through">{money.format(Number(product.base_price))}</span>
                 )}
               </div>
-              <Button size="sm" onClick={handleAdd} disabled={isOutOfStock} className={cn("shrink-0 transition-all", added && "bg-emerald-600 text-white")}>
+              <Button size="sm" onClick={handleAdd} disabled={isOutOfStock} className={cn("relative z-10 shrink-0 transition-all", added && "bg-emerald-600 text-white")}>
                 {added ? "Added!" : isOutOfStock ? "Out of stock" : <><Plus className="mr-1 h-3.5 w-3.5" />Add</>}
               </Button>
             </div>
@@ -213,7 +213,7 @@ function ProductCard({ product, view }: { product: Product; view: "grid" | "list
   }
 
   return (
-    <Card className={cn("group overflow-hidden transition-shadow hover:shadow-md", isOutOfStock && "opacity-60")}>
+    <Card className={cn("group relative overflow-hidden transition-shadow hover:shadow-md", isOutOfStock && "opacity-60")}>
       <div className="relative aspect-[4/3] overflow-hidden bg-secondary/30">
         {imageUrl ? (
           <img
@@ -244,7 +244,7 @@ function ProductCard({ product, view }: { product: Product; view: "grid" | "list
       </div>
       <CardContent className="p-4">
         <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{product.category}</div>
-        <a href={`/shop/${product.slug}`} className="mb-1 block font-semibold leading-tight hover:underline underline-offset-2">
+        <a href={`/shop/${product.slug}`} className="mb-1 block font-semibold leading-tight hover:underline underline-offset-2 after:absolute after:inset-0 after:content-['']">
           {product.name}
         </a>
         {product.tagline && <div className="mb-3 text-sm text-muted-foreground line-clamp-2">{product.tagline}</div>}
@@ -259,7 +259,7 @@ function ProductCard({ product, view }: { product: Product; view: "grid" | "list
             size="sm"
             onClick={handleAdd}
             disabled={isOutOfStock}
-            className={cn("shrink-0 transition-all", added && "bg-emerald-600 text-white")}
+            className={cn("relative z-10 shrink-0 transition-all", added && "bg-emerald-600 text-white")}
           >
             {added ? "Added!" : isOutOfStock ? "Out of stock" : <><Plus className="mr-1 h-3.5 w-3.5" />Add to cart</>}
           </Button>

@@ -149,25 +149,23 @@ function UpsellCard({ product }: { product: Product }) {
   }
 
   return (
-    <div className="group rounded-xl border bg-card overflow-hidden hover:shadow-sm transition-shadow">
-      <a href={`/shop/${product.slug}`}>
-        <div className="aspect-[4/3] overflow-hidden bg-secondary/30">
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={product.name}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <ShoppingBag className="h-10 w-10 text-muted-foreground/30" />
-            </div>
-          )}
-        </div>
-      </a>
+    <div className="group relative rounded-xl border bg-card overflow-hidden hover:shadow-sm transition-shadow">
+      <div className="aspect-[4/3] overflow-hidden bg-secondary/30">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <ShoppingBag className="h-10 w-10 text-muted-foreground/30" />
+          </div>
+        )}
+      </div>
       <div className="p-3">
         <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{product.category}</p>
-        <a href={`/shop/${product.slug}`} className="block text-sm font-semibold leading-tight hover:underline underline-offset-2 line-clamp-2 mb-2">
+        <a href={`/shop/${product.slug}`} className="block text-sm font-semibold leading-tight hover:underline underline-offset-2 line-clamp-2 mb-2 after:absolute after:inset-0 after:content-['']">
           {product.name}
         </a>
         <div className="flex items-center justify-between gap-2">
@@ -175,7 +173,7 @@ function UpsellCard({ product }: { product: Product }) {
           <button
             onClick={handleAdd}
             className={cn(
-              "flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-all",
+              "relative z-10 flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-all",
               added
                 ? "bg-emerald-500 text-white"
                 : "border hover:bg-accent"

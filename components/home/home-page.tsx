@@ -92,13 +92,13 @@ const CATEGORIES: {
   image?: string;
 }[] = [
   { icon: WrapIcon, title: "Vehicle Wraps", desc: "6 products · Tesla specialty", href: "/shop" },
-  { icon: SignsIcon, title: "Signs", desc: "Acrylic · Aluminum · Coroplast", href: "/shop", image: "https://www.b2sign.com/image/thumb/240404/dNDEb9Bb-s1000.jpg" },
-  { icon: BannerIcon, title: "Banners", desc: "Vinyl · Mesh · Fabric · Retractable", href: "/shop", image: "https://www.b2sign.com/image/thumb/240430/WvsHtoYW-s1000.jpg" },
-  { icon: CardsIcon, title: "Business Cards", desc: "Standard · Die-cut · Foil", href: "/shop", image: "https://kwyzxqlbwraiqftfjgjj.supabase.co/storage/v1/object/public/artwork/products/bc/1782186571885-velvet-bc---4.webp" },
-  { icon: SignsIcon, title: "Flags", desc: "Feather · Teardrop · Pole", href: "/shop", image: "https://www.b2sign.com/image/thumb/240228/snlYm2Bs-s1000.jpg" },
-  { icon: DisplaysIcon, title: "Displays & Tents", desc: "Event tents · Tabletop · Fabric", href: "/shop", image: "https://www.b2sign.com/image/thumb/240228/XWKEnh55-s1000.jpg" },
-  { icon: MerchIcon, title: "Apparel & Merch", desc: "Shirts · Hats · Bags · Mugs", href: "/shop" },
-  { icon: WindowIcon, title: "Window Graphics", desc: "Perforated · Cling · Frosted", href: "/shop", image: "https://www.b2sign.com/image/thumb/240305/p3UypbTG-s1000.jpg" },
+  { icon: SignsIcon, title: "Signs", desc: "Acrylic · Aluminum · Coroplast", href: "/shop?category=signage", image: "https://www.b2sign.com/image/thumb/240404/dNDEb9Bb-s1000.jpg" },
+  { icon: BannerIcon, title: "Banners", desc: "Vinyl · Mesh · Fabric · Retractable", href: "/shop?category=banners", image: "https://www.b2sign.com/image/thumb/240430/WvsHtoYW-s1000.jpg" },
+  { icon: CardsIcon, title: "Business Cards", desc: "Standard · Die-cut · Foil", href: "/shop?category=print", image: "https://kwyzxqlbwraiqftfjgjj.supabase.co/storage/v1/object/public/artwork/products/bc/1782186571885-velvet-bc---4.webp" },
+  { icon: SignsIcon, title: "Flags", desc: "Feather · Teardrop · Pole", href: "/shop?category=flags", image: "https://www.b2sign.com/image/thumb/240228/snlYm2Bs-s1000.jpg" },
+  { icon: DisplaysIcon, title: "Displays & Tents", desc: "Event tents · Tabletop · Fabric", href: "/shop?category=displays", image: "https://www.b2sign.com/image/thumb/240228/XWKEnh55-s1000.jpg" },
+  { icon: MerchIcon, title: "Apparel & Merch", desc: "Shirts · Hats · Bags · Mugs", href: "/shop?category=custom-merch" },
+  { icon: WindowIcon, title: "Window Graphics", desc: "Perforated · Cling · Frosted", href: "/shop?category=signage", image: "https://www.b2sign.com/image/thumb/240305/p3UypbTG-s1000.jpg" },
 ];
 
 type ProductCard = {
@@ -106,20 +106,21 @@ type ProductCard = {
   image?: string;
   category: string;
   name: string;
+  href: string;
   price: string;
   stars: number;
   filter: string;
 };
 
 const POPULAR_PRODUCTS: ProductCard[] = [
-  { badge: { label: "New", color: "bg-zinc-900 text-white" }, image: "https://www.b2sign.com/image/thumb/240228/oaKpnDtM-s1000.jpg", category: "Rigid Sign", name: "Gatorboard", price: "From $28/ea", stars: 5, filter: "Signs" },
-  { badge: { label: "Best Seller", color: "bg-emerald-500 text-white" }, image: "https://www.b2sign.com/image/thumb/240404/dNDEb9Bb-s1000.jpg", category: "Sign", name: "Standard A-Frame Sign", price: "From $89/ea", stars: 5, filter: "Signs" },
-  { image: "https://www.b2sign.com/image/thumb/240228/snlYm2Bs-s1000.jpg", category: "Flags", name: "Pole Banner Set", price: "From $145/set", stars: 4, filter: "Banners" },
-  { badge: { label: "Premium", color: "bg-zinc-100 text-zinc-700" }, image: "https://www.b2sign.com/image/thumb/240228/XWKEnh55-s1000.jpg", category: "Display", name: "Tension Fabric Stand", price: "From $325", stars: 5, filter: "Signs" },
-  { category: "Window", name: "Perforated Window Cling", price: "From $18/sqft", stars: 5, filter: "Signs" },
-  { category: "Business Cards", name: "Standard Business Cards", price: "From $24/100", stars: 5, filter: "Cards" },
-  { badge: { label: "New", color: "bg-zinc-900 text-white" }, category: "Business Cards", name: "Die-Cut Business Cards", price: "From $48/100", stars: 5, filter: "Cards" },
-  { image: "https://www.b2sign.com/image/thumb/240430/WvsHtoYW-s1000.jpg", category: "Banner", name: "Mesh Banners", price: "From $3.50/sqft", stars: 4, filter: "Banners" },
+  { badge: { label: "New", color: "bg-zinc-900 text-white" }, image: "https://www.b2sign.com/image/thumb/240228/oaKpnDtM-s1000.jpg", category: "Rigid Sign", name: "Gatorboard", href: "/shop/rigid-signs", price: "From $28/ea", stars: 5, filter: "Signs" },
+  { badge: { label: "Best Seller", color: "bg-emerald-500 text-white" }, image: "https://www.b2sign.com/image/thumb/240404/dNDEb9Bb-s1000.jpg", category: "Sign", name: "Standard A-Frame Sign", href: "/shop/a-frame-signs", price: "From $89/ea", stars: 5, filter: "Signs" },
+  { image: "https://www.b2sign.com/image/thumb/240228/snlYm2Bs-s1000.jpg", category: "Flags", name: "Pole Banner Set", href: "/shop/pole-banner-set", price: "From $145/set", stars: 4, filter: "Banners" },
+  { badge: { label: "Premium", color: "bg-zinc-100 text-zinc-700" }, image: "https://www.b2sign.com/image/thumb/240228/XWKEnh55-s1000.jpg", category: "Display", name: "Tension Fabric Stand", href: "/shop/tension-fabric-display", price: "From $325", stars: 5, filter: "Signs" },
+  { category: "Window", name: "Perforated Window Cling", href: "/shop?category=signage", price: "From $18/sqft", stars: 5, filter: "Signs" },
+  { category: "Business Cards", name: "Standard Business Cards", href: "/shop/business-cards", price: "From $24/100", stars: 5, filter: "Cards" },
+  { badge: { label: "New", color: "bg-zinc-900 text-white" }, category: "Business Cards", name: "Die-Cut Business Cards", href: "/shop/die-cut-business-cards", price: "From $48/100", stars: 5, filter: "Cards" },
+  { image: "https://www.b2sign.com/image/thumb/240430/WvsHtoYW-s1000.jpg", category: "Banner", name: "Mesh Banners", href: "/shop/mesh-banners", price: "From $3.50/sqft", stars: 4, filter: "Banners" },
 ];
 
 const PRODUCT_FILTERS = ["All", "Signs", "Banners", "Wraps", "Cards"];
@@ -326,7 +327,7 @@ export function HomePage() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {filtered.map((product) => (
-              <Link key={product.name} href="/shop" className="group overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-600 transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <Link key={product.name} href={product.href} className="group overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-600 transition-all hover:-translate-y-0.5 hover:shadow-md">
                 <div className="aspect-square relative bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900">
                   {product.badge && (
                     <div className={`absolute top-3 left-3 inline-flex items-center px-2.5 py-1 rounded-full text-[11.5px] font-medium ${product.badge.color}`}>
@@ -439,7 +440,7 @@ export function HomePage() {
                   Spend less on the best business cards in the game. Standard, die-cut, and specialty finishes starting at $24/100.
                 </p>
                 <div className="flex gap-3">
-                  <Link href="/shop" className="inline-flex items-center gap-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-md px-5 py-2.5 text-[14px] font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">Shop business cards</Link>
+                  <Link href="/shop?category=print" className="inline-flex items-center gap-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-md px-5 py-2.5 text-[14px] font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">Shop business cards</Link>
                   <Link href="/shop" className="inline-flex items-center gap-2 text-zinc-700 dark:text-zinc-300 rounded-md px-5 py-2.5 text-[14px] font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">See samples →</Link>
                 </div>
               </div>
