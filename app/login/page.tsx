@@ -4,6 +4,7 @@ import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Mail } from "lucide-react";
 
+import { safeRedirectPath } from "@/lib/auth/redirect";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { defaultDashboardPathForRole } from "@/lib/rbac/roles";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect");
+  const redirect = safeRedirectPath(searchParams.get("redirect"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,7 +72,7 @@ function LoginForm() {
     setMessage("");
     const { error } = await db.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/login` },
+      options: { emailRedirectTo: `${window.location.origin}/login${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}` },
     });
     setLoading(false);
     if (error) { setMessage(error.message); setMessageType("error"); return; }
@@ -85,7 +86,7 @@ function LoginForm() {
     if (!db) return;
     await db.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/login` },
+      options: { redirectTo: `${window.location.origin}/login${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}` },
     });
   }
 
