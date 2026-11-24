@@ -16,7 +16,18 @@ const NOT_STAFF = `This connector is for active Ctrl+P staff and admins. The sig
 // One fresh server per request; tools close over the caller's context.
 export function createCtrlPServer(ctx: McpContext) {
   const server = new McpServer(
-    { name: "ctrlp", title: "Ctrl+P", version: "1.0.0" },
+    {
+      name: "ctrlp",
+      title: "Ctrl+P",
+      version: "1.0.0",
+      description: "Run Ctrl+P: website and shop content, products, orders, pipeline, production, customers and files.",
+      websiteUrl: "https://controlp.io",
+      icons: [
+        { src: "https://controlp.io/icons/icon-512.png", mimeType: "image/png", sizes: ["512x512"] },
+        { src: "https://controlp.io/icons/icon-192.png", mimeType: "image/png", sizes: ["192x192"] },
+        { src: "https://controlp.io/logos/app-icon.svg", mimeType: "image/svg+xml", sizes: ["any"] },
+      ],
+    },
     { instructions: ctx.user.staff ? INSTRUCTIONS : NOT_STAFF },
   );
   registerAccountTools(server, ctx);
